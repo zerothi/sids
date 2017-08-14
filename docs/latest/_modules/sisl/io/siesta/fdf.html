@@ -1,0 +1,878 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>sisl.io.siesta.fdf &mdash; sisl |release| documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="../../../../_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+        <link rel="index" title="Index"
+              href="../../../../genindex.html"/>
+        <link rel="search" title="Search" href="../../../../search.html"/>
+    <link rel="top" title="sisl |release| documentation" href="../../../../index.html"/>
+        <link rel="up" title="Module code" href="../../../index.html"/> 
+
+  
+  <script src="../../../../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../../../../index.html" class="icon icon-home"> sisl
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.8.5-77
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+    
+            
+            
+              
+            
+            
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../scripts/scripts.html">Scripts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../tutorials.html">Tutorials</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../rst/files.html">File formats</a></li>
+</ul>
+
+            
+          
+    <a href="py-modindex.html">API documentation</a>
+  
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../../index.html">sisl</a>
+        
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../../../index.html">Module code</a> &raquo;</li>
+        
+      <li>sisl.io.siesta.fdf</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for sisl.io.siesta.fdf</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Sile object for reading/writing FDF files</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">print_function</span><span class="p">,</span> <span class="n">division</span>
+
+<span class="kn">import</span> <span class="nn">os.path</span> <span class="k">as</span> <span class="nn">osp</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">warnings</span> <span class="k">as</span> <span class="nn">warn</span>
+
+<span class="c1"># Import sile objects</span>
+<span class="kn">from</span> <span class="nn">sisl._help</span> <span class="k">import</span> <span class="n">_str</span>
+<span class="kn">from</span> <span class="nn">.sile</span> <span class="k">import</span> <span class="n">SileSiesta</span>
+<span class="kn">from</span> <span class="nn">..sile</span> <span class="k">import</span> <span class="o">*</span>
+<span class="kn">from</span> <span class="nn">sisl.io._help</span> <span class="k">import</span> <span class="o">*</span>
+
+<span class="c1"># Import the geometry object</span>
+<span class="kn">from</span> <span class="nn">sisl</span> <span class="k">import</span> <span class="n">Geometry</span><span class="p">,</span> <span class="n">Atom</span><span class="p">,</span> <span class="n">SuperCell</span><span class="p">,</span> <span class="n">Grid</span>
+
+<span class="kn">from</span> <span class="nn">sisl.utils.cmd</span> <span class="k">import</span> <span class="o">*</span>
+<span class="kn">from</span> <span class="nn">sisl.utils.misc</span> <span class="k">import</span> <span class="n">merge_instances</span><span class="p">,</span> <span class="n">str_spec</span>
+
+<span class="kn">from</span> <span class="nn">sisl.units</span> <span class="k">import</span> <span class="n">unit_default</span><span class="p">,</span> <span class="n">unit_group</span>
+<span class="kn">from</span> <span class="nn">sisl.units.siesta</span> <span class="k">import</span> <span class="n">unit_convert</span>
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;fdfSileSiesta&#39;</span><span class="p">]</span>
+
+
+<span class="n">_LOGICAL_TRUE</span>  <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;.true.&#39;</span><span class="p">,</span> <span class="s1">&#39;true&#39;</span><span class="p">,</span> <span class="s1">&#39;yes&#39;</span><span class="p">,</span> <span class="s1">&#39;y&#39;</span><span class="p">,</span> <span class="s1">&#39;t&#39;</span><span class="p">]</span>
+<span class="n">_LOGICAL_FALSE</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;.false.&#39;</span><span class="p">,</span> <span class="s1">&#39;false&#39;</span><span class="p">,</span> <span class="s1">&#39;no&#39;</span><span class="p">,</span> <span class="s1">&#39;n&#39;</span><span class="p">,</span> <span class="s1">&#39;f&#39;</span><span class="p">]</span>
+<span class="n">_LOGICAL</span> <span class="o">=</span> <span class="n">_LOGICAL_FALSE</span> <span class="o">+</span> <span class="n">_LOGICAL_TRUE</span>
+
+<span class="n">Bohr2Ang</span> <span class="o">=</span> <span class="n">unit_convert</span><span class="p">(</span><span class="s1">&#39;Bohr&#39;</span><span class="p">,</span> <span class="s1">&#39;Ang&#39;</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="fdfSileSiesta"><a class="viewcode-back" href="../../../../sisl/sisl.io.siesta.fdf.html#sisl.io.fdfSileSiesta">[docs]</a><span class="k">class</span> <span class="nc">fdfSileSiesta</span><span class="p">(</span><span class="n">SileSiesta</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; FDF file object &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filename</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">base</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Initialize an FDF file from the filename</span>
+
+<span class="sd">        By supplying base you can reference files in other directories.</span>
+<span class="sd">        By default the ``base`` is the directory given in the file name.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">fdfSileSiesta</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="n">mode</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">base</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># Extract from filename</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_directory</span> <span class="o">=</span> <span class="n">osp</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_directory</span> <span class="o">=</span> <span class="n">base</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_directory</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_directory</span> <span class="o">=</span> <span class="s1">&#39;.&#39;</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">file</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Return the current file name (without the directory prefix) &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_file</span>
+
+    <span class="k">def</span> <span class="nf">_setup</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Setup the `fdfSileSiesta` after initialization &quot;&quot;&quot;</span>
+        <span class="c1"># These are the comments</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_comment</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;#&#39;</span><span class="p">,</span> <span class="s1">&#39;!&#39;</span><span class="p">,</span> <span class="s1">&#39;;&#39;</span><span class="p">]</span>
+
+        <span class="c1"># List of parent file-handles used while reading</span>
+        <span class="c1"># This is because fdf enables inclusion of other files</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_parent_fh</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_directory</span> <span class="o">=</span> <span class="s1">&#39;.&#39;</span>
+
+    <span class="nd">@Sile_fh_open</span>
+    <span class="k">def</span> <span class="nf">includes</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Return a list of all include files &quot;&quot;&quot;</span>
+
+        <span class="n">includes</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">fh</span><span class="o">.</span><span class="n">name</span><span class="p">]</span>
+        <span class="n">l</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">readline</span><span class="p">()</span>
+        <span class="k">while</span> <span class="n">l</span> <span class="o">!=</span> <span class="s1">&#39;&#39;</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">inc</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parent_fh</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">inc</span><span class="o">.</span><span class="n">name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">includes</span><span class="p">:</span>
+                    <span class="n">includes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">inc</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+
+        <span class="c1"># Now remove prefixes make it smaller</span>
+        <span class="n">includes</span> <span class="o">=</span> <span class="p">[</span><span class="n">inc</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_directory</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span> <span class="k">for</span> <span class="n">inc</span> <span class="ow">in</span> <span class="n">includes</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">includes</span>
+
+<div class="viewcode-block" id="fdfSileSiesta.readline"><a class="viewcode-back" href="../../../../sisl/sisl.io.siesta.fdf.html#sisl.io.fdfSileSiesta.readline">[docs]</a>    <span class="k">def</span> <span class="nf">readline</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">comment</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Reads the next line of the file &quot;&quot;&quot;</span>
+        <span class="c1"># Call the parent readline function</span>
+        <span class="n">l</span> <span class="o">=</span> <span class="nb">super</span><span class="p">(</span><span class="n">fdfSileSiesta</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">readline</span><span class="p">(</span><span class="n">comment</span><span class="o">=</span><span class="n">comment</span><span class="p">)</span>
+
+        <span class="c1"># In FDF files, %include marks files that progress</span>
+        <span class="c1"># down in a tree structure</span>
+        <span class="k">if</span> <span class="s1">&#39;</span><span class="si">%i</span><span class="s1">nclude&#39;</span> <span class="ow">in</span> <span class="n">l</span><span class="p">:</span>
+            <span class="c1"># Split for reading tree file</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_parent_fh</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fh</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">fh</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_directory</span> <span class="o">+</span> <span class="n">osp</span><span class="o">.</span><span class="n">sep</span> <span class="o">+</span> <span class="n">l</span><span class="o">.</span><span class="n">split</span><span class="p">()[</span><span class="mi">1</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mode</span><span class="p">)</span>
+            <span class="c1"># Read the following line in the new file</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">readline</span><span class="p">(</span><span class="n">comment</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_parent_fh</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">l</span> <span class="o">==</span> <span class="s1">&#39;&#39;</span><span class="p">:</span>
+            <span class="c1"># l == &#39;&#39; marks the end of the file</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">fh</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">fh</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parent_fh</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">readline</span><span class="p">(</span><span class="n">comment</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">l</span></div>
+
+<div class="viewcode-block" id="fdfSileSiesta.type"><a class="viewcode-back" href="../../../../sisl/sisl.io.siesta.fdf.html#sisl.io.fdfSileSiesta.type">[docs]</a>    <span class="k">def</span> <span class="nf">type</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Return the type of the fdf-keyword &quot;&quot;&quot;</span>
+        <span class="n">found</span><span class="p">,</span> <span class="n">fdf</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_read</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">found</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span>
+
+        <span class="k">if</span> <span class="n">fdf</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;%block&#39;</span><span class="p">):</span>
+            <span class="k">return</span> <span class="s1">&#39;B&#39;</span>
+
+        <span class="c1"># Grab the entire line (beside the key)</span>
+        <span class="n">fdf</span> <span class="o">=</span> <span class="n">fdf</span><span class="o">.</span><span class="n">split</span><span class="p">()[</span><span class="mi">1</span><span class="p">:]</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">fdf</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">fdf</span> <span class="o">=</span> <span class="n">fdf</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">fdf</span> <span class="ow">in</span> <span class="n">__LOGICAL</span><span class="p">:</span>
+                <span class="k">return</span> <span class="s1">&#39;b&#39;</span>
+
+            <span class="k">if</span> <span class="s1">&#39;.&#39;</span> <span class="ow">in</span> <span class="n">fdf</span><span class="p">:</span>
+                <span class="k">return</span> <span class="s1">&#39;r&#39;</span>
+            <span class="k">return</span> <span class="s1">&#39;i&#39;</span>
+
+        <span class="k">return</span> <span class="s1">&#39;n&#39;</span></div>
+
+<div class="viewcode-block" id="fdfSileSiesta.key"><a class="viewcode-back" href="../../../../sisl/sisl.io.siesta.fdf.html#sisl.io.fdfSileSiesta.key">[docs]</a>    <span class="k">def</span> <span class="nf">key</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Return the key as written in the fdf-file. If not found, returns `None`. &quot;&quot;&quot;</span>
+        <span class="n">found</span><span class="p">,</span> <span class="n">fdf</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_read</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">found</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">fdf</span><span class="o">.</span><span class="n">split</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span></div>
+
+<div class="viewcode-block" id="fdfSileSiesta.get"><a class="viewcode-back" href="../../../../sisl/sisl.io.siesta.fdf.html#sisl.io.fdfSileSiesta.get">[docs]</a>    <span class="k">def</span> <span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">unit</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">with_unit</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Retrieve fdf-keyword from the file &quot;&quot;&quot;</span>
+
+        <span class="c1"># First split into specification and key</span>
+        <span class="n">key</span><span class="p">,</span> <span class="n">tmp_unit</span> <span class="o">=</span> <span class="n">str_spec</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">unit</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">unit</span> <span class="o">=</span> <span class="n">tmp_unit</span>
+
+        <span class="n">found</span><span class="p">,</span> <span class="n">fdf</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_read</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">found</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">default</span>
+
+        <span class="c1"># The keyword is found...</span>
+        <span class="k">if</span> <span class="n">fdf</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;%block&#39;</span><span class="p">):</span>
+            <span class="n">found</span><span class="p">,</span> <span class="n">fdf</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_read_block</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">found</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">default</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">fdf</span>
+
+        <span class="c1"># We need to process the returned value further.</span>
+        <span class="n">fdfl</span> <span class="o">=</span> <span class="n">fdf</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+        <span class="c1"># Check whether this is a logical flag</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">fdfl</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="c1"># This *MUST* be a boolean</span>
+            <span class="c1">#   SCF.Converge.H</span>
+            <span class="c1"># defaults to .true.</span>
+            <span class="k">return</span> <span class="kc">True</span>
+        <span class="k">elif</span> <span class="n">fdfl</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="ow">in</span> <span class="n">_LOGICAL_TRUE</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">True</span>
+        <span class="k">elif</span> <span class="n">fdfl</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="ow">in</span> <span class="n">_LOGICAL_FALSE</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">False</span>
+
+        <span class="c1"># It is something different.</span>
+        <span class="c1"># Try and figure out what it is</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">fdfl</span><span class="p">)</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+            <span class="c1"># We expect it to be a unit</span>
+            <span class="k">if</span> <span class="n">unit</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="c1"># Get group of unit</span>
+                <span class="n">group</span> <span class="o">=</span> <span class="n">unit_group</span><span class="p">(</span><span class="n">fdfl</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
+                <span class="c1"># return in default sisl units</span>
+                <span class="n">unit</span> <span class="o">=</span> <span class="n">unit_default</span><span class="p">(</span><span class="n">group</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">with_unit</span> <span class="ow">and</span> <span class="n">tmp_unit</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="c1"># The user has specifically requested the unit:</span>
+                <span class="c1">#  key{unit}</span>
+                <span class="k">return</span> <span class="s1">&#39;</span><span class="si">{0:.4f}</span><span class="s1"> </span><span class="si">{1}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">fdfl</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="o">*</span> <span class="n">unit_convert</span><span class="p">(</span><span class="n">fdfl</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">unit</span><span class="p">),</span> <span class="n">unit</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="ow">not</span> <span class="n">with_unit</span><span class="p">:</span>
+                <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">fdfl</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="o">*</span> <span class="n">unit_convert</span><span class="p">(</span><span class="n">fdfl</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">unit</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="s1">&#39; &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">fdfl</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span></div>
+
+<div class="viewcode-block" id="fdfSileSiesta.set"><a class="viewcode-back" href="../../../../sisl/sisl.io.siesta.fdf.html#sisl.io.fdfSileSiesta.set">[docs]</a>    <span class="k">def</span> <span class="nf">set</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">keep</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Add the key and value to the FDF file </span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        key : `str`</span>
+<span class="sd">           the fdf-key value to be set in the fdf file</span>
+<span class="sd">        value : `str`/`list`</span>
+<span class="sd">           the value of the string. If a `str` is passed a regular</span>
+<span class="sd">           fdf-key is used, if a `list` it will be a %block.</span>
+<span class="sd">        keep : `bool`</span>
+<span class="sd">           whether old flags will be kept in the fdf file.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c1"># To set a key we first need to figure out if it is</span>
+        <span class="c1"># already present, if so, we will add the new key, just above</span>
+        <span class="c1"># the already present key.</span>
+
+        <span class="c1"># 1. find the old value, and thus the file in which it is found</span>
+        <span class="k">with</span> <span class="bp">self</span><span class="p">:</span>
+            <span class="n">old_value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+            <span class="c1"># Get the file of the containing data</span>
+            <span class="n">top_file</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">file</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">while</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_parent_fh</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">fh</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">fh</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parent_fh</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">fh</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="k">pass</span>
+
+        <span class="c1"># Now we should re-read and edit the file</span>
+        <span class="n">lines</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">top_file</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">readlines</span><span class="p">()</span>
+
+        <span class="k">def</span> <span class="nf">write</span><span class="p">(</span><span class="n">fh</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">return</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">_str</span><span class="p">):</span>
+                <span class="n">fh</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">]))</span>
+                <span class="k">if</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">value</span><span class="p">:</span>
+                    <span class="n">fh</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">fh</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;%block &#39;</span> <span class="o">+</span> <span class="n">key</span> <span class="o">+</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+                <span class="n">fh</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">value</span><span class="p">))</span>
+                <span class="n">fh</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">%e</span><span class="s1">ndblock &#39;</span> <span class="o">+</span> <span class="n">key</span> <span class="o">+</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+
+        <span class="c1"># Now loop, write and edit</span>
+        <span class="n">do_write</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">top_file</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">fh</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">lines</span><span class="p">:</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">line_has_key</span><span class="p">(</span><span class="n">line</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">case</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="ow">and</span> <span class="n">do_write</span><span class="p">:</span>
+                    <span class="n">write</span><span class="p">(</span><span class="n">fh</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">keep</span><span class="p">:</span>
+                        <span class="n">fh</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;# Old value</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+                        <span class="n">fh</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">line</span><span class="p">)</span>
+                    <span class="n">do_write</span> <span class="o">=</span> <span class="kc">False</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">fh</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">line</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="fdfSileSiesta.print"><a class="viewcode-back" href="../../../../sisl/sisl.io.siesta.fdf.html#sisl.io.fdfSileSiesta.print">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">print</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Return a string which is pretty-printing the key+value &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+            <span class="n">s</span> <span class="o">=</span> <span class="s1">&#39;%block &#39;</span> <span class="o">+</span> <span class="n">key</span>
+            <span class="c1"># if the value has any new-values</span>
+            <span class="n">has_nl</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">value</span><span class="p">:</span>
+                <span class="k">if</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span> <span class="ow">in</span> <span class="n">v</span><span class="p">:</span>
+                    <span class="n">has_nl</span> <span class="o">=</span> <span class="kc">True</span>
+                    <span class="k">break</span>
+            <span class="k">if</span> <span class="n">has_nl</span><span class="p">:</span>
+                <span class="c1"># do not skip to next line in next segment</span>
+                <span class="n">value</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
+                <span class="n">s</span> <span class="o">+=</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">value</span><span class="p">))</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">s</span> <span class="o">+=</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="si">{}</span><span class="s1"> </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">value</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">value</span><span class="p">[</span><span class="mi">1</span><span class="p">:]))</span>
+            <span class="n">s</span> <span class="o">+=</span> <span class="s1">&#39;</span><span class="si">%e</span><span class="s1">ndblock &#39;</span> <span class="o">+</span> <span class="n">key</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">s</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="si">{}</span><span class="s1"> </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">s</span></div>
+
+    <span class="nd">@Sile_fh_open</span>
+    <span class="k">def</span> <span class="nf">_read</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Returns the arguments following the keyword in the FDF file &quot;&quot;&quot;</span>
+        <span class="n">found</span><span class="p">,</span> <span class="n">fdf</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">step_to</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">case</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+        <span class="c1"># Check whether the key is piped</span>
+        <span class="k">if</span> <span class="n">found</span> <span class="ow">and</span> <span class="n">fdf</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s1">&#39;&lt;&#39;</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="c1"># Create new fdf-file</span>
+            <span class="n">sub_fdf</span> <span class="o">=</span> <span class="n">fdfSileSiesta</span><span class="p">(</span><span class="n">fdf</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;&lt;&#39;</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">())</span>
+            <span class="k">return</span> <span class="n">sub_fdf</span><span class="o">.</span><span class="n">_read</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">found</span><span class="p">,</span> <span class="n">fdf</span>
+
+    <span class="nd">@Sile_fh_open</span>
+    <span class="k">def</span> <span class="nf">_read_block</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">force</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Returns the arguments following the keyword in the FDF file &quot;&quot;&quot;</span>
+        <span class="n">k</span> <span class="o">=</span> <span class="n">key</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+        <span class="n">f</span><span class="p">,</span> <span class="n">fdf</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">step_to</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">case</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">force</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">f</span><span class="p">:</span>
+            <span class="c1"># The user requests that the block *MUST* be found</span>
+            <span class="k">raise</span> <span class="n">SileError</span><span class="p">((</span><span class="s1">&#39;Requested forced block could not be found: &#39;</span> <span class="o">+</span>
+                             <span class="nb">str</span><span class="p">(</span><span class="n">key</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;.&#39;</span><span class="p">),</span> <span class="bp">self</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">f</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">False</span><span class="p">,</span> <span class="p">[]</span>  <span class="c1"># not found</span>
+
+        <span class="c1"># If the block is piped in from another file...</span>
+        <span class="k">if</span> <span class="s1">&#39;&lt;&#39;</span> <span class="ow">in</span> <span class="n">fdf</span><span class="p">:</span>
+            <span class="c1"># Create new fdf-file</span>
+            <span class="n">sub_fdf</span> <span class="o">=</span> <span class="n">fdfSileSiesta</span><span class="p">(</span><span class="n">fdf</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;&lt;&#39;</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">())</span>
+            <span class="k">with</span> <span class="n">sub_fdf</span><span class="p">:</span>
+                <span class="n">li</span> <span class="o">=</span> <span class="p">[]</span>
+                <span class="n">line</span> <span class="o">=</span> <span class="n">sub_fdf</span><span class="o">.</span><span class="n">readline</span><span class="p">()</span>
+                <span class="k">while</span> <span class="n">line</span> <span class="o">!=</span> <span class="s1">&#39;&#39;</span><span class="p">:</span>
+                    <span class="n">li</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">line</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">))</span>
+                    <span class="n">line</span> <span class="o">=</span> <span class="n">sub_fdf</span><span class="o">.</span><span class="n">readline</span><span class="p">()</span>
+            <span class="k">return</span> <span class="kc">True</span><span class="p">,</span> <span class="n">li</span>
+
+        <span class="n">li</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="n">l</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">readline</span><span class="p">()</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">line_has_key</span><span class="p">(</span><span class="n">l</span><span class="p">,</span> <span class="s1">&#39;</span><span class="si">%e</span><span class="s1">ndblock&#39;</span><span class="p">,</span> <span class="n">case</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="ow">or</span> \
+               <span class="bp">self</span><span class="o">.</span><span class="n">line_has_key</span><span class="p">(</span><span class="n">l</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">case</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+                <span class="k">return</span> <span class="kc">True</span><span class="p">,</span> <span class="n">li</span>
+            <span class="c1"># Append list</span>
+            <span class="n">li</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">l</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="n">SileError</span><span class="p">((</span><span class="s1">&#39;Error on reading block: &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">key</span><span class="p">)</span> <span class="o">+</span>
+                         <span class="s1">&#39; could not find start/end.&#39;</span><span class="p">))</span>
+
+    <span class="nd">@Sile_fh_open</span>
+    <span class="k">def</span> <span class="nf">write_geometry</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">geom</span><span class="p">,</span> <span class="n">fmt</span><span class="o">=</span><span class="s1">&#39;.8f&#39;</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Writes the geometry to the contained file &quot;&quot;&quot;</span>
+        <span class="c1"># Check that we can write to the file</span>
+        <span class="n">sile_raise_write</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+
+        <span class="c1"># Write out the cell</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_write</span><span class="p">(</span><span class="s1">&#39;LatticeConstant 1. Ang</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_write</span><span class="p">(</span><span class="s1">&#39;%block LatticeVectors</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_write</span><span class="p">(</span><span class="s1">&#39; </span><span class="si">{0}</span><span class="s1"> </span><span class="si">{1}</span><span class="s1"> </span><span class="si">{2}</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="o">*</span><span class="n">geom</span><span class="o">.</span><span class="n">cell</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="p">:]))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_write</span><span class="p">(</span><span class="s1">&#39; </span><span class="si">{0}</span><span class="s1"> </span><span class="si">{1}</span><span class="s1"> </span><span class="si">{2}</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="o">*</span><span class="n">geom</span><span class="o">.</span><span class="n">cell</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="p">:]))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_write</span><span class="p">(</span><span class="s1">&#39; </span><span class="si">{0}</span><span class="s1"> </span><span class="si">{1}</span><span class="s1"> </span><span class="si">{2}</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="o">*</span><span class="n">geom</span><span class="o">.</span><span class="n">cell</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="p">:]))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_write</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">%e</span><span class="s1">ndblock LatticeVectors</span><span class="se">\n\n</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_write</span><span class="p">(</span><span class="s1">&#39;NumberOfAtoms </span><span class="si">{0}</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">geom</span><span class="o">.</span><span class="n">na</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_write</span><span class="p">(</span><span class="s1">&#39;AtomicCoordinatesFormat Ang</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_write</span><span class="p">(</span><span class="s1">&#39;%block AtomicCoordinatesAndAtomicSpecies</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+
+        <span class="n">fmt_str</span> <span class="o">=</span> <span class="s1">&#39; {{2:</span><span class="si">{0}</span><span class="s1">}} {{3:</span><span class="si">{0}</span><span class="s1">}} {{4:</span><span class="si">{0}</span><span class="s1">}} {{0}} # {{1}}</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">fmt</span><span class="p">)</span>
+        <span class="c1"># Count for the species</span>
+        <span class="k">for</span> <span class="n">ia</span><span class="p">,</span> <span class="n">a</span><span class="p">,</span> <span class="n">isp</span> <span class="ow">in</span> <span class="n">geom</span><span class="o">.</span><span class="n">iter_species</span><span class="p">():</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_write</span><span class="p">(</span><span class="n">fmt_str</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">isp</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">ia</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="o">*</span><span class="n">geom</span><span class="o">.</span><span class="n">xyz</span><span class="p">[</span><span class="n">ia</span><span class="p">,</span> <span class="p">:]))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_write</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">%e</span><span class="s1">ndblock AtomicCoordinatesAndAtomicSpecies</span><span class="se">\n\n</span><span class="s1">&#39;</span><span class="p">)</span>
+
+        <span class="c1"># Write out species</span>
+        <span class="c1"># First swap key and value</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_write</span><span class="p">(</span><span class="s1">&#39;NumberOfSpecies </span><span class="si">{0}</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">geom</span><span class="o">.</span><span class="n">atom</span><span class="o">.</span><span class="n">atom</span><span class="p">)))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_write</span><span class="p">(</span><span class="s1">&#39;%block ChemicalSpeciesLabel</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">_</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">geom</span><span class="o">.</span><span class="n">atom</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_write</span><span class="p">(</span><span class="s1">&#39; </span><span class="si">{0}</span><span class="s1"> </span><span class="si">{1}</span><span class="s1"> </span><span class="si">{2}</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">a</span><span class="o">.</span><span class="n">Z</span><span class="p">,</span> <span class="n">a</span><span class="o">.</span><span class="n">tag</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_write</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">%e</span><span class="s1">ndblock ChemicalSpeciesLabel</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+
+<div class="viewcode-block" id="fdfSileSiesta.read_supercell"><a class="viewcode-back" href="../../../../sisl/sisl.io.siesta.fdf.html#sisl.io.fdfSileSiesta.read_supercell">[docs]</a>    <span class="k">def</span> <span class="nf">read_supercell</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Returns `SuperCell` object from the FDF file &quot;&quot;&quot;</span>
+        <span class="n">f</span><span class="p">,</span> <span class="n">lc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_read</span><span class="p">(</span><span class="s1">&#39;LatticeConstant&#39;</span><span class="p">)</span>
+
+        <span class="n">s</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">lc</span><span class="o">.</span><span class="n">split</span><span class="p">()[</span><span class="mi">1</span><span class="p">])</span>
+        <span class="k">if</span> <span class="s1">&#39;ang&#39;</span> <span class="ow">in</span> <span class="n">lc</span><span class="o">.</span><span class="n">lower</span><span class="p">():</span>
+            <span class="k">pass</span>
+        <span class="k">elif</span> <span class="s1">&#39;bohr&#39;</span> <span class="ow">in</span> <span class="n">lc</span><span class="o">.</span><span class="n">lower</span><span class="p">():</span>
+            <span class="n">s</span> <span class="o">*=</span> <span class="n">Bohr2Ang</span>
+
+        <span class="c1"># Read in cell</span>
+        <span class="n">cell</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">([</span><span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+
+        <span class="n">f</span><span class="p">,</span> <span class="n">lc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_read_block</span><span class="p">(</span><span class="s1">&#39;LatticeVectors&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">f</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">3</span><span class="p">):</span>
+                <span class="n">cell</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="p">[</span><span class="nb">float</span><span class="p">(</span><span class="n">k</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">lc</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">()[:</span><span class="mi">3</span><span class="p">]]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">f</span><span class="p">,</span> <span class="n">lc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_read_block</span><span class="p">(</span><span class="s1">&#39;LatticeParameters&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">f</span><span class="p">:</span>
+                <span class="n">tmp</span> <span class="o">=</span> <span class="p">[</span><span class="nb">float</span><span class="p">(</span><span class="n">k</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">lc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">()[:</span><span class="mi">6</span><span class="p">]]</span>
+                <span class="n">cell</span> <span class="o">=</span> <span class="n">SuperCell</span><span class="o">.</span><span class="n">tocell</span><span class="p">(</span><span class="o">*</span><span class="n">tmp</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">f</span><span class="p">:</span>
+            <span class="c1"># the fdf file contains neither the latticevectors or parameters</span>
+            <span class="k">raise</span> <span class="n">SileError</span><span class="p">(</span>
+                <span class="s1">&#39;Could not find LatticeVectors or LatticeParameters block in file&#39;</span><span class="p">)</span>
+        <span class="n">cell</span> <span class="o">*=</span> <span class="n">s</span>
+
+        <span class="k">return</span> <span class="n">SuperCell</span><span class="p">(</span><span class="n">cell</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="fdfSileSiesta.read_geometry"><a class="viewcode-back" href="../../../../sisl/sisl.io.siesta.fdf.html#sisl.io.fdfSileSiesta.read_geometry">[docs]</a>    <span class="k">def</span> <span class="nf">read_geometry</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Returns Geometry object from the FDF file</span>
+
+<span class="sd">        NOTE: Interaction range of the Atoms are currently not read.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">f</span><span class="p">,</span> <span class="n">lc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_read</span><span class="p">(</span><span class="s1">&#39;LatticeConstant&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">f</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Could not find LatticeConstant in fdf file.&#39;</span><span class="p">)</span>
+        <span class="n">s</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">lc</span><span class="o">.</span><span class="n">split</span><span class="p">()[</span><span class="mi">1</span><span class="p">])</span>
+        <span class="k">if</span> <span class="s1">&#39;ang&#39;</span> <span class="ow">in</span> <span class="n">lc</span><span class="o">.</span><span class="n">lower</span><span class="p">():</span>
+            <span class="k">pass</span>
+        <span class="k">elif</span> <span class="s1">&#39;bohr&#39;</span> <span class="ow">in</span> <span class="n">lc</span><span class="o">.</span><span class="n">lower</span><span class="p">():</span>
+            <span class="n">s</span> <span class="o">*=</span> <span class="n">Bohr2Ang</span>
+
+        <span class="n">sc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">read_supercell</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="c1"># No fractional coordinates</span>
+        <span class="n">is_frac</span> <span class="o">=</span> <span class="kc">False</span>
+
+        <span class="c1"># Read atom scaling</span>
+        <span class="n">f</span><span class="p">,</span> <span class="n">lc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_read</span><span class="p">(</span><span class="s1">&#39;AtomicCoordinatesFormat&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">f</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s1">&#39;Could not find AtomicCoordinatesFormat in fdf file.&#39;</span><span class="p">)</span>
+        <span class="n">lc</span> <span class="o">=</span> <span class="n">lc</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+        <span class="k">if</span> <span class="s1">&#39;ang&#39;</span> <span class="ow">in</span> <span class="n">lc</span> <span class="ow">or</span> <span class="s1">&#39;notscaledcartesianang&#39;</span> <span class="ow">in</span> <span class="n">lc</span><span class="p">:</span>
+            <span class="n">s</span> <span class="o">=</span> <span class="mf">1.</span>
+            <span class="k">pass</span>
+        <span class="k">elif</span> <span class="s1">&#39;bohr&#39;</span> <span class="ow">in</span> <span class="n">lc</span> <span class="ow">or</span> <span class="s1">&#39;notscaledcartesianbohr&#39;</span> <span class="ow">in</span> <span class="n">lc</span><span class="p">:</span>
+            <span class="n">s</span> <span class="o">=</span> <span class="n">Bohr2Ang</span>
+        <span class="k">elif</span> <span class="s1">&#39;scaledcartesian&#39;</span> <span class="ow">in</span> <span class="n">lc</span><span class="p">:</span>
+            <span class="c1"># the same scaling as the lattice-vectors</span>
+            <span class="k">pass</span>
+        <span class="k">elif</span> <span class="s1">&#39;fractional&#39;</span> <span class="ow">in</span> <span class="n">lc</span> <span class="ow">or</span> <span class="s1">&#39;scaledbylatticevectors&#39;</span> <span class="ow">in</span> <span class="n">lc</span><span class="p">:</span>
+            <span class="c1"># no scaling of coordinates as that is entirely</span>
+            <span class="c1"># done by the latticevectors</span>
+            <span class="n">s</span> <span class="o">=</span> <span class="mf">1.</span>
+            <span class="n">is_frac</span> <span class="o">=</span> <span class="kc">True</span>
+
+        <span class="c1"># If the user requests a shifted geometry</span>
+        <span class="c1"># we correct for this</span>
+        <span class="n">origo</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">([</span><span class="mi">3</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+        <span class="n">run</span> <span class="o">=</span> <span class="s1">&#39;origin&#39;</span> <span class="ow">in</span> <span class="n">kwargs</span>
+        <span class="k">if</span> <span class="n">run</span><span class="p">:</span>
+            <span class="n">run</span> <span class="o">=</span> <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;origin&#39;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">run</span><span class="p">:</span>
+            <span class="n">f</span><span class="p">,</span> <span class="n">lor</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_read_block</span><span class="p">(</span><span class="s1">&#39;AtomicCoordinatesOrigin&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">f</span><span class="p">:</span>
+                <span class="n">origo</span> <span class="o">=</span> <span class="n">ensure_array</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="nb">float</span><span class="p">,</span> <span class="n">lor</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">()[:</span><span class="mi">3</span><span class="p">]))</span> <span class="o">*</span> <span class="n">s</span>
+        <span class="c1"># Origo cannot be interpreted with fractional coordinates</span>
+        <span class="c1"># hence, it is not transformed.</span>
+
+        <span class="c1"># Read atom block</span>
+        <span class="n">f</span><span class="p">,</span> <span class="n">atms</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_read_block</span><span class="p">(</span>
+            <span class="s1">&#39;AtomicCoordinatesAndAtomicSpecies&#39;</span><span class="p">,</span> <span class="n">force</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">f</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s1">&#39;Could not find AtomicCoordinatesAndAtomicSpecies in fdf file.&#39;</span><span class="p">)</span>
+
+        <span class="c1"># Read number of atoms and block</span>
+        <span class="n">f</span><span class="p">,</span> <span class="n">l</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_read</span><span class="p">(</span><span class="s1">&#39;NumberOfAtoms&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">f</span><span class="p">:</span>
+            <span class="c1"># We default to the number of elements in the</span>
+            <span class="c1"># AtomicCoordinatesAndAtomicSpecies block</span>
+            <span class="n">na</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">atms</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">na</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">l</span><span class="o">.</span><span class="n">split</span><span class="p">()[</span><span class="mi">1</span><span class="p">])</span>
+
+        <span class="c1"># Reduce space if number of atoms specified</span>
+        <span class="k">if</span> <span class="n">na</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">atms</span><span class="p">):</span>
+            <span class="c1"># align number of atoms and atms array</span>
+            <span class="n">atms</span> <span class="o">=</span> <span class="n">atms</span><span class="p">[:</span><span class="n">na</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="n">na</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;NumberOfAtoms has been determined to be zero, no atoms.&#39;</span><span class="p">)</span>
+
+        <span class="c1"># Create array</span>
+        <span class="n">xyz</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">([</span><span class="n">na</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+        <span class="n">species</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">([</span><span class="n">na</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">ia</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">na</span><span class="p">):</span>
+            <span class="n">l</span> <span class="o">=</span> <span class="n">atms</span><span class="p">[</span><span class="n">ia</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+            <span class="n">xyz</span><span class="p">[</span><span class="n">ia</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="p">[</span><span class="nb">float</span><span class="p">(</span><span class="n">k</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">l</span><span class="p">[:</span><span class="mi">3</span><span class="p">]]</span>
+            <span class="n">species</span><span class="p">[</span><span class="n">ia</span><span class="p">]</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">l</span><span class="p">[</span><span class="mi">3</span><span class="p">])</span> <span class="o">-</span> <span class="mi">1</span>
+        <span class="k">if</span> <span class="n">is_frac</span><span class="p">:</span>
+            <span class="n">xyz</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">xyz</span><span class="p">,</span> <span class="n">sc</span><span class="o">.</span><span class="n">cell</span><span class="p">)</span>
+        <span class="n">xyz</span> <span class="o">*=</span> <span class="n">s</span>
+        <span class="n">xyz</span> <span class="o">+=</span> <span class="n">origo</span>
+
+        <span class="c1"># Now we read in the species</span>
+        <span class="n">f</span><span class="p">,</span> <span class="n">l</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_read</span><span class="p">(</span><span class="s1">&#39;NumberOfSpecies&#39;</span><span class="p">)</span>
+        <span class="n">ns</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">if</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">ns</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">l</span><span class="o">.</span><span class="n">split</span><span class="p">()[</span><span class="mi">1</span><span class="p">])</span>
+
+        <span class="c1"># Read the block (not strictly needed, if so we simply set all atoms to</span>
+        <span class="c1"># H)</span>
+        <span class="n">f</span><span class="p">,</span> <span class="n">spcs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_read_block</span><span class="p">(</span><span class="s1">&#39;ChemicalSpeciesLabel&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">f</span><span class="p">,</span> <span class="n">spcs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_read_block</span><span class="p">(</span><span class="s1">&#39;Chemical_Species_Label&#39;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">f</span><span class="p">:</span>
+            <span class="c1"># Initialize number of species to</span>
+            <span class="c1"># the length of the ChemicalSpeciesLabel block</span>
+            <span class="k">if</span> <span class="n">ns</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">ns</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">spcs</span><span class="p">)</span>
+            <span class="c1"># Pre-allocate the species array</span>
+            <span class="n">sp</span> <span class="o">=</span> <span class="p">[</span><span class="kc">None</span><span class="p">]</span> <span class="o">*</span> <span class="n">ns</span>
+            <span class="k">for</span> <span class="n">spc</span> <span class="ow">in</span> <span class="n">spcs</span><span class="p">:</span>
+                <span class="c1">#  index Z pseudo-tag</span>
+                <span class="n">l</span> <span class="o">=</span> <span class="n">spc</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+                <span class="n">idx</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">l</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">-</span> <span class="mi">1</span>
+                <span class="c1"># Insert the atom</span>
+                <span class="n">sp</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">Atom</span><span class="p">(</span><span class="n">Z</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">l</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span> <span class="n">tag</span><span class="o">=</span><span class="n">l</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
+
+            <span class="k">if</span> <span class="kc">None</span> <span class="ow">in</span> <span class="n">sp</span><span class="p">:</span>
+                <span class="n">idx</span> <span class="o">=</span> <span class="n">sp</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="p">(</span><span class="s2">&quot;Could not populate entire species list. &quot;</span>
+                     <span class="s2">&quot;Please ensure specie with index </span><span class="si">{}</span><span class="s2"> is present&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">idx</span><span class="p">)))</span>
+
+            <span class="c1"># Create atoms array with species</span>
+            <span class="n">atom</span> <span class="o">=</span> <span class="p">[</span><span class="kc">None</span><span class="p">]</span> <span class="o">*</span> <span class="n">na</span>
+            <span class="k">for</span> <span class="n">ia</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">na</span><span class="p">):</span>
+                <span class="n">atom</span><span class="p">[</span><span class="n">ia</span><span class="p">]</span> <span class="o">=</span> <span class="n">sp</span><span class="p">[</span><span class="n">species</span><span class="p">[</span><span class="n">ia</span><span class="p">]]</span>
+
+            <span class="k">if</span> <span class="kc">None</span> <span class="ow">in</span> <span class="n">atom</span><span class="p">:</span>
+                <span class="n">idx</span> <span class="o">=</span> <span class="n">atom</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="p">(</span><span class="s2">&quot;Could not populate entire atomic list list. &quot;</span>
+                     <span class="s2">&quot;Please ensure atom with index </span><span class="si">{}</span><span class="s2"> is present&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">idx</span><span class="p">)))</span>
+
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># Default atom (hydrogen)</span>
+            <span class="n">atom</span> <span class="o">=</span> <span class="n">Atom</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+            <span class="c1"># Force number of species to 1</span>
+            <span class="n">ns</span> <span class="o">=</span> <span class="mi">1</span>
+
+        <span class="c1"># Create and return geometry object</span>
+        <span class="k">return</span> <span class="n">Geometry</span><span class="p">(</span><span class="n">xyz</span><span class="p">,</span> <span class="n">atom</span><span class="o">=</span><span class="n">atom</span><span class="p">,</span> <span class="n">sc</span><span class="o">=</span><span class="n">sc</span><span class="p">)</span></div>
+
+    <span class="nd">@dec_default_AP</span><span class="p">(</span><span class="s2">&quot;Manipulate a FDF file.&quot;</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">ArgumentParser</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">p</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Returns the arguments that is available for this Sile &quot;&quot;&quot;</span>
+        <span class="kn">import</span> <span class="nn">argparse</span>
+
+        <span class="c1"># We must by-pass this fdf-file</span>
+        <span class="kn">import</span> <span class="nn">sisl.io.siesta</span> <span class="k">as</span> <span class="nn">sis</span>
+
+        <span class="c1"># The fdf parser is more complicated</span>
+
+        <span class="c1"># It is based on different settings based on the</span>
+
+        <span class="n">sp</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">add_subparsers</span><span class="p">(</span><span class="n">help</span><span class="o">=</span><span class="s2">&quot;Determine which part of the fdf-file that should be processed.&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Get the label which retains all the sub-modules</span>
+        <span class="n">label</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;SystemLabel&#39;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="s1">&#39;siesta&#39;</span><span class="p">)</span>
+
+        <span class="c1"># The default on all sub-parsers are the retrieval and setting</span>
+
+        <span class="n">d</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s1">&#39;_fdf&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="p">,</span>
+            <span class="s1">&#39;_fdf_first&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="p">}</span>
+        <span class="n">namespace</span> <span class="o">=</span> <span class="n">default_namespace</span><span class="p">(</span><span class="o">**</span><span class="n">d</span><span class="p">)</span>
+
+        <span class="n">ep</span> <span class="o">=</span> <span class="n">sp</span><span class="o">.</span><span class="n">add_parser</span><span class="p">(</span><span class="s1">&#39;edit&#39;</span><span class="p">,</span>
+                           <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Change or read and print data from the fdf file&#39;</span><span class="p">)</span>
+
+        <span class="c1"># As the fdf may provide additional stuff, we do not add EVERYTHING from</span>
+        <span class="c1"># the Geometry class.</span>
+        <span class="k">class</span> <span class="nc">FDFAdd</span><span class="p">(</span><span class="n">argparse</span><span class="o">.</span><span class="n">Action</span><span class="p">):</span>
+
+            <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parser</span><span class="p">,</span> <span class="n">ns</span><span class="p">,</span> <span class="n">values</span><span class="p">,</span> <span class="n">option_string</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+                <span class="n">key</span> <span class="o">=</span> <span class="n">values</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="n">val</span> <span class="o">=</span> <span class="n">values</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+                <span class="k">if</span> <span class="n">ns</span><span class="o">.</span><span class="n">_fdf_first</span><span class="p">:</span>
+                    <span class="c1"># Append to the end of the file</span>
+                    <span class="k">with</span> <span class="n">ns</span><span class="o">.</span><span class="n">_fdf</span> <span class="k">as</span> <span class="n">fd</span><span class="p">:</span>
+                        <span class="n">fd</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n\n</span><span class="s1"># SISL added keywords</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+                    <span class="nb">setattr</span><span class="p">(</span><span class="n">ns</span><span class="p">,</span> <span class="s1">&#39;_fdf_first&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+                <span class="n">ns</span><span class="o">.</span><span class="n">_fdf</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">val</span><span class="p">)</span>
+        <span class="n">ep</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--set&#39;</span><span class="p">,</span> <span class="s1">&#39;-s&#39;</span><span class="p">,</span> <span class="n">nargs</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">metavar</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;KEY&#39;</span><span class="p">,</span> <span class="s1">&#39;VALUE&#39;</span><span class="p">),</span>
+                        <span class="n">action</span><span class="o">=</span><span class="n">FDFAdd</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Add a key to the FDF file. If it already exists it will be overwritten&#39;</span><span class="p">)</span>
+
+        <span class="k">class</span> <span class="nc">FDFGet</span><span class="p">(</span><span class="n">argparse</span><span class="o">.</span><span class="n">Action</span><span class="p">):</span>
+
+            <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parser</span><span class="p">,</span> <span class="n">ns</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">option_string</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+                <span class="c1"># Retrieve the value in standard units</span>
+                <span class="c1"># Currently, we write out the unit &quot;as-is&quot;</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">val</span> <span class="o">=</span> <span class="n">ns</span><span class="o">.</span><span class="n">_fdf</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">value</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">with_unit</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span>
+                <span class="k">except</span><span class="p">:</span>
+                    <span class="n">val</span> <span class="o">=</span> <span class="n">ns</span><span class="o">.</span><span class="n">_fdf</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">value</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+                <span class="k">if</span> <span class="n">val</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;# </span><span class="si">{}</span><span class="s1"> is currently not in the FDF file &#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">value</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+                    <span class="k">return</span>
+
+                <span class="nb">print</span><span class="p">(</span><span class="n">ns</span><span class="o">.</span><span class="n">_fdf</span><span class="o">.</span><span class="n">print</span><span class="p">(</span><span class="n">value</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">val</span><span class="p">))</span>
+
+        <span class="n">ep</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--get&#39;</span><span class="p">,</span> <span class="s1">&#39;-g&#39;</span><span class="p">,</span> <span class="n">nargs</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">metavar</span><span class="o">=</span><span class="s1">&#39;KEY&#39;</span><span class="p">,</span>
+                        <span class="n">action</span><span class="o">=</span><span class="n">FDFGet</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Print (to stdout) the value of the key in the FDF file.&#39;</span><span class="p">)</span>
+
+        <span class="c1"># If the XV file exists, it has precedence</span>
+        <span class="c1"># of the contained geometry (we will issue</span>
+        <span class="c1"># a warning in that case)</span>
+        <span class="n">f</span> <span class="o">=</span> <span class="n">label</span> <span class="o">+</span> <span class="s1">&#39;.XV&#39;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">osp</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">f</span><span class="p">):</span>
+                <span class="n">geom</span> <span class="o">=</span> <span class="n">sis</span><span class="o">.</span><span class="n">XVSileSiesta</span><span class="p">(</span><span class="n">f</span><span class="p">)</span><span class="o">.</span><span class="n">read_geometry</span><span class="p">()</span>
+                <span class="n">warn</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s2">&quot;Reading geometry from the XV file instead of the fdf-file!&quot;</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">geom</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">read_geometry</span><span class="p">()</span>
+
+            <span class="n">tmp_p</span> <span class="o">=</span> <span class="n">sp</span><span class="o">.</span><span class="n">add_parser</span><span class="p">(</span><span class="s1">&#39;geom&#39;</span><span class="p">,</span>
+                                  <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Edit the contained geometry in the file&quot;</span><span class="p">)</span>
+            <span class="n">tmp_p</span><span class="p">,</span> <span class="n">tmp_ns</span> <span class="o">=</span> <span class="n">geom</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">(</span><span class="n">tmp_p</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+            <span class="n">namespace</span> <span class="o">=</span> <span class="n">merge_instances</span><span class="p">(</span><span class="n">namespace</span><span class="p">,</span> <span class="n">tmp_ns</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="k">pass</span>
+
+        <span class="n">f</span> <span class="o">=</span> <span class="n">label</span> <span class="o">+</span> <span class="s1">&#39;.bands&#39;</span>
+        <span class="k">if</span> <span class="n">osp</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">f</span><span class="p">):</span>
+            <span class="n">tmp_p</span> <span class="o">=</span> <span class="n">sp</span><span class="o">.</span><span class="n">add_parser</span><span class="p">(</span><span class="s1">&#39;band&#39;</span><span class="p">,</span>
+                                  <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Manipulate the bands file from the SIESTA simulation&quot;</span><span class="p">)</span>
+            <span class="n">tmp_p</span><span class="p">,</span> <span class="n">tmp_ns</span> <span class="o">=</span> <span class="n">sis</span><span class="o">.</span><span class="n">bandsSileSiesta</span><span class="p">(</span><span class="n">f</span><span class="p">)</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">(</span><span class="n">tmp_p</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+            <span class="n">namespace</span> <span class="o">=</span> <span class="n">merge_instances</span><span class="p">(</span><span class="n">namespace</span><span class="p">,</span> <span class="n">tmp_ns</span><span class="p">)</span>
+
+        <span class="n">f</span> <span class="o">=</span> <span class="n">label</span> <span class="o">+</span> <span class="s1">&#39;.TBT.nc&#39;</span>
+        <span class="k">if</span> <span class="n">osp</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">f</span><span class="p">):</span>
+            <span class="n">tmp_p</span> <span class="o">=</span> <span class="n">sp</span><span class="o">.</span><span class="n">add_parser</span><span class="p">(</span><span class="s1">&#39;tbt&#39;</span><span class="p">,</span>
+                                  <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Manipulate the tbtrans output file&quot;</span><span class="p">)</span>
+            <span class="n">tmp_p</span><span class="p">,</span> <span class="n">tmp_ns</span> <span class="o">=</span> <span class="n">sis</span><span class="o">.</span><span class="n">tbtncSileSiesta</span><span class="p">(</span><span class="n">f</span><span class="p">)</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">(</span><span class="n">tmp_p</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+            <span class="n">namespace</span> <span class="o">=</span> <span class="n">merge_instances</span><span class="p">(</span><span class="n">namespace</span><span class="p">,</span> <span class="n">tmp_ns</span><span class="p">)</span>
+
+        <span class="n">f</span> <span class="o">=</span> <span class="n">label</span> <span class="o">+</span> <span class="s1">&#39;.TBT.Proj.nc&#39;</span>
+        <span class="k">if</span> <span class="n">osp</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">f</span><span class="p">):</span>
+            <span class="n">tmp_p</span> <span class="o">=</span> <span class="n">sp</span><span class="o">.</span><span class="n">add_parser</span><span class="p">(</span><span class="s1">&#39;tbt-proj&#39;</span><span class="p">,</span>
+                                  <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Manipulate the tbtrans projection output file&quot;</span><span class="p">)</span>
+            <span class="n">tmp_p</span><span class="p">,</span> <span class="n">tmp_ns</span> <span class="o">=</span> <span class="n">sis</span><span class="o">.</span><span class="n">tbtprojncSileSiesta</span><span class="p">(</span><span class="n">f</span><span class="p">)</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">(</span><span class="n">tmp_p</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+            <span class="n">namespace</span> <span class="o">=</span> <span class="n">merge_instances</span><span class="p">(</span><span class="n">namespace</span><span class="p">,</span> <span class="n">tmp_ns</span><span class="p">)</span>
+
+        <span class="n">f</span> <span class="o">=</span> <span class="n">label</span> <span class="o">+</span> <span class="s1">&#39;.PHT.nc&#39;</span>
+        <span class="k">if</span> <span class="n">osp</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">f</span><span class="p">):</span>
+            <span class="n">tmp_p</span> <span class="o">=</span> <span class="n">sp</span><span class="o">.</span><span class="n">add_parser</span><span class="p">(</span><span class="s1">&#39;pht&#39;</span><span class="p">,</span>
+                                  <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Manipulate the phtrans output file&quot;</span><span class="p">)</span>
+            <span class="n">tmp_p</span><span class="p">,</span> <span class="n">tmp_ns</span> <span class="o">=</span> <span class="n">sis</span><span class="o">.</span><span class="n">phtncSileSiesta</span><span class="p">(</span><span class="n">f</span><span class="p">)</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">(</span><span class="n">tmp_p</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+            <span class="n">namespace</span> <span class="o">=</span> <span class="n">merge_instances</span><span class="p">(</span><span class="n">namespace</span><span class="p">,</span> <span class="n">tmp_ns</span><span class="p">)</span>
+
+        <span class="n">f</span> <span class="o">=</span> <span class="n">label</span> <span class="o">+</span> <span class="s1">&#39;.PHT.Proj.nc&#39;</span>
+        <span class="k">if</span> <span class="n">osp</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">f</span><span class="p">):</span>
+            <span class="n">tmp_p</span> <span class="o">=</span> <span class="n">sp</span><span class="o">.</span><span class="n">add_parser</span><span class="p">(</span><span class="s1">&#39;pht-proj&#39;</span><span class="p">,</span>
+                                  <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Manipulate the phtrans projection output file&quot;</span><span class="p">)</span>
+            <span class="n">tmp_p</span><span class="p">,</span> <span class="n">tmp_ns</span> <span class="o">=</span> <span class="n">sis</span><span class="o">.</span><span class="n">phtprojncSileSiesta</span><span class="p">(</span><span class="n">f</span><span class="p">)</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">(</span><span class="n">tmp_p</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+            <span class="n">namespace</span> <span class="o">=</span> <span class="n">merge_instances</span><span class="p">(</span><span class="n">namespace</span><span class="p">,</span> <span class="n">tmp_ns</span><span class="p">)</span>
+
+        <span class="n">f</span> <span class="o">=</span> <span class="n">label</span> <span class="o">+</span> <span class="s1">&#39;.nc&#39;</span>
+        <span class="k">if</span> <span class="n">osp</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">f</span><span class="p">):</span>
+            <span class="n">tmp_p</span> <span class="o">=</span> <span class="n">sp</span><span class="o">.</span><span class="n">add_parser</span><span class="p">(</span><span class="s1">&#39;nc&#39;</span><span class="p">,</span>
+                                  <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Manipulate the SIESTA output file&quot;</span><span class="p">)</span>
+            <span class="n">tmp_p</span><span class="p">,</span> <span class="n">tmp_ns</span> <span class="o">=</span> <span class="n">sis</span><span class="o">.</span><span class="n">ncSileSiesta</span><span class="p">(</span><span class="n">f</span><span class="p">)</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">(</span><span class="n">tmp_p</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+            <span class="n">namespace</span> <span class="o">=</span> <span class="n">merge_instances</span><span class="p">(</span><span class="n">namespace</span><span class="p">,</span> <span class="n">tmp_ns</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">p</span><span class="p">,</span> <span class="n">namespace</span></div>
+
+
+<span class="n">add_sile</span><span class="p">(</span><span class="s1">&#39;fdf&#39;</span><span class="p">,</span> <span class="n">fdfSileSiesta</span><span class="p">,</span> <span class="n">case</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">gzip</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+
+           </div>
+           <div class="articleComments">
+            
+           </div>
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2015-2017, Nick R. Papior.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../../../../',
+            VERSION:'0.8.5-77',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+      <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+      <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../../../../_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>
