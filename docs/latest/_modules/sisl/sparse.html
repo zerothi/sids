@@ -65,7 +65,7 @@
             
             
               <div class="version">
-                0.8.5-77
+                0.8.5-87
               </div>
             
           
@@ -752,21 +752,23 @@
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[:</span><span class="mi">2</span><span class="p">]</span> <span class="o">!=</span> <span class="n">other</span><span class="o">.</span><span class="n">shape</span><span class="p">[:</span><span class="mi">2</span><span class="p">]:</span>
             <span class="k">return</span> <span class="kc">False</span>
 
+        <span class="n">sptr</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ptr</span><span class="o">.</span><span class="n">view</span><span class="p">()</span>
+        <span class="n">sncol</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ncol</span><span class="o">.</span><span class="n">view</span><span class="p">()</span>
+        <span class="n">scol</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">col</span><span class="o">.</span><span class="n">view</span><span class="p">()</span>
+        <span class="n">optr</span> <span class="o">=</span> <span class="n">other</span><span class="o">.</span><span class="n">ptr</span><span class="o">.</span><span class="n">view</span><span class="p">()</span>
+        <span class="n">oncol</span> <span class="o">=</span> <span class="n">other</span><span class="o">.</span><span class="n">ncol</span><span class="o">.</span><span class="n">view</span><span class="p">()</span>
+        <span class="n">ocol</span> <span class="o">=</span> <span class="n">other</span><span class="o">.</span><span class="n">col</span><span class="o">.</span><span class="n">view</span><span class="p">()</span>
+
+        <span class="c1"># Easy check for non-equal number of elements</span>
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">count_nonzero</span><span class="p">(</span><span class="n">sncol</span> <span class="o">==</span> <span class="n">oncol</span><span class="p">)</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
+            <span class="k">return</span> <span class="kc">False</span>
+
         <span class="k">def</span> <span class="nf">samesect1d</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">):</span>
-            <span class="n">n</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">a</span><span class="p">)</span>
-            <span class="k">if</span> <span class="n">n</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">b</span><span class="p">):</span>
-                <span class="k">return</span> <span class="kc">False</span>
-            <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="n">intersect1d</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">))</span> <span class="o">==</span> <span class="n">n</span>
+            <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="n">intersect1d</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">))</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">a</span><span class="p">)</span>
 
         <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
-            <span class="c1"># pointers</span>
-            <span class="n">sptr</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ptr</span><span class="p">[</span><span class="n">r</span><span class="p">]</span>
-            <span class="n">sn</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ncol</span><span class="p">[</span><span class="n">r</span><span class="p">]</span>
-            <span class="n">optr</span> <span class="o">=</span> <span class="n">other</span><span class="o">.</span><span class="n">ptr</span><span class="p">[</span><span class="n">r</span><span class="p">]</span>
-            <span class="n">on</span> <span class="o">=</span> <span class="n">other</span><span class="o">.</span><span class="n">ncol</span><span class="p">[</span><span class="n">r</span><span class="p">]</span>
-
-            <span class="k">if</span> <span class="ow">not</span> <span class="n">samesect1d</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">col</span><span class="p">[</span><span class="n">sptr</span><span class="p">:</span><span class="n">sptr</span><span class="o">+</span><span class="n">sn</span><span class="p">],</span>
-                              <span class="n">other</span><span class="o">.</span><span class="n">col</span><span class="p">[</span><span class="n">optr</span><span class="p">:</span><span class="n">optr</span><span class="o">+</span><span class="n">on</span><span class="p">]):</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">samesect1d</span><span class="p">(</span><span class="n">scol</span><span class="p">[</span><span class="n">sptr</span><span class="p">[</span><span class="n">r</span><span class="p">]:</span><span class="n">sptr</span><span class="p">[</span><span class="n">r</span><span class="p">]</span><span class="o">+</span><span class="n">sncol</span><span class="p">[</span><span class="n">r</span><span class="p">]],</span>
+                              <span class="n">ocol</span><span class="p">[</span><span class="n">optr</span><span class="p">[</span><span class="n">r</span><span class="p">]:</span><span class="n">optr</span><span class="p">[</span><span class="n">r</span><span class="p">]</span><span class="o">+</span><span class="n">oncol</span><span class="p">[</span><span class="n">r</span><span class="p">]]):</span>
                 <span class="k">return</span> <span class="kc">False</span>
         <span class="k">return</span> <span class="kc">True</span></div>
 
@@ -1785,7 +1787,7 @@
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'../../',
-            VERSION:'0.8.5-77',
+            VERSION:'0.8.5-87',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true,
