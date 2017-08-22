@@ -65,7 +65,7 @@
             
             
               <div class="version">
-                0.8.5-87
+                0.8.5-125
               </div>
             
           
@@ -170,7 +170,6 @@
 
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 
-<span class="kn">from</span> <span class="nn">sisl</span> <span class="k">import</span> <span class="n">Geometry</span>
 <span class="kn">from</span> <span class="nn">sisl.utils.misc</span> <span class="k">import</span> <span class="n">str_spec</span>
 <span class="kn">from</span> <span class="nn">._help</span> <span class="k">import</span> <span class="o">*</span>
 
@@ -434,16 +433,19 @@
     <span class="k">return</span> <span class="n">sile</span><span class="p">(</span><span class="n">str_spec</span><span class="p">(</span><span class="n">file</span><span class="p">)[</span><span class="mi">0</span><span class="p">],</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
 
 
-<div class="viewcode-block" id="get_siles"><a class="viewcode-back" href="../../../sisl/sisl.io.sile.html#sisl.io.get_siles">[docs]</a><span class="k">def</span> <span class="nf">get_siles</span><span class="p">(</span><span class="n">attrs</span><span class="o">=</span><span class="p">[</span><span class="kc">None</span><span class="p">]):</span>
+<div class="viewcode-block" id="get_siles"><a class="viewcode-back" href="../../../sisl/sisl.io.sile.html#sisl.io.get_siles">[docs]</a><span class="k">def</span> <span class="nf">get_siles</span><span class="p">(</span><span class="n">attrs</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot; Returns all siles with a specific attribute (or all)</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
 <span class="sd">    attrs : list of attribute names</span>
 <span class="sd">       limits the returned sile-objects to those that have</span>
-<span class="sd">       the given attributes `hasattr(sile, attrs)`</span>
+<span class="sd">       the given attributes `hasattr(sile, attrs)`, default ``[None]``</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">global</span> <span class="n">__siles</span>
+
+    <span class="k">if</span> <span class="n">attrs</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">attrs</span> <span class="o">=</span> <span class="p">[</span><span class="kc">None</span><span class="p">]</span>
 
     <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">attrs</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="n">attrs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="n">__siles</span><span class="p">)</span>
@@ -461,8 +463,12 @@
 <div class="viewcode-block" id="BaseSile"><a class="viewcode-back" href="../../../sisl/sisl.io.sile.html#sisl.io.BaseSile">[docs]</a><span class="k">class</span> <span class="nc">BaseSile</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot; Base class for the Siles &quot;&quot;&quot;</span>
 
+<div class="viewcode-block" id="BaseSile.exist"><a class="viewcode-back" href="../../../sisl/sisl.io.sile.html#sisl.io.BaseSile.exist">[docs]</a>    <span class="k">def</span> <span class="nf">exist</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Query whether the file exists &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">isfile</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">file</span><span class="p">)</span></div>
+
 <div class="viewcode-block" id="BaseSile.read"><a class="viewcode-back" href="../../../sisl/sisl.io.sile.html#sisl.io.BaseSile.read">[docs]</a>    <span class="k">def</span> <span class="nf">read</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot; Generic read method which should be overloaded in child-classes </span>
+        <span class="sd">&quot;&quot;&quot; Generic read method which should be overloaded in child-classes</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
@@ -572,22 +578,22 @@
         <span class="k">return</span> <span class="p">{}</span>
 
     <span class="c1"># Define the custom ArgumentParser</span>
-    <span class="k">def</span> <span class="nf">ArgumentParser</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parser</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">ArgumentParser</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">p</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Returns the arguments that may be available for this Sile</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
-<span class="sd">        parser: ArgumentParser</span>
+<span class="sd">        p: ArgumentParser</span>
 <span class="sd">           the argument parser to add the arguments to.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;The ArgumentParser of &#39;&quot;</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="o">+</span><span class="s2">&quot;&#39; has not been implemented yet.&quot;</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">ArgumentParser_out</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parser</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">ArgumentParser_out</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">p</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Appends additional arguments based on the output of the file</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
-<span class="sd">        parser: ArgumentParser</span>
+<span class="sd">        p: ArgumentParser</span>
 <span class="sd">           the argument parser to add the arguments to.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">pass</span>
@@ -639,6 +645,8 @@
 
 <span class="sd">        This method must **never** be overwritten.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Initialize the non-comment sile</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_comment</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_setup</span><span class="p">()</span>
 
     <span class="k">def</span> <span class="nf">_open</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -821,7 +829,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_lvl</span> <span class="o">=</span> <span class="n">lvl</span>
         <span class="c1"># Initialize the _data dictionary for access == 1</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_data</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
-        <span class="k">if</span> <span class="n">isfile</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">file</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">exist</span><span class="p">():</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_access</span> <span class="o">=</span> <span class="n">access</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="c1"># If it has not been created we should not try</span>
@@ -830,7 +838,6 @@
 
         <span class="c1"># The CDF file can easily open the file</span>
         <span class="k">if</span> <span class="n">_open</span><span class="p">:</span>
-            <span class="k">global</span> <span class="n">_import_netCDF4</span>
             <span class="n">_import_netCDF4</span><span class="p">()</span>
             <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="p">[</span><span class="s1">&#39;fh&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">_netCDF4</span><span class="o">.</span><span class="n">Dataset</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">file</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mode</span><span class="p">,</span>
                                                    <span class="nb">format</span><span class="o">=</span><span class="s1">&#39;NETCDF4&#39;</span><span class="p">)</span>
@@ -1010,7 +1017,7 @@
 <span class="sd">        variable : ``bool`` (`True`)</span>
 <span class="sd">           whether the iterator yields `Variable` instances</span>
 <span class="sd">        levels : ``int`` (`-1`)</span>
-<span class="sd">           number of levels to traverse, with respect to ``root`` variable, i.e. number of </span>
+<span class="sd">           number of levels to traverse, with respect to ``root`` variable, i.e. number of</span>
 <span class="sd">           sub-groups this iterator will return.</span>
 <span class="sd">        root : ``str`` (`None`)</span>
 <span class="sd">           the base root to start iterating from.</span>
@@ -1155,7 +1162,7 @@
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'../../../',
-            VERSION:'0.8.5-87',
+            VERSION:'0.8.5-125',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true,

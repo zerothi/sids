@@ -65,7 +65,7 @@
             
             
               <div class="version">
-                0.8.5-87
+                0.8.5-125
               </div>
             
           
@@ -168,17 +168,56 @@
 <span class="sd">&quot;&quot;&quot;</span>
 <span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">division</span>
 
+<span class="kn">import</span> <span class="nn">ast</span>
+<span class="kn">import</span> <span class="nn">operator</span> <span class="k">as</span> <span class="nn">op</span>
 <span class="kn">from</span> <span class="nn">numbers</span> <span class="k">import</span> <span class="n">Integral</span>
 <span class="kn">from</span> <span class="nn">math</span> <span class="k">import</span> <span class="n">pi</span>
 
 <span class="kn">from</span> <span class="nn">sisl._help</span> <span class="k">import</span> <span class="n">_range</span> <span class="k">as</span> <span class="nb">range</span>
 
 <span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;merge_instances&#39;</span><span class="p">,</span> <span class="s1">&#39;str_spec&#39;</span><span class="p">,</span> <span class="s1">&#39;direction&#39;</span><span class="p">,</span> <span class="s1">&#39;angle&#39;</span><span class="p">]</span>
-<span class="n">__all__</span> <span class="o">+=</span> <span class="p">[</span><span class="s1">&#39;iter_shape&#39;</span><span class="p">]</span>
+<span class="n">__all__</span> <span class="o">+=</span> <span class="p">[</span><span class="s1">&#39;iter_shape&#39;</span><span class="p">,</span> <span class="s1">&#39;math_eval&#39;</span><span class="p">]</span>
+
+
+<span class="c1"># supported operators</span>
+<span class="n">_operators</span> <span class="o">=</span> <span class="p">{</span><span class="n">ast</span><span class="o">.</span><span class="n">Add</span><span class="p">:</span> <span class="n">op</span><span class="o">.</span><span class="n">add</span><span class="p">,</span> <span class="n">ast</span><span class="o">.</span><span class="n">Sub</span><span class="p">:</span> <span class="n">op</span><span class="o">.</span><span class="n">sub</span><span class="p">,</span> <span class="n">ast</span><span class="o">.</span><span class="n">Mult</span><span class="p">:</span> <span class="n">op</span><span class="o">.</span><span class="n">mul</span><span class="p">,</span>
+              <span class="n">ast</span><span class="o">.</span><span class="n">Div</span><span class="p">:</span> <span class="n">op</span><span class="o">.</span><span class="n">truediv</span><span class="p">,</span> <span class="n">ast</span><span class="o">.</span><span class="n">Pow</span><span class="p">:</span> <span class="n">op</span><span class="o">.</span><span class="n">pow</span><span class="p">,</span> <span class="n">ast</span><span class="o">.</span><span class="n">BitXor</span><span class="p">:</span> <span class="n">op</span><span class="o">.</span><span class="n">xor</span><span class="p">,</span>
+              <span class="n">ast</span><span class="o">.</span><span class="n">USub</span><span class="p">:</span> <span class="n">op</span><span class="o">.</span><span class="n">neg</span><span class="p">}</span>
+
+
+<div class="viewcode-block" id="math_eval"><a class="viewcode-back" href="../../../sisl/sisl.utils.misc.html#sisl.utils.misc.math_eval">[docs]</a><span class="k">def</span> <span class="nf">math_eval</span><span class="p">(</span><span class="n">expr</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Evaluate a mathematical expression using a safe evaluation method</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    expr : str</span>
+<span class="sd">       the string to be evaluated using math</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; eval_expr(&#39;2^6&#39;)</span>
+<span class="sd">    4</span>
+<span class="sd">    &gt;&gt;&gt; eval_expr(&#39;2**6&#39;)</span>
+<span class="sd">    64</span>
+<span class="sd">    &gt;&gt;&gt; eval_expr(&#39;1 + 2*3**(4^5) / (6 + -7)&#39;)</span>
+<span class="sd">    -5.0</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">_eval</span><span class="p">(</span><span class="n">ast</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">expr</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;eval&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">body</span><span class="p">)</span></div>
+
+
+<span class="k">def</span> <span class="nf">_eval</span><span class="p">(</span><span class="n">node</span><span class="p">):</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">ast</span><span class="o">.</span><span class="n">Num</span><span class="p">):</span> <span class="c1"># &lt;number&gt;</span>
+        <span class="k">return</span> <span class="n">node</span><span class="o">.</span><span class="n">n</span>
+    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">ast</span><span class="o">.</span><span class="n">BinOp</span><span class="p">):</span> <span class="c1"># &lt;left&gt; &lt;operator&gt; &lt;right&gt;</span>
+        <span class="k">return</span> <span class="n">_operators</span><span class="p">[</span><span class="nb">type</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">op</span><span class="p">)](</span><span class="n">_eval</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">left</span><span class="p">),</span> <span class="n">_eval</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">right</span><span class="p">))</span>
+    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">ast</span><span class="o">.</span><span class="n">UnaryOp</span><span class="p">):</span> <span class="c1"># &lt;operator&gt; &lt;operand&gt; e.g., -1</span>
+        <span class="k">return</span> <span class="n">_operators</span><span class="p">[</span><span class="nb">type</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">op</span><span class="p">)](</span><span class="n">_eval</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">operand</span><span class="p">))</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="n">node</span><span class="p">)</span>
 
 
 <div class="viewcode-block" id="merge_instances"><a class="viewcode-back" href="../../../sisl/sisl.utils.misc.html#sisl.utils.misc.merge_instances">[docs]</a><span class="k">def</span> <span class="nf">merge_instances</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot; Merges an arbitrary number of instances together. </span>
+    <span class="sd">&quot;&quot;&quot; Merges an arbitrary number of instances together.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -197,7 +236,7 @@
 
 
 <div class="viewcode-block" id="iter_shape"><a class="viewcode-back" href="../../../sisl/sisl.utils.misc.html#sisl.utils.misc.iter_shape">[docs]</a><span class="k">def</span> <span class="nf">iter_shape</span><span class="p">(</span><span class="n">shape</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot; Generator for iterating a shape by returning consecutive slices </span>
+    <span class="sd">&quot;&quot;&quot; Generator for iterating a shape by returning consecutive slices</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -316,10 +355,10 @@
 <span class="sd">       If `s` ends with &#39;r&#39; it returns in radians.</span>
 <span class="sd">       If `s` ends with &#39;a&#39; it returns in regular angle.</span>
 
-<span class="sd">       `s` may be any mathematical equation which can be </span>
+<span class="sd">       `s` may be any mathematical equation which can be</span>
 <span class="sd">       intercepted through ``eval``.</span>
 <span class="sd">    radians : bool</span>
-<span class="sd">       Whether the returned angle is in radians. </span>
+<span class="sd">       Whether the returned angle is in radians.</span>
 <span class="sd">       Note than an &#39;r&#39; at the end of `s` has precedence.</span>
 <span class="sd">    in_radians : bool</span>
 <span class="sd">       Whether the calculated angle is in radians. </span>
@@ -373,7 +412,7 @@
     <span class="c1"># We have now transformed all values</span>
     <span class="c1"># to the correct numerical values and we calculate</span>
     <span class="c1"># the expression</span>
-    <span class="n">ra</span> <span class="o">=</span> <span class="nb">eval</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
+    <span class="n">ra</span> <span class="o">=</span> <span class="n">math_eval</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">radians</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">in_radians</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">ra</span> <span class="o">/</span> <span class="mf">180.</span> <span class="o">*</span> <span class="n">pi</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">radians</span> <span class="ow">and</span> <span class="n">in_radians</span><span class="p">:</span>
@@ -418,7 +457,7 @@
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'../../../',
-            VERSION:'0.8.5-87',
+            VERSION:'0.8.5-125',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true,

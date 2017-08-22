@@ -65,7 +65,7 @@
             
             
               <div class="version">
-                0.8.5-87
+                0.8.5-125
               </div>
             
           
@@ -167,18 +167,17 @@
 
 <span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">print_function</span><span class="p">,</span> <span class="n">division</span>
 
-<span class="kn">import</span> <span class="nn">warnings</span>
 <span class="kn">import</span> <span class="nn">types</span>
-<span class="kn">from</span> <span class="nn">numbers</span> <span class="k">import</span> <span class="n">Integral</span>
+<span class="kn">from</span> <span class="nn">numbers</span> <span class="k">import</span> <span class="n">Integral</span><span class="p">,</span> <span class="n">Real</span>
 
 <span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">pi</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="nb">sum</span><span class="p">,</span> <span class="n">dot</span>
 
-<span class="kn">from</span> <span class="nn">sisl.supercell</span> <span class="k">import</span> <span class="n">SuperCell</span><span class="p">,</span> <span class="n">SuperCellChild</span>
+<span class="kn">from</span> <span class="nn">sisl.supercell</span> <span class="k">import</span> <span class="n">SuperCell</span>
 
 
-<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;BrillouinZone&#39;</span><span class="p">,</span> <span class="s1">&#39;PathBZ&#39;</span><span class="p">]</span>
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;BrillouinZone&#39;</span><span class="p">,</span> <span class="s1">&#39;MonkhorstPackBZ&#39;</span><span class="p">,</span> <span class="s1">&#39;PathBZ&#39;</span><span class="p">]</span>
 
 
 <div class="viewcode-block" id="BrillouinZone"><a class="viewcode-back" href="../../../sisl/sisl.physics.brillouinzone.html#sisl.physics.brillouinzone.BrillouinZone">[docs]</a><span class="k">class</span> <span class="nc">BrillouinZone</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
@@ -334,7 +333,7 @@
 <span class="sd">        Examples</span>
 <span class="sd">        --------</span>
 <span class="sd">        &gt;&gt;&gt; obj = BrillouinZone(Hamiltonian)</span>
-<span class="sd">        &gt;&gt;&gt; obj.average().eigh() </span>
+<span class="sd">        &gt;&gt;&gt; obj.average().eigh()</span>
 
 <span class="sd">        &gt;&gt;&gt; obj = BrillouinZone(Hamiltonian)</span>
 <span class="sd">        &gt;&gt;&gt; obj.average()</span>
@@ -396,6 +395,75 @@
         <span class="k">return</span> <span class="mi">1</span></div>
 
 
+<div class="viewcode-block" id="MonkhorstPackBZ"><a class="viewcode-back" href="../../../sisl/sisl.physics.brillouinzone.html#sisl.physics.brillouinzone.MonkhorstPackBZ">[docs]</a><span class="k">class</span> <span class="nc">MonkhorstPackBZ</span><span class="p">(</span><span class="n">BrillouinZone</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Create a Monkhorst-Pack grid for the Brillouin zone &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obj</span><span class="p">,</span> <span class="n">nkpt</span><span class="p">,</span> <span class="n">symmetry</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">displacement</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Instantiate the `MonkhorstPackBZ` by a number of points in each direction</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        obj : object or array_like</span>
+<span class="sd">           An object with associated `obj.cell` and `obj.rcell` or</span>
+<span class="sd">           an array of floats which may be turned into a `SuperCell`</span>
+<span class="sd">        nktp : array_like of ints</span>
+<span class="sd">           a list of number of k-points along each cell direction</span>
+<span class="sd">        symmetry : bool, optional</span>
+<span class="sd">           whether symmetry exists in the Brillouin zone.</span>
+<span class="sd">        displacement : float or array_like of float, optional</span>
+<span class="sd">           the displacement of the evenly spaced grid, a single floating</span>
+<span class="sd">           number is the displacement for the 3 directions, else they</span>
+<span class="sd">           are the individual displacements</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">MonkhorstPackBZ</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">obj</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">nkpt</span><span class="p">,</span> <span class="n">Integral</span><span class="p">):</span>
+            <span class="n">nkpt</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">([</span><span class="n">nkpt</span><span class="p">]</span> <span class="o">*</span> <span class="mi">3</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">nkpt</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">Integral</span><span class="p">):</span>
+            <span class="n">nkpt</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">nkpt</span><span class="p">)</span>
+
+        <span class="c1"># Now we have a matrix of k-points</span>
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">nkpt</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">nkpt</span><span class="p">))</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;MonkhorstPackBZ with off-diagonal components is not implemented yet&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">displacement</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">displacement</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">displacement</span><span class="p">,</span> <span class="n">Real</span><span class="p">):</span>
+            <span class="n">displacement</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span> <span class="o">+</span> <span class="n">displacement</span>
+
+        <span class="c1"># Retrieve the diagonal number of values</span>
+        <span class="n">Dn</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">nkpt</span><span class="p">)</span>
+
+        <span class="k">def</span> <span class="nf">link</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">d</span><span class="p">):</span>
+            <span class="k">return</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">n</span><span class="p">)</span> <span class="o">*</span> <span class="mi">2</span> <span class="o">-</span> <span class="n">n</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">n</span><span class="p">)</span> <span class="o">+</span> <span class="n">d</span>
+
+        <span class="c1"># Now we are ready to create the list of k-points</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_kpt</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">([</span><span class="n">np</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span><span class="n">Dn</span><span class="p">),</span> <span class="mi">3</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_kpt</span><span class="o">.</span><span class="n">shape</span> <span class="o">=</span> <span class="p">(</span><span class="n">Dn</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">Dn</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">Dn</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="mi">3</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_kpt</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">link</span><span class="p">(</span><span class="n">Dn</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">displacement</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_kpt</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">link</span><span class="p">(</span><span class="n">Dn</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">displacement</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_kpt</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">link</span><span class="p">(</span><span class="n">Dn</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">displacement</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+
+        <span class="c1"># Return to original shape</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_kpt</span><span class="o">.</span><span class="n">shape</span> <span class="o">=</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_kpt</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_kpt</span> <span class="o">&gt;</span> <span class="o">.</span><span class="mi">5</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_kpt</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_kpt</span><span class="p">)</span>
+        <span class="n">N</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_kpt</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_wkpt</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">([</span><span class="n">N</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span> <span class="o">/</span> <span class="n">N</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">weight</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; The weights of the k-points &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_wkpt</span>
+
+    <span class="k">def</span> <span class="nf">__iter__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Iterate through the Monkhorst pack-grid &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">)):</span>
+            <span class="k">yield</span> <span class="bp">self</span><span class="o">.</span><span class="n">_kpt</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">_wkpt</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">__len__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_kpt</span><span class="p">)</span></div>
+
+
 <div class="viewcode-block" id="PathBZ"><a class="viewcode-back" href="../../../sisl/sisl.physics.brillouinzone.html#sisl.physics.brillouinzone.PathBZ">[docs]</a><span class="k">class</span> <span class="nc">PathBZ</span><span class="p">(</span><span class="n">BrillouinZone</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot; Create a path in the Brillouin zone for plotting band-structures etc. &quot;&quot;&quot;</span>
 
@@ -410,8 +478,8 @@
 <span class="sd">        point : array_like of float</span>
 <span class="sd">           a list of points that are the *corners* of the path</span>
 <span class="sd">        division : int or array_like of int</span>
-<span class="sd">           number of divisions in each segment. </span>
-<span class="sd">           If a single integer is passed it is the total number </span>
+<span class="sd">           number of divisions in each segment.</span>
+<span class="sd">           If a single integer is passed it is the total number</span>
 <span class="sd">           of points on the path (equally separated).</span>
 <span class="sd">           If it is an array_like input it must have length one</span>
 <span class="sd">           less than `point`.</span>
@@ -422,7 +490,6 @@
 
         <span class="c1"># Copy over points</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">point</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">point</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
-        <span class="n">nk</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">point</span><span class="p">)</span>
 
         <span class="c1"># If the array has fewer points we try and determine</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">point</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mi">3</span><span class="p">:</span>
@@ -529,14 +596,12 @@
 <span class="sd">           xticks, label_ticks, lk = PathBZ.lineark(True)</span>
 
 <span class="sd">        &quot;&quot;&quot;</span>
-
-        <span class="n">nk</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
         <span class="c1"># Calculate points</span>
         <span class="n">k</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">k</span><span class="p">(</span><span class="n">pnt</span><span class="p">)</span> <span class="k">for</span> <span class="n">pnt</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">point</span><span class="p">]</span>
         <span class="n">dk</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
         <span class="n">xtick</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">k</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
         <span class="c1"># Prepare output array</span>
-        <span class="n">dK</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="n">nk</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+        <span class="n">dK</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
 
         <span class="n">ii</span><span class="p">,</span> <span class="n">add</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="mf">0.</span>
         <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">dk</span><span class="p">)):</span>
@@ -607,7 +672,7 @@
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'../../../',
-            VERSION:'0.8.5-87',
+            VERSION:'0.8.5-125',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true,

@@ -65,7 +65,7 @@
             
             
               <div class="version">
-                0.8.5-87
+                0.8.5-125
               </div>
             
           
@@ -163,15 +163,56 @@
            <div itemprop="articleBody">
             
   <h1>Source code for sisl.io.siesta.tbtrans</h1><div class="highlight"><pre>
-<span></span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">Sile object for reading TBtrans binary files</span>
+<span></span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;sisl file objects for interaction with the TBtrans code</span>
+
+<span class="sd">The TBtrans code is a tight-binding transport code implementing</span>
+<span class="sd">the widely used non-equilibrium Green function method.</span>
+
+<span class="sd">It is primarily implemented for the support of TranSiesta (DFT+NEGF)</span>
+<span class="sd">as a backend for calculating th transport for self-consistent DFT software.</span>
+
+<span class="sd">Here we show a variety of supplement files that allows the extracting, manipulation</span>
+<span class="sd">and creation of files supported in TBtrans.</span>
+
+<span class="sd">The basic file is the `tbtncSileSiesta` which is a file to extract information</span>
+<span class="sd">from a TBtrans output file (typically named: ``siesta.TBT.nc``).</span>
+<span class="sd">The following will interact with the TBtrans file:</span>
+
+<span class="sd">&gt;&gt;&gt; tbt = sisl.get_sile(&#39;siesta.TBT.nc&#39;)</span>
+<span class="sd">&gt;&gt;&gt; tbt.E # retrieve energies where physical quantities are calculated</span>
+<span class="sd">&gt;&gt;&gt; tbt.a_d # atomic indices where physical quantities are accessible</span>
+
+<span class="sd">Importantly one may retrieve quantities such as DOS, transmissions,</span>
+<span class="sd">transmission eigenvalues etc.</span>
+
+<span class="sd">&gt;&gt;&gt; tbt.transmission() # from electrode 0 -&gt; 1 (default)</span>
+<span class="sd">&gt;&gt;&gt; tbt.transmission(0, 1) # from electrode 0 -&gt; 1</span>
+<span class="sd">&gt;&gt;&gt; tbt.transmission(0, 2) # from electrode 0 -&gt; 2</span>
+<span class="sd">&gt;&gt;&gt; tbt.ADOS(0, E=1.) # k-average, total spectral DOS from 0th electrode</span>
+
+
+<span class="sd">The above is the most important use of this module while the following</span>
+<span class="sd">entries are enabled:</span>
+
+<span class="sd">Data extraction files</span>
+<span class="sd">---------------------</span>
+<span class="sd">- `tbtncSileSiesta` (electronic TBtrans output)</span>
+<span class="sd">- `tbtavncSileSiesta` (electronic k-averaged TBtrans output)</span>
+<span class="sd">- `phtncSileSiesta` (phononic PHtrans output)</span>
+<span class="sd">- `phtavncSileSiesta` (phononic k-averaged PHtrans output)</span>
+
+<span class="sd">Support files to complement TBtrans</span>
+<span class="sd">-----------------------------------</span>
+<span class="sd">- `dHncSileSiesta` adding :math:`\delta H` elements to a TBtrans calculation</span>
+
 <span class="sd">&quot;&quot;&quot;</span>
 <span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">print_function</span><span class="p">,</span> <span class="n">division</span>
 
 <span class="kn">import</span> <span class="nn">warnings</span>
+<span class="kn">from</span> <span class="nn">numbers</span> <span class="k">import</span> <span class="n">Integral</span>
 <span class="k">try</span><span class="p">:</span>
     <span class="kn">from</span> <span class="nn">StringIO</span> <span class="k">import</span> <span class="n">StringIO</span>
-<span class="k">except</span><span class="p">:</span>
+<span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
     <span class="kn">from</span> <span class="nn">io</span> <span class="k">import</span> <span class="n">StringIO</span>
 
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
@@ -182,7 +223,7 @@
 <span class="kn">import</span> <span class="nn">itertools</span>
 
 <span class="c1"># The sparse matrix for the orbital/bond currents</span>
-<span class="kn">from</span> <span class="nn">scipy.sparse</span> <span class="k">import</span> <span class="n">csr_matrix</span><span class="p">,</span> <span class="n">lil_matrix</span>
+<span class="kn">from</span> <span class="nn">scipy.sparse</span> <span class="k">import</span> <span class="n">csr_matrix</span>
 <span class="kn">from</span> <span class="nn">scipy.sparse</span> <span class="k">import</span> <span class="n">isspmatrix_csr</span>
 
 <span class="c1"># Import sile objects</span>
@@ -192,9 +233,9 @@
 
 
 <span class="c1"># Import the geometry object</span>
-<span class="kn">from</span> <span class="nn">sisl</span> <span class="k">import</span> <span class="n">Geometry</span><span class="p">,</span> <span class="n">Atom</span><span class="p">,</span> <span class="n">Atoms</span><span class="p">,</span> <span class="n">SuperCell</span>
+<span class="kn">from</span> <span class="nn">sisl</span> <span class="k">import</span> <span class="n">Geometry</span><span class="p">,</span> <span class="n">Atom</span><span class="p">,</span> <span class="n">Atoms</span><span class="p">,</span> <span class="n">SuperCell</span><span class="p">,</span> <span class="n">Hamiltonian</span>
 <span class="kn">from</span> <span class="nn">sisl._help</span> <span class="k">import</span> <span class="n">_str</span>
-<span class="kn">from</span> <span class="nn">sisl._help</span> <span class="k">import</span> <span class="n">_range</span> <span class="k">as</span> <span class="nb">range</span><span class="p">,</span> <span class="n">_zip</span> <span class="k">as</span> <span class="nb">zip</span>
+<span class="kn">from</span> <span class="nn">sisl._help</span> <span class="k">import</span> <span class="n">_range</span> <span class="k">as</span> <span class="nb">range</span>
 <span class="kn">from</span> <span class="nn">sisl.units.siesta</span> <span class="k">import</span> <span class="n">unit_convert</span>
 
 <span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;tbtncSileSiesta&#39;</span><span class="p">,</span> <span class="s1">&#39;phtncSileSiesta&#39;</span><span class="p">]</span>
@@ -208,7 +249,7 @@
 
 
 <div class="viewcode-block" id="tbtncSileSiesta"><a class="viewcode-back" href="../../../../sisl/sisl.io.siesta.tbtrans.html#sisl.io.tbtncSileSiesta">[docs]</a><span class="k">class</span> <span class="nc">tbtncSileSiesta</span><span class="p">(</span><span class="n">SileCDFSiesta</span><span class="p">):</span>
-    <span class="sa">r</span><span class="sd">&quot;&quot;&quot; TBtrans output file object </span>
+    <span class="sa">r</span><span class="sd">&quot;&quot;&quot; TBtrans output file object</span>
 
 <span class="sd">    Implementation of the TBtrans output ``*.TBT.nc`` files which contains</span>
 <span class="sd">    calculated quantities related to the NEGF code TBtrans.</span>
@@ -222,6 +263,13 @@
 <span class="sd">    * :math:`\alpha` and :math:`\beta` are atomic indices</span>
 <span class="sd">    * :math:`\nu` and :math:`\mu` are orbital indices</span>
 
+<span class="sd">    A word on DOS normalization:</span>
+
+<span class="sd">    All the device region DOS functions may request a normalization depending</span>
+<span class="sd">    on a variety of functions. You are highly encouraged to read the documentation for</span>
+<span class="sd">    the `norm` function and to consider the benefit of using the ``norm=&#39;atom&#39;``</span>
+<span class="sd">    normalization to more easily compare various partitions of DOS.</span>
+
 <span class="sd">    Notes</span>
 <span class="sd">    -----</span>
 <span class="sd">    The API for this class are largely equivalent to the arguments of the `sdata` command-line</span>
@@ -230,7 +278,7 @@
     <span class="n">_trans_type</span> <span class="o">=</span> <span class="s1">&#39;TBT&#39;</span>
     <span class="n">_k_avg</span> <span class="o">=</span> <span class="kc">False</span>
 
-<div class="viewcode-block" id="tbtncSileSiesta.write_tbtav"><a class="viewcode-back" href="../../../../sisl/sisl.io.siesta.tbtrans.html#sisl.io.tbtncSileSiesta.write_tbtav">[docs]</a>    <span class="k">def</span> <span class="nf">write_tbtav</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<div class="viewcode-block" id="tbtncSileSiesta.write_tbtav"><a class="viewcode-back" href="../../../../sisl/sisl.io.siesta.tbtrans.html#sisl.io.tbtncSileSiesta.write_tbtav">[docs]</a>    <span class="k">def</span> <span class="nf">write_tbtav</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Convert this to a TBT.AV.nc file, i.e. all k dependent quantites are averaged out.</span>
 
 <span class="sd">        This command will overwrite any previous file with the ending TBT.AV.nc and thus</span>
@@ -342,7 +390,7 @@
         <span class="c1"># Return data</span>
         <span class="k">return</span> <span class="n">data</span>
 
-    <span class="k">def</span> <span class="nf">_setup</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">_setup</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Setup the special object for data containing &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_data</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
 
@@ -389,6 +437,7 @@
         <span class="k">try</span><span class="p">:</span>
             <span class="n">sc</span><span class="o">.</span><span class="n">sc_off</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_value</span><span class="p">(</span><span class="s1">&#39;isc_off&#39;</span><span class="p">)</span>
         <span class="k">except</span><span class="p">:</span>
+            <span class="c1"># This is ok, we simply do not have the supercell offsets</span>
             <span class="k">pass</span>
 
         <span class="k">return</span> <span class="n">sc</span></div>
@@ -479,7 +528,7 @@
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_value</span><span class="p">(</span><span class="s1">&#39;pivot&#39;</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span>
 
 <div class="viewcode-block" id="tbtncSileSiesta.a2p"><a class="viewcode-back" href="../../../../sisl/sisl.io.siesta.tbtrans.html#sisl.io.tbtncSileSiesta.a2p">[docs]</a>    <span class="k">def</span> <span class="nf">a2p</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">atom</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot; Return the pivoting indices (0-based) for the atoms </span>
+        <span class="sd">&quot;&quot;&quot; Return the pivoting indices (0-based) for the atoms</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
@@ -691,11 +740,11 @@
 <span class="sd">           device region.</span>
 <span class="sd">        #. &#39;atom&#39;: :math:`N` is equal to the total number of orbitals in the selected</span>
 <span class="sd">           atoms. If `orbital` is an argument a conversion of `orbital` to the equivalent</span>
-<span class="sd">           unique atoms is performed, and subsequently the total number of orbitals on the </span>
+<span class="sd">           unique atoms is performed, and subsequently the total number of orbitals on the</span>
 <span class="sd">           atoms is used. This makes it possible to compare the fraction of orbital DOS easier.</span>
 <span class="sd">           I.e. for an atom with 4 orbitals one could compare the DOS for orbital `1` with norm:</span>
 <span class="sd">           ``norm(orbital=[1], norm=&#39;atom&#39;)`` for the remaning orbitals ``norm(orbital=[0, 2, 3], norm=&#39;atom&#39;)``.</span>
-<span class="sd">        #. &#39;orbital&#39;: :math:`N` is simply the sum of selected orbitals, if `atom` is specified, this </span>
+<span class="sd">        #. &#39;orbital&#39;: :math:`N` is simply the sum of selected orbitals, if `atom` is specified, this</span>
 <span class="sd">           is equivalent to the &#39;atom&#39; option.</span>
 
 <span class="sd">        Parameters</span>
@@ -809,13 +858,23 @@
             <span class="c1"># we return it</span>
             <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">DOS</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">p</span><span class="p">],</span> <span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span> <span class="o">/</span> <span class="n">NORM</span>
 
+        <span class="c1"># We default the case where 1-orbital systems are in use</span>
+        <span class="c1"># Then it becomes *very* easy</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">p</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">atom</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">DOS</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">p</span><span class="p">]</span> <span class="o">/</span> <span class="n">NORM</span>
+
+        <span class="c1"># This is the multi-orbital case...</span>
+
         <span class="c1"># We will return per-atom</span>
         <span class="n">shp</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">DOS</span><span class="o">.</span><span class="n">shape</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
         <span class="n">nDOS</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="n">shp</span> <span class="o">+</span> <span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">atom</span><span class="p">)],</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
 
+        <span class="c1"># Quicker than re-creating the geometry on every instance</span>
+        <span class="n">geom</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">geom</span>
+
         <span class="c1"># Sum for new return stuff</span>
         <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">a</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">atom</span><span class="p">):</span>
-            <span class="n">pvt</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">a2p</span><span class="p">(</span><span class="n">a</span><span class="p">)</span>
+            <span class="n">pvt</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">o2p</span><span class="p">(</span><span class="n">geom</span><span class="o">.</span><span class="n">a2o</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="kc">True</span><span class="p">))</span>
             <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">pvt</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
                 <span class="n">nDOS</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.</span>
             <span class="k">else</span><span class="p">:</span>
@@ -945,7 +1004,7 @@
         <span class="k">return</span> <span class="n">E</span><span class="p">[</span><span class="n">idx_sort</span><span class="p">],</span> <span class="n">T</span><span class="p">[</span><span class="n">idx_sort</span><span class="p">]</span>
 
 <div class="viewcode-block" id="tbtncSileSiesta.current"><a class="viewcode-back" href="../../../../sisl/sisl.io.siesta.tbtrans.html#sisl.io.tbtncSileSiesta.current">[docs]</a>    <span class="k">def</span> <span class="nf">current</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">elec_from</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">elec_to</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">kavg</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
-        <span class="sa">r</span><span class="sd">&quot;&quot;&quot; Current from `from` to `to` using the k-weights and energy spacings in the file. </span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot; Current from `from` to `to` using the k-weights and energy spacings in the file.</span>
 
 <span class="sd">        Calculates the current as:</span>
 
@@ -981,7 +1040,7 @@
 
 <div class="viewcode-block" id="tbtncSileSiesta.current_parameter"><a class="viewcode-back" href="../../../../sisl/sisl.io.siesta.tbtrans.html#sisl.io.tbtncSileSiesta.current_parameter">[docs]</a>    <span class="k">def</span> <span class="nf">current_parameter</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">elec_from</span><span class="p">,</span> <span class="n">mu_from</span><span class="p">,</span> <span class="n">kt_from</span><span class="p">,</span>
                           <span class="n">elec_to</span><span class="p">,</span> <span class="n">mu_to</span><span class="p">,</span> <span class="n">kt_to</span><span class="p">,</span> <span class="n">kavg</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
-        <span class="sa">r</span><span class="sd">&quot;&quot;&quot; Current from `from` to `to` using the k-weights and energy spacings in the file. </span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot; Current from `from` to `to` using the k-weights and energy spacings in the file.</span>
 
 <span class="sd">        Calculates the current as:</span>
 
@@ -1166,12 +1225,12 @@
 <span class="sd">        .. math::</span>
 <span class="sd">           J_{\alpha\beta} = \sum_{\nu\in\alpha}\sum_{\mu\in\beta} J_{\nu\mu}</span>
 
-<span class="sd">        where if </span>
+<span class="sd">        where if</span>
 
 <span class="sd">        * ``sum=&#39;+&#39;``:</span>
-<span class="sd">          only :math:`J_{\nu\mu} &gt; 0` are summed, </span>
+<span class="sd">          only :math:`J_{\nu\mu} &gt; 0` are summed,</span>
 <span class="sd">        * ``sum=&#39;-&#39;``:</span>
-<span class="sd">          only :math:`J_{\nu\mu} &lt; 0` are summed, </span>
+<span class="sd">          only :math:`J_{\nu\mu} &lt; 0` are summed,</span>
 <span class="sd">        * ``sum=&#39;all&#39;``:</span>
 <span class="sd">          all :math:`J_{\nu\mu}` are summed.</span>
 
@@ -1213,14 +1272,12 @@
         <span class="k">if</span> <span class="n">uc</span><span class="p">:</span>
             <span class="n">Jab</span> <span class="o">=</span> <span class="n">csr_matrix</span><span class="p">((</span><span class="n">na</span><span class="p">,</span> <span class="n">na</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">Jij</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
 
-            <span class="n">map_row</span> <span class="o">=</span> <span class="n">o2a</span>
             <span class="k">def</span> <span class="nf">map_col</span><span class="p">(</span><span class="n">c</span><span class="p">):</span>
                 <span class="k">return</span> <span class="n">o2a</span><span class="p">(</span><span class="n">c</span><span class="p">)</span> <span class="o">%</span> <span class="n">na</span>
 
         <span class="k">else</span><span class="p">:</span>
             <span class="n">Jab</span> <span class="o">=</span> <span class="n">csr_matrix</span><span class="p">((</span><span class="n">na</span><span class="p">,</span> <span class="n">na</span> <span class="o">*</span> <span class="n">geom</span><span class="o">.</span><span class="n">n_s</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">Jij</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
 
-            <span class="n">map_row</span> <span class="o">=</span> <span class="n">o2a</span>
             <span class="n">map_col</span> <span class="o">=</span> <span class="n">o2a</span>
 
         <span class="c1"># Lets do array notation for speeding up the computations</span>
@@ -1330,7 +1387,7 @@
 <div class="viewcode-block" id="tbtncSileSiesta.atom_current_from_orbital"><a class="viewcode-back" href="../../../../sisl/sisl.io.siesta.tbtrans.html#sisl.io.tbtncSileSiesta.atom_current_from_orbital">[docs]</a>    <span class="k">def</span> <span class="nf">atom_current_from_orbital</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">Jij</span><span class="p">,</span> <span class="n">activity</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
         <span class="sa">r</span><span class="sd">&quot;&quot;&quot; Atomic current of atoms by passing the orbital current</span>
 
-<span class="sd">        The atomic current is a single number specifying a figure of the *magnitude* </span>
+<span class="sd">        The atomic current is a single number specifying a figure of the *magnitude*</span>
 <span class="sd">        current flowing through each atom. It is thus *not* a quantity that can be related to</span>
 <span class="sd">        the physical current flowing in/out of atoms but is merely a number that provides an</span>
 <span class="sd">        idea of *how much* current this atom is redistributing.</span>
@@ -1342,18 +1399,18 @@
 <span class="sd">            \\</span>
 <span class="sd">            J_\alpha^{|o|} &amp;=\frac{1}{2} \sum_\beta \sum_{\nu\in \alpha}\sum_{\mu\in \beta} \big| J_{\nu\mu} \big|</span>
 
-<span class="sd">        If the *activity* current is requested (``activity=True``) </span>
+<span class="sd">        If the *activity* current is requested (``activity=True``)</span>
 <span class="sd">        :math:`J_\alpha^{\mathcal A} = \sqrt{ J_\alpha^{|a|} J_\alpha^{|o|} }` is returned.</span>
 
-<span class="sd">        If ``activity=False`` :math:`J_\alpha^{|a|}` is returned. </span>
+<span class="sd">        If ``activity=False`` :math:`J_\alpha^{|a|}` is returned.</span>
 
 <span class="sd">        For geometries with all atoms only having 1-orbital, they are equivalent.</span>
 
 <span class="sd">        Generally the activity current is a more rigorous figure of merit for the current</span>
-<span class="sd">        flowing through an atom. More so than than the summed absolute atomic current due to </span>
+<span class="sd">        flowing through an atom. More so than than the summed absolute atomic current due to</span>
 <span class="sd">        the following reasoning. The activity current is a geometric mean of the absolute bond current</span>
-<span class="sd">        and the absolute orbital current. This means that if there is an atom with a large orbital current between</span>
-<span class="sd">        its own orbitals it will have a larger activity current. </span>
+<span class="sd">        and the absolute orbital current. This means that if there is an atom with a large orbital current</span>
+<span class="sd">        it will have a larger activity current.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
@@ -1370,7 +1427,7 @@
         <span class="c1"># Create the bond-currents with all summations</span>
         <span class="n">Jab</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">bond_current_from_orbital</span><span class="p">(</span><span class="n">Jij</span><span class="p">,</span> <span class="nb">sum</span><span class="o">=</span><span class="s1">&#39;all&#39;</span><span class="p">)</span>
         <span class="c1"># We take the absolute and sum it over all connecting atoms</span>
-        <span class="n">Ja</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">Jab</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">Jij</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">Ja</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">Jab</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
 
         <span class="k">if</span> <span class="n">activity</span><span class="p">:</span>
             <span class="c1"># Calculate the absolute summation of all orbital</span>
@@ -1378,7 +1435,7 @@
             <span class="n">Jab</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">bond_current_from_orbital</span><span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">Jij</span><span class="p">),</span> <span class="nb">sum</span><span class="o">=</span><span class="s1">&#39;all&#39;</span><span class="p">)</span>
 
             <span class="c1"># Sum to make it per atom, it is already the absolute</span>
-            <span class="n">Jo</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">Jab</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">Jij</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">Jo</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">Jab</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
 
             <span class="c1"># Return the geometric mean of the atomic current X orbital</span>
             <span class="c1"># current.</span>
@@ -1426,7 +1483,7 @@
 <span class="sd">        .. math::</span>
 <span class="sd">              \mathbf J_\alpha = \sum_\beta \frac{r_\beta - r_\alpha}{|r_\beta - r_\alpha|} \cdot J_{\alpha\beta}</span>
 
-<span class="sd">        Where :math:`J_{\alpha\beta}` is the bond current between atom :math:`\alpha` and :math:`\beta` and </span>
+<span class="sd">        Where :math:`J_{\alpha\beta}` is the bond current between atom :math:`\alpha` and :math:`\beta` and</span>
 <span class="sd">        :math:`r_\alpha` are the atomic coordinates.</span>
 
 <span class="sd">        Parameters</span>
@@ -1454,23 +1511,28 @@
         <span class="c1"># Create local orbital look-up</span>
         <span class="n">xyz</span> <span class="o">=</span> <span class="n">geom</span><span class="o">.</span><span class="n">xyz</span>
 
+        <span class="c1"># Short-hands</span>
+        <span class="n">sqrt</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span>
+        <span class="nb">sum</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span>
+
         <span class="c1"># Loop atoms in the device region</span>
         <span class="c1"># These are the only atoms which may have bond-currents,</span>
         <span class="c1"># So no need to loop over any other atoms</span>
         <span class="k">for</span> <span class="n">ia</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">a_dev</span><span class="p">:</span>
             <span class="c1"># Get csr matrix</span>
-            <span class="n">Jia</span> <span class="o">=</span> <span class="n">Jab</span><span class="p">[</span><span class="n">ia</span><span class="p">,</span> <span class="p">:]</span><span class="o">.</span><span class="n">tocsr</span><span class="p">()</span>
+            <span class="n">Jia</span> <span class="o">=</span> <span class="n">Jab</span><span class="o">.</span><span class="n">getrow</span><span class="p">(</span><span class="n">ia</span><span class="p">)</span>
 
             <span class="c1"># Set diagonal to zero</span>
             <span class="n">Jia</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="n">ia</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.</span>
-            <span class="c1"># Remove the diagonal</span>
+            <span class="c1"># Remove the diagonal (prohibits the calculation of the</span>
+            <span class="c1"># norm of the zero vector, hence required)</span>
             <span class="n">Jia</span><span class="o">.</span><span class="n">eliminate_zeros</span><span class="p">()</span>
 
             <span class="c1"># Now calculate the vector elements</span>
             <span class="c1"># Remark that the vector goes from ia -&gt; ja</span>
-            <span class="n">rv</span> <span class="o">=</span> <span class="n">xyz</span><span class="p">[</span><span class="n">ia</span><span class="p">,</span> <span class="p">:][</span><span class="kc">None</span><span class="p">,</span> <span class="p">:]</span> <span class="o">-</span> <span class="n">geom</span><span class="o">.</span><span class="n">axyz</span><span class="p">(</span><span class="n">Jia</span><span class="o">.</span><span class="n">indices</span><span class="p">)</span>
-            <span class="n">rv</span> <span class="o">=</span> <span class="n">rv</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">rv</span> <span class="o">**</span> <span class="mi">2</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">))[:,</span> <span class="kc">None</span><span class="p">]</span>
-            <span class="n">Ja</span><span class="p">[</span><span class="n">ia</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">Jia</span><span class="o">.</span><span class="n">data</span><span class="p">[:,</span> <span class="kc">None</span><span class="p">]</span> <span class="o">*</span> <span class="n">rv</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+            <span class="n">rv</span> <span class="o">=</span> <span class="n">geom</span><span class="o">.</span><span class="n">axyz</span><span class="p">(</span><span class="n">Jia</span><span class="o">.</span><span class="n">indices</span><span class="p">)</span> <span class="o">-</span> <span class="n">xyz</span><span class="p">[</span><span class="n">ia</span><span class="p">,</span> <span class="p">:][</span><span class="kc">None</span><span class="p">,</span> <span class="p">:]</span>
+            <span class="n">rv</span> <span class="o">=</span> <span class="n">rv</span> <span class="o">/</span> <span class="n">sqrt</span><span class="p">(</span><span class="nb">sum</span><span class="p">(</span><span class="n">rv</span> <span class="o">**</span> <span class="mi">2</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">))[:,</span> <span class="kc">None</span><span class="p">]</span>
+            <span class="n">Ja</span><span class="p">[</span><span class="n">ia</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">Jia</span><span class="o">.</span><span class="n">data</span><span class="p">[:,</span> <span class="kc">None</span><span class="p">]</span> <span class="o">*</span> <span class="n">rv</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
 
         <span class="k">return</span> <span class="n">Ja</span></div>
 
@@ -1513,7 +1575,7 @@
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">vector_current_from_bond</span><span class="p">(</span><span class="n">Jab</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="tbtncSileSiesta.read_data"><a class="viewcode-back" href="../../../../sisl/sisl.io.siesta.tbtrans.html#sisl.io.tbtncSileSiesta.read_data">[docs]</a>    <span class="k">def</span> <span class="nf">read_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot; Read specific type of data. </span>
+        <span class="sd">&quot;&quot;&quot; Read specific type of data.</span>
 
 <span class="sd">        This is a generic routine for reading different parts of the data-file.</span>
 
@@ -1564,10 +1626,7 @@
         <span class="n">out</span> <span class="o">=</span> <span class="n">StringIO</span><span class="p">()</span>
         <span class="c1"># Create wrapper function</span>
         <span class="k">def</span> <span class="nf">prnt</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-            <span class="k">try</span><span class="p">:</span>
-                <span class="nb">print</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="n">file</span><span class="o">=</span><span class="n">out</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
-            <span class="k">except</span><span class="p">:</span>
-                <span class="k">pass</span>
+            <span class="nb">print</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="n">file</span><span class="o">=</span><span class="n">out</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 
         <span class="k">def</span> <span class="nf">truefalse</span><span class="p">(</span><span class="n">bol</span><span class="p">,</span> <span class="n">string</span><span class="p">,</span> <span class="n">fdf</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
             <span class="k">if</span> <span class="n">bol</span><span class="p">:</span>
@@ -2078,8 +2137,7 @@
 
 <div class="viewcode-block" id="phtncSileSiesta"><a class="viewcode-back" href="../../../../sisl/sisl.io.siesta.tbtrans.html#sisl.io.phtncSileSiesta">[docs]</a><span class="k">class</span> <span class="nc">phtncSileSiesta</span><span class="p">(</span><span class="n">tbtncSileSiesta</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot; PHtrans file object &quot;&quot;&quot;</span>
-    <span class="n">_trans_type</span> <span class="o">=</span> <span class="s1">&#39;PHT&#39;</span>
-    <span class="k">pass</span></div>
+    <span class="n">_trans_type</span> <span class="o">=</span> <span class="s1">&#39;PHT&#39;</span></div>
 
 <span class="n">add_sile</span><span class="p">(</span><span class="s1">&#39;PHT.nc&#39;</span><span class="p">,</span> <span class="n">phtncSileSiesta</span><span class="p">)</span>
 
@@ -2088,7 +2146,7 @@
 <span class="c1"># These are essentially equivalent to the TBT.nc files</span>
 <span class="c1"># with the exception that the k-points have been averaged out.</span>
 <div class="viewcode-block" id="tbtavncSileSiesta"><a class="viewcode-back" href="../../../../sisl/sisl.io.siesta.tbtrans.html#sisl.io.tbtavncSileSiesta">[docs]</a><span class="k">class</span> <span class="nc">tbtavncSileSiesta</span><span class="p">(</span><span class="n">tbtncSileSiesta</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot; TBtrans average file object </span>
+    <span class="sd">&quot;&quot;&quot; TBtrans average file object</span>
 
 <span class="sd">    This `Sile` implements the writing of the TBtrans output ``*.TBT.AV.nc`` sile which contains</span>
 <span class="sd">    the k-averaged quantities related to the NEGF code TBtrans.</span>
@@ -2109,7 +2167,7 @@
         <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
 
 <div class="viewcode-block" id="tbtavncSileSiesta.write_tbtav"><a class="viewcode-back" href="../../../../sisl/sisl.io.siesta.tbtrans.html#sisl.io.tbtavncSileSiesta.write_tbtav">[docs]</a>    <span class="k">def</span> <span class="nf">write_tbtav</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot; Wrapper for writing the k-averaged TBT.AV.nc file. </span>
+        <span class="sd">&quot;&quot;&quot; Wrapper for writing the k-averaged TBT.AV.nc file.</span>
 
 <span class="sd">        This write *requires* the TBT.nc `Sile` object passed as the first argument,</span>
 <span class="sd">        or as the keyword ``from=tbt`` argument.</span>
@@ -2132,8 +2190,6 @@
 
         <span class="c1"># Notify if the object is not in write mode.</span>
         <span class="n">sile_raise_write</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
-
-        <span class="n">head</span> <span class="o">=</span> <span class="bp">self</span>
 
         <span class="k">def</span> <span class="nf">copy_attr</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">t</span><span class="p">):</span>
             <span class="n">t</span><span class="o">.</span><span class="n">setncatts</span><span class="p">({</span><span class="n">att</span><span class="p">:</span> <span class="n">f</span><span class="o">.</span><span class="n">getncattr</span><span class="p">(</span><span class="n">att</span><span class="p">)</span> <span class="k">for</span> <span class="n">att</span> <span class="ow">in</span> <span class="n">f</span><span class="o">.</span><span class="n">ncattrs</span><span class="p">()})</span>
@@ -2252,37 +2308,103 @@
 <div class="viewcode-block" id="dHncSileSiesta"><a class="viewcode-back" href="../../../../sisl/sisl.io.siesta.tbtrans.html#sisl.io.dHncSileSiesta">[docs]</a><span class="k">class</span> <span class="nc">dHncSileSiesta</span><span class="p">(</span><span class="n">SileCDFSiesta</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot; TBtrans delta-H file object &quot;&quot;&quot;</span>
 
+<div class="viewcode-block" id="dHncSileSiesta.read_supercell"><a class="viewcode-back" href="../../../../sisl/sisl.io.siesta.tbtrans.html#sisl.io.dHncSileSiesta.read_supercell">[docs]</a>    <span class="k">def</span> <span class="nf">read_supercell</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Returns the `SuperCell` object from this file &quot;&quot;&quot;</span>
+        <span class="n">cell</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_value</span><span class="p">(</span><span class="s1">&#39;cell&#39;</span><span class="p">)),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+        <span class="n">cell</span><span class="o">.</span><span class="n">shape</span> <span class="o">=</span> <span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">nsc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_value</span><span class="p">(</span><span class="s1">&#39;nsc&#39;</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">nsc</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="n">sc</span> <span class="o">=</span> <span class="n">SuperCell</span><span class="p">(</span><span class="n">cell</span><span class="p">,</span> <span class="n">nsc</span><span class="o">=</span><span class="n">nsc</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">sc</span><span class="o">.</span><span class="n">sc_off</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_value</span><span class="p">(</span><span class="s1">&#39;isc_off&#39;</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="c1"># This is ok, we simply do not have the supercell offsets</span>
+            <span class="k">pass</span>
+
+        <span class="k">return</span> <span class="n">sc</span></div>
+
+<div class="viewcode-block" id="dHncSileSiesta.read_geometry"><a class="viewcode-back" href="../../../../sisl/sisl.io.siesta.tbtrans.html#sisl.io.dHncSileSiesta.read_geometry">[docs]</a>    <span class="k">def</span> <span class="nf">read_geometry</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Returns the `Geometry` object from this file &quot;&quot;&quot;</span>
+        <span class="n">sc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">read_supercell</span><span class="p">()</span>
+
+        <span class="n">xyz</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_value</span><span class="p">(</span><span class="s1">&#39;xa&#39;</span><span class="p">)),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+        <span class="n">xyz</span><span class="o">.</span><span class="n">shape</span> <span class="o">=</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+
+        <span class="c1"># Create list with correct number of orbitals</span>
+        <span class="n">lasto</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_value</span><span class="p">(</span><span class="s1">&#39;lasto&#39;</span><span class="p">)),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
+        <span class="n">nos</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">lasto</span><span class="p">[</span><span class="mi">0</span><span class="p">]],</span> <span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">lasto</span><span class="p">))</span>
+        <span class="n">nos</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">nos</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="s1">&#39;atom&#39;</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="p">:</span>
+            <span class="c1"># The user &quot;knows&quot; which atoms are present</span>
+            <span class="n">atms</span> <span class="o">=</span> <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;atom&#39;</span><span class="p">]</span>
+            <span class="c1"># Check that all atoms have the correct number of orbitals.</span>
+            <span class="c1"># Otherwise we will correct them</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">atms</span><span class="p">)):</span>
+                <span class="k">if</span> <span class="n">atms</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">orbs</span> <span class="o">!=</span> <span class="n">nos</span><span class="p">[</span><span class="n">i</span><span class="p">]:</span>
+                    <span class="n">atms</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">Atom</span><span class="p">(</span><span class="n">Z</span><span class="o">=</span><span class="n">atms</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">Z</span><span class="p">,</span> <span class="n">orbs</span><span class="o">=</span><span class="n">nos</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">tag</span><span class="o">=</span><span class="n">atms</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">tag</span><span class="p">)</span>
+
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># Default to Hydrogen atom with nos[ia] orbitals</span>
+            <span class="c1"># This may be counterintuitive but there is no storage of the</span>
+            <span class="c1"># actual species</span>
+            <span class="n">atms</span> <span class="o">=</span> <span class="p">[</span><span class="n">Atom</span><span class="p">(</span><span class="n">Z</span><span class="o">=</span><span class="s1">&#39;H&#39;</span><span class="p">,</span> <span class="n">orbs</span><span class="o">=</span><span class="n">o</span><span class="p">)</span> <span class="k">for</span> <span class="n">o</span> <span class="ow">in</span> <span class="n">nos</span><span class="p">]</span>
+
+        <span class="c1"># Create and return geometry object</span>
+        <span class="n">geom</span> <span class="o">=</span> <span class="n">Geometry</span><span class="p">(</span><span class="n">xyz</span><span class="p">,</span> <span class="n">atms</span><span class="p">,</span> <span class="n">sc</span><span class="o">=</span><span class="n">sc</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">geom</span></div>
+
+<div class="viewcode-block" id="dHncSileSiesta.write_supercell"><a class="viewcode-back" href="../../../../sisl/sisl.io.siesta.tbtrans.html#sisl.io.dHncSileSiesta.write_supercell">[docs]</a>    <span class="k">def</span> <span class="nf">write_supercell</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sc</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Creates the NetCDF file and writes the supercell information &quot;&quot;&quot;</span>
+        <span class="n">sile_raise_write</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+
+        <span class="c1"># Create initial dimensions</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_crt_dim</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;one&#39;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_crt_dim</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;n_s&#39;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span><span class="n">sc</span><span class="o">.</span><span class="n">nsc</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_crt_dim</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;xyz&#39;</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+
+        <span class="c1"># Create initial geometry</span>
+        <span class="n">v</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_crt_var</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;nsc&#39;</span><span class="p">,</span> <span class="s1">&#39;i4&#39;</span><span class="p">,</span> <span class="p">(</span><span class="s1">&#39;xyz&#39;</span><span class="p">,))</span>
+        <span class="n">v</span><span class="o">.</span><span class="n">info</span> <span class="o">=</span> <span class="s1">&#39;Number of supercells in each unit-cell direction&#39;</span>
+        <span class="n">v</span><span class="p">[:]</span> <span class="o">=</span> <span class="n">sc</span><span class="o">.</span><span class="n">nsc</span><span class="p">[:]</span>
+        <span class="n">v</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_crt_var</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;isc_off&#39;</span><span class="p">,</span> <span class="s1">&#39;i4&#39;</span><span class="p">,</span> <span class="p">(</span><span class="s1">&#39;n_s&#39;</span><span class="p">,</span> <span class="s1">&#39;xyz&#39;</span><span class="p">))</span>
+        <span class="n">v</span><span class="o">.</span><span class="n">info</span> <span class="o">=</span> <span class="s2">&quot;Index of supercell coordinates&quot;</span>
+        <span class="n">v</span><span class="p">[:]</span> <span class="o">=</span> <span class="n">sc</span><span class="o">.</span><span class="n">sc_off</span><span class="p">[:,</span> <span class="p">:]</span>
+        <span class="n">v</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_crt_var</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;cell&#39;</span><span class="p">,</span> <span class="s1">&#39;f8&#39;</span><span class="p">,</span> <span class="p">(</span><span class="s1">&#39;xyz&#39;</span><span class="p">,</span> <span class="s1">&#39;xyz&#39;</span><span class="p">))</span>
+        <span class="n">v</span><span class="o">.</span><span class="n">info</span> <span class="o">=</span> <span class="s1">&#39;Unit cell&#39;</span>
+        <span class="n">v</span><span class="o">.</span><span class="n">unit</span> <span class="o">=</span> <span class="s1">&#39;Bohr&#39;</span>
+        <span class="n">v</span><span class="p">[:]</span> <span class="o">=</span> <span class="n">sc</span><span class="o">.</span><span class="n">cell</span><span class="p">[:,</span> <span class="p">:]</span> <span class="o">/</span> <span class="n">Bohr2Ang</span>
+
+        <span class="c1"># Create designation of the creation</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">method</span> <span class="o">=</span> <span class="s1">&#39;sisl&#39;</span></div>
+
 <div class="viewcode-block" id="dHncSileSiesta.write_geometry"><a class="viewcode-back" href="../../../../sisl/sisl.io.siesta.tbtrans.html#sisl.io.dHncSileSiesta.write_geometry">[docs]</a>    <span class="k">def</span> <span class="nf">write_geometry</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">geom</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Creates the NetCDF file and writes the geometry information &quot;&quot;&quot;</span>
         <span class="n">sile_raise_write</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
 
         <span class="c1"># Create initial dimensions</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_crt_dim</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;one&#39;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_crt_dim</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;n_s&#39;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span><span class="n">geom</span><span class="o">.</span><span class="n">nsc</span><span class="p">))</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_crt_dim</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;xyz&#39;</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">write_supercell</span><span class="p">(</span><span class="n">geom</span><span class="o">.</span><span class="n">sc</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_crt_dim</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;no_s&#39;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span><span class="n">geom</span><span class="o">.</span><span class="n">nsc</span><span class="p">)</span> <span class="o">*</span> <span class="n">geom</span><span class="o">.</span><span class="n">no</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_crt_dim</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;no_u&#39;</span><span class="p">,</span> <span class="n">geom</span><span class="o">.</span><span class="n">no</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_crt_dim</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;na_u&#39;</span><span class="p">,</span> <span class="n">geom</span><span class="o">.</span><span class="n">na</span><span class="p">)</span>
 
         <span class="c1"># Create initial geometry</span>
-        <span class="n">v</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_crt_var</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;nsc&#39;</span><span class="p">,</span> <span class="s1">&#39;i4&#39;</span><span class="p">,</span> <span class="p">(</span><span class="s1">&#39;xyz&#39;</span><span class="p">,))</span>
-        <span class="n">v</span><span class="o">.</span><span class="n">info</span> <span class="o">=</span> <span class="s1">&#39;Number of supercells in each unit-cell direction&#39;</span>
         <span class="n">v</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_crt_var</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;lasto&#39;</span><span class="p">,</span> <span class="s1">&#39;i4&#39;</span><span class="p">,</span> <span class="p">(</span><span class="s1">&#39;na_u&#39;</span><span class="p">,))</span>
         <span class="n">v</span><span class="o">.</span><span class="n">info</span> <span class="o">=</span> <span class="s1">&#39;Last orbital of equivalent atom&#39;</span>
         <span class="n">v</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_crt_var</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;xa&#39;</span><span class="p">,</span> <span class="s1">&#39;f8&#39;</span><span class="p">,</span> <span class="p">(</span><span class="s1">&#39;na_u&#39;</span><span class="p">,</span> <span class="s1">&#39;xyz&#39;</span><span class="p">))</span>
         <span class="n">v</span><span class="o">.</span><span class="n">info</span> <span class="o">=</span> <span class="s1">&#39;Atomic coordinates&#39;</span>
-        <span class="n">v</span><span class="o">.</span><span class="n">unit</span> <span class="o">=</span> <span class="s1">&#39;Bohr&#39;</span>
-        <span class="n">v</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_crt_var</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;cell&#39;</span><span class="p">,</span> <span class="s1">&#39;f8&#39;</span><span class="p">,</span> <span class="p">(</span><span class="s1">&#39;xyz&#39;</span><span class="p">,</span> <span class="s1">&#39;xyz&#39;</span><span class="p">))</span>
-        <span class="n">v</span><span class="o">.</span><span class="n">info</span> <span class="o">=</span> <span class="s1">&#39;Unit cell&#39;</span>
         <span class="n">v</span><span class="o">.</span><span class="n">unit</span> <span class="o">=</span> <span class="s1">&#39;Bohr&#39;</span>
 
         <span class="c1"># Create designation of the creation</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">method</span> <span class="o">=</span> <span class="s1">&#39;sisl&#39;</span>
 
         <span class="c1"># Save stuff</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">variables</span><span class="p">[</span><span class="s1">&#39;nsc&#39;</span><span class="p">][:]</span> <span class="o">=</span> <span class="n">geom</span><span class="o">.</span><span class="n">nsc</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">variables</span><span class="p">[</span><span class="s1">&#39;xa&#39;</span><span class="p">][:]</span> <span class="o">=</span> <span class="n">geom</span><span class="o">.</span><span class="n">xyz</span> <span class="o">/</span> <span class="n">Bohr2Ang</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">variables</span><span class="p">[</span><span class="s1">&#39;cell&#39;</span><span class="p">][:]</span> <span class="o">=</span> <span class="n">geom</span><span class="o">.</span><span class="n">cell</span> <span class="o">/</span> <span class="n">Bohr2Ang</span>
 
         <span class="n">bs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_crt_grp</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;BASIS&#39;</span><span class="p">)</span>
         <span class="n">b</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_crt_var</span><span class="p">(</span><span class="n">bs</span><span class="p">,</span> <span class="s1">&#39;basis&#39;</span><span class="p">,</span> <span class="s1">&#39;i4&#39;</span><span class="p">,</span> <span class="p">(</span><span class="s1">&#39;na_u&#39;</span><span class="p">,))</span>
@@ -2296,11 +2418,9 @@
             <span class="k">if</span> <span class="n">a</span><span class="o">.</span><span class="n">tag</span> <span class="ow">in</span> <span class="n">bs</span><span class="o">.</span><span class="n">groups</span><span class="p">:</span>
                 <span class="c1"># Assert the file sizes</span>
                 <span class="k">if</span> <span class="n">bs</span><span class="o">.</span><span class="n">groups</span><span class="p">[</span><span class="n">a</span><span class="o">.</span><span class="n">tag</span><span class="p">]</span><span class="o">.</span><span class="n">Number_of_orbitals</span> <span class="o">!=</span> <span class="n">a</span><span class="o">.</span><span class="n">orbs</span><span class="p">:</span>
-                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                        <span class="s1">&#39;File &#39;</span> <span class="o">+</span>
-                        <span class="bp">self</span><span class="o">.</span><span class="n">file</span> <span class="o">+</span>
-                        <span class="s1">&#39; has erroneous data in regards of &#39;</span> <span class="o">+</span>
-                        <span class="s1">&#39;of the alreay stored dimensions.&#39;</span><span class="p">)</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">((</span><span class="s1">&#39;File </span><span class="si">{0}</span><span class="s1">&#39;</span>
+                                      <span class="s1">&#39; has erroneous data in regards of &#39;</span>
+                                      <span class="s1">&#39;of the alreay stored dimensions.&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">file</span><span class="p">))</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="n">ba</span> <span class="o">=</span> <span class="n">bs</span><span class="o">.</span><span class="n">createGroup</span><span class="p">(</span><span class="n">a</span><span class="o">.</span><span class="n">tag</span><span class="p">)</span>
                 <span class="n">ba</span><span class="o">.</span><span class="n">ID</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">(</span><span class="n">isp</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
@@ -2313,11 +2433,63 @@
         <span class="c1"># Store the lasto variable as the remaining thing to do</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">variables</span><span class="p">[</span><span class="s1">&#39;lasto&#39;</span><span class="p">][:]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cumsum</span><span class="p">(</span><span class="n">orbs</span><span class="p">)</span></div>
 
-    <span class="k">def</span> <span class="nf">_add_lvl</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ilvl</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Simply adds and returns a group if it does not</span>
-<span class="sd">        exist it will be created</span>
+    <span class="k">def</span> <span class="nf">_get_lvl_k_E</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Return level, k and E indices, in that order.</span>
+
+<span class="sd">        The indices are negative if a new index needs to be created.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Determine the type of dH we are storing...</span>
+        <span class="n">k</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;k&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="n">E</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;E&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="p">(</span><span class="n">k</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">E</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">):</span>
+            <span class="n">ilvl</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="k">elif</span> <span class="p">(</span><span class="n">k</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">E</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">):</span>
+            <span class="n">ilvl</span> <span class="o">=</span> <span class="mi">2</span>
+        <span class="k">elif</span> <span class="p">(</span><span class="n">k</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">E</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">):</span>
+            <span class="n">ilvl</span> <span class="o">=</span> <span class="mi">3</span>
+            <span class="c1"># Convert to Rydberg</span>
+            <span class="n">E</span> <span class="o">=</span> <span class="n">E</span> <span class="o">*</span> <span class="n">eV2Ry</span>
+        <span class="k">elif</span> <span class="p">(</span><span class="n">k</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">E</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">):</span>
+            <span class="n">ilvl</span> <span class="o">=</span> <span class="mi">4</span>
+            <span class="c1"># Convert to Rydberg</span>
+            <span class="n">E</span> <span class="o">=</span> <span class="n">E</span> <span class="o">*</span> <span class="n">eV2Ry</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">E</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;This is wrongly implemented!!!&quot;</span><span class="p">)</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">lvl</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_lvl</span><span class="p">(</span><span class="n">ilvl</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">ilvl</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span>
+
+        <span class="c1"># Now determine the energy and k-indices</span>
+        <span class="n">iE</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+        <span class="k">if</span> <span class="n">ilvl</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">]:</span>
+            <span class="n">Es</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">lvl</span><span class="o">.</span><span class="n">variables</span><span class="p">[</span><span class="s1">&#39;E&#39;</span><span class="p">][:])</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">Es</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">iE</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argmin</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">Es</span> <span class="o">-</span> <span class="n">E</span><span class="p">))</span>
+                <span class="k">if</span> <span class="nb">abs</span><span class="p">(</span><span class="n">Es</span><span class="p">[</span><span class="n">iE</span><span class="p">]</span> <span class="o">-</span> <span class="n">E</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mf">0.0001</span><span class="p">:</span>
+                    <span class="n">iE</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+
+        <span class="n">ik</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+        <span class="k">if</span> <span class="n">ilvl</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">4</span><span class="p">]:</span>
+            <span class="n">kpt</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">lvl</span><span class="o">.</span><span class="n">variables</span><span class="p">[</span><span class="s1">&#39;kpt&#39;</span><span class="p">][:])</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">kpt</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">ik</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argmin</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">kpt</span> <span class="o">-</span> <span class="n">k</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="p">:]),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">))</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">allclose</span><span class="p">(</span><span class="n">kpt</span><span class="p">[</span><span class="n">ik</span><span class="p">,</span> <span class="p">:],</span> <span class="n">k</span><span class="p">,</span> <span class="n">atol</span><span class="o">=</span><span class="mf">0.0001</span><span class="p">):</span>
+                    <span class="n">ik</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+
+        <span class="k">return</span> <span class="n">ilvl</span><span class="p">,</span> <span class="n">ik</span><span class="p">,</span> <span class="n">iE</span>
+
+    <span class="k">def</span> <span class="nf">_get_lvl</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ilvl</span><span class="p">):</span>
+        <span class="n">slvl</span> <span class="o">=</span> <span class="s1">&#39;LEVEL-&#39;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">ilvl</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">slvl</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">groups</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_crt_grp</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">slvl</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Level </span><span class="si">{0}</span><span class="s2"> does not exist in </span><span class="si">{1}</span><span class="s2">.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">ilvl</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">file</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">_add_lvl</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ilvl</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Simply adds and returns a group if it does not exist it will be created &quot;&quot;&quot;</span>
         <span class="n">slvl</span> <span class="o">=</span> <span class="s1">&#39;LEVEL-&#39;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">ilvl</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">slvl</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">groups</span><span class="p">:</span>
             <span class="n">lvl</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_crt_grp</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">slvl</span><span class="p">)</span>
@@ -2325,14 +2497,14 @@
             <span class="n">lvl</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_crt_grp</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">slvl</span><span class="p">)</span>
             <span class="k">if</span> <span class="n">ilvl</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">4</span><span class="p">]:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">_crt_dim</span><span class="p">(</span><span class="n">lvl</span><span class="p">,</span> <span class="s1">&#39;nkpt&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
-                <span class="n">v</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_crt_var</span><span class="p">(</span><span class="n">lvl</span><span class="p">,</span> <span class="s1">&#39;kpt&#39;</span><span class="p">,</span> <span class="s1">&#39;f8&#39;</span><span class="p">,</span> <span class="p">(</span><span class="s1">&#39;nkpt&#39;</span><span class="p">,</span> <span class="s1">&#39;xyz&#39;</span><span class="p">),</span>
-                                  <span class="n">attr</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;info&#39;</span><span class="p">:</span> <span class="s1">&#39;k-points for dH values&#39;</span><span class="p">,</span>
-                                          <span class="s1">&#39;unit&#39;</span><span class="p">:</span> <span class="s1">&#39;b**-1&#39;</span><span class="p">})</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_crt_var</span><span class="p">(</span><span class="n">lvl</span><span class="p">,</span> <span class="s1">&#39;kpt&#39;</span><span class="p">,</span> <span class="s1">&#39;f8&#39;</span><span class="p">,</span> <span class="p">(</span><span class="s1">&#39;nkpt&#39;</span><span class="p">,</span> <span class="s1">&#39;xyz&#39;</span><span class="p">),</span>
+                              <span class="n">attr</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;info&#39;</span><span class="p">:</span> <span class="s1">&#39;k-points for dH values&#39;</span><span class="p">,</span>
+                                      <span class="s1">&#39;unit&#39;</span><span class="p">:</span> <span class="s1">&#39;b**-1&#39;</span><span class="p">})</span>
             <span class="k">if</span> <span class="n">ilvl</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">]:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">_crt_dim</span><span class="p">(</span><span class="n">lvl</span><span class="p">,</span> <span class="s1">&#39;ne&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
-                <span class="n">v</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_crt_var</span><span class="p">(</span><span class="n">lvl</span><span class="p">,</span> <span class="s1">&#39;E&#39;</span><span class="p">,</span> <span class="s1">&#39;f8&#39;</span><span class="p">,</span> <span class="p">(</span><span class="s1">&#39;ne&#39;</span><span class="p">,),</span>
-                                  <span class="n">attr</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;info&#39;</span><span class="p">:</span> <span class="s1">&#39;Energy points for dH values&#39;</span><span class="p">,</span>
-                                          <span class="s1">&#39;unit&#39;</span><span class="p">:</span> <span class="s1">&#39;Ry&#39;</span><span class="p">})</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_crt_var</span><span class="p">(</span><span class="n">lvl</span><span class="p">,</span> <span class="s1">&#39;E&#39;</span><span class="p">,</span> <span class="s1">&#39;f8&#39;</span><span class="p">,</span> <span class="p">(</span><span class="s1">&#39;ne&#39;</span><span class="p">,),</span>
+                              <span class="n">attr</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;info&#39;</span><span class="p">:</span> <span class="s1">&#39;Energy points for dH values&#39;</span><span class="p">,</span>
+                                      <span class="s1">&#39;unit&#39;</span><span class="p">:</span> <span class="s1">&#39;Ry&#39;</span><span class="p">})</span>
 
         <span class="k">return</span> <span class="n">lvl</span>
 
@@ -2358,22 +2530,7 @@
         <span class="n">k</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;k&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
         <span class="n">E</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;E&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
 
-        <span class="k">if</span> <span class="p">(</span><span class="n">k</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">E</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">):</span>
-            <span class="n">ilvl</span> <span class="o">=</span> <span class="mi">1</span>
-        <span class="k">elif</span> <span class="p">(</span><span class="n">k</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">E</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">):</span>
-            <span class="n">ilvl</span> <span class="o">=</span> <span class="mi">2</span>
-        <span class="k">elif</span> <span class="p">(</span><span class="n">k</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">E</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">):</span>
-            <span class="n">ilvl</span> <span class="o">=</span> <span class="mi">3</span>
-            <span class="c1"># Convert to Rydberg</span>
-            <span class="n">E</span> <span class="o">=</span> <span class="n">E</span> <span class="o">*</span> <span class="n">eV2Ry</span>
-        <span class="k">elif</span> <span class="p">(</span><span class="n">k</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">E</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">):</span>
-            <span class="n">ilvl</span> <span class="o">=</span> <span class="mi">4</span>
-            <span class="c1"># Convert to Rydberg</span>
-            <span class="n">E</span> <span class="o">=</span> <span class="n">E</span> <span class="o">*</span> <span class="n">eV2Ry</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="nb">print</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">E</span><span class="p">)</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;This is wrongly implemented!!!&quot;</span><span class="p">)</span>
-
+        <span class="n">ilvl</span><span class="p">,</span> <span class="n">ik</span><span class="p">,</span> <span class="n">iE</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_lvl_k_E</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
         <span class="n">lvl</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_add_lvl</span><span class="p">(</span><span class="n">ilvl</span><span class="p">)</span>
 
         <span class="c1"># Append the sparsity pattern</span>
@@ -2388,6 +2545,9 @@
             <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">lvl</span><span class="o">.</span><span class="n">variables</span><span class="p">[</span><span class="s1">&#39;list_col&#39;</span><span class="p">][:]</span> <span class="o">!=</span> <span class="n">H</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">col</span><span class="p">[:]</span><span class="o">+</span><span class="mi">1</span><span class="p">):</span>
                 <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;The sparsity pattern stored in dH *MUST* be equivalent for &quot;</span>
                                  <span class="s2">&quot;all dH entries [list_col].&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">lvl</span><span class="o">.</span><span class="n">variables</span><span class="p">[</span><span class="s1">&#39;isc_off&#39;</span><span class="p">][:]</span> <span class="o">!=</span> <span class="n">H</span><span class="o">.</span><span class="n">geom</span><span class="o">.</span><span class="n">sc</span><span class="o">.</span><span class="n">sc_off</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;The sparsity pattern stored in dH *MUST* be equivalent for &quot;</span>
+                                 <span class="s2">&quot;all dH entries [sc_off].&quot;</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_crt_dim</span><span class="p">(</span><span class="n">lvl</span><span class="p">,</span> <span class="s1">&#39;nnzs&#39;</span><span class="p">,</span> <span class="n">H</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">col</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
             <span class="n">v</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_crt_var</span><span class="p">(</span><span class="n">lvl</span><span class="p">,</span> <span class="s1">&#39;n_col&#39;</span><span class="p">,</span> <span class="s1">&#39;i4&#39;</span><span class="p">,</span> <span class="p">(</span><span class="s1">&#39;no_u&#39;</span><span class="p">,))</span>
@@ -2403,37 +2563,16 @@
 
         <span class="n">warn_E</span> <span class="o">=</span> <span class="kc">True</span>
         <span class="k">if</span> <span class="n">ilvl</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">]:</span>
-            <span class="n">Es</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">lvl</span><span class="o">.</span><span class="n">variables</span><span class="p">[</span><span class="s1">&#39;E&#39;</span><span class="p">][:])</span>
-
-            <span class="n">iE</span> <span class="o">=</span> <span class="mi">0</span>
-            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">Es</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
-                <span class="n">iE</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argmin</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">Es</span> <span class="o">-</span> <span class="n">E</span><span class="p">))</span>
-                <span class="k">if</span> <span class="nb">abs</span><span class="p">(</span><span class="n">Es</span><span class="p">[</span><span class="n">iE</span><span class="p">]</span> <span class="o">-</span> <span class="n">E</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mf">0.0001</span><span class="p">:</span>
-                    <span class="c1"># accuracy of 0.1 meV</span>
-
-                    <span class="c1"># create a new entry</span>
-                    <span class="n">iE</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">Es</span><span class="p">)</span>
-                    <span class="n">lvl</span><span class="o">.</span><span class="n">variables</span><span class="p">[</span><span class="s1">&#39;E&#39;</span><span class="p">][</span><span class="n">iE</span><span class="p">]</span> <span class="o">=</span> <span class="n">E</span>
-                    <span class="n">warn_E</span> <span class="o">=</span> <span class="kc">False</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="n">lvl</span><span class="o">.</span><span class="n">variables</span><span class="p">[</span><span class="s1">&#39;E&#39;</span><span class="p">][</span><span class="n">iE</span><span class="p">]</span> <span class="o">=</span> <span class="n">E</span>
+            <span class="k">if</span> <span class="n">iE</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="c1"># We need to add the new value</span>
+                <span class="n">iE</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">lvl</span><span class="o">.</span><span class="n">variables</span><span class="p">[</span><span class="s1">&#39;E&#39;</span><span class="p">])</span>
+                <span class="n">lvl</span><span class="o">.</span><span class="n">variables</span><span class="p">[</span><span class="s1">&#39;E&#39;</span><span class="p">][</span><span class="n">iE</span><span class="p">]</span> <span class="o">=</span> <span class="n">E</span> <span class="o">*</span> <span class="n">eV2Ry</span>
                 <span class="n">warn_E</span> <span class="o">=</span> <span class="kc">False</span>
 
         <span class="n">warn_k</span> <span class="o">=</span> <span class="kc">True</span>
         <span class="k">if</span> <span class="n">ilvl</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">4</span><span class="p">]:</span>
-            <span class="n">kpt</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">lvl</span><span class="o">.</span><span class="n">variables</span><span class="p">[</span><span class="s1">&#39;kpt&#39;</span><span class="p">][:])</span>
-
-            <span class="n">ik</span> <span class="o">=</span> <span class="mi">0</span>
-            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">kpt</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
-                <span class="n">ik</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argmin</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">kpt</span> <span class="o">-</span> <span class="n">k</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="p">:]),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">))</span>
-                <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">allclose</span><span class="p">(</span><span class="n">kpt</span><span class="p">[</span><span class="n">ik</span><span class="p">,</span> <span class="p">:],</span> <span class="n">k</span><span class="p">,</span> <span class="n">atol</span><span class="o">=</span><span class="mf">0.0001</span><span class="p">):</span>
-                    <span class="c1"># accuracy of 0.0001</span>
-
-                    <span class="c1"># create a new entry</span>
-                    <span class="n">ik</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">kpt</span><span class="p">)</span>
-                    <span class="n">lvl</span><span class="o">.</span><span class="n">variables</span><span class="p">[</span><span class="s1">&#39;kpt&#39;</span><span class="p">][</span><span class="n">ik</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">k</span>
-                    <span class="n">warn_k</span> <span class="o">=</span> <span class="kc">False</span>
-            <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">ik</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">ik</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">lvl</span><span class="o">.</span><span class="n">variables</span><span class="p">[</span><span class="s1">&#39;kpt&#39;</span><span class="p">])</span>
                 <span class="n">lvl</span><span class="o">.</span><span class="n">variables</span><span class="p">[</span><span class="s1">&#39;kpt&#39;</span><span class="p">][</span><span class="n">ik</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">k</span>
                 <span class="n">warn_k</span> <span class="o">=</span> <span class="kc">False</span>
 
@@ -2496,8 +2635,73 @@
                                       <span class="s1">&#39;unit&#39;</span><span class="p">:</span> <span class="s2">&quot;Ry&quot;</span><span class="p">},</span>  <span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">_cmp_args</span><span class="p">)</span>
             <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">H</span><span class="o">.</span><span class="n">spin</span><span class="p">)):</span>
                 <span class="n">sl</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">i</span>
-                <span class="n">v</span><span class="p">[</span><span class="n">sl</span><span class="p">]</span> <span class="o">=</span> <span class="n">H</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">_D</span><span class="p">[:,</span> <span class="n">i</span><span class="p">]</span> <span class="o">*</span> <span class="n">eV2Ry</span></div></div>
+                <span class="n">v</span><span class="p">[</span><span class="n">sl</span><span class="p">]</span> <span class="o">=</span> <span class="n">H</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">_D</span><span class="p">[:,</span> <span class="n">i</span><span class="p">]</span> <span class="o">*</span> <span class="n">eV2Ry</span></div>
 
+    <span class="k">def</span> <span class="nf">_read_class</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="bp">cls</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Reads a class model from a file &quot;&quot;&quot;</span>
+
+        <span class="c1"># Ensure that the geometry is written</span>
+        <span class="n">geom</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">read_geometry</span><span class="p">()</span>
+
+        <span class="c1"># Determine the type of dH we are storing...</span>
+        <span class="n">E</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;E&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+
+        <span class="n">ilvl</span><span class="p">,</span> <span class="n">ik</span><span class="p">,</span> <span class="n">iE</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_lvl_k_E</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="c1"># Get the level</span>
+        <span class="n">lvl</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_lvl</span><span class="p">(</span><span class="n">ilvl</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">iE</span> <span class="o">&lt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">ilvl</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">]:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Energy </span><span class="si">{0}</span><span class="s2"> eV does not exist in the file.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">E</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">ik</span> <span class="o">&lt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">ilvl</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">4</span><span class="p">]:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;k-point requested does not exist in the file.&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">ilvl</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">sl</span> <span class="o">=</span> <span class="p">[</span><span class="nb">slice</span><span class="p">(</span><span class="kc">None</span><span class="p">)]</span> <span class="o">*</span> <span class="mi">2</span>
+        <span class="k">elif</span> <span class="n">ilvl</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="n">sl</span> <span class="o">=</span> <span class="p">[</span><span class="nb">slice</span><span class="p">(</span><span class="kc">None</span><span class="p">)]</span> <span class="o">*</span> <span class="mi">3</span>
+            <span class="n">sl</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">ik</span>
+        <span class="k">elif</span> <span class="n">ilvl</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+            <span class="n">sl</span> <span class="o">=</span> <span class="p">[</span><span class="nb">slice</span><span class="p">(</span><span class="kc">None</span><span class="p">)]</span> <span class="o">*</span> <span class="mi">3</span>
+            <span class="n">sl</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">iE</span>
+        <span class="k">elif</span> <span class="n">ilvl</span> <span class="o">==</span> <span class="mi">4</span><span class="p">:</span>
+            <span class="n">sl</span> <span class="o">=</span> <span class="p">[</span><span class="nb">slice</span><span class="p">(</span><span class="kc">None</span><span class="p">)]</span> <span class="o">*</span> <span class="mi">4</span>
+            <span class="n">sl</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">ik</span>
+            <span class="n">sl</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">iE</span>
+
+        <span class="c1"># Now figure out what data-type the dH is.</span>
+        <span class="k">if</span> <span class="s1">&#39;RedH&#39;</span> <span class="ow">in</span> <span class="n">lvl</span><span class="o">.</span><span class="n">variables</span><span class="p">:</span>
+            <span class="c1"># It *must* be a complex valued Hamiltonian</span>
+            <span class="n">is_complex</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="n">dtype</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">complex128</span>
+        <span class="k">elif</span> <span class="s1">&#39;dH&#39;</span> <span class="ow">in</span> <span class="n">lvl</span><span class="o">.</span><span class="n">variables</span><span class="p">:</span>
+            <span class="n">is_complex</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="n">dtype</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span>
+
+        <span class="c1"># Now create the tight-binding stuff (we re-create the</span>
+        <span class="c1"># array, hence just allocate the smallest amount possible)</span>
+        <span class="n">C</span> <span class="o">=</span> <span class="bp">cls</span><span class="p">(</span><span class="n">geom</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">nnzpr</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">,</span> <span class="n">orthogonal</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+        <span class="n">C</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">ncol</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">lvl</span><span class="o">.</span><span class="n">variables</span><span class="p">[</span><span class="s1">&#39;n_col&#39;</span><span class="p">][:],</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
+        <span class="c1"># Update maximum number of connections (in case future stuff happens)</span>
+        <span class="n">C</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">ptr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">cumsum</span><span class="p">(</span><span class="n">C</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">ncol</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">),</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">C</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">col</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">lvl</span><span class="o">.</span><span class="n">variables</span><span class="p">[</span><span class="s1">&#39;list_col&#39;</span><span class="p">][:],</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span>
+
+        <span class="c1"># Copy information over</span>
+        <span class="n">C</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">_nnz</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">C</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">col</span><span class="p">)</span>
+        <span class="n">C</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">_D</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">([</span><span class="n">C</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">ptr</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="mi">1</span><span class="p">],</span> <span class="n">dtype</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">is_complex</span><span class="p">:</span>
+            <span class="n">C</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">_D</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">real</span> <span class="o">=</span> <span class="n">lvl</span><span class="o">.</span><span class="n">variables</span><span class="p">[</span><span class="s1">&#39;RedH&#39;</span><span class="p">][</span><span class="n">sl</span><span class="p">]</span> <span class="o">*</span> <span class="n">Ry2eV</span>
+            <span class="n">C</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">_D</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">imag</span> <span class="o">=</span> <span class="n">lvl</span><span class="o">.</span><span class="n">variables</span><span class="p">[</span><span class="s1">&#39;ImdH&#39;</span><span class="p">][</span><span class="n">sl</span><span class="p">]</span> <span class="o">*</span> <span class="n">Ry2eV</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">C</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">_D</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">lvl</span><span class="o">.</span><span class="n">variables</span><span class="p">[</span><span class="s1">&#39;dH&#39;</span><span class="p">][</span><span class="n">sl</span><span class="p">]</span> <span class="o">*</span> <span class="n">Ry2eV</span>
+
+        <span class="k">return</span> <span class="n">C</span>
+
+<div class="viewcode-block" id="dHncSileSiesta.read_hamiltonian"><a class="viewcode-back" href="../../../../sisl/sisl.io.siesta.tbtrans.html#sisl.io.dHncSileSiesta.read_hamiltonian">[docs]</a>    <span class="k">def</span> <span class="nf">read_hamiltonian</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Reads a Hamiltonian model from the file &quot;&quot;&quot;</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_read_class</span><span class="p">(</span><span class="n">Hamiltonian</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div></div>
 
 <span class="n">add_sile</span><span class="p">(</span><span class="s1">&#39;dH.nc&#39;</span><span class="p">,</span> <span class="n">dHncSileSiesta</span><span class="p">)</span>
 </pre></div>
@@ -2536,7 +2740,7 @@
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'../../../../',
-            VERSION:'0.8.5-87',
+            VERSION:'0.8.5-125',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true,

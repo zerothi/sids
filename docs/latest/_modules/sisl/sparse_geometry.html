@@ -65,7 +65,7 @@
             
             
               <div class="version">
-                0.8.5-87
+                0.8.5-125
               </div>
             
           
@@ -172,13 +172,8 @@
 <span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">print_function</span><span class="p">,</span> <span class="n">division</span>
 
 <span class="kn">import</span> <span class="nn">warnings</span>
-<span class="kn">from</span> <span class="nn">numbers</span> <span class="k">import</span> <span class="n">Integral</span>
-<span class="kn">import</span> <span class="nn">itertools</span> <span class="k">as</span> <span class="nn">itools</span>
 
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-<span class="kn">import</span> <span class="nn">scipy.linalg</span> <span class="k">as</span> <span class="nn">sli</span>
-<span class="kn">from</span> <span class="nn">scipy.sparse</span> <span class="k">import</span> <span class="n">isspmatrix</span><span class="p">,</span> <span class="n">csr_matrix</span>
-<span class="kn">import</span> <span class="nn">scipy.sparse.linalg</span> <span class="k">as</span> <span class="nn">ssli</span>
 
 <span class="kn">import</span> <span class="nn">sisl._numpy</span> <span class="k">as</span> <span class="nn">n_</span>
 <span class="kn">from</span> <span class="nn">._help</span> <span class="k">import</span> <span class="n">get_dtype</span><span class="p">,</span> <span class="n">ensure_array</span>
@@ -199,7 +194,7 @@
 <span class="sd">    The sub-classed object may re-implement the ``_cls_kwargs`` routine</span>
 <span class="sd">    to pass down keyword arguments when a new class is instantiated.</span>
 
-<span class="sd">    This object contains information regarding the </span>
+<span class="sd">    This object contains information regarding the</span>
 <span class="sd">     - geometry</span>
 
 <span class="sd">    &quot;&quot;&quot;</span>
@@ -265,7 +260,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="n">keep</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="SparseGeometry.copy"><a class="viewcode-back" href="../../sisl/sisl.sparse_geometry.html#sisl.sparse_geometry.SparseGeometry.copy">[docs]</a>    <span class="k">def</span> <span class="nf">copy</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot; A copy of this object </span>
+        <span class="sd">&quot;&quot;&quot; A copy of this object</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
@@ -400,7 +395,7 @@
 
 <span class="sd">        Notes</span>
 <span class="sd">        -----</span>
-<span class="sd">        This function only works for geometry sparse matrices (i.e. one </span>
+<span class="sd">        This function only works for geometry sparse matrices (i.e. one</span>
 <span class="sd">        element per atom). If you have more than one element per atom</span>
 <span class="sd">        you have to implement the function your-self.</span>
 
@@ -432,9 +427,9 @@
 
 <span class="sd">        This may be called in two variants.</span>
 
-<span class="sd">        1. Pass a function (``func``), see e.g. ``create_construct`` </span>
+<span class="sd">        1. Pass a function (``func``), see e.g. ``create_construct``</span>
 <span class="sd">           which does the setting up.</span>
-<span class="sd">        2. Pass a tuple/list in ``func`` which consists of two </span>
+<span class="sd">        2. Pass a tuple/list in ``func`` which consists of two</span>
 <span class="sd">           elements, one is ``R`` the radii parameters for</span>
 <span class="sd">           the corresponding parameters.</span>
 <span class="sd">           The second is the parameters</span>
@@ -527,6 +522,48 @@
     <span class="k">def</span> <span class="nf">finalized</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Whether the contained data is finalized and non-used elements have been removed &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">finalized</span>
+
+<div class="viewcode-block" id="SparseGeometry.remove"><a class="viewcode-back" href="../../sisl/sisl.sparse_geometry.html#sisl.sparse_geometry.SparseGeometry.remove">[docs]</a>    <span class="k">def</span> <span class="nf">remove</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">atom</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Create a subset of this sparse matrix by removing the atoms corresponding to `atom`</span>
+
+<span class="sd">        Indices passed must be unique.</span>
+
+<span class="sd">        Negative indices are wrapped and thus works.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        atom  : array_like of int</span>
+<span class="sd">            indices of removed atoms</span>
+
+<span class="sd">        See Also</span>
+<span class="sd">        --------</span>
+<span class="sd">        Geometry.remove : equivalent to the resulting `Geometry` from this routine</span>
+<span class="sd">        Geometry.sub : the negative of `Geometry.remove`</span>
+<span class="sd">        sub : the negative of `remove`, i.e. retain a subset of atoms</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">atom</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sc2uc</span><span class="p">(</span><span class="n">atom</span><span class="p">)</span>
+        <span class="n">atom</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="n">n_</span><span class="o">.</span><span class="n">arangei</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">na</span><span class="p">),</span> <span class="n">atom</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="n">atom</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="SparseGeometry.sub"><a class="viewcode-back" href="../../sisl/sisl.sparse_geometry.html#sisl.sparse_geometry.SparseGeometry.sub">[docs]</a>    <span class="k">def</span> <span class="nf">sub</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">atom</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Create a subset of this sparse matrix by retaining the atoms corresponding to `atom`</span>
+
+<span class="sd">        Indices passed must be unique.</span>
+
+<span class="sd">        Negative indices are wrapped and thus works.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        atom  : array_like of int</span>
+<span class="sd">            indices of removed atoms</span>
+
+<span class="sd">        See Also</span>
+<span class="sd">        --------</span>
+<span class="sd">        Geometry.remove : equivalent to the resulting `Geometry` from this routine</span>
+<span class="sd">        Geometry.sub : the negative of `Geometry.remove`</span>
+<span class="sd">        remove : the negative of `sub`, i.e. remove a subset of atoms</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">pass</span></div>
 
 <div class="viewcode-block" id="SparseGeometry.finalize"><a class="viewcode-back" href="../../sisl/sisl.sparse_geometry.html#sisl.sparse_geometry.SparseGeometry.finalize">[docs]</a>    <span class="k">def</span> <span class="nf">finalize</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Finalizes the model</span>
@@ -816,7 +853,7 @@
             <span class="s2">&quot;Not all supercells are accounted for&quot;</span>
 
         <span class="c1"># Maximum column translated too</span>
-        <span class="n">max_n</span> <span class="o">=</span> <span class="n">sc</span><span class="o">.</span><span class="n">n_s</span>
+        <span class="n">max_n</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">sc</span><span class="o">.</span><span class="n">n_s</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">sc</span><span class="o">.</span><span class="n">n_s</span><span class="p">)</span>
         <span class="c1"># 1. Ensure that any one of the *old* supercells that</span>
         <span class="c1">#    are now deleted are put in the end</span>
         <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">deleted</span><span class="o">.</span><span class="n">nonzero</span><span class="p">()[</span><span class="mi">0</span><span class="p">]):</span>
@@ -850,7 +887,7 @@
 
         <span class="c1"># Create array of deleted values</span>
         <span class="n">max_n</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">max_n</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">sc</span><span class="o">.</span><span class="n">n_s</span><span class="p">)</span>
-        <span class="n">delete</span> <span class="o">=</span> <span class="n">n_</span><span class="o">.</span><span class="n">arangei</span><span class="p">(</span><span class="n">sc</span><span class="o">.</span><span class="n">n_s</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">na</span><span class="p">,</span> <span class="n">max_n</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">na</span><span class="p">)</span>
+        <span class="n">delete</span> <span class="o">=</span> <span class="n">n_</span><span class="o">.</span><span class="n">arangei</span><span class="p">(</span><span class="n">sc</span><span class="o">.</span><span class="n">n_s</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">na</span><span class="p">,</span> <span class="p">(</span><span class="n">max_n</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">na</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">delete_columns</span><span class="p">(</span><span class="n">delete</span><span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">geom</span><span class="o">.</span><span class="n">set_nsc</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
@@ -858,7 +895,7 @@
 <div class="viewcode-block" id="SparseAtom.cut"><a class="viewcode-back" href="../../sisl/sisl.sparse_geometry.html#sisl.sparse_geometry.SparseAtom.cut">[docs]</a>    <span class="k">def</span> <span class="nf">cut</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">seps</span><span class="p">,</span> <span class="n">axis</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Cuts the sparse atom model into different parts.</span>
 
-<span class="sd">        Recreates a new sparse atom object with only the cutted </span>
+<span class="sd">        Recreates a new sparse atom object with only the cutted</span>
 <span class="sd">        atoms in the structure.</span>
 
 <span class="sd">        Cutting is the opposite of tiling.</span>
@@ -970,28 +1007,6 @@
             <span class="n">S</span><span class="p">[</span><span class="n">a</span><span class="p">,</span> <span class="n">ja</span> <span class="o">+</span> <span class="n">afm</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="p">[</span><span class="n">ja</span><span class="p">,</span> <span class="n">ia</span><span class="p">]</span>
 
         <span class="k">return</span> <span class="n">S</span></div>
-
-<div class="viewcode-block" id="SparseAtom.remove"><a class="viewcode-back" href="../../sisl/sisl.sparse_geometry.html#sisl.sparse_geometry.SparseAtom.remove">[docs]</a>    <span class="k">def</span> <span class="nf">remove</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">atom</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot; Create a subset of this sparse matrix by removing the elements corresponding to `atom`</span>
-
-<span class="sd">        Indices passed must be unique.</span>
-
-<span class="sd">        Negative indices are wrapped and thus works.</span>
-
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        atom  : array_like of int</span>
-<span class="sd">            indices of removed atoms</span>
-
-<span class="sd">        See Also</span>
-<span class="sd">        --------</span>
-<span class="sd">        Geometry.remove : equivalent to the resulting `Geometry` from this routine</span>
-<span class="sd">        Geometry.sub : the negative of `Geometry.remove`</span>
-<span class="sd">        sub : the negative of `remove`, i.e. retain a subset of atoms</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">atom</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sc2uc</span><span class="p">(</span><span class="n">atom</span><span class="p">)</span>
-        <span class="n">atom</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">setdiff1d</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">na</span><span class="p">),</span> <span class="n">atom</span><span class="p">,</span> <span class="n">assume_unique</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="n">atom</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="SparseAtom.sub"><a class="viewcode-back" href="../../sisl/sisl.sparse_geometry.html#sisl.sparse_geometry.SparseAtom.sub">[docs]</a>    <span class="k">def</span> <span class="nf">sub</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">atom</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Create a subset of this sparse matrix by only retaining the elements corresponding to the ``atom``</span>
@@ -1315,7 +1330,7 @@
             <span class="s2">&quot;Not all supercells are accounted for&quot;</span>
 
         <span class="c1"># Maximum column translated too</span>
-        <span class="n">max_n</span> <span class="o">=</span> <span class="n">sc</span><span class="o">.</span><span class="n">n_s</span>
+        <span class="n">max_n</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">sc</span><span class="o">.</span><span class="n">n_s</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">sc</span><span class="o">.</span><span class="n">n_s</span><span class="p">)</span>
         <span class="c1"># 1. Ensure that any one of the *old* supercells that</span>
         <span class="c1">#    are now deleted are put in the end</span>
         <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">deleted</span><span class="o">.</span><span class="n">nonzero</span><span class="p">()[</span><span class="mi">0</span><span class="p">]):</span>
@@ -1349,7 +1364,7 @@
 
         <span class="c1"># Create array of deleted values</span>
         <span class="n">max_n</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">max_n</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">sc</span><span class="o">.</span><span class="n">n_s</span><span class="p">)</span>
-        <span class="n">delete</span> <span class="o">=</span> <span class="n">n_</span><span class="o">.</span><span class="n">arangei</span><span class="p">(</span><span class="n">sc</span><span class="o">.</span><span class="n">n_s</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">no</span><span class="p">,</span> <span class="n">max_n</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">no</span><span class="p">)</span>
+        <span class="n">delete</span> <span class="o">=</span> <span class="n">n_</span><span class="o">.</span><span class="n">arangei</span><span class="p">(</span><span class="n">sc</span><span class="o">.</span><span class="n">n_s</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">no</span><span class="p">,</span> <span class="p">(</span><span class="n">max_n</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">no</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">delete_columns</span><span class="p">(</span><span class="n">delete</span><span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">geom</span><span class="o">.</span><span class="n">set_nsc</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
@@ -1357,7 +1372,7 @@
 <div class="viewcode-block" id="SparseOrbital.cut"><a class="viewcode-back" href="../../sisl/sisl.sparse_geometry.html#sisl.sparse_geometry.SparseOrbital.cut">[docs]</a>    <span class="k">def</span> <span class="nf">cut</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">seps</span><span class="p">,</span> <span class="n">axis</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Cuts the sparse orbital model into different parts.</span>
 
-<span class="sd">        Recreates a new sparse orbital object with only the cutted </span>
+<span class="sd">        Recreates a new sparse orbital object with only the cutted</span>
 <span class="sd">        atoms in the structure.</span>
 
 <span class="sd">        Cutting is the opposite of tiling.</span>
@@ -1470,30 +1485,8 @@
 
         <span class="k">return</span> <span class="n">S</span></div>
 
-<div class="viewcode-block" id="SparseOrbital.remove"><a class="viewcode-back" href="../../sisl/sisl.sparse_geometry.html#sisl.sparse_geometry.SparseOrbital.remove">[docs]</a>    <span class="k">def</span> <span class="nf">remove</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">atom</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot; Create a subset of this sparse matrix by removing the elements corresponding to `atom`</span>
-
-<span class="sd">        Indices passed *MUST* be unique.</span>
-
-<span class="sd">        Negative indices are wrapped and thus works.</span>
-
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        atom  : array_like of int</span>
-<span class="sd">            indices of removed atoms</span>
-
-<span class="sd">        See Also</span>
-<span class="sd">        --------</span>
-<span class="sd">        Geometry.remove : equivalent to the resulting `Geometry` from this routine</span>
-<span class="sd">        Geometry.sub : the negative of `Geometry.remove`</span>
-<span class="sd">        sub : the negative of `remove`, i.e. retain a subset of atoms</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">atom</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sc2uc</span><span class="p">(</span><span class="n">atom</span><span class="p">)</span>
-        <span class="n">atom</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">setdiff1d</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">na</span><span class="p">),</span> <span class="n">atom</span><span class="p">,</span> <span class="n">assume_unique</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="n">atom</span><span class="p">)</span></div>
-
 <div class="viewcode-block" id="SparseOrbital.sub"><a class="viewcode-back" href="../../sisl/sisl.sparse_geometry.html#sisl.sparse_geometry.SparseOrbital.sub">[docs]</a>    <span class="k">def</span> <span class="nf">sub</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">atom</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot; Create a subset of this sparse matrix by only retaining the elements corresponding to the `atom`</span>
+        <span class="sd">&quot;&quot;&quot; Create a subset of this sparse matrix by only retaining the atoms corresponding to the `atom`</span>
 
 <span class="sd">        Indices passed *MUST* be unique.</span>
 
@@ -1511,7 +1504,6 @@
 <span class="sd">        remove : the negative of `sub`, i.e. remove a subset of atoms</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">atom</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sc2uc</span><span class="p">(</span><span class="n">atom</span><span class="p">)</span>
-        <span class="n">otom</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">geom</span><span class="o">.</span><span class="n">a2o</span><span class="p">(</span><span class="n">atom</span><span class="p">,</span> <span class="nb">all</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
         <span class="n">geom</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">geom</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="n">atom</span><span class="p">)</span>
 
         <span class="n">idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="n">atom</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_s</span><span class="p">)</span>
@@ -1694,7 +1686,7 @@
         <span class="n">ncol</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">ncol</span><span class="o">.</span><span class="n">view</span><span class="p">()</span>
 
         <span class="c1"># Create repetitions</span>
-        <span class="k">for</span> <span class="n">rep</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">reps</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">reps</span><span class="p">):</span>
 
             <span class="c1"># Update atomic offset</span>
             <span class="n">OA</span> <span class="o">+=</span> <span class="n">AO</span>
@@ -1759,7 +1751,7 @@
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'../../',
-            VERSION:'0.8.5-87',
+            VERSION:'0.8.5-125',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true,
