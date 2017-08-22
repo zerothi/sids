@@ -7,13 +7,8 @@ sub-classed for specific uses.
 from __future__ import print_function, division
 
 import warnings
-from numbers import Integral
-import itertools as itools
 
 import numpy as np
-import scipy.linalg as sli
-from scipy.sparse import isspmatrix, csr_matrix
-import scipy.sparse.linalg as ssli
 
 import sisl._numpy as n_
 from ._help import get_dtype, ensure_array
@@ -34,7 +29,7 @@ class SparseGeometry(object):
     The sub-classed object may re-implement the ``_cls_kwargs`` routine
     to pass down keyword arguments when a new class is instantiated.
 
-    This object contains information regarding the 
+    This object contains information regarding the
      - geometry
 
     """
@@ -100,7 +95,7 @@ class SparseGeometry(object):
         self._csr.empty(keep)
 
     def copy(self, dtype=None):
-        """ A copy of this object 
+        """ A copy of this object
 
         Parameters
         ----------
@@ -235,7 +230,7 @@ class SparseGeometry(object):
 
         Notes
         -----
-        This function only works for geometry sparse matrices (i.e. one 
+        This function only works for geometry sparse matrices (i.e. one
         element per atom). If you have more than one element per atom
         you have to implement the function your-self.
 
@@ -267,9 +262,9 @@ class SparseGeometry(object):
 
         This may be called in two variants.
 
-        1. Pass a function (``func``), see e.g. ``create_construct`` 
+        1. Pass a function (``func``), see e.g. ``create_construct``
            which does the setting up.
-        2. Pass a tuple/list in ``func`` which consists of two 
+        2. Pass a tuple/list in ``func`` which consists of two
            elements, one is ``R`` the radii parameters for
            the corresponding parameters.
            The second is the parameters
@@ -362,6 +357,48 @@ class SparseGeometry(object):
     def finalized(self):
         """ Whether the contained data is finalized and non-used elements have been removed """
         return self._csr.finalized
+
+    def remove(self, atom):
+        """ Create a subset of this sparse matrix by removing the atoms corresponding to `atom`
+
+        Indices passed must be unique.
+
+        Negative indices are wrapped and thus works.
+
+        Parameters
+        ----------
+        atom  : array_like of int
+            indices of removed atoms
+
+        See Also
+        --------
+        Geometry.remove : equivalent to the resulting `Geometry` from this routine
+        Geometry.sub : the negative of `Geometry.remove`
+        sub : the negative of `remove`, i.e. retain a subset of atoms
+        """
+        atom = self.sc2uc(atom)
+        atom = np.delete(n_.arangei(self.na), atom)
+        return self.sub(atom)
+
+    def sub(self, atom):
+        """ Create a subset of this sparse matrix by retaining the atoms corresponding to `atom`
+
+        Indices passed must be unique.
+
+        Negative indices are wrapped and thus works.
+
+        Parameters
+        ----------
+        atom  : array_like of int
+            indices of removed atoms
+
+        See Also
+        --------
+        Geometry.remove : equivalent to the resulting `Geometry` from this routine
+        Geometry.sub : the negative of `Geometry.remove`
+        remove : the negative of `sub`, i.e. remove a subset of atoms
+        """
+        pass
 
     def finalize(self):
         """ Finalizes the model
@@ -651,7 +688,7 @@ class SparseAtom(SparseGeometry):
             "Not all supercells are accounted for"
 
         # Maximum column translated too
-        max_n = sc.n_s
+        max_n = max(sc.n_s, self.sc.n_s)
         # 1. Ensure that any one of the *old* supercells that
         #    are now deleted are put in the end
         for i, j in enumerate(deleted.nonzero()[0]):
@@ -685,7 +722,7 @@ class SparseAtom(SparseGeometry):
 
         # Create array of deleted values
         max_n = max(max_n, self.sc.n_s)
-        delete = n_.arangei(sc.n_s * self.na, max_n * self.na)
+        delete = n_.arangei(sc.n_s * self.na, (max_n + 1) * self.na)
         self._csr.delete_columns(delete)
 
         self.geom.set_nsc(*args, **kwargs)
@@ -693,7 +730,7 @@ class SparseAtom(SparseGeometry):
     def cut(self, seps, axis, *args, **kwargs):
         """ Cuts the sparse atom model into different parts.
 
-        Recreates a new sparse atom object with only the cutted 
+        Recreates a new sparse atom object with only the cutted
         atoms in the structure.
 
         Cutting is the opposite of tiling.
@@ -805,28 +842,6 @@ class SparseAtom(SparseGeometry):
             S[a, ja + afm] = self[ja, ia]
 
         return S
-
-    def remove(self, atom):
-        """ Create a subset of this sparse matrix by removing the elements corresponding to `atom`
-
-        Indices passed must be unique.
-
-        Negative indices are wrapped and thus works.
-
-        Parameters
-        ----------
-        atom  : array_like of int
-            indices of removed atoms
-
-        See Also
-        --------
-        Geometry.remove : equivalent to the resulting `Geometry` from this routine
-        Geometry.sub : the negative of `Geometry.remove`
-        sub : the negative of `remove`, i.e. retain a subset of atoms
-        """
-        atom = self.sc2uc(atom)
-        atom = np.setdiff1d(np.arange(self.na), atom, assume_unique=True)
-        return self.sub(atom)
 
     def sub(self, atom):
         """ Create a subset of this sparse matrix by only retaining the elements corresponding to the ``atom``
@@ -1150,7 +1165,7 @@ class SparseOrbital(SparseGeometry):
             "Not all supercells are accounted for"
 
         # Maximum column translated too
-        max_n = sc.n_s
+        max_n = max(sc.n_s, self.sc.n_s)
         # 1. Ensure that any one of the *old* supercells that
         #    are now deleted are put in the end
         for i, j in enumerate(deleted.nonzero()[0]):
@@ -1184,7 +1199,7 @@ class SparseOrbital(SparseGeometry):
 
         # Create array of deleted values
         max_n = max(max_n, self.sc.n_s)
-        delete = n_.arangei(sc.n_s * self.no, max_n * self.no)
+        delete = n_.arangei(sc.n_s * self.no, (max_n + 1) * self.no)
         self._csr.delete_columns(delete)
 
         self.geom.set_nsc(*args, **kwargs)
@@ -1192,7 +1207,7 @@ class SparseOrbital(SparseGeometry):
     def cut(self, seps, axis, *args, **kwargs):
         """ Cuts the sparse orbital model into different parts.
 
-        Recreates a new sparse orbital object with only the cutted 
+        Recreates a new sparse orbital object with only the cutted
         atoms in the structure.
 
         Cutting is the opposite of tiling.
@@ -1305,30 +1320,8 @@ class SparseOrbital(SparseGeometry):
 
         return S
 
-    def remove(self, atom):
-        """ Create a subset of this sparse matrix by removing the elements corresponding to `atom`
-
-        Indices passed *MUST* be unique.
-
-        Negative indices are wrapped and thus works.
-
-        Parameters
-        ----------
-        atom  : array_like of int
-            indices of removed atoms
-
-        See Also
-        --------
-        Geometry.remove : equivalent to the resulting `Geometry` from this routine
-        Geometry.sub : the negative of `Geometry.remove`
-        sub : the negative of `remove`, i.e. retain a subset of atoms
-        """
-        atom = self.sc2uc(atom)
-        atom = np.setdiff1d(np.arange(self.na), atom, assume_unique=True)
-        return self.sub(atom)
-
     def sub(self, atom):
-        """ Create a subset of this sparse matrix by only retaining the elements corresponding to the `atom`
+        """ Create a subset of this sparse matrix by only retaining the atoms corresponding to the `atom`
 
         Indices passed *MUST* be unique.
 
@@ -1346,7 +1339,6 @@ class SparseOrbital(SparseGeometry):
         remove : the negative of `sub`, i.e. remove a subset of atoms
         """
         atom = self.sc2uc(atom)
-        otom = self.geom.a2o(atom, all=True)
         geom = self.geom.sub(atom)
 
         idx = np.tile(atom, self.n_s)
@@ -1529,7 +1521,7 @@ class SparseOrbital(SparseGeometry):
         ncol = self._csr.ncol.view()
 
         # Create repetitions
-        for rep in range(reps):
+        for _ in range(reps):
 
             # Update atomic offset
             OA += AO

@@ -9,8 +9,7 @@ from numbers import Integral
 import numpy as np
 
 from .utils import *
-from .quaternion import Quaternion
-from .supercell import SuperCell, SuperCellChild
+from .supercell import SuperCellChild
 from .atom import Atom
 from .geometry import Geometry
 
@@ -337,7 +336,6 @@ class Grid(SuperCellChild):
            the axis segment from which we retain the indices ``idx``
         """
         idx = np.array([idx], np.int32).flatten()
-        uidx = np.unique(np.clip(idx, 0, self.shape[axis] - 1))
 
         # Calculate new shape
         shape = list(self.shape)
@@ -480,8 +478,7 @@ class Grid(SuperCellChild):
     def _compatible_copy(self, other, *args, **kwargs):
         """ Returns a copy of self with an additional check of commensurable """
         if isinstance(other, Grid):
-            if self._check_compatibility(other, *args, **kwargs):
-                pass
+            self._check_compatibility(other, *args, **kwargs)
         return self.copy()
 
     def __eq__(self, other):
@@ -593,7 +590,7 @@ class Grid(SuperCellChild):
     # an automatic ArgumentParser which makes actions
     # as the options are read.
     def ArgumentParser(self, parser=None, *args, **kwargs):
-        """ Create and return a group of argument parsers which manipulates it self `Grid`. 
+        """ Create and return a group of argument parsers which manipulates it self `Grid`.
 
         Parameters
         ----------
@@ -608,8 +605,6 @@ class Grid(SuperCellChild):
         positional_out: bool, False
            If `True`, adds a positional argument which acts as --out. This may be handy if only the geometry is in the argument list.
         """
-
-        limit_args = kwargs.get('limit_arguments', True)
         short = kwargs.get('short', False)
 
         def opts(*args):
@@ -684,7 +679,6 @@ class Grid(SuperCellChild):
                 rng = strseq(float, values[1].replace('f', ''))
                 if isinstance(rng, tuple):
                     if is_frac:
-                        t = [ns._grid.cell[axis, :] * r for r in rng]
                         rng = tuple(rng)
                     # we have bounds
                     idx1 = ns._grid.index(rng[0], axis=axis)
@@ -764,7 +758,7 @@ class Grid(SuperCellChild):
 
 
 def sgrid(grid=None, argv=None, ret_grid=False):
-    """ Main script for sgrid script. 
+    """ Main script for sgrid script.
 
     This routine may be called with `argv` and/or a `Sile` which is the grid at hand.
 
@@ -839,7 +833,7 @@ This may be unexpected but enables one to do advanced manipulations.
             grid = sile.read_grid()
             # Store the input file...
             input_file = grid.file
-        except Exception as E:
+        except Exception:
             grid = Grid([10, 10, 10])
         argv = ['fake.grid.nc'] + argv
 

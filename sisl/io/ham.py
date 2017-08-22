@@ -12,7 +12,7 @@ from .sile import *
 from sisl import Geometry, Atom, SuperCell
 from sisl.sparse import ispmatrix, ispmatrixd
 from sisl.physics import Hamiltonian
-from sisl._help import _zip as zip, _range as range
+from sisl._help import _range as range
 
 
 __all__ = ['HamiltonianSile']
@@ -35,7 +35,7 @@ class HamiltonianSile(Sile):
             try:
                 # pure atomic number
                 return int(i), no
-            except:
+            except Exception:
                 # both atomic number and no
                 j = i.replace('[', ' ').replace(']', ' ').split()
                 return int(j[0]), int(j[1])
@@ -43,7 +43,7 @@ class HamiltonianSile(Sile):
         # The format of the geometry file is
         keys = ['atom', 'cell', 'supercell', 'nsc']
         for _ in range(len(keys)):
-            f, l = self.step_to(keys, case=False)
+            _, l = self.step_to(keys, case=False)
             l = l.strip()
             if 'supercell' in l.lower() or 'nsc' in l.lower():
                 # We have everything in one line
@@ -70,7 +70,7 @@ class HamiltonianSile(Sile):
                     ls = l.split()
                     try:
                         no = int(ls[4])
-                    except:
+                    except Exception:
                         no = 1
                     z, no = Z2no(ls[0], no)
                     Z.append({'Z': z, 'orbs': no})
@@ -108,7 +108,7 @@ class HamiltonianSile(Sile):
             try:
                 # pure orbital
                 return int(i)
-            except:
+            except Exception:
                 # ia[o]
                 # atom ia and the orbital o
                 j = i.replace('[', ' ').replace(']', ' ').split()
@@ -124,7 +124,7 @@ class HamiltonianSile(Sile):
             ls = l.split()
             try:
                 isc = np.array([int(ls[i]) for i in range(2, 5)], np.int32)
-            except:
+            except Exception:
                 isc = np.array([0, 0, 0], np.int32)
 
             off1 = geom.sc_index(isc) * geom.no
@@ -137,7 +137,7 @@ class HamiltonianSile(Sile):
                 h = float(ls[2])
                 try:
                     s = float(ls[3])
-                except:
+                except Exception:
                     s = 0.
                 H[jo, io + off1] = h
                 S[jo, io + off1] = s

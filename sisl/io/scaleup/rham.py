@@ -8,10 +8,6 @@ from __future__ import division, print_function
 from .sile import SileScaleUp
 from ..sile import *
 
-# Import the geometry object
-from sisl import Geometry, Atom, SuperCell
-from sisl._help import ensure_array
-
 import numpy as np
 
 __all__ = ['rhamSileScaleUp']
@@ -66,8 +62,10 @@ class rhamSileScaleUp(SileScaleUp):
                 species = get_sile(self.file.rsplit('rham', 1)[0] + 'orbocc').read_atom()
                 for i, atom in enumerate(species.atom):
                     g.atom._atom[i] = atom
-            except:
+            except Exception:
+                # Allowed pass due to pythonic reading
                 pass
+
         # Check again, to be sure...
         if no + 1 != g.no:
             raise ValueError(('The Geometry has a different number of '

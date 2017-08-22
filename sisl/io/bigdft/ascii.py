@@ -22,7 +22,7 @@ Bohr2Ang = unit_convert('Bohr', 'Ang')
 class ASCIISileBigDFT(SileBigDFT):
     """ ASCII file object for BigDFT """
 
-    def _setup(self):
+    def _setup(self, *args, **kwargs):
         """ Initialize for `ASCIISileBigDFT` """
         self._comment = ['#', '!']
 
@@ -90,7 +90,8 @@ class ASCIISileBigDFT(SileBigDFT):
 
         except IOError as e:
             print("I/O error({0}): {1}".format(e.errno, e.strerror))
-        except:
+        except Exception:
+            # Allowed pass due to pythonic reading
             pass
 
         if is_bohr:
@@ -148,7 +149,7 @@ class ASCIISileBigDFT(SileBigDFT):
         f1_str = '{{1:{0}}}  {{2:{0}}}  {{3:{0}}} {{0:2s}}\n'.format(fmt)
         f2_str = '{{2:{0}}}  {{3:{0}}}  {{4:{0}}} {{0:2s}} {{1:s}}\n'.format(fmt)
 
-        for ia, a, isp in geom.iter_species():
+        for ia, a, _ in geom.iter_species():
             if a.symbol != a.tag:
                 self._write(f2_str.format(a.symbol, a.tag, *geom.xyz[ia, :]))
             else:
@@ -156,11 +157,11 @@ class ASCIISileBigDFT(SileBigDFT):
         # Add a single new line
         self._write('\n')
 
-    def ArgumentParser(self, *args, **kwargs):
+    def ArgumentParser(self, p=None, *args, **kwargs):
         """ Returns the arguments that is available for this Sile """
         newkw = Geometry._ArgumentParser_args_single()
         newkw.update(kwargs)
-        return self.read_geometry().ArgumentParser(*args, **newkw)
+        return self.read_geometry().ArgumentParser(p, *args, **newkw)
 
 
 add_sile('ascii', ASCIISileBigDFT, case=False, gzip=True)

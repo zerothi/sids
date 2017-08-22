@@ -1,8 +1,7 @@
-""" 
+"""
 Implement a set of simple shapes that
 """
 
-from numbers import Real
 from math import pi
 import numpy as np
 
@@ -17,11 +16,11 @@ class Ellipsoid(Shape):
 
     Parameters
     ----------
-    x : `float` 
+    x : `float`
        the radius along x-direction
-    y : `float` 
+    y : `float`
        the radius along y-direction
-    z : `int` 
+    z : `int`
        the radius along z-direction
     """
 
@@ -87,7 +86,6 @@ class Ellipsoid(Shape):
         other.shape = (-1, 3)
 
         # First check
-        where = np.where
         fabs = np.fabs
         landr = np.logical_and.reduce
         r = self.radius
@@ -112,11 +110,11 @@ class Spheroid(Ellipsoid):
 
     Parameters
     ----------
-    a : `float` 
+    a : `float`
        the first spheroid axis radius
-    b : `float` 
+    b : `float`
        the second spheroid axis radius
-    axis : `int` 
+    axis : `int`
        the symmetry axis of the Spheroid
     """
 
@@ -140,10 +138,6 @@ class Sphere(Spheroid):
 
     def __init__(self, radius, center=None):
         super(Sphere, self).__init__(radius, radius, center=center)
-
-    def __repr__(self):
-        cr = np.array([self.center, self.radius])[:][:4]
-        return self.__class__.__name__ + '{{c({0:.2f} {1:.2f} {2:.2f}) r({3:.2f}}}'.format(*cr)
 
     def set_center(self, center):
         """ Change the center of the object """

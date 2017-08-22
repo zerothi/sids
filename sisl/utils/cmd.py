@@ -5,6 +5,11 @@ options etc.
 
 from sisl.utils.ranges import strmap, strseq
 
+__all__ = ['argv_negative_fix', 'default_namespace', 'ensure_namespace']
+__all__ += ['collect_input', 'collect_arguments']
+__all__ += ['dec_default_AP', 'dec_collect_action']
+__all__ += ['dec_collect_and_run_action', 'dec_run_actions']
+
 
 def argv_negative_fix(argv):
     """ Fixes the ``argv`` list by adding a space for input that may be float's """
@@ -93,7 +98,6 @@ def collect_arguments(argv, input=False,
     # First we figure out the input file, and the output file
     import argparse
     import sisl
-    import sys, os, os.path as osp
 
     # Create the default namespace in case there is none
     if namespace is None:
@@ -134,7 +138,8 @@ def collect_arguments(argv, input=False,
         try:
             obj = sisl.get_sile(args.out[0], mode='r')
             obj.ArgumentParser_out(argumentparser, namespace=namespace)
-        except Exception as e:
+        except Exception:
+            # Allowed pass due to pythonic reading
             pass
 
     return argumentparser, namespace, argv

@@ -6,10 +6,9 @@ from __future__ import print_function
 import numpy as np
 
 try:
-    import _siesta
+    from . import _siesta
     found_module = True
 except Exception as e:
-    print(e)
     found_module = False
 
 # Import sile objects
@@ -22,11 +21,11 @@ from sisl.units.siesta import unit_convert
 from sisl.physics import Hamiltonian
 
 
-__all__ = ['tshsSileSiesta']
+__all__ = ['TSHSSileSiesta']
 __all__ += ['rhoSileSiesta', 'vSileSiesta']
 
 
-class tshsSileSiesta(SileBinSiesta):
+class TSHSSileSiesta(SileBinSiesta):
     """ TranSIESTA file object """
 
     def read_supercell(self):
@@ -76,7 +75,7 @@ class tshsSileSiesta(SileBinSiesta):
                     return atom
 
         atom = []
-        for i, orb in enumerate(orbs):
+        for _, orb in enumerate(orbs):
             atom.append(get_atom(atoms, orb))
 
         # Create and return geometry object
@@ -108,9 +107,7 @@ class tshsSileSiesta(SileBinSiesta):
         H._csr._nnz = len(col)
 
         H._csr._D = np.empty([nnz, spin+1], np.float64)
-        for i in range(spin):
-            # this is because of the F-ordering
-            H._csr._D[:, i] = dH[:, i]
+        H._csr._D[:, :spin] = dH[:, :]
         H._csr._D[:, spin] = dS[:]
 
         return H
@@ -156,7 +153,7 @@ class vSileSiesta(GridSileSiesta):
 
 
 if found_module:
-    add_sile('TSHS', tshsSileSiesta)
+    add_sile('TSHS', TSHSSileSiesta)
     add_sile('RHO', rhoSileSiesta)
     add_sile('RHOINIT', rhoSileSiesta)
     add_sile('DRHO', rhoSileSiesta)

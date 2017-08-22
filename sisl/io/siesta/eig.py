@@ -19,10 +19,6 @@ __all__ = ['eigSileSiesta']
 class eigSileSiesta(SileSiesta):
     """ EIG SIESTA file object """
 
-    def _setup(self):
-        """ Setup the `eigSileSiesta` after initialization """
-        self._comment = []
-
     @Sile_fh_open
     def read_data(self):
         """ Returns data associated with the EIG file """
@@ -44,7 +40,7 @@ class eigSileSiesta(SileSiesta):
             e = len(E)
             tmp_E = np.empty([ns*no], np.float32)
             tmp_E[s:e] = E
-            for i in range(ns):
+            for _ in range(ns):
                 while e < ns*no:
                     E = map(float, self.readline().split())
                     s = e
@@ -57,7 +53,7 @@ class eigSileSiesta(SileSiesta):
     @dec_default_AP("Manipulate EIG file in sisl.")
     def ArgumentParser(self, p=None, *args, **kwargs):
         """ Returns the arguments that is available for this Sile """
-        limit_args = kwargs.get('limit_arguments', True)
+        #limit_args = kwargs.get('limit_arguments', True)
         short = kwargs.get('short', False)
 
         def opts(*args):
@@ -92,8 +88,9 @@ class eigSileSiesta(SileSiesta):
             def __call__(self, parser, ns, value, option_string=None):
                 import matplotlib.pyplot as plt
                 E = ns._eigs
-                Emin, Emax = np.min(E), np.max(E)
-                n = E.shape[1]
+                #Emin = np.min(E)
+                #Emax = np.max(E)
+                #n = E.shape[1]
                 # We need to setup a relatively good size of the scatter
                 # plots
                 s = 10 #20. / max(Emax - Emin, n)

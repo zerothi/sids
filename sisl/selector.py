@@ -4,7 +4,7 @@ Sub-package to easily make algorithmic decisions based on different routines
 Several functions exists here to most efficiently choose the most performant 
 routine.
 
-The `Selector` will run through the different routines and decide, based on 
+The `Selector` will run through the different routines and decide, based on
 all the calls which is the best one.
 
 Basically the `Selector` will only be a powerful tool if a given routine is
@@ -33,7 +33,7 @@ to automatically call the fastest of 3 routines::
 
 In certain cases one may wish to limit the search for a selected routine
 by only searching until the performance of the *next* called routine drops.
-This is called an *ordered* selector because it tries them in order, and 
+This is called an *ordered* selector because it tries them in order, and
 once one is slower than the former tested ones, it will not test any further.
 For the above same functions we may do::
 
@@ -51,9 +51,7 @@ from __future__ import print_function, division
 
 import warnings
 import time
-import numpy as np
 
-from ._help import _str as str, _range as range, _zip as zip
 
 __all__ = ['Selector', 'TimeSelector']
 
@@ -64,7 +62,7 @@ class Selector(object):
     This class should contain a list of routines and may then be used
     to always return the best performant routine.
 
-    This is done on a per-class basis where this class should initially 
+    This is done on a per-class basis where this class should initially
     determine which routine is the best performing one and then always return
     that one.
 
@@ -232,7 +230,7 @@ class Selector(object):
         return -1, self._best
 
     def __call__(self, *args, **kwargs):
-        """ Call the function that optimizes the run-time the most 
+        """ Call the function that optimizes the run-time the most
 
         The first argument *must* be an object (`self`) while all remaining
         arguments are transferred to the routine calls
@@ -265,8 +263,8 @@ class Selector(object):
         """ Start the performance profiler
 
         This routine should return an initial state value.
-        The difference between `stop() - start()` should yield a 
-        performance identifier which may be used to control the 
+        The difference between `stop() - start()` should yield a
+        performance identifier which may be used to control the
         used algorithm.
 
         A large performance identifier results in the use of the routine.
@@ -277,8 +275,8 @@ class Selector(object):
         """ Stop the performance profiler
 
         This routine should return an initial state value.
-        The difference between `stop() - start()` should yield a 
-        performance identifier which may be used to control the 
+        The difference between `stop() - start()` should yield a
+        performance identifier which may be used to control the
         used algorithm.
 
         A large performance identifier results in the use of the routine.

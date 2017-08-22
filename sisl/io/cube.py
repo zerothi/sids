@@ -21,10 +21,6 @@ Ang2Bohr = unit_convert('Ang', 'Bohr')
 class CUBESile(Sile):
     """ CUBE file object """
 
-    def _setup(self):
-        """ Setup the `CUBESile` after initialization """
-        self._comment = []
-
     @Sile_fh_open
     def write_geometry(self, geom, size=None,
             fmt='15.10e', origo=None,
@@ -90,7 +86,6 @@ class CUBESile(Sile):
         self.readline()  # header 1
         self.readline()  # header 2
         tmp = self.readline().split()  # origo
-        origo = [float(x) for x in tmp[1:4]]
         na = int(tmp[0])
 
         cell = np.empty([3, 3], np.float64)

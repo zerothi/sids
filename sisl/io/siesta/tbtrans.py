@@ -1,12 +1,53 @@
-"""
-Sile object for reading TBtrans binary files
+r"""sisl file objects for interaction with the TBtrans code
+
+The TBtrans code is a tight-binding transport code implementing
+the widely used non-equilibrium Green function method.
+
+It is primarily implemented for the support of TranSiesta (DFT+NEGF)
+as a backend for calculating th transport for self-consistent DFT software.
+
+Here we show a variety of supplement files that allows the extracting, manipulation
+and creation of files supported in TBtrans.
+
+The basic file is the `tbtncSileSiesta` which is a file to extract information
+from a TBtrans output file (typically named: ``siesta.TBT.nc``).
+The following will interact with the TBtrans file:
+
+>>> tbt = sisl.get_sile('siesta.TBT.nc')
+>>> tbt.E # retrieve energies where physical quantities are calculated
+>>> tbt.a_d # atomic indices where physical quantities are accessible
+
+Importantly one may retrieve quantities such as DOS, transmissions,
+transmission eigenvalues etc.
+
+>>> tbt.transmission() # from electrode 0 -> 1 (default)
+>>> tbt.transmission(0, 1) # from electrode 0 -> 1
+>>> tbt.transmission(0, 2) # from electrode 0 -> 2
+>>> tbt.ADOS(0, E=1.) # k-average, total spectral DOS from 0th electrode
+
+
+The above is the most important use of this module while the following
+entries are enabled:
+
+Data extraction files
+---------------------
+- `tbtncSileSiesta` (electronic TBtrans output)
+- `tbtavncSileSiesta` (electronic k-averaged TBtrans output)
+- `phtncSileSiesta` (phononic PHtrans output)
+- `phtavncSileSiesta` (phononic k-averaged PHtrans output)
+
+Support files to complement TBtrans
+-----------------------------------
+- `dHncSileSiesta` adding :math:`\delta H` elements to a TBtrans calculation
+
 """
 from __future__ import print_function, division
 
 import warnings
+from numbers import Integral
 try:
     from StringIO import StringIO
-except:
+except Exception:
     from io import StringIO
 
 import numpy as np
@@ -17,7 +58,7 @@ except:
 import itertools
 
 # The sparse matrix for the orbital/bond currents
-from scipy.sparse import csr_matrix, lil_matrix
+from scipy.sparse import csr_matrix
 from scipy.sparse import isspmatrix_csr
 
 # Import sile objects
@@ -27,9 +68,9 @@ from sisl.utils import *
 
 
 # Import the geometry object
-from sisl import Geometry, Atom, Atoms, SuperCell
+from sisl import Geometry, Atom, Atoms, SuperCell, Hamiltonian
 from sisl._help import _str
-from sisl._help import _range as range, _zip as zip
+from sisl._help import _range as range
 from sisl.units.siesta import unit_convert
 
 __all__ = ['tbtncSileSiesta', 'phtncSileSiesta']
@@ -43,7 +84,7 @@ eV2Ry = unit_convert('eV', 'Ry')
 
 
 class tbtncSileSiesta(SileCDFSiesta):
-    r""" TBtrans output file object 
+    r""" TBtrans output file object
 
     Implementation of the TBtrans output ``*.TBT.nc`` files which contains
     calculated quantities related to the NEGF code TBtrans.
@@ -57,6 +98,13 @@ class tbtncSileSiesta(SileCDFSiesta):
     * :math:`\alpha` and :math:`\beta` are atomic indices
     * :math:`\nu` and :math:`\mu` are orbital indices
 
+    DOS normalization
+    -----------------
+    All the device region DOS functions may request a normalization depending
+    on a variety of functions. You are highly encouraged to read the documentation for
+    the `norm` function and to consider the benefit of using the ``norm='atom'``
+    normalization to more easily compare various partitions of DOS.
+
     Notes
     -----
     The API for this class are largely equivalent to the arguments of the `sdata` command-line
@@ -65,7 +113,7 @@ class tbtncSileSiesta(SileCDFSiesta):
     _trans_type = 'TBT'
     _k_avg = False
 
-    def write_tbtav(self, **kwargs):
+    def write_tbtav(self, *args, **kwargs):
         """ Convert this to a TBT.AV.nc file, i.e. all k dependent quantites are averaged out.
 
         This command will overwrite any previous file with the ending TBT.AV.nc and thus
@@ -177,7 +225,7 @@ class tbtncSileSiesta(SileCDFSiesta):
         # Return data
         return data
 
-    def _setup(self):
+    def _setup(self, *args, **kwargs):
         """ Setup the special object for data containing """
         self._data = dict()
 
@@ -224,6 +272,7 @@ class tbtncSileSiesta(SileCDFSiesta):
         try:
             sc.sc_off = self._value('isc_off')
         except:
+            # This is ok, we simply do not have the supercell offsets
             pass
 
         return sc
@@ -314,7 +363,7 @@ class tbtncSileSiesta(SileCDFSiesta):
         return self._value('pivot') - 1
 
     def a2p(self, atom):
-        """ Return the pivoting indices (0-based) for the atoms 
+        """ Return the pivoting indices (0-based) for the atoms
 
         Parameters
         ----------
@@ -526,11 +575,11 @@ class tbtncSileSiesta(SileCDFSiesta):
            device region.
         #. 'atom': :math:`N` is equal to the total number of orbitals in the selected
            atoms. If `orbital` is an argument a conversion of `orbital` to the equivalent
-           unique atoms is performed, and subsequently the total number of orbitals on the 
+           unique atoms is performed, and subsequently the total number of orbitals on the
            atoms is used. This makes it possible to compare the fraction of orbital DOS easier.
            I.e. for an atom with 4 orbitals one could compare the DOS for orbital `1` with norm:
            ``norm(orbital=[1], norm='atom')`` for the remaning orbitals ``norm(orbital=[0, 2, 3], norm='atom')``.
-        #. 'orbital': :math:`N` is simply the sum of selected orbitals, if `atom` is specified, this 
+        #. 'orbital': :math:`N` is simply the sum of selected orbitals, if `atom` is specified, this
            is equivalent to the 'atom' option.
 
         Parameters
@@ -644,13 +693,23 @@ class tbtncSileSiesta(SileCDFSiesta):
             # we return it
             return np.sum(DOS[..., p], axis=-1) / NORM
 
+        # We default the case where 1-orbital systems are in use
+        # Then it becomes *very* easy
+        if len(p) == len(atom):
+            return DOS[..., p] / NORM
+
+        # This is the multi-orbital case...
+
         # We will return per-atom
         shp = list(DOS.shape[:-1])
         nDOS = np.empty(shp + [len(atom)], np.float64)
 
+        # Quicker than re-creating the geometry on every instance
+        geom = self.geom
+
         # Sum for new return stuff
         for i, a in enumerate(atom):
-            pvt = self.a2p(a)
+            pvt = self.o2p(geom.a2o(a, True))
             if len(pvt) == 0:
                 nDOS[..., i] = 0.
             else:
@@ -780,7 +839,7 @@ class tbtncSileSiesta(SileCDFSiesta):
         return E[idx_sort], T[idx_sort]
 
     def current(self, elec_from=0, elec_to=1, kavg=True):
-        r""" Current from `from` to `to` using the k-weights and energy spacings in the file. 
+        r""" Current from `from` to `to` using the k-weights and energy spacings in the file.
 
         Calculates the current as:
 
@@ -816,7 +875,7 @@ class tbtncSileSiesta(SileCDFSiesta):
 
     def current_parameter(self, elec_from, mu_from, kt_from,
                           elec_to, mu_to, kt_to, kavg=True):
-        r""" Current from `from` to `to` using the k-weights and energy spacings in the file. 
+        r""" Current from `from` to `to` using the k-weights and energy spacings in the file.
 
         Calculates the current as:
 
@@ -1001,12 +1060,12 @@ class tbtncSileSiesta(SileCDFSiesta):
         .. math::
            J_{\alpha\beta} = \sum_{\nu\in\alpha}\sum_{\mu\in\beta} J_{\nu\mu}
 
-        where if 
+        where if
 
         * ``sum='+'``:
-          only :math:`J_{\nu\mu} > 0` are summed, 
+          only :math:`J_{\nu\mu} > 0` are summed,
         * ``sum='-'``:
-          only :math:`J_{\nu\mu} < 0` are summed, 
+          only :math:`J_{\nu\mu} < 0` are summed,
         * ``sum='all'``:
           all :math:`J_{\nu\mu}` are summed.
 
@@ -1048,14 +1107,12 @@ class tbtncSileSiesta(SileCDFSiesta):
         if uc:
             Jab = csr_matrix((na, na), dtype=Jij.dtype)
 
-            map_row = o2a
             def map_col(c):
                 return o2a(c) % na
 
         else:
             Jab = csr_matrix((na, na * geom.n_s), dtype=Jij.dtype)
 
-            map_row = o2a
             map_col = o2a
 
         # Lets do array notation for speeding up the computations
@@ -1165,7 +1222,7 @@ class tbtncSileSiesta(SileCDFSiesta):
     def atom_current_from_orbital(self, Jij, activity=True):
         r""" Atomic current of atoms by passing the orbital current
 
-        The atomic current is a single number specifying a figure of the *magnitude* 
+        The atomic current is a single number specifying a figure of the *magnitude*
         current flowing through each atom. It is thus *not* a quantity that can be related to
         the physical current flowing in/out of atoms but is merely a number that provides an
         idea of *how much* current this atom is redistributing.
@@ -1177,18 +1234,18 @@ class tbtncSileSiesta(SileCDFSiesta):
             \\
             J_\alpha^{|o|} &=\frac{1}{2} \sum_\beta \sum_{\nu\in \alpha}\sum_{\mu\in \beta} \big| J_{\nu\mu} \big|
 
-        If the *activity* current is requested (``activity=True``) 
+        If the *activity* current is requested (``activity=True``)
         :math:`J_\alpha^{\mathcal A} = \sqrt{ J_\alpha^{|a|} J_\alpha^{|o|} }` is returned.
 
-        If ``activity=False`` :math:`J_\alpha^{|a|}` is returned. 
+        If ``activity=False`` :math:`J_\alpha^{|a|}` is returned.
 
         For geometries with all atoms only having 1-orbital, they are equivalent.
 
         Generally the activity current is a more rigorous figure of merit for the current
-        flowing through an atom. More so than than the summed absolute atomic current due to 
+        flowing through an atom. More so than than the summed absolute atomic current due to
         the following reasoning. The activity current is a geometric mean of the absolute bond current
-        and the absolute orbital current. This means that if there is an atom with a large orbital current between
-        its own orbitals it will have a larger activity current. 
+        and the absolute orbital current. This means that if there is an atom with a large orbital current
+        it will have a larger activity current.
 
         Parameters
         ----------
@@ -1205,7 +1262,7 @@ class tbtncSileSiesta(SileCDFSiesta):
         # Create the bond-currents with all summations
         Jab = self.bond_current_from_orbital(Jij, sum='all')
         # We take the absolute and sum it over all connecting atoms
-        Ja = np.asarray(abs(Jab).sum(1), dtype=Jij.dtype).reshape(-1)
+        Ja = np.asarray(abs(Jab).sum(1)).ravel()
 
         if activity:
             # Calculate the absolute summation of all orbital
@@ -1213,7 +1270,7 @@ class tbtncSileSiesta(SileCDFSiesta):
             Jab = self.bond_current_from_orbital(abs(Jij), sum='all')
 
             # Sum to make it per atom, it is already the absolute
-            Jo = np.asarray(Jab.sum(1), dtype=Jij.dtype).reshape(-1)
+            Jo = np.asarray(Jab.sum(1)).ravel()
 
             # Return the geometric mean of the atomic current X orbital
             # current.
@@ -1261,7 +1318,7 @@ class tbtncSileSiesta(SileCDFSiesta):
         .. math::
               \mathbf J_\alpha = \sum_\beta \frac{r_\beta - r_\alpha}{|r_\beta - r_\alpha|} \cdot J_{\alpha\beta}
 
-        Where :math:`J_{\alpha\beta}` is the bond current between atom :math:`\alpha` and :math:`\beta` and 
+        Where :math:`J_{\alpha\beta}` is the bond current between atom :math:`\alpha` and :math:`\beta` and
         :math:`r_\alpha` are the atomic coordinates.
 
         Parameters
@@ -1289,23 +1346,28 @@ class tbtncSileSiesta(SileCDFSiesta):
         # Create local orbital look-up
         xyz = geom.xyz
 
+        # Short-hands
+        sqrt = np.sqrt
+        sum = np.sum
+
         # Loop atoms in the device region
         # These are the only atoms which may have bond-currents,
         # So no need to loop over any other atoms
         for ia in self.a_dev:
             # Get csr matrix
-            Jia = Jab[ia, :].tocsr()
+            Jia = Jab.getrow(ia)
 
             # Set diagonal to zero
             Jia[0, ia] = 0.
-            # Remove the diagonal
+            # Remove the diagonal (prohibits the calculation of the
+            # norm of the zero vector, hence required)
             Jia.eliminate_zeros()
 
             # Now calculate the vector elements
             # Remark that the vector goes from ia -> ja
-            rv = xyz[ia, :][None, :] - geom.axyz(Jia.indices)
-            rv = rv / np.sqrt(np.sum(rv ** 2, axis=1))[:, None]
-            Ja[ia, :] = np.sum(Jia.data[:, None] * rv, axis=0)
+            rv = geom.axyz(Jia.indices) - xyz[ia, :][None, :]
+            rv = rv / sqrt(sum(rv ** 2, axis=1))[:, None]
+            Ja[ia, :] = sum(Jia.data[:, None] * rv, axis=0)
 
         return Ja
 
@@ -1348,7 +1410,7 @@ class tbtncSileSiesta(SileCDFSiesta):
         return self.vector_current_from_bond(Jab)
 
     def read_data(self, *args, **kwargs):
-        """ Read specific type of data. 
+        """ Read specific type of data.
 
         This is a generic routine for reading different parts of the data-file.
 
@@ -1399,10 +1461,7 @@ class tbtncSileSiesta(SileCDFSiesta):
         out = StringIO()
         # Create wrapper function
         def prnt(*args, **kwargs):
-            try:
-                print(*args, file=out, **kwargs)
-            except:
-                pass
+            print(*args, file=out, **kwargs)
 
         def truefalse(bol, string, fdf=None):
             if bol:
@@ -1914,7 +1973,6 @@ add_sile('TBT_UP.nc', tbtncSileSiesta)
 class phtncSileSiesta(tbtncSileSiesta):
     """ PHtrans file object """
     _trans_type = 'PHT'
-    pass
 
 add_sile('PHT.nc', phtncSileSiesta)
 
@@ -1923,7 +1981,7 @@ add_sile('PHT.nc', phtncSileSiesta)
 # These are essentially equivalent to the TBT.nc files
 # with the exception that the k-points have been averaged out.
 class tbtavncSileSiesta(tbtncSileSiesta):
-    """ TBtrans average file object 
+    """ TBtrans average file object
 
     This `Sile` implements the writing of the TBtrans output ``*.TBT.AV.nc`` sile which contains
     the k-averaged quantities related to the NEGF code TBtrans.
@@ -1944,7 +2002,7 @@ class tbtavncSileSiesta(tbtncSileSiesta):
         return np.ones(1, dtype=np.float64)
 
     def write_tbtav(self, *args, **kwargs):
-        """ Wrapper for writing the k-averaged TBT.AV.nc file. 
+        """ Wrapper for writing the k-averaged TBT.AV.nc file.
 
         This write *requires* the TBT.nc `Sile` object passed as the first argument,
         or as the keyword ``from=tbt`` argument.
@@ -1967,8 +2025,6 @@ class tbtavncSileSiesta(tbtncSileSiesta):
 
         # Notify if the object is not in write mode.
         sile_raise_write(self)
-
-        head = self
 
         def copy_attr(f, t):
             t.setncatts({att: f.getncattr(att) for att in f.ncattrs()})
@@ -2087,37 +2143,103 @@ add_sile('PHT.AV.nc', phtavncSileSiesta)
 class dHncSileSiesta(SileCDFSiesta):
     """ TBtrans delta-H file object """
 
+    def read_supercell(self):
+        """ Returns the `SuperCell` object from this file """
+        cell = np.array(np.copy(self._value('cell')), dtype=np.float64)
+        cell.shape = (3, 3)
+
+        try:
+            nsc = self._value('nsc')
+        except:
+            nsc = None
+
+        sc = SuperCell(cell, nsc=nsc)
+        try:
+            sc.sc_off = self._value('isc_off')
+        except:
+            # This is ok, we simply do not have the supercell offsets
+            pass
+
+        return sc
+
+    def read_geometry(self, *args, **kwargs):
+        """ Returns the `Geometry` object from this file """
+        sc = self.read_supercell()
+
+        xyz = np.array(np.copy(self._value('xa')), dtype=np.float64)
+        xyz.shape = (-1, 3)
+
+        # Create list with correct number of orbitals
+        lasto = np.array(np.copy(self._value('lasto')), dtype=np.int32)
+        nos = np.append([lasto[0]], np.diff(lasto))
+        nos = np.array(nos, np.int32)
+
+        if 'atom' in kwargs:
+            # The user "knows" which atoms are present
+            atms = kwargs['atom']
+            # Check that all atoms have the correct number of orbitals.
+            # Otherwise we will correct them
+            for i in range(len(atms)):
+                if atms[i].orbs != nos[i]:
+                    atms[i] = Atom(Z=atms[i].Z, orbs=nos[i], tag=atms[i].tag)
+
+        else:
+            # Default to Hydrogen atom with nos[ia] orbitals
+            # This may be counterintuitive but there is no storage of the
+            # actual species
+            atms = [Atom(Z='H', orbs=o) for o in nos]
+
+        # Create and return geometry object
+        geom = Geometry(xyz, atms, sc=sc)
+
+        return geom
+
+    def write_supercell(self, sc):
+        """ Creates the NetCDF file and writes the supercell information """
+        sile_raise_write(self)
+
+        # Create initial dimensions
+        self._crt_dim(self, 'one', 1)
+        self._crt_dim(self, 'n_s', np.prod(sc.nsc))
+        self._crt_dim(self, 'xyz', 3)
+
+        # Create initial geometry
+        v = self._crt_var(self, 'nsc', 'i4', ('xyz',))
+        v.info = 'Number of supercells in each unit-cell direction'
+        v[:] = sc.nsc[:]
+        v = self._crt_var(self, 'isc_off', 'i4', ('n_s', 'xyz'))
+        v.info = "Index of supercell coordinates"
+        v[:] = sc.sc_off[:, :]
+        v = self._crt_var(self, 'cell', 'f8', ('xyz', 'xyz'))
+        v.info = 'Unit cell'
+        v.unit = 'Bohr'
+        v[:] = sc.cell[:, :] / Bohr2Ang
+
+        # Create designation of the creation
+        self.method = 'sisl'
+
     def write_geometry(self, geom):
         """ Creates the NetCDF file and writes the geometry information """
         sile_raise_write(self)
 
         # Create initial dimensions
-        self._crt_dim(self, 'one', 1)
-        self._crt_dim(self, 'n_s', np.prod(geom.nsc))
-        self._crt_dim(self, 'xyz', 3)
+        self.write_supercell(geom.sc)
         self._crt_dim(self, 'no_s', np.prod(geom.nsc) * geom.no)
         self._crt_dim(self, 'no_u', geom.no)
         self._crt_dim(self, 'na_u', geom.na)
 
         # Create initial geometry
-        v = self._crt_var(self, 'nsc', 'i4', ('xyz',))
-        v.info = 'Number of supercells in each unit-cell direction'
         v = self._crt_var(self, 'lasto', 'i4', ('na_u',))
         v.info = 'Last orbital of equivalent atom'
         v = self._crt_var(self, 'xa', 'f8', ('na_u', 'xyz'))
         v.info = 'Atomic coordinates'
-        v.unit = 'Bohr'
-        v = self._crt_var(self, 'cell', 'f8', ('xyz', 'xyz'))
-        v.info = 'Unit cell'
         v.unit = 'Bohr'
 
         # Create designation of the creation
         self.method = 'sisl'
 
         # Save stuff
-        self.variables['nsc'][:] = geom.nsc
         self.variables['xa'][:] = geom.xyz / Bohr2Ang
-        self.variables['cell'][:] = geom.cell / Bohr2Ang
 
         bs = self._crt_grp(self, 'BASIS')
         b = self._crt_var(bs, 'basis', 'i4', ('na_u',))
@@ -2131,11 +2253,9 @@ class dHncSileSiesta(SileCDFSiesta):
             if a.tag in bs.groups:
                 # Assert the file sizes
                 if bs.groups[a.tag].Number_of_orbitals != a.orbs:
-                    raise ValueError(
-                        'File ' +
-                        self.file +
-                        ' has erroneous data in regards of ' +
-                        'of the alreay stored dimensions.')
+                    raise ValueError(('File {0}'
+                                      ' has erroneous data in regards of '
+                                      'of the alreay stored dimensions.').format(self.file))
             else:
                 ba = bs.createGroup(a.tag)
                 ba.ID = np.int32(isp + 1)
@@ -2148,11 +2268,63 @@ class dHncSileSiesta(SileCDFSiesta):
         # Store the lasto variable as the remaining thing to do
         self.variables['lasto'][:] = np.cumsum(orbs)
 
+    def _get_lvl_k_E(self, **kwargs):
+        """ Return level, k and E indices, in that order.
+
+        The indices are negative if a new index needs to be created.
+        """
+        # Determine the type of dH we are storing...
+        k = kwargs.get('k', None)
+        E = kwargs.get('E', None)
+
+        if (k is None) and (E is None):
+            ilvl = 1
+        elif (k is not None) and (E is None):
+            ilvl = 2
+        elif (k is None) and (E is not None):
+            ilvl = 3
+            # Convert to Rydberg
+            E = E * eV2Ry
+        elif (k is not None) and (E is not None):
+            ilvl = 4
+            # Convert to Rydberg
+            E = E * eV2Ry
+        else:
+            print(k, E)
+            raise ValueError("This is wrongly implemented!!!")
+
+        try:
+            lvl = self._get_lvl(ilvl)
+        except ValueError:
+            return ilvl, -1, -1
+
+        # Now determine the energy and k-indices
+        iE = -1
+        if ilvl in [3, 4]:
+            Es = np.array(lvl.variables['E'][:])
+            if len(Es) > 0:
+                iE = np.argmin(np.abs(Es - E))
+                if abs(Es[iE] - E) > 0.0001:
+                    iE = -1
+
+        ik = -1
+        if ilvl in [2, 4]:
+            kpt = np.array(lvl.variables['kpt'][:])
+            if len(kpt) > 0:
+                ik = np.argmin(np.sum(np.abs(kpt - k[None, :]), axis=1))
+                if not np.allclose(kpt[ik, :], k, atol=0.0001):
+                    ik = -1
+
+        return ilvl, ik, iE
+
+    def _get_lvl(self, ilvl):
+        slvl = 'LEVEL-'+str(ilvl)
+        if slvl in self.groups:
+            return self._crt_grp(self, slvl)
+        raise ValueError("Level {0} does not exist in {1}.".format(ilvl, self.file))
+
     def _add_lvl(self, ilvl):
-        """
-        Simply adds and returns a group if it does not
-        exist it will be created
-        """
+        """ Simply adds and returns a group if it does not exist it will be created """
         slvl = 'LEVEL-'+str(ilvl)
         if slvl in self.groups:
             lvl = self._crt_grp(self, slvl)
@@ -2160,14 +2332,14 @@ class dHncSileSiesta(SileCDFSiesta):
             lvl = self._crt_grp(self, slvl)
             if ilvl in [2, 4]:
                 self._crt_dim(lvl, 'nkpt', None)
-                v = self._crt_var(lvl, 'kpt', 'f8', ('nkpt', 'xyz'),
-                                  attr = {'info': 'k-points for dH values',
-                                          'unit': 'b**-1'})
+                self._crt_var(lvl, 'kpt', 'f8', ('nkpt', 'xyz'),
+                              attr = {'info': 'k-points for dH values',
+                                      'unit': 'b**-1'})
             if ilvl in [3, 4]:
                 self._crt_dim(lvl, 'ne', None)
-                v = self._crt_var(lvl, 'E', 'f8', ('ne',),
-                                  attr = {'info': 'Energy points for dH values',
-                                          'unit': 'Ry'})
+                self._crt_var(lvl, 'E', 'f8', ('ne',),
+                              attr = {'info': 'Energy points for dH values',
+                                      'unit': 'Ry'})
 
         return lvl
 
@@ -2193,22 +2365,7 @@ class dHncSileSiesta(SileCDFSiesta):
         k = kwargs.get('k', None)
         E = kwargs.get('E', None)
 
-        if (k is None) and (E is None):
-            ilvl = 1
-        elif (k is not None) and (E is None):
-            ilvl = 2
-        elif (k is None) and (E is not None):
-            ilvl = 3
-            # Convert to Rydberg
-            E = E * eV2Ry
-        elif (k is not None) and (E is not None):
-            ilvl = 4
-            # Convert to Rydberg
-            E = E * eV2Ry
-        else:
-            print(k, E)
-            raise ValueError("This is wrongly implemented!!!")
-
+        ilvl, ik, iE = self._get_lvl_k_E(**kwargs)
         lvl = self._add_lvl(ilvl)
 
         # Append the sparsity pattern
@@ -2223,6 +2380,9 @@ class dHncSileSiesta(SileCDFSiesta):
             if np.any(lvl.variables['list_col'][:] != H._csr.col[:]+1):
                 raise ValueError("The sparsity pattern stored in dH *MUST* be equivalent for "
                                  "all dH entries [list_col].")
+            if np.any(lvl.variables['isc_off'][:] != H.geom.sc.sc_off):
+                raise ValueError("The sparsity pattern stored in dH *MUST* be equivalent for "
+                                 "all dH entries [sc_off].")
         else:
             self._crt_dim(lvl, 'nnzs', H._csr.col.shape[0])
             v = self._crt_var(lvl, 'n_col', 'i4', ('no_u',))
@@ -2238,37 +2398,16 @@ class dHncSileSiesta(SileCDFSiesta):
 
         warn_E = True
         if ilvl in [3, 4]:
-            Es = np.array(lvl.variables['E'][:])
-
-            iE = 0
-            if len(Es) > 0:
-                iE = np.argmin(np.abs(Es - E))
-                if abs(Es[iE] - E) > 0.0001:
-                    # accuracy of 0.1 meV
-
-                    # create a new entry
-                    iE = len(Es)
-                    lvl.variables['E'][iE] = E
-                    warn_E = False
-            else:
-                lvl.variables['E'][iE] = E
+            if iE < 0:
+                # We need to add the new value
+                iE = len(lvl.variables['E'])
+                lvl.variables['E'][iE] = E * eV2Ry
                 warn_E = False
 
         warn_k = True
         if ilvl in [2, 4]:
-            kpt = np.array(lvl.variables['kpt'][:])
-
-            ik = 0
-            if len(kpt) > 0:
-                ik = np.argmin(np.sum(np.abs(kpt - k[None, :]), axis=1))
-                if np.allclose(kpt[ik, :], k, atol=0.0001):
-                    # accuracy of 0.0001
-
-                    # create a new entry
-                    ik = len(kpt)
-                    lvl.variables['kpt'][ik, :] = k
-                    warn_k = False
-            else:
+            if ik < 0:
+                ik = len(lvl.variables['kpt'])
                 lvl.variables['kpt'][ik, :] = k
                 warn_k = False
 
@@ -2333,5 +2472,70 @@ class dHncSileSiesta(SileCDFSiesta):
                 sl[-2] = i
                 v[sl] = H._csr._D[:, i] * eV2Ry
 
+    def _read_class(self, cls, **kwargs):
+        """ Reads a class model from a file """
+
+        # Ensure that the geometry is written
+        geom = self.read_geometry()
+
+        # Determine the type of dH we are storing...
+        E = kwargs.get('E', None)
+
+        ilvl, ik, iE = self._get_lvl_k_E(**kwargs)
+
+        # Get the level
+        lvl = self._get_lvl(ilvl)
+
+        if iE < 0 and ilvl in [3, 4]:
+            raise ValueError("Energy {0} eV does not exist in the file.".format(E))
+        if ik < 0 and ilvl in [2, 4]:
+            raise ValueError("k-point requested does not exist in the file.")
+
+        if ilvl == 1:
+            sl = [slice(None)] * 2
+        elif ilvl == 2:
+            sl = [slice(None)] * 3
+            sl[0] = ik
+        elif ilvl == 3:
+            sl = [slice(None)] * 3
+            sl[0] = iE
+        elif ilvl == 4:
+            sl = [slice(None)] * 4
+            sl[0] = ik
+            sl[1] = iE
+
+        # Now figure out what data-type the dH is.
+        if 'RedH' in lvl.variables:
+            # It *must* be a complex valued Hamiltonian
+            is_complex = True
+            dtype = np.complex128
+        elif 'dH' in lvl.variables:
+            is_complex = False
+            dtype = np.float64
+
+        # Now create the tight-binding stuff (we re-create the
+        # array, hence just allocate the smallest amount possible)
+        C = cls(geom, 1, nnzpr=1, dtype=dtype, orthogonal=True)
+
+        C._csr.ncol = np.array(lvl.variables['n_col'][:], np.int32)
+        # Update maximum number of connections (in case future stuff happens)
+        C._csr.ptr = np.insert(np.cumsum(C._csr.ncol, dtype=np.int32), 0, 0)
+        C._csr.col = np.array(lvl.variables['list_col'][:], np.int32) - 1
+
+        # Copy information over
+        C._csr._nnz = len(C._csr.col)
+        C._csr._D = np.empty([C._csr.ptr[-1], 1], dtype)
+        if is_complex:
+            C._csr._D[:, 0].real = lvl.variables['RedH'][sl] * Ry2eV
+            C._csr._D[:, 0].imag = lvl.variables['ImdH'][sl] * Ry2eV
+        else:
+            C._csr._D[:, 0] = lvl.variables['dH'][sl] * Ry2eV
+
+        return C
+
+    def read_hamiltonian(self, **kwargs):
+        """ Reads a Hamiltonian model from the file """
+
+        return self._read_class(Hamiltonian, **kwargs)
 
 add_sile('dH.nc', dHncSileSiesta)

@@ -1,32 +1,31 @@
-""" 
+"""
 Sparsity pattern used to express matrices in concise manners.
 """
 from __future__ import print_function, division
 
 import warnings
-from numbers import Integral, Real, Complex
+from numbers import Integral
 from collections import Iterable
 
 # To speed up the extension algorithm we limit
 # the lookup table
 import numpy as np
-from numpy import empty, zeros, asarray, array, arange
+from numpy import empty, zeros, asarray, arange
 from numpy import insert, take, delete, copyto
 from numpy import where, intersect1d, setdiff1d, unique
 from numpy import diff
 from numpy import hstack, argsort, sort
 try:
     isin = np.isin
-except:
+except Exception:
     isin = np.in1d
 
 
 from scipy.sparse import isspmatrix
-from scipy.sparse import coo_matrix, isspmatrix_coo
+from scipy.sparse import isspmatrix_coo
 from scipy.sparse import csr_matrix, isspmatrix_csr
-from scipy.sparse import csc_matrix, isspmatrix_csc
-from scipy.sparse import lil_matrix, isspmatrix_lil
-
+from scipy.sparse import isspmatrix_csc
+from scipy.sparse import isspmatrix_lil
 
 import sisl._numpy as n_
 from ._help import array_fill_repeat, ensure_array, get_dtype
@@ -62,7 +61,7 @@ class SparseCSR(object):
     This class holds all required information regarding the CSR matrix format.
 
     Note that this sparse matrix of data does not retain the number of columns
-    in the matrix, i.e. it has no way of determining whether the input is 
+    in the matrix, i.e. it has no way of determining whether the input is
     correct.
     """
 
@@ -74,7 +73,7 @@ class SparseCSR(object):
         ``scipy.sparse.csr_matrix`` as much as possible with
         the difference of this class being multi-dimensional.
 
-        Creating a new sparse matrix is much similar to the 
+        Creating a new sparse matrix is much similar to the
         ``scipy`` equivalent.
 
         `nnz` is only used if ``nnz > nr * nnzpr``.
@@ -117,9 +116,9 @@ class SparseCSR(object):
            number of entries per row
         ptr: int-array, ``self.shape[0]+1``
            pointer index in the 1D column indices of the corresponding row
-        col: int-array, 
+        col: int-array
            column indices of the sparse elements
-        data: 
+        data:
            the data in the sparse matrix
         dim: int
            the extra dimension of the sparse matrix
@@ -289,7 +288,7 @@ class SparseCSR(object):
         keep: boolean, optional
            if ``True`` keeps the sparse elements *as is*.
            I.e. it will merely set the stored sparse elements to zero.
-           This may be advantagegous when re-constructing a new sparse 
+           This may be advantagegous when re-constructing a new sparse
            matrix from an old sparse matrix
         """
         self._D[:, :] = 0.
@@ -424,7 +423,7 @@ class SparseCSR(object):
            columns to delete from the sparse pattern
         keep : bool, optional
            whether the ``shape`` of the object should be retained, if ``True`` all higher
-           columns will be shifted according to the number of columns deleted below, 
+           columns will be shifted according to the number of columns deleted below,
            if ``False``, only the elements will be deleted.
         """
         # Shorthand function for retrieval
@@ -439,7 +438,7 @@ class SparseCSR(object):
         ncol = self.ncol.view()
         col = self.col.view()
 
-        # Delete columns
+        # Indices of deleted columns
         idx = [ptr[r] + isin(col[ptr[r]:ptr[r]+ncol[r]], columns).nonzero()[0]
                for r in range(self.shape[0])]
         lidx = hstack(idx)
@@ -452,6 +451,7 @@ class SparseCSR(object):
                 self._shape = tuple(shape)
             return
 
+        # Reduce the column indices and the data
         self.col = delete(self.col, lidx)
         self._D = delete(self._D, lidx, axis=0)
         del lidx
@@ -468,6 +468,11 @@ class SparseCSR(object):
             # Check that we really do have to update
             update_col = np.any(columns < self.shape[1] - n_cols)
 
+        # Correct number of elements per column, and the pointers
+        idx = n_.arrayi([len(r) for r in idx])
+        ncol[:] -= idx
+        ptr[1:] -= n_.cumsumi(idx)
+
         if update_col:
             # Create a count array to subtract
             count = n_.zerosi(self.shape[1])
@@ -476,25 +481,12 @@ class SparseCSR(object):
             for c in columns:
                 count[c:] += 1
 
-            # Loop rows
-            for r in range(self.shape[0]):
-                ndel = len(idx[r])
-                ncol[r] -= ndel
-                ptr[r+1] -= ndel
-
-                # Correct all indices above the deleted ones
-                sl = slice(ptr[r], ptr[r] + ncol[r])
-                col[sl] -= count[col[sl]]
-
-        else:
-            # Only update counts and pointers
-            for r in range(self.shape[0]):
-                ndel = len(idx[r])
-                ncol[r] -= ndel
-                ptr[r+1] -= ndel
+            idx = array_arange(ptr[:-1], n=ncol)
+            col[idx] -= count[col[idx]]
+        del idx
 
         # Update number of non-zeroes
-        self._nnz = sum(ncol)
+        self._nnz = np.sum(ncol)
 
         if not keep:
             shape = list(self.shape)
@@ -512,21 +504,21 @@ class SparseCSR(object):
         nc = self.shape[1]
 
         # Only update counts and pointers
-        idx = []
+        idx = [None] * self.shape[0]
         for r in range(self.shape[0]):
-            idx.append(ptr[r] + (col[ptr[r]:ptr[r]+ncol[r]] >= nc).nonzero()[0])
+            idx[r] = ptr[r] + (col[ptr[r]:ptr[r]+ncol[r]] >= nc).nonzero()[0]
             ndel = len(idx[r])
             ncol[r] -= ndel
-            ptr[r+1] -= ndel
+            ptr[r+1:] -= ndel
 
         # Deleted columns
-        lidx = hstack(idx)
-        self.col = delete(self.col, lidx)
-        self._D = delete(self._D, lidx, axis=0)
-        del lidx, idx
+        idx = hstack(idx)
+        self.col = delete(self.col, idx)
+        self._D = delete(self._D, idx, axis=0)
+        del idx
 
         # Update number of non-zeroes
-        self._nnz = sum(ncol)
+        self._nnz = np.sum(ncol)
 
         # We are *only* deleting columns, so if it is finalized,
         # it will still be
@@ -648,7 +640,7 @@ class SparseCSR(object):
 
         In the above case ``r`` and ``c`` are rows and columns such that
 
-        >>> self[r, c] 
+        >>> self[r, c]
 
         returns the non-zero element of the sparse matrix.
 
@@ -698,7 +690,7 @@ class SparseCSR(object):
         Returns
         -------
         index : array_like
-           the indicies of the existing/added elements. 
+           the indicies of the existing/added elements
         """
 
         # We skip this check and let sisl die if wrong input is given...
@@ -808,7 +800,7 @@ class SparseCSR(object):
 
         Returns
         -------
-        the indicies of the existing elements. 
+        numpy.ndarray : indicies of the existing elements
         """
 
         # Ensure flattened array...
@@ -874,8 +866,7 @@ class SparseCSR(object):
         self._nnz -= len(index)
 
     def __getitem__(self, key):
-        """ Intrinsic sparse matrix retrieval of a non-zero element
-        """
+        """ Intrinsic sparse matrix retrieval of a non-zero element """
 
         # Get indices of sparse data (-1 if non-existing)
         index = self._get(key[0], key[1])
@@ -898,7 +889,7 @@ class SparseCSR(object):
                 return where(index >= 0, self._D[index, :], [0] * s)
 
     def __setitem__(self, key, data):
-        """ Intrinsic sparse matrix assignment of the item. 
+        """ Intrinsic sparse matrix assignment of the item.
 
         It will only allow to set the data in the sparse
         matrix if the dimensions match.
@@ -963,7 +954,6 @@ class SparseCSR(object):
         col = self.col.view()
         D = self._D.view()
 
-        rng = range(self.shape[2])
         # Get short-hand
         for i in range(self.shape[0]):
 
@@ -987,7 +977,7 @@ class SparseCSR(object):
         dims: array-like, optional
            which dimensions to store in the copy, defaults to all.
         dtype : ``numpy.dtype``
-           this defaults to the dtype of the object, 
+           this defaults to the dtype of the object,
            but one may change it if supplied.
         """
         # Create sparse matrix (with only one entry per
@@ -1110,7 +1100,7 @@ class SparseCSR(object):
         col1 = pvt[take(self.col, col_idx)]
 
         # Count the number of items that are left in the sparse pattern
-        # First recreate the new (temporar) pointer
+        # First recreate the new (temporary) pointer
         ptr1[0] = 0
         # Place it directly where it should be
         n_.cumsumi(ncol1, out=ptr1[1:])
@@ -1393,10 +1383,10 @@ def ispmatrix(matrix, map_row=None, map_col=None):
     matrix : scipy.sparse.sp_matrix
       the sparse matrix to iterate non-zero elements
     map_row : func, optional
-      map each row entry through the function `map_row`, defaults to ``None`` which is 
+      map each row entry through the function `map_row`, defaults to ``None`` which is
       equivalent to no mapping.
     map_col : func, optional
-      map each column entry through the function `map_col`, defaults to ``None`` which is 
+      map each column entry through the function `map_col`, defaults to ``None`` which is
       equivalent to no mapping.
 
     Yields
@@ -1531,10 +1521,10 @@ def ispmatrixd(matrix, map_row=None, map_col=None):
     matrix : scipy.sparse.sp_matrix
       the sparse matrix to iterate non-zero elements
     map_row : func, optional
-      map each row entry through the function `map_row`, defaults to ``None`` which is 
+      map each row entry through the function `map_row`, defaults to ``None`` which is
       equivalent to no mapping.
     map_col : func, optional
-      map each column entry through the function `map_col`, defaults to ``None`` which is 
+      map each column entry through the function `map_col`, defaults to ``None`` which is
       equivalent to no mapping.
 
     Yields

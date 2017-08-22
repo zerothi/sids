@@ -15,7 +15,7 @@ from ..sile import *
 from sisl.io._help import *
 
 # Import the geometry object
-from sisl import Geometry, Atom, SuperCell, Grid
+from sisl import Geometry, Atom, SuperCell
 
 from sisl.utils.cmd import *
 from sisl.utils.misc import merge_instances, str_spec
@@ -56,7 +56,7 @@ class fdfSileSiesta(SileSiesta):
         """ Return the current file name (without the directory prefix) """
         return self._file
 
-    def _setup(self):
+    def _setup(self, *args, **kwargs):
         """ Setup the `fdfSileSiesta` after initialization """
         # These are the comments
         self._comment = ['#', '!', ';']
@@ -186,16 +186,16 @@ class fdfSileSiesta(SileSiesta):
         return ' '.join(fdfl[1:])
 
     def set(self, key, value, keep=True):
-        """ Add the key and value to the FDF file 
+        """ Add the key and value to the FDF file
 
         Parameters
         ----------
-        key : `str`
+        key : str
            the fdf-key value to be set in the fdf file
-        value : `str`/`list`
+        value : str or list of str
            the value of the string. If a `str` is passed a regular
            fdf-key is used, if a `list` it will be a %block.
-        keep : `bool`
+        keep : bool, optional
            whether old flags will be kept in the fdf file.
         """
 
@@ -205,7 +205,7 @@ class fdfSileSiesta(SileSiesta):
 
         # 1. find the old value, and thus the file in which it is found
         with self:
-            old_value = self.get(key)
+            #old_value = self.get(key)
             # Get the file of the containing data
             top_file = self.file
 
@@ -215,6 +215,7 @@ class fdfSileSiesta(SileSiesta):
                 self.fh = self._parent_fh.pop()
             self.fh.close()
         except:
+            # Allowed pass due to pythonic reading
             pass
 
         # Now we should re-read and edit the file
@@ -316,18 +317,30 @@ class fdfSileSiesta(SileSiesta):
                          ' could not find start/end.'))
 
     @Sile_fh_open
+    def write_supercell(self, sc, fmt='.8f', *args, **kwargs):
+        """ Writes the supercell to the contained file """
+        # Check that we can write to the file
+        sile_raise_write(self)
+
+        fmt_str = ' {{0:{0}}} {{1:{0}}} {{2:{0}}}\n'.format(fmt)
+
+        # Write out the cell
+        self._write('LatticeConstant 1. Ang\n')
+        self._write('%block LatticeVectors\n')
+        self._write(fmt_str.format(*sc.cell[0, :]))
+        self._write(fmt_str.format(*sc.cell[1, :]))
+        self._write(fmt_str.format(*sc.cell[2, :]))
+        self._write('%endblock LatticeVectors\n')
+
+    @Sile_fh_open
     def write_geometry(self, geom, fmt='.8f', *args, **kwargs):
         """ Writes the geometry to the contained file """
         # Check that we can write to the file
         sile_raise_write(self)
 
-        # Write out the cell
-        self._write('LatticeConstant 1. Ang\n')
-        self._write('%block LatticeVectors\n')
-        self._write(' {0} {1} {2}\n'.format(*geom.cell[0, :]))
-        self._write(' {0} {1} {2}\n'.format(*geom.cell[1, :]))
-        self._write(' {0} {1} {2}\n'.format(*geom.cell[2, :]))
-        self._write('%endblock LatticeVectors\n\n')
+        self.write_supercell(geom.sc, fmt, *args, **kwargs)
+
+        self._write('\n')
         self._write('NumberOfAtoms {0}\n'.format(geom.na))
         self._write('AtomicCoordinatesFormat Ang\n')
         self._write('%block AtomicCoordinatesAndAtomicSpecies\n')
@@ -404,7 +417,6 @@ class fdfSileSiesta(SileSiesta):
         lc = lc.lower()
         if 'ang' in lc or 'notscaledcartesianang' in lc:
             s = 1.
-            pass
         elif 'bohr' in lc or 'notscaledcartesianbohr' in lc:
             s = Bohr2Ang
         elif 'scaledcartesian' in lc:
@@ -597,6 +609,7 @@ class fdfSileSiesta(SileSiesta):
             tmp_p, tmp_ns = geom.ArgumentParser(tmp_p, *args, **kwargs)
             namespace = merge_instances(namespace, tmp_ns)
         except:
+            # Allowed pass due to pythonic reading
             pass
 
         f = label + '.bands'

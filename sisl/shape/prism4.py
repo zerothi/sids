@@ -1,10 +1,9 @@
-""" 
+"""
 Implement a set of simple shapes that
 """
 
 from numbers import Real
 import numpy as np
-import numpy.linalg as la
 
 from .shape import Shape
 
@@ -100,7 +99,6 @@ class Cuboid(Shape):
         tmp = other[:, :] - self.origo[None, :]
         el = self.edge_length[:]
 
-        voxel = np.diagflat(self.edge_length)
         # First reject those that are definitely not inside
         land = np.logical_and
         ix = land(land(land(0 <= tmp[:, 0],
@@ -110,13 +108,13 @@ class Cuboid(Shape):
                   land(0 <= tmp[:, 2],
                        tmp[:, 2] <= el[2])).nonzero()[0]
         return ix
-        # This below is for a skewed box
-        within = la.solve(voxel, tmp[ix, :].T).T
+        ## This below is for a skewed box
+        #within = la.solve(voxel, tmp[ix, :].T).T
 
         # Reduce to check if they are within
-        within = ix[land.reduce(land(0. <= within, within <=1), axis=1)]
+        #within = ix[land.reduce(land(0. <= within, within <=1), axis=1)]
 
-        return within
+        #return within
 
 
 class Cube(Cuboid):

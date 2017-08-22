@@ -19,10 +19,6 @@ __all__ = ['bandsSileSiesta']
 class bandsSileSiesta(SileSiesta):
     """ bands SIESTA file object """
 
-    def _setup(self):
-        """ Setup the `BandsSIEASTASile` after initialization """
-        self._comment = []
-
     @Sile_fh_open
     def read_data(self):
         """ Returns data associated with the bands file """
@@ -34,11 +30,11 @@ class bandsSileSiesta(SileSiesta):
         minl, maxl = map(float, self.readline().split())
         l = self.readline()
         try:
-            minE, maxE = map(float, l.split())
+            _, _ = map(float, l.split())
             band_lines = True
         except:
             # We are dealing with a band-points file
-            minE, maxE = minl, maxl
+            pass
 
         # orbitals, n-spin, n-k
         if band_lines:
@@ -65,7 +61,7 @@ class bandsSileSiesta(SileSiesta):
             xlabels = []
             labels = []
             nl = int(self.readline())
-            for il in range(nl):
+            for _ in range(nl):
                 l = self.readline().split()
                 xlabels.append(float(l[0]))
                 labels.append((' '.join(l[1:])).replace("'", ''))
@@ -91,7 +87,7 @@ class bandsSileSiesta(SileSiesta):
     @dec_default_AP("Manipulate bands file in sisl.")
     def ArgumentParser(self, p=None, *args, **kwargs):
         """ Returns the arguments that is available for this Sile """
-        limit_args = kwargs.get('limit_arguments', True)
+        #limit_args = kwargs.get('limit_arguments', True)
         short = kwargs.get('short', False)
 
         def opts(*args):

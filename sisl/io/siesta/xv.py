@@ -22,10 +22,6 @@ __all__ = ['XVSileSiesta']
 class XVSileSiesta(SileSiesta):
     """ XV file object """
 
-    def _setup(self):
-        """ Setup the `XVSileSiesta` after initialization """
-        self._comment = []
-
     @Sile_fh_open
     def write_geometry(self, geom, fmt='.8f'):
         """ Writes the geometry to the contained file """
@@ -80,11 +76,11 @@ class XVSileSiesta(SileSiesta):
 
         return Geometry(xyz, atms, sc=sc)
 
-    def ArgumentParser(self, *args, **kwargs):
+    def ArgumentParser(self, p=None, *args, **kwargs):
         """ Returns the arguments that is available for this Sile """
         newkw = Geometry._ArgumentParser_args_single()
         newkw.update(kwargs)
-        return self.read_geometry().ArgumentParser(*args, **newkw)
+        return self.read_geometry().ArgumentParser(p, *args, **newkw)
 
 
 add_sile('XV', XVSileSiesta, gzip=True)

@@ -15,13 +15,12 @@ __all__ = ['TableSile']
 class TableSile(Sile):
     """ Table file object """
 
-    def _setup(self):
+    def _setup(self, *args, **kwargs):
         """ Setup the `TableSile` after initialization """
         self._comment = ['#']
 
     def write_data(self, data, header=None, footer=None, newline='\n', fmt='%.5e', comment=None, delimiter='\t'):
         """ Write tabular data to the file with optional header. """
-        C = self._comment[0]
 
         if comment is None:
             comment = ''

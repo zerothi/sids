@@ -22,9 +22,8 @@ class CARSileVASP(SileVASP):
     This file-object handles both POSCAR and CONTCAR files
     """
 
-    def _setup(self):
+    def _setup(self, *args, **kwargs):
         """ Setup the `POSCARSile` after initialization """
-        self._comment = []
         self._scale = 1.
 
     @Sile_fh_open
@@ -112,10 +111,11 @@ class CARSileVASP(SileVASP):
                 for i in range(nsp)]
 
         # Read whether this is selective or direct
+        # Currently direct is not used
         opt = self.readline()
-        direct = True
+        #direct = True
         if opt[0] in 'Ss':
-            direct = False
+            #direct = False
             opt = self.readline()
 
         # Check whether this is in fractional or direct
@@ -128,7 +128,6 @@ class CARSileVASP(SileVASP):
         na = len(atom)
 
         xyz = np.empty([na, 3], np.float64)
-        aoff = 0
         for ia in range(na):
             xyz[ia, :] = list(map(float, self.readline().split()))
         if cart:
@@ -140,11 +139,11 @@ class CARSileVASP(SileVASP):
         # The POT/CONT-CAR does not contain information on the atomic species
         return Geometry(xyz=xyz, atom=atom, sc=sc)
 
-    def ArgumentParser(self, *args, **kwargs):
+    def ArgumentParser(self, p=None, *args, **kwargs):
         """ Returns the arguments that is available for this Sile """
         newkw = Geometry._ArgumentParser_args_single()
         newkw.update(kwargs)
-        return self.read_geometry().ArgumentParser(*args, **newkw)
+        return self.read_geometry().ArgumentParser(p, *args, **newkw)
 
 
 # Equivalent classes

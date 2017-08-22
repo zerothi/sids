@@ -3,22 +3,7 @@ Density matrix class
 """
 from __future__ import print_function, division
 
-import warnings
-from numbers import Integral
-import itertools as itools
-
-import numpy as np
-import scipy.linalg as sli
-from scipy.sparse import isspmatrix, csr_matrix
-import scipy.sparse.linalg as ssli
-
-from sisl._help import get_dtype
-from sisl._help import _zip as zip, _range as range
-from sisl.sparse import SparseCSR, ispmatrix, ispmatrixd
-from sisl.sparse_geometry import SparseOrbital
 from .sparse_physics import SparseOrbitalBZSpin
-from .spin import Spin
-from .brillouinzone import BrillouinZone
 
 __all__ = ['DensityMatrix']
 
@@ -26,7 +11,7 @@ __all__ = ['DensityMatrix']
 class DensityMatrix(SparseOrbitalBZSpin):
     """ DensityMatrix object containing the density matrix elements
 
-    The object contains information regarding the 
+    The object contains information regarding the
      - geometry
      - density matrix elements between orbitals
 
@@ -83,7 +68,7 @@ class DensityMatrix(SparseOrbitalBZSpin):
         ----------
         k : array_like
            the k-point to setup the density matrix at
-        dtype : numpy.dtype , optional 
+        dtype : numpy.dtype , optional
            the data type of the returned matrix. Do NOT request non-complex
            data-type for non-Gamma k.
            The default data-type is '`numpy.complex128``

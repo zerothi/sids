@@ -5,8 +5,6 @@ Easy conversion of data from different formats to other formats.
 from __future__ import print_function, division
 
 import sys
-import os
-import os.path as osp
 import argparse
 
 __all__ = ['sdata']
@@ -15,7 +13,7 @@ __all__ = ['sdata']
 def argparse_patch(parser):
     """ Patch the argparse module such that one may process the Namespace in subparsers
 
-    This patch have been created by: 
+    This patch have been created by:
       paul.j3 (http://bugs.python.org/file44363/issue27859test.py)
     and adapted by Nick R. Papior with minor edits.
 
@@ -76,7 +74,7 @@ def sdata(argv=None, sile=None):
     description = """
 This manipulation utility can handle nearly all files in the sisl code in
 changing ways. It handles files dependent on type AND content.
-    """.format(osp.basename(sys.argv[0]))
+    """
 
     if argv is not None:
         # We keep the arguments

@@ -1,6 +1,6 @@
 """ Geometry class to retain the atomic structure.
 
-A `Geometry` contains all necessary components regarding an 
+A `Geometry` contains all necessary components regarding an
 atomic configuration:
 
 1. Number of atoms
@@ -8,7 +8,7 @@ atomic configuration:
 3. Atomic species
 4. Unit cell where the atoms are contained
 
-The class implements a wide variety of routines for manipulation of the 
+The class implements a wide variety of routines for manipulation of the
 above listed items.
 """
 from __future__ import print_function, division
@@ -16,19 +16,21 @@ from __future__ import print_function, division
 # To check for integers
 import warnings
 from numbers import Integral, Real
-from collections import deque
 from six import string_types
-from math import acos, pi
+from math import acos
 from itertools import product
 
 import numpy as np
 
 import sisl.plot as plt
+import sisl._numpy as n_
 from ._help import _str
 from ._help import _range as range
-from ._help import array_fill_repeat, ensure_array, ensure_dtype
-from ._help import isiterable, isndarray
-from .utils import *
+from ._help import ensure_array, ensure_dtype
+from ._help import isndarray
+from .utils import dec_default_AP, default_namespace, cmd
+from .utils import angle, direction
+from .utils import lstranges, strmap, array_arange
 from .quaternion import Quaternion
 from .supercell import SuperCell, SuperCellChild
 from .atom import Atom, Atoms
@@ -252,12 +254,12 @@ class Geometry(SuperCellChild):
         return self.axyz(atom)
 
     def rij(self, ia, ja):
-        r""" Distance between atom ``ia`` and ``ja``, atoms are expected to be in super-cell indices
+        r""" Distance between atom `ia` and `ja`, atoms can be in super-cell indices
 
         Returns the distance between two atoms:
 
-        .. math ::
-            r\\_{ij} = |r\\_j - r\\_i|
+        .. math::
+            r_{ij} = |r_j - r_i|
 
         Parameters
         ----------
@@ -277,12 +279,12 @@ class Geometry(SuperCellChild):
         return np.sqrt(np.sum((xj - xi[None, :]) ** 2., axis=1))
 
     def orij(self, io, jo):
-        r""" Return distance between orbital ``io`` and ``jo``, orbitals are expected to be in super-cell indices
+        r""" Distance between orbital `io` and `jo`, orbitals can be in super-cell indices
 
         Returns the distance between two orbitals:
 
-        .. math ::
-            r\\_{ij} = |r\\_j - r\\_i|
+        .. math::
+            r_{ij} = |r_j - r_i|
 
         Parameters
         ----------
@@ -409,7 +411,7 @@ class Geometry(SuperCellChild):
         atom : int or array_like, optional
            only loop on the given atoms, default to all atoms
         local : bool, optional
-           whether the orbital index is the global index, or the local index relative to 
+           whether the orbital index is the global index, or the local index relative to
            the atom it resides on.
 
         See Also
@@ -457,9 +459,11 @@ class Geometry(SuperCellChild):
         # default block iterator
         if R is None:
             R = self.maxR()
+        if R < 0:
+            raise ValueError("Unable to determine a number of atoms within a sphere with negative radius, is maxR() defined?")
 
         # Number of atoms in within 20 * R
-        naiR = len(self.close(ia, R=R * iR))
+        naiR = max(1, len(self.close(ia, R=R * iR)))
 
         # Convert to na atoms spherical radii
         iR = int(4 / 3 * np.pi * R ** 3 / naiR * na)
@@ -488,7 +492,6 @@ class Geometry(SuperCellChild):
         # The boundaries (ensure complete overlap)
         R = np.array([iR - 0.975, iR + .025]) * R
 
-        where = np.where
         append = np.append
 
         # loop until all passed are true
@@ -661,7 +664,7 @@ class Geometry(SuperCellChild):
         atom : array_like, optional
             enables only effectively looping a subset of the full geometry
         method : {'rand', 'sphere', 'cube'}
-            select the method by which the block iteration is performed. 
+            select the method by which the block iteration is performed.
             Possible values are:
              `rand`: a spherical object is constructed with a random center according to the internal atoms
              `sphere`: a spherical equispaced shape is constructed and looped
@@ -808,8 +811,8 @@ class Geometry(SuperCellChild):
         """
         if self.na % seps != 0:
             raise ValueError(
-                'The system cannot be cut into {0} different ' +
-                'pieces. Please check your geometry and input.'.format(seps))
+                'The system cannot be cut into {0} different '.format(seps) +
+                'pieces. Please check your geometry and input.')
         # Truncate to the correct segments
         lseg = seg % seps
         # Cut down cell
@@ -842,7 +845,7 @@ class Geometry(SuperCellChild):
         sub : the negative of this routine, i.e. retain a subset of atoms
         """
         atom = self.sc2uc(atom)
-        atom = np.setdiff1d(np.arange(self.na, dtype=np.int32), atom, assume_unique=True)
+        atom = np.delete(n_.arangei(self.na), atom)
         return self.sub(atom)
 
     def tile(self, reps, axis):
@@ -884,15 +887,7 @@ class Geometry(SuperCellChild):
         if reps < 1:
             raise ValueError(self.__class__.__name__ + '.tile() requires a repetition above 0')
 
-        # We need a double copy as we want to re-calculate after
-        # enlarging cell
-        sc = self.sc.copy()
-        sc.cell[axis, :] *= reps
-        # Only reduce the size if it is larger than 5
-        if sc.nsc[axis] > 3 and reps > 1:
-            sc.nsc[axis] = max(1, sc.nsc[axis] // 2 - (reps - 1)) * 2 + 1
-        # Ensures that everything gets re-initialized
-        sc = sc.copy()
+        sc = self.sc.tile(reps, axis)
 
         # Our first repetition *must* be with
         # the former coordinate
@@ -967,15 +962,7 @@ class Geometry(SuperCellChild):
         if reps < 1:
             raise ValueError(self.__class__.__name__ + '.repeat() requires a repetition above 0')
 
-        # We need a double copy as we want to re-calculate after
-        # enlarging cell
-        sc = self.sc.copy()
-        sc.cell[axis, :] *= reps
-        # Only reduce the size if it is larger than 5
-        if sc.nsc[axis] > 3 and reps > 1:
-            sc.nsc[axis] = max(1, sc.nsc[axis] // 2 - (reps - 1)) * 2 + 1
-        # Ensures that everything gets re-initialized
-        sc = sc.copy()
+        sc = self.sc.repeat(reps, axis)
 
         # Our first repetition *must* be with
         # the former coordinate
@@ -993,7 +980,7 @@ class Geometry(SuperCellChild):
         return self.__class__(xyz, atom=self.atom.repeat(reps), sc=sc)
 
     def __mul__(self, m):
-        """ Implement easy repeat function 
+        """ Implement easy repeat function
 
         Parameters
         ----------
@@ -1475,14 +1462,14 @@ class Geometry(SuperCellChild):
         Parameters
         ----------
         dist : ``array_like``, ``float``, ``str`` (`'calc'`)
-           the distance (in `Ang`) between the attached coordinates. 
+           the distance (in `Ang`) between the attached coordinates.
            If `dist` is `arraylike it should be the vector between
            the atoms;
            if `dist` is `float` the argument `axis` is required
            and the vector will be calculated along the corresponding latticevector;
            else if `dist` is `str` this will correspond to the
-           `method` argument of the ``Atom.radius`` class of the two 
-           atoms. Here `axis` is also required. 
+           `method` argument of the ``Atom.radius`` class of the two
+           atoms. Here `axis` is also required.
         axis : ``int``
            specify the direction of the lattice vectors used.
            Not used if `dist` is an array-like argument.
@@ -1545,14 +1532,18 @@ class Geometry(SuperCellChild):
 
     def mirror(self, plane, atom=None):
         """ Mirrors the structure around the center of the atoms """
+        if not atom is None:
+            atom = ensure_array(atom)
+        else:
+            atom = slice(None)
         g = self.copy()
         lplane = ''.join(sorted(plane.lower()))
         if lplane == 'xy':
-            g.xyz[:, 2] *= -1
+            g.xyz[atom, 2] *= -1
         elif lplane == 'yz':
-            g.xyz[:, 0] *= -1
+            g.xyz[atom, 0] *= -1
         elif lplane == 'xz':
-            g.xyz[:, 1] *= -1
+            g.xyz[atom, 1] *= -1
         return self.__class__(g.xyz, atom=g.atom, sc=self.sc.copy())
 
     @property
@@ -1814,7 +1805,6 @@ class Geometry(SuperCellChild):
         """
 
         # Common numpy used functions (reduces function look-ups)
-        where = np.where
         log_and = np.logical_and
         fabs = np.fabs
 
@@ -2029,7 +2019,7 @@ class Geometry(SuperCellChild):
             try:
                 # If it is a number, we use that.
                 rad = float(method)
-            except:
+            except Exception:
                 # get radius
                 rad = self.atom[idx].radius(method) \
                       + self.atom[ia].radius(method)
@@ -2363,7 +2353,7 @@ class Geometry(SuperCellChild):
         if fig_axes is False:
             try:
                 fig_axes = plt.mlibplt.gca()
-            except:
+            except Exception:
                 fig_axes = plt.mlibplt.figure().add_subplot(111, **d)
         elif fig_axes is True:
             fig_axes = plt.mlibplt.figure().add_subplot(111, **d)
@@ -2371,7 +2361,7 @@ class Geometry(SuperCellChild):
         colors = np.linspace(0, 1, num=len(self.atom.atom), endpoint=False)
         colors = colors[self.atom.specie]
         area = np.array([a.Z for a in self.atom.atom], np.float64)
-        ma, Ma = np.min(area), np.max(area)
+        ma = np.min(area)
         area[:] *= 20 * np.pi / ma
         area = area[self.atom.specie]
 
@@ -2492,7 +2482,7 @@ class Geometry(SuperCellChild):
         atom : int or array_like, optional
            only create list of distances from the given atoms, default to all atoms
         R : float, optional
-           the maximum radius to consider, default to ``self.maxR()``. 
+           the maximum radius to consider, default to ``self.maxR()``.
            To retrieve all distances for atoms within the supercell structure
            you can pass ``numpy.inf``.
         tol : float or array_like, optional
@@ -2500,14 +2490,14 @@ class Geometry(SuperCellChild):
            This parameter sets the shell radius for each shell.
            I.e. the returned distances between two shells will be maximally
            `2*tol`, but only if atoms are within two consecutive lists.
-           If this is a list, the shells will be of unequal size. 
+           If this is a list, the shells will be of unequal size.
 
            The first shell size will be `tol * .5` or `tol[0] * .5` if ``tol`` is a list.
 
         method : {'average', 'mode', '<numpy.func>', func}
            How the distance in each shell is determined.
            A list of distances within each shell is gathered and the equivalent
-           method will be used to extract a single quantity from the list of 
+           method will be used to extract a single quantity from the list of
            distances in the shell.
            If `'mode'` is chosen it will use ``scipy.stats.mode``.
            If a string is given it will correspond to ``getattr(numpy, method)``,
@@ -2654,7 +2644,7 @@ class Geometry(SuperCellChild):
     # as the options are read.
     @dec_default_AP("Manipulate a Geometry object in sisl.")
     def ArgumentParser(self, p=None, *args, **kwargs):
-        """ Create and return a group of argument parsers which manipulates it self `Geometry`. 
+        """ Create and return a group of argument parsers which manipulates it self `Geometry`.
 
         Parameters
         ----------
@@ -2663,7 +2653,7 @@ class Geometry(SuperCellChild):
            to create a new.
         limit_arguments: bool, optional
            If `False` additional options will be created which are similar to other options.
-           For instance `--repeat-x` which is equivalent to `--repeat x`. 
+           For instance `--repeat-x` which is equivalent to `--repeat x`.
            Default `True`.
         short: bool, optional
            Create short options for a selected range of options.
@@ -2746,9 +2736,9 @@ class Geometry(SuperCellChild):
 
             def __call__(self, parser, ns, values, option_string=None):
                 # Convert value[0] to the direction
-                d = direction(values[0])
                 # The rotate function expects degree
-                ang = angle(values[1], radians=False, in_radians=False)
+                ang = angle(values[0], radians=False, in_radians=False)
+                d = direction(values[1])
                 if d == 0:
                     v = [1, 0, 0]
                 elif d == 1:
@@ -2756,7 +2746,7 @@ class Geometry(SuperCellChild):
                 elif d == 2:
                     v = [0, 0, 1]
                 ns._geometry = ns._geometry.rotate(ang, v)
-        p.add_argument(*opts('--rotate', '-R'), nargs=2, metavar=('DIR', 'ANGLE'),
+        p.add_argument(*opts('--rotate', '-R'), nargs=2, metavar=('ANGLE', 'DIR'),
                        action=Rotation,
                        help='Rotate geometry around given axis. ANGLE defaults to be specified in degree. Prefix with "r" for input in radians.')
 
@@ -2805,10 +2795,10 @@ class Geometry(SuperCellChild):
         class ReduceCut(argparse.Action):
 
             def __call__(self, parser, ns, values, option_string=None):
-                d = direction(values[0])
-                s = int(values[1])
+                s = int(values[0])
+                d = direction(values[1])
                 ns._geometry = ns._geometry.cut(s, d)
-        p.add_argument(*opts('--cut', '-c'), nargs=2, metavar=('DIR', 'SEPS'),
+        p.add_argument(*opts('--cut', '-c'), nargs=2, metavar=('SEPS', 'DIR'),
                        action=ReduceCut,
                        help='Cuts the geometry into `seps` parts along the unit-cell direction `dir`.')
 
@@ -2855,10 +2845,10 @@ class Geometry(SuperCellChild):
         class PeriodRepeat(argparse.Action):
 
             def __call__(self, parser, ns, values, option_string=None):
-                d = direction(values[0])
-                r = int(values[1])
+                r = int(values[0])
+                d = direction(values[1])
                 ns._geometry = ns._geometry.repeat(r, d)
-        p.add_argument(*opts('--repeat', '-r'), nargs=2, metavar=('DIR', 'TIMES'),
+        p.add_argument(*opts('--repeat', '-r'), nargs=2, metavar=('TIMES', 'DIR'),
                        action=PeriodRepeat,
                        help='Repeats the geometry in the specified direction.')
 
@@ -2890,10 +2880,10 @@ class Geometry(SuperCellChild):
         class PeriodTile(argparse.Action):
 
             def __call__(self, parser, ns, values, option_string=None):
-                d = direction(values[0])
-                r = int(values[1])
+                r = int(values[0])
+                d = direction(values[1])
                 ns._geometry = ns._geometry.tile(r, d)
-        p.add_argument(*opts('--tile'), nargs=2, metavar=('DIR', 'TIMES'),
+        p.add_argument(*opts('--tile'), nargs=2, metavar=('TIMES', 'DIR'),
                        action=PeriodTile,
                        help='Tiles the geometry in the specified direction.')
 
@@ -2966,7 +2956,7 @@ class Geometry(SuperCellChild):
 
 
 def sgeom(geom=None, argv=None, ret_geometry=False):
-    """ Main script for sgeom script. 
+    """ Main script for sgeom script.
 
     This routine may be called with `argv` and/or a `Sile` which is the geometry at hand.
 
@@ -3043,7 +3033,6 @@ lattice vector.
     elif isinstance(geom, Geometry):
         # Do nothing, the geometry is already created
         argv = ['fake.xyz'] + argv
-        pass
 
     elif isinstance(geom, BaseSile):
         geom = sile.read_geometry()

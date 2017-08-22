@@ -10,7 +10,7 @@ import numpy as np
 from .sile import *
 
 # Import the geometry object
-from sisl import Geometry, Atom, SuperCell
+from sisl import Geometry, SuperCell
 
 
 __all__ = ['XYZSile']
@@ -18,10 +18,6 @@ __all__ = ['XYZSile']
 
 class XYZSile(Sile):
     """ XYZ file object """
-
-    def _setup(self):
-        """ Setup the `XYZSile` after initialization """
-        self._comment = []
 
     @Sile_fh_open
     def write_geometry(self, geom, fmt='.8f'):
@@ -39,7 +35,7 @@ class XYZSile(Sile):
         self._write(fmt_str.format(*geom.cell.flatten()))
 
         fmt_str = '{{0:2s}}  {{1:{0}}}  {{2:{0}}}  {{3:{0}}}\n'.format(fmt)
-        for ia, a, isp in geom.iter_species():
+        for ia, a, _ in geom.iter_species():
             self._write(fmt_str.format(a.symbol, *geom.xyz[ia, :]))
         # Add a single new line
         self._write('\n')
@@ -84,11 +80,11 @@ class XYZSile(Sile):
 
         return Geometry(xyz, atom=sp, sc=SuperCell(cell, nsc=nsc))
 
-    def ArgumentParser(self, *args, **kwargs):
+    def ArgumentParser(self, p=None, *args, **kwargs):
         """ Returns the arguments that is available for this Sile """
         newkw = Geometry._ArgumentParser_args_single()
         newkw.update(kwargs)
-        return self.read_geometry().ArgumentParser(*args, **newkw)
+        return self.read_geometry().ArgumentParser(p, *args, **newkw)
 
 
 add_sile('xyz', XYZSile, case=False, gzip=True)

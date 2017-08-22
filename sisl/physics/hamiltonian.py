@@ -3,22 +3,8 @@ Tight-binding class to create tight-binding models.
 """
 from __future__ import print_function, division
 
-import warnings
-from numbers import Integral
-import itertools as itools
-
-import numpy as np
-import scipy.linalg as sli
-from scipy.sparse import isspmatrix, csr_matrix
-import scipy.sparse.linalg as ssli
-
-from sisl._help import get_dtype
-from sisl._help import _zip as zip, _range as range
-from sisl.sparse import SparseCSR, ispmatrix, ispmatrixd
-from sisl.sparse_geometry import SparseOrbital
+from sisl._help import _range as range
 from .sparse_physics import SparseOrbitalBZSpin
-from .spin import Spin
-from .brillouinzone import BrillouinZone
 
 __all__ = ['Hamiltonian', 'TightBinding']
 
@@ -26,7 +12,7 @@ __all__ = ['Hamiltonian', 'TightBinding']
 class Hamiltonian(SparseOrbitalBZSpin):
     """ Hamiltonian object containing the coupling constants between orbitals.
 
-    The Hamiltonian object contains information regarding the 
+    The Hamiltonian object contains information regarding the
      - geometry
      - coupling constants between orbitals
 
@@ -79,7 +65,7 @@ class Hamiltonian(SparseOrbitalBZSpin):
         ----------
         k : array_like
            the k-point to setup the Hamiltonian at
-        dtype : numpy.dtype , optional 
+        dtype : numpy.dtype , optional
            the data type of the returned matrix. Do NOT request non-complex
            data-type for non-Gamma k.
            The default data-type is '`numpy.complex128``

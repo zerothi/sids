@@ -32,6 +32,7 @@ from numbers import Integral
 import numpy as np
 
 from ._help import array_fill_repeat, ensure_array, _str
+import sisl._numpy as n_
 
 __all__ = ['PeriodicTable', 'Atom', 'Atoms']
 
@@ -1009,11 +1010,10 @@ class Atom(with_metaclass(AtomMeta, object)):
             orbs = 1
 
         self.Z = _ptbl.Z_int(Z)
-        self.orbs = orbs
         try:
             self.orbs = max(len(R), orbs)
         except:
-            pass
+            self.orbs = orbs
         self.R = array_fill_repeat(
             np.asarray([R], np.float64).flatten(),
             self.orbs)
@@ -1035,7 +1035,7 @@ class Atom(with_metaclass(AtomMeta, object)):
                               self.tag if tag is None else tag)
 
     def radius(self, method='calc'):
-        """ Return the atomic radii of the atom (in Ang) 
+        """ Return the atomic radii of the atom (in Ang)
 
         See `PeriodicTable.radius` for details on the argument.
         """
@@ -1449,37 +1449,29 @@ class Atoms(object):
     def __getitem__(self, key):
         """ Return an `Atom` object corresponding to the key(s) """
         if isinstance(key, slice):
-            if key.step is None:
-                nkey = slice(key.start or 0, key.stop or len(self), key.step or 1)
-            elif key.step < 0:
-                nkey = slice(key.stop or len(self)-1, key.start or -1, key.step)
-            return [self.atom[self._specie[s]] for s in range(nkey.start, nkey.stop, nkey.step)]
-        elif isinstance(key, (list, tuple, np.ndarray)):
-            return [self.atom[self._specie[s]] for s in key]
-        else:
+            sl = key.indices(len(self))
+            return [self.atom[self._specie[s]] for s in range(sl[0], sl[1], sl[2])]
+        elif isinstance(key, Integral):
             return self.atom[self._specie[key]]
+        return [self.atom[i] for i in self._specie[ensure_array(key)]]
 
     def __setitem__(self, key, value):
         """ Overwrite an `Atom` object corresponding to the key(s) """
-
-        # First we figure out if this is a new atom
-        if isinstance(key, (list, np.ndarray, tuple)):
-            atoms = Atoms(value, na=len(key))
+        # Convert to array
+        if isinstance(key, slice):
+            sl = key.indices(len(self))
+            key = n_.arangei(sl[0], sl[1], sl[2])
         else:
-            atoms = Atoms(value)
+            key = ensure_array(key)
+
+        # Create new atoms object to iterate
+        other = Atoms(value, na=len(key))
 
         # Append the new Atom objects
-        for atom, _ in atoms:
+        for atom, s_i in other:
             if atom not in self:
                 self._atom.append(atom)
-
-        # Now the unique atom list also contains the new atoms
-        # We need to re-create the species list
-        if isinstance(key, (list, np.ndarray, tuple)):
-            for i, j in enumerate(key):
-                self._specie[j] = self.index(atoms[i])
-        else:
-            self._specie[key] = self.index(atoms[0])
+            self._specie[key[s_i]] = self.index(atom)
 
     def equal(self, other, R=True):
         """ True if the contained atoms are the same in the two lists

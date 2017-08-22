@@ -5,7 +5,6 @@ import gzip
 
 import numpy as np
 
-from sisl import Geometry
 from sisl.utils.misc import str_spec
 from ._help import *
 
@@ -269,16 +268,19 @@ def get_sile(file, *args, **kwargs):
     return sile(str_spec(file)[0], *args, **kwargs)
 
 
-def get_siles(attrs=[None]):
+def get_siles(attrs=None):
     """ Returns all siles with a specific attribute (or all)
 
     Parameters
     ----------
     attrs : list of attribute names
        limits the returned sile-objects to those that have
-       the given attributes `hasattr(sile, attrs)`
+       the given attributes `hasattr(sile, attrs)`, default ``[None]``
     """
     global __siles
+
+    if attrs is None:
+        attrs = [None]
 
     if len(attrs) == 1 and attrs[0] is None:
         return list(__siles)
@@ -296,8 +298,12 @@ def get_siles(attrs=[None]):
 class BaseSile(object):
     """ Base class for the Siles """
 
+    def exist(self):
+        """ Query whether the file exists """
+        return isfile(self.file)
+
     def read(self, *args, **kwargs):
-        """ Generic read method which should be overloaded in child-classes 
+        """ Generic read method which should be overloaded in child-classes
 
         Parameters
         ----------
@@ -407,22 +413,22 @@ class BaseSile(object):
         return {}
 
     # Define the custom ArgumentParser
-    def ArgumentParser(self, parser=None, *args, **kwargs):
+    def ArgumentParser(self, p=None, *args, **kwargs):
         """ Returns the arguments that may be available for this Sile
 
         Parameters
         ----------
-        parser: ArgumentParser
+        p: ArgumentParser
            the argument parser to add the arguments to.
         """
         raise NotImplementedError("The ArgumentParser of '"+self.__class__.__name__+"' has not been implemented yet.")
 
-    def ArgumentParser_out(self, parser=None, *args, **kwargs):
+    def ArgumentParser_out(self, p=None, *args, **kwargs):
         """ Appends additional arguments based on the output of the file
 
         Parameters
         ----------
-        parser: ArgumentParser
+        p: ArgumentParser
            the argument parser to add the arguments to.
         """
         pass
@@ -474,6 +480,8 @@ class Sile(BaseSile):
 
         This method must **never** be overwritten.
         """
+        # Initialize the non-comment sile
+        self._comment = []
         self._setup()
 
     def _open(self):
@@ -656,7 +664,7 @@ class SileCDF(BaseSile):
         self._lvl = lvl
         # Initialize the _data dictionary for access == 1
         self._data = dict()
-        if isfile(self.file):
+        if self.exist():
             self._access = access
         else:
             # If it has not been created we should not try
@@ -665,7 +673,6 @@ class SileCDF(BaseSile):
 
         # The CDF file can easily open the file
         if _open:
-            global _import_netCDF4
             _import_netCDF4()
             self.__dict__['fh'] = _netCDF4.Dataset(self.file, self._mode,
                                                    format='NETCDF4')
@@ -845,7 +852,7 @@ class SileCDF(BaseSile):
         variable : ``bool`` (`True`)
            whether the iterator yields `Variable` instances
         levels : ``int`` (`-1`)
-           number of levels to traverse, with respect to ``root`` variable, i.e. number of 
+           number of levels to traverse, with respect to ``root`` variable, i.e. number of
            sub-groups this iterator will return.
         root : ``str`` (`None`)
            the base root to start iterating from.
