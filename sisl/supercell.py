@@ -4,9 +4,11 @@ This class is the basis of many different objects.
 """
 from __future__ import print_function, division
 
+import math
 import numpy as np
 from numbers import Integral
 
+import sisl._numpy_scipy as ns_
 import sisl.plot as plt
 from ._help import ensure_array
 from .quaternion import Quaternion
@@ -211,7 +213,7 @@ class SuperCell(object):
         cell = np.copy(self.cell[:, :])
 
         # Solve to get the divisions in the current cell
-        x = np.linalg.solve(cell.T, xyz.T).T
+        x = ns_.solve(cell.T, xyz.T).T
 
         # Now we should figure out the correct repetitions
         # by rounding to integer positions of the cell vectors
@@ -357,16 +359,30 @@ class SuperCell(object):
 
         Returns the integer for the supercell
         """
+        def _assert(m, v):
+            if np.all(np.abs(v) > m):
+                raise ValueError("Requesting a non-existing supercell index")
+        hsc = self.nsc // 2
+
         if isinstance(sc_off[0], np.ndarray):
+            _assert(hsc[0], sc_off[:, 0])
+            _assert(hsc[1], sc_off[:, 1])
+            _assert(hsc[2], sc_off[:, 2])
             return self._isc_off[sc_off[:, 0], sc_off[:, 1], sc_off[:, 2]]
         elif isinstance(sc_off[0], (tuple, list)):
             # We are dealing with a list of lists
             sc_off = np.asarray(sc_off)
+            _assert(hsc[0], sc_off[:, 0])
+            _assert(hsc[1], sc_off[:, 1])
+            _assert(hsc[2], sc_off[:, 2])
             return self._isc_off[sc_off[:, 0], sc_off[:, 1], sc_off[:, 2]]
 
         # Fall back to the other routines
         sc_off = self._fill_sc(sc_off)
         if sc_off[0] is not None and sc_off[1] is not None and sc_off[2] is not None:
+            _assert(hsc[0], sc_off[0])
+            _assert(hsc[1], sc_off[1])
+            _assert(hsc[2], sc_off[2])
             return self._isc_off[sc_off[0], sc_off[1], sc_off[2]]
 
         # We build it because there are 'none'
@@ -556,6 +572,25 @@ class SuperCell(object):
             if abs(np.dot(a, b) - 1) > 0.001:
                 return False
         return True
+
+    def angle(self, i, j, radians=False):
+        """ The angle between two of the cell vectors
+
+        Parameters
+        ----------
+        i : int
+           the first cell vector
+        j : int
+           the second cell vector
+        radians : bool, optional
+           whether the returned value is in radians
+        """
+        na = np.sum(self.cell[i, :]**2)
+        nb = np.sum(self.cell[j, :]**2)
+        ang = math.acos(np.sum(self.cell[i, :] * self.cell[j, :]) / (na * nb))
+        if radians:
+            return ang
+        return math.degrees(ang)
 
     @staticmethod
     def read(sile, *args, **kwargs):

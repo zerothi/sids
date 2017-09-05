@@ -10,7 +10,7 @@ import warnings
 
 import numpy as np
 
-import sisl._numpy as n_
+import sisl._numpy_scipy as ns_
 from ._help import get_dtype, ensure_array
 from ._help import _zip as zip, _range as range
 from .utils.ranges import array_arange
@@ -44,7 +44,7 @@ class SparseGeometry(object):
     @property
     def _size(self):
         """ The size of the sparse object """
-        raise NotImplementedError
+        return self.geom.na
 
     def _cls_kwargs(self):
         """ Custom keyword arguments when creating a new instance """
@@ -105,7 +105,7 @@ class SparseGeometry(object):
         """
         if dtype is None:
             dtype = self.dtype
-        new = self.__class__(self.geom, self.dim, dtype, 1, **self._cls_kwargs())
+        new = self.__class__(self.geom.copy(), self.dim, dtype, 1, **self._cls_kwargs())
         # Be sure to copy the content of the SparseCSR object
         new._csr = self._csr.copy(dtype=dtype)
         return new
@@ -377,7 +377,7 @@ class SparseGeometry(object):
         sub : the negative of `remove`, i.e. retain a subset of atoms
         """
         atom = self.sc2uc(atom)
-        atom = np.delete(n_.arangei(self.na), atom)
+        atom = np.delete(ns_.arangei(self.na), atom)
         return self.sub(atom)
 
     def sub(self, atom):
@@ -400,6 +400,28 @@ class SparseGeometry(object):
         """
         pass
 
+    def swap(self, a, b):
+        """ Swaps atoms in the sparse geometry to obtain a new order of atoms
+
+        This can be used to reorder elements of a geometry.
+
+        Parameters
+        ----------
+        a : array_like
+             the first list of atomic coordinates
+        b : array_like
+             the second list of atomic coordinates
+        """
+        a = ensure_array(a)
+        b = ensure_array(b)
+        # Create full index list
+        full = ns_.arangei(len(self.geom))
+        # Regardless of whether swapping or new indices are requested
+        # this should work.
+        full[a] = b
+        full[b] = a
+        return self.sub(full)
+
     def finalize(self):
         """ Finalizes the model
 
@@ -410,7 +432,7 @@ class SparseGeometry(object):
         """
         self._csr.finalize()
 
-    def tocsr(self, index, isc=None):
+    def tocsr(self, index, isc=None, **kwargs):
         """ Return a ``scipy.sparse.csr_matrix`` of the specified index
 
         Parameters
@@ -423,7 +445,16 @@ class SparseGeometry(object):
         """
         if isc is not None:
             raise NotImplementedError("Requesting sub-sparse has not been implemented yet")
-        return self._csr.tocsr(index)
+        return self._csr.tocsr(index, **kwargs)
+
+    def spalign(self, other):
+        """ Aligns two sparse objects and by extending `self` with the elements in `other` which are not in `self`
+
+        See Also
+        --------
+        SparseCSR.spalign : the resulting function called
+        """
+        return self._csr.spalign(other._csr)
 
     def spsame(self, other):
         """ Compare two sparse objects and check whether they have the same entries.
@@ -435,7 +466,6 @@ class SparseGeometry(object):
     @classmethod
     def fromsp(cls, geom, *sp):
         """ Returns a sparse model from a preset Geometry and a list of sparse matrices """
-
         # Ensure it is a list (no tuples can be used)
         sp = list(sp)
         for i, s in enumerate(sp):
@@ -453,6 +483,7 @@ class SparseGeometry(object):
         for i in range(dim):
             sp[i] = sp[i].tocsr()
             sp[i].sort_indices()
+            sp[i].sum_duplicates()
 
             # Figure out the maximum connections per
             # row to reduce number of re-allocations to 0
@@ -460,6 +491,10 @@ class SparseGeometry(object):
 
         # Create the sparse object
         S = cls(geom, dim, sp[0].dtype, nnzpr)
+
+        if S._size != sp[0].shape[0]:
+            raise ValueError(cls.__name__ + '.fromsp cannot create a new class, the geometry ' + \
+                             'and sparse matrices does not have coinciding dimensions size != sp.shape[0]')
 
         for i in range(dim):
             ptr = sp[i].indptr
@@ -469,7 +504,7 @@ class SparseGeometry(object):
             # loop and add elements
             for r in range(S.shape[0]):
                 sl = slice(ptr[r], ptr[r+1], None)
-                S[r, col[sl], i] += D[sl]
+                S[r, col[sl], i] = D[sl]
 
         return S
 
@@ -626,6 +661,22 @@ class SparseAtom(SparseGeometry):
     def _size(self):
         return self.geometry.na
 
+    def nonzero(self, atom=None, only_col=False):
+        """ Indices row and column indices where non-zero elements exists
+
+        Parameters
+        ----------
+        atom : int or array_like of int, optional
+           only return the tuples for the requested atoms, default is all atoms
+        only_col : bool, optional
+           only return then non-zero columns
+
+        See Also
+        --------
+        SparseCSR.nonzero : the equivalent function call
+        """
+        return self._csr.nonzero(row=atom, only_col=only_col)
+
     def iter_nnz(self, atom=None):
         """ Iterations of the non-zero elements
 
@@ -699,8 +750,8 @@ class SparseAtom(SparseGeometry):
             new.append(sc.n_s + i)
             max_n = sc.n_s + i
 
-        old = n_.arrayi(old)
-        new = n_.arrayi(new)
+        old = ns_.arrayi(old)
+        new = ns_.arrayi(new)
 
         # Assert that there are only unique values
         assert len(np.unique(old)) == len(old), "non-unique values in set_nsc"
@@ -722,7 +773,7 @@ class SparseAtom(SparseGeometry):
 
         # Create array of deleted values
         max_n = max(max_n, self.sc.n_s)
-        delete = n_.arangei(sc.n_s * self.na, (max_n + 1) * self.na)
+        delete = ns_.arangei(sc.n_s * self.na, (max_n + 1) * self.na)
         self._csr.delete_columns(delete)
 
         self.geom.set_nsc(*args, **kwargs)
@@ -769,7 +820,7 @@ class SparseAtom(SparseGeometry):
         # We initialize to be the same as the parent direction
         nsc = np.array(self.nsc, np.int32, copy=True) // 2
         nsc[axis] = 0  # we count the new direction
-        isc = n_.zerosi([3])
+        isc = ns_.zerosi([3])
         isc[axis] -= 1
         out = False
         while not out:
@@ -867,7 +918,7 @@ class SparseAtom(SparseGeometry):
         idx = np.tile(atom, self.n_s)
         # Use broadcasting rules
         idx.shape = (self.n_s, -1)
-        tmp = n_.arangei(self.n_s) * self.na
+        tmp = ns_.arangei(self.n_s) * self.na
         tmp.shape = (-1, 1)
         idx += tmp
         del tmp
@@ -934,9 +985,9 @@ class SparseAtom(SparseGeometry):
         # Create new indptr, indices and D
         ncol = np.tile(ncol, reps)
         # Now indptr is complete
-        indptr = np.insert(n_.cumsumi(ncol), 0, 0)
+        indptr = np.insert(ns_.cumsumi(ncol), 0, 0)
         del ncol
-        indices = n_.emptyi([indptr[-1]])
+        indices = ns_.emptyi([indptr[-1]])
         indices.shape = (reps, -1)
 
         # Now we should fill the data
@@ -1013,9 +1064,9 @@ class SparseAtom(SparseGeometry):
         # Create new indptr, indices and D
         ncol = np.repeat(ncol, reps)
         # Now indptr is complete
-        indptr = np.insert(n_.cumsumi(ncol), 0, 0)
+        indptr = np.insert(ns_.cumsumi(ncol), 0, 0)
         del ncol
-        indices = n_.emptyi([indptr[-1]])
+        indices = ns_.emptyi([indptr[-1]])
 
         # Now we should fill the data
         isc = geom.a2isc(col)
@@ -1046,7 +1097,7 @@ class SparseAtom(SparseGeometry):
             D = np.tile(D, (reps, 1))
         else:
             D = np.vstack([np.tile(d, (reps, 1))
-                           for d in np.split(D, n_.cumsumi(self._csr.ncol[:-1]), axis=0)
+                           for d in np.split(D, ns_.cumsumi(self._csr.ncol[:-1]), axis=0)
                        ])
         S._csr = SparseCSR((D, indices, indptr),
                            shape=(geom_n.na, geom_n.na_s))
@@ -1095,6 +1146,26 @@ class SparseOrbital(SparseGeometry):
     @property
     def _size(self):
         return self.geom.no
+
+    def nonzero(self, atom=None, only_col=False):
+        """ Indices row and column indices where non-zero elements exists
+
+        Parameters
+        ----------
+        atom : int or array_like of int, optional
+           only return the tuples for the requested atoms, default is all atoms
+           But for *all* orbitals.
+        only_col : bool, optional
+           only return then non-zero columns
+
+        See Also
+        --------
+        SparseCSR.nonzero : the equivalent function call
+        """
+        if atom is None:
+            return self._csr.nonzero(only_col=only_col)
+        row = self.geom.a2o(atom, all=True)
+        return self._csr.nonzero(row=row, only_col=only_col)
 
     def iter_nnz(self, atom=None, orbital=None):
         """ Iterations of the non-zero elements
@@ -1176,12 +1247,12 @@ class SparseOrbital(SparseGeometry):
             new.append(sc.n_s + i)
             max_n = sc.n_s + i
 
-        old = n_.arrayi(old)
-        new = n_.arrayi(new)
+        old = ns_.arrayi(old)
+        new = ns_.arrayi(new)
 
         # Assert that there are only unique values
-        assert len(np.unique(old)) == len(old), "non-unique values in set_nsc"
-        assert len(np.unique(new)) == len(new), "non-unique values in set_nsc"
+        assert len(np.unique(old)) == len(old), "non-unique values in old set_nsc"
+        assert len(np.unique(new)) == len(new), "non-unique values in new set_nsc"
 
         # Remove all elements where old == new
         # I.e. this should prevent us doing unnecessary work
@@ -1199,10 +1270,10 @@ class SparseOrbital(SparseGeometry):
 
         # Create array of deleted values
         max_n = max(max_n, self.sc.n_s)
-        delete = n_.arangei(sc.n_s * self.no, (max_n + 1) * self.no)
+        delete = ns_.arangei(sc.n_s * self.no, (max_n + 1) * self.no)
         self._csr.delete_columns(delete)
 
-        self.geom.set_nsc(*args, **kwargs)
+        self.geom.sc.set_nsc(*args, **kwargs)
 
     def cut(self, seps, axis, *args, **kwargs):
         """ Cuts the sparse orbital model into different parts.
@@ -1246,7 +1317,7 @@ class SparseOrbital(SparseGeometry):
         # We initialize to be the same as the parent direction
         nsc = self.nsc // 2
         nsc[axis] = 0  # we count the new direction
-        isc = n_.zerosi([3])
+        isc = ns_.zerosi([3])
         isc[axis] -= 1
         out = False
         while not out:
@@ -1293,7 +1364,7 @@ class SparseOrbital(SparseGeometry):
 
         def sco2sco(M, o, m, seps, axis):
             # Converts an o from M to m
-            isc = n_.arrayi(M.o2isc(o), copy=True)
+            isc = ns_.arrayi(M.o2isc(o), copy=True)
             isc[axis] = isc[axis] * seps
             # Correct for cell-offset
             isc[axis] = isc[axis] + (o % M.no) // m.no
@@ -1344,7 +1415,7 @@ class SparseOrbital(SparseGeometry):
         idx = np.tile(atom, self.n_s)
         # Use broadcasting rules
         idx.shape = (self.n_s, -1)
-        tmp = n_.arangei(self.n_s) * self.no
+        tmp = ns_.arangei(self.n_s) * self.no
         tmp.shape = (-1, 1)
         idx += tmp
         del tmp
@@ -1406,9 +1477,9 @@ class SparseOrbital(SparseGeometry):
         # Create new indptr, indices and D
         ncol = np.tile(ncol, reps)
         # Now indptr is complete
-        indptr = np.insert(n_.cumsumi(ncol), 0, 0)
+        indptr = np.insert(ns_.cumsumi(ncol), 0, 0)
         del ncol
-        indices = n_.emptyi([indptr[-1]])
+        indices = ns_.emptyi([indptr[-1]])
         indices.shape = (reps, -1)
 
         # Now we should fill the data
@@ -1485,9 +1556,9 @@ class SparseOrbital(SparseGeometry):
         # Create new indptr, indices and D
         ncol = np.repeat(ncol, reps)
         # Now indptr is complete
-        indptr = np.insert(n_.cumsumi(ncol), 0, 0)
+        indptr = np.insert(ns_.cumsumi(ncol), 0, 0)
         del ncol
-        indices = n_.emptyi([indptr[-1]])
+        indices = ns_.emptyi([indptr[-1]])
 
         # Now we should fill the data
         isc = geom.o2isc(col)
@@ -1509,7 +1580,7 @@ class SparseOrbital(SparseGeometry):
         # This is required for multi-orbital cases where
         # we should tile atomic orbitals, and repeat the atoms (only).
         # 'A' is now the first (non-repeated) atom in the new structure
-        A = n_.arangei(geom.na) * reps
+        A = ns_.arangei(geom.na) * reps
         AO = geom_n.lasto[A] - geom_n.firsto[A] + 1
         # subtract AO for first iteration in repetition loop
         OA = geom_n.firsto[A] - AO
@@ -1544,7 +1615,7 @@ class SparseOrbital(SparseGeometry):
             D = np.tile(D, (reps, 1))
         else:
             D = np.vstack([np.tile(d, (reps, 1))
-                           for d in np.split(D, n_.cumsumi(ncol)[geom.lasto[:geom.na-1]], axis=0)
+                           for d in np.split(D, ns_.cumsumi(ncol)[geom.lasto[:geom.na-1]], axis=0)
                        ])
         S._csr = SparseCSR((D, indices, indptr),
                            shape=(geom_n.no, geom_n.no_s))

@@ -32,7 +32,7 @@ from numbers import Integral
 import numpy as np
 
 from ._help import array_fill_repeat, ensure_array, _str
-import sisl._numpy as n_
+import sisl._numpy_scipy as ns_
 
 __all__ = ['PeriodicTable', 'Atom', 'Atoms']
 
@@ -1084,7 +1084,7 @@ class Atom(with_metaclass(AtomMeta, object)):
             return False
         same = self.Z == other.Z
         same &= self.orbs == other.orbs
-        same &= self.mass == other.mass
+        same &= np.isclose(self.mass, other.mass)
         same &= self.tag == other.tag
         # This prevents an allclose being called with
         # different number of orbitals
@@ -1130,14 +1130,20 @@ class Atoms(object):
 
     Attributes
     ----------
-    atom : `list(Atom)`
+    atom : list of Atom
         a list of unique atoms in this object
-    specie : ndarray
+    specie : numpy.ndarray
         a list of unique specie indices
+    firsto : numpy.ndarray
+        a list of orbital indices for each atom, this corresponds to the first
+        orbital on each of the atoms.
+    lasto : numpy.ndarray
+        a list of orbital indices for each atom, this corresponds to the last
+        orbital on each of the atoms.
     """
 
-    # Using the slots should make this routine slightly faster.
-    __slots__ = ['_atom', '_specie']
+    # Using the slots should make this class slightly faster.
+    __slots__ = ['_atom', '_specie', '_firsto']
 
     def __init__(self, atom=None, na=None):
 
@@ -1205,6 +1211,14 @@ class Atoms(object):
 
         self._specie = array_fill_repeat(specie, na, cls=np.int16)
 
+        self._update_orbitals()
+
+    def _update_orbitals(self):
+        """ Internal routine for updating the `firsto` attribute """
+        # Get number of orbitals per specie
+        uorbs = np.array([a.orbs for a in self.atom], np.int32)
+        self._firsto = np.insert(ns_.cumsumi(uorbs[self.specie[:]]), 0, 0)
+
     def copy(self):
         """ Return a copy of this atom """
         atoms = Atoms()
@@ -1235,8 +1249,17 @@ class Atoms(object):
     @property
     def orbitals(self):
         """ Return an array of orbitals of the contained objects """
-        uorbs = np.array([a.orbs for a in self.atom], np.int32)
-        return uorbs[self.specie[:]]
+        return np.diff(self.firsto)
+
+    @property
+    def firsto(self):
+        """ The first orbital of the corresponding atom in the consecutive list of orbitals """
+        return self._firsto
+
+    @property
+    def lasto(self):
+        """ The lasto orbital of the corresponding atom in the consecutive list of orbitals """
+        return self._firsto[1:] - 1
 
     def maxR(self, all=False):
         """ The maximum radius of the atoms
@@ -1303,6 +1326,7 @@ class Atoms(object):
             atoms._atom[ns] = self._atom[os].copy()
             atoms._specie[self.specie == os] = ns
 
+        atoms._update_orbitals()
         return atoms
 
     def reduce(self):
@@ -1323,6 +1347,7 @@ class Atoms(object):
 
         atoms._atom = atom
         atoms._specie = specie
+        atoms._update_orbitals()
 
         return atoms
 
@@ -1332,6 +1357,7 @@ class Atoms(object):
         atoms = Atoms()
         atoms._atom = self._atom[:]
         atoms._specie = self._specie[atom]
+        atoms._update_orbitals()
         return atoms
 
     def remove(self, atom):
@@ -1344,12 +1370,14 @@ class Atoms(object):
         """ Tile this atom object """
         atoms = self.copy()
         atoms._specie = np.tile(atoms._specie, reps)
+        atoms._update_orbitals()
         return atoms
 
     def repeat(self, reps):
         """ Repeat this atom object """
         atoms = self.copy()
         atoms._specie = np.repeat(atoms._specie, reps)
+        atoms._update_orbitals()
         return atoms
 
     def swap(self, a, b):
@@ -1360,6 +1388,7 @@ class Atoms(object):
         spec = np.copy(atoms._specie)
         atoms._specie[a] = spec[b]
         atoms._specie[b] = spec[a]
+        atoms._update_orbitals()
         return atoms
 
     def append(self, other):
@@ -1372,13 +1401,14 @@ class Atoms(object):
         atoms = self.copy()
         spec = np.copy(other._specie)
         for i, atom in enumerate(other.atom):
-            if atom not in atoms:
+            try:
+                s = atoms.index(atom)
+            except KeyError as e:
                 s = len(atoms.atom)
                 atoms._atom.append(atom)
-            else:
-                s = atoms.index(atom)
-            spec = np.where(spec == i, s, spec)
+            spec = np.where(other._specie == i, s, spec)
         atoms._specie = np.concatenate((atoms._specie, spec))
+        atoms._update_orbitals()
         return atoms
 
     add = append
@@ -1398,6 +1428,7 @@ class Atoms(object):
             atoms._specie = atoms._specie[::-1]
         else:
             atoms._specie[atom] = atoms._specie[atom[::-1]]
+        atoms._update_orbitals()
         return atoms
 
     def insert(self, index, other):
@@ -1419,6 +1450,7 @@ class Atoms(object):
                 s = atoms.index(atom)
             spec = np.where(spec == i, s, spec)
         atoms._specie = np.insert(atoms._specie, index, spec)
+        atoms._update_orbitals()
         return atoms
 
     def __repr__(self):
@@ -1460,7 +1492,7 @@ class Atoms(object):
         # Convert to array
         if isinstance(key, slice):
             sl = key.indices(len(self))
-            key = n_.arangei(sl[0], sl[1], sl[2])
+            key = ns_.arangei(sl[0], sl[1], sl[2])
         else:
             key = ensure_array(key)
 
@@ -1472,8 +1504,9 @@ class Atoms(object):
             if atom not in self:
                 self._atom.append(atom)
             self._specie[key[s_i]] = self.index(atom)
+        self._update_orbitals()
 
-    def equal(self, other, R=True):
+    def hassame(self, other, R=True):
         """ True if the contained atoms are the same in the two lists
 
         Notes
@@ -1487,19 +1520,68 @@ class Atoms(object):
            the list of atoms to check against
         R : bool, optional
            if True also checks that the orbital radius are the same
+
+        See Also
+        --------
+        equal : explicit check of the indices *and* the contained atoms
         """
+        if len(self.atom) != len(other.atom):
+            return False
         for A in self.atom:
+            is_in = False
             for B in other.atom:
-                if not A.equal(B, R):
+                if A.equal(B, R):
+                    is_in = True
+                    break
+            if not is_in:
+                return False
+        return True
+
+    def equal(self, other, R=True):
+        """ True if the contained atoms are the same in the two lists (also checks indices)
+
+        Parameters
+        ----------
+        other : Atoms
+           the list of atoms to check against
+        R : bool, optional
+           if True also checks that the orbital radius are the same
+
+        See Also
+        --------
+        hassame : only check whether the two atoms are contained in both
+        """
+        if len(self.atom) > len(other.atom):
+            for iA, A in enumerate(self.atom):
+                is_in = -1
+                for iB, B in enumerate(other.atom):
+                    if A.equal(B, R):
+                        is_in = iB
+                        break
+                if is_in == -1:
+                    return False
+                # We should check that they also have the same indices
+                if not np.all(np.nonzero(self.specie == iA)[0] \
+                              == np.nonzero(other.specie == is_in)[0]):
+                    return False
+        else:
+            for iB, B in enumerate(other.atom):
+                is_in = -1
+                for iA, A in enumerate(self.atom):
+                    if B.equal(A, R):
+                        is_in = iA
+                        break
+                if is_in == -1:
+                    return False
+                # We should check that they also have the same indices
+                if not np.all(np.nonzero(other.specie == iB)[0] \
+                              == np.nonzero(self.specie == is_in)[0]):
                     return False
         return True
 
     def __eq__(a, b):
         """ Returns true if the contained atoms are the same """
-        for atom in a.atom:
-            if atom not in b:
-                return False
-        return True
+        return a.equal(b)
 
     # Create pickling routines
     def __getstate__(self):

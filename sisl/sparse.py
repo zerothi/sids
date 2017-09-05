@@ -27,7 +27,7 @@ from scipy.sparse import csr_matrix, isspmatrix_csr
 from scipy.sparse import isspmatrix_csc
 from scipy.sparse import isspmatrix_lil
 
-import sisl._numpy as n_
+import sisl._numpy_scipy as ns_
 from ._help import array_fill_repeat, ensure_array, get_dtype
 from ._help import _range as range, _zip as zip
 from .utils.ranges import array_arange
@@ -227,11 +227,11 @@ class SparseCSR(object):
 
         # Store number of columns currently hold
         # in the sparsity pattern
-        self.ncol = n_.zerosi([M])
+        self.ncol = ns_.zerosi([M])
         # Create pointer array
-        self.ptr = n_.cumsumi(n_.arrayi([nnzpr] * (M+1))) - nnzpr
+        self.ptr = ns_.cumsumi(ns_.arrayi([nnzpr] * (M+1))) - nnzpr
         # Create column array
-        self.col = n_.emptyi(nnz)
+        self.col = ns_.emptyi(nnz)
         # Store current number of non-zero elements
         self._nnz = 0
 
@@ -243,9 +243,8 @@ class SparseCSR(object):
         # Denote that this sparsity pattern hasn't been finalized
         self._finalized = False
 
-    @classmethod
-    def diags(cls, diagonals, offsets=0, shape=None, dtype=None):
-        """ Create a `SparseCSR` with diagonal elements
+    def diags(self, diagonals, offsets=0, dim=None, dtype=None):
+        """ Create a `SparseCSR` with diagonal elements with the same shape as the routine
 
         Parameters
         ----------
@@ -254,29 +253,33 @@ class SparseCSR(object):
         offsets : scalar or array_like
            the offsets from the diagonal for each of the components (defaults
            to the diagonal)
-        shape : tuple or list of int
-           matrix dimensions, if un-specified the size will be a square matrix
-           with size ``len(diagonals)``
+        dim : int, optional
+           the extra dimension of the new diagonal matrix (default to the current
+           extra dimension)
         dtype : numpy.dtype, optional
            the data-type to create (default to ``numpy.float64``)
         """
-        if shape is None:
-            shape = (len(diagonals), len(diagonals), 1)
+        if dim is None:
+            dim = self.shape[2]
+        if dtype is None:
+            dtype = self.dtype
 
         # Now create the sparse matrix
-        S = cls(shape, dtype=dtype)
+        shape = list(self.shape)
+        shape[2] = dim
+        shape = tuple(shape)
 
-        # Get default dtype from the sparse matrix
-        dtype = S.dtype
+        # Delete the last entry, regardless of the size, the diagonal
+        D = self.__class__(shape, dtype=dtype)
 
-        diagonals = array_fill_repeat(diagonals, shape[0], cls=dtype)
-        offsets = array_fill_repeat(offsets, shape[0], cls=dtype)
+        diagonals = array_fill_repeat(diagonals, D.shape[0], cls=dtype)
+        offsets = array_fill_repeat(offsets, D.shape[0], cls=dtype)
 
         # Create diagonal elements
-        for i in range(S.shape[0]):
-            S[i, i + offsets[i]] = diagonals[i]
+        for i in range(D.shape[0]):
+            D[i, i + offsets[i]] = diagonals[i]
 
-        return S
+        return D
 
     def empty(self, keep=False):
         """ Delete all sparse information from the sparsity pattern
@@ -366,7 +369,7 @@ class SparseCSR(object):
         self._D = take(self._D, idx, 0)
         del idx
         self.ptr[0] = 0
-        n_.cumsumi(ncol, out=self.ptr[1:])
+        ns_.cumsumi(ncol, out=self.ptr[1:])
 
         ptr = self.ptr.view()
         col = self.col.view()
@@ -469,13 +472,13 @@ class SparseCSR(object):
             update_col = np.any(columns < self.shape[1] - n_cols)
 
         # Correct number of elements per column, and the pointers
-        idx = n_.arrayi([len(r) for r in idx])
+        idx = ns_.arrayi([len(r) for r in idx])
         ncol[:] -= idx
-        ptr[1:] -= n_.cumsumi(idx)
+        ptr[1:] -= ns_.cumsumi(idx)
 
         if update_col:
             # Create a count array to subtract
-            count = n_.zerosi(self.shape[1])
+            count = ns_.zerosi(self.shape[1])
             # This is probably not the fastest solution
             # But it works!
             for c in columns:
@@ -546,7 +549,7 @@ class SparseCSR(object):
             end_clean = True
 
         # Now do the translation
-        new_col = n_.arangei(self.shape[1])
+        new_col = ns_.arangei(self.shape[1])
         new_col[old] = new
 
         # Update the columns
@@ -702,7 +705,7 @@ class SparseCSR(object):
         # Ensure flattened array...
         j = ensure_array(j)
         if len(j) == 0:
-            return n_.arrayi([])
+            return ns_.arrayi([])
 
         # fast reference
         ptr = self.ptr
@@ -720,7 +723,7 @@ class SparseCSR(object):
             exists = intersect1d(j, col[ptr[i]:ptr[i]+ncol[i]],
                                  assume_unique=True)
         else:
-            exists = n_.arrayi([])
+            exists = ns_.arrayi([])
 
         # Get list of new elements to be added
         new_j = setdiff1d(j, exists, assume_unique=True)
@@ -804,7 +807,7 @@ class SparseCSR(object):
         """
 
         # Ensure flattened array...
-        j = n_.asarrayi(j).flatten()
+        j = ns_.asarrayi(j).flatten()
 
         # Make it a little easier
         ptr = self.ptr[i]
@@ -849,7 +852,7 @@ class SparseCSR(object):
 
         # Now create the compressed data...
         index -= ptr[i]
-        keep = isin(n_.arangei(ncol[i]), index, invert=True)
+        keep = isin(ns_.arangei(ncol[i]), index, invert=True)
 
         # Update new count of the number of
         # non-zero elements
@@ -928,7 +931,11 @@ class SparseCSR(object):
 
         else:
             # Ensure correct shape
-            data.shape = (-1, self.shape[2])
+            if data.ndim == 0:
+                data = np.array([data])
+                data.shape = (1, 1)
+            else:
+                data.shape = (-1, self.shape[2])
 
             # Now there are two cases
             if data.shape[0] == 1:
@@ -943,6 +950,39 @@ class SparseCSR(object):
         """ Check whether a sparse index is non-zero """
         # Get indices of sparse data (-1 if non-existing)
         return np.all(self._get(key[0], key[1]) >= 0)
+
+    def nonzero(self, row=None, only_col=False):
+        """ Row and column indices where non-zero elements exists
+
+        Parameters
+        ----------
+        row : int or array_like of int, optional
+           only return the tuples for the requested rows, default is all rows
+        only_col : bool, optional
+           only return then non-zero columns
+        """
+        if row is None:
+            idx = array_arange(self.ptr[:-1], n=self.ncol)
+            if not only_col:
+                rows = ns_.emptyi([self.nnz])
+                j = 0
+                for r, N in enumerate(self.ncol):
+                    rows[j:j+N] = r
+                    j += N
+        else:
+            row = ensure_array(row)
+            idx = array_arange(self.ptr[row], n=self.ncol[row])
+            if not only_col:
+                N = ns_.sumi(self.ncol[row])
+                rows = ns_.emptyi([N])
+                j = 0
+                for r, N in zip(row, self.ncol[row]):
+                    rows[j:j+N] = r
+                    j += N
+
+        if only_col:
+            return self.col[idx]
+        return rows, self.col[idx]
 
     def eliminate_zeros(self):
         """ Remove all zero elememts from the sparse matrix
@@ -1040,10 +1080,10 @@ class SparseCSR(object):
 
         # Check if we have a square matrix or a rectangular one
         if self.shape[0] >= self.shape[1]:
-            rindices = delete(n_.arangei(self.shape[0]), indices)
+            rindices = delete(ns_.arangei(self.shape[0]), indices)
 
         else:
-            rindices = delete(n_.arangei(self.shape[1]), indices)
+            rindices = delete(ns_.arangei(self.shape[1]), indices)
 
         return self.sub(rindices)
 
@@ -1062,21 +1102,21 @@ class SparseCSR(object):
             # Easy
             ridx = indices.view()
             nc = len(indices)
-            pvt = n_.emptyi([self.shape[0]])
+            pvt = ns_.emptyi([self.shape[0]])
 
         elif self.shape[0] < self.shape[1]:
             ridx = indices[indices < self.shape[0]]
             nc = len(indices)
-            pvt = n_.emptyi([self.shape[1]])
+            pvt = ns_.emptyi([self.shape[1]])
 
         elif self.shape[0] > self.shape[1]:
             ridx = indices.view()
             nc = np.count_nonzero(indices < self.shape[1])
-            pvt = n_.emptyi([self.shape[0]])
+            pvt = ns_.emptyi([self.shape[0]])
 
         # Fix the pivoting indices with the new indices
         pvt.fill(-1)
-        pvt[indices] = n_.arangei(len(indices))
+        pvt[indices] = ns_.arangei(len(indices))
 
         # Create the new SparseCSR
         # We use nnzpr = 1 because we will overwrite all quantities afterwards.
@@ -1103,7 +1143,7 @@ class SparseCSR(object):
         # First recreate the new (temporary) pointer
         ptr1[0] = 0
         # Place it directly where it should be
-        n_.cumsumi(ncol1, out=ptr1[1:])
+        ns_.cumsumi(ncol1, out=ptr1[1:])
         cnnz = np.count_nonzero
         # Note ncol1 is a view of csr.ncol
         ncol1[:] = ensure_array([cnnz(col1[ptr1[r]:ptr1[r+1]] >= 0)
@@ -1125,7 +1165,7 @@ class SparseCSR(object):
 
         # Set the data for the new sparse csr
         csr.ptr[0] = 0
-        n_.cumsumi(ncol1, out=csr.ptr[1:])
+        ns_.cumsumi(ncol1, out=csr.ptr[1:])
         csr._nnz = len(csr.col)
 
         return csr

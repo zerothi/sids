@@ -1,3 +1,33 @@
+subroutine read_hsx_header(fname,Gamma,nspin,no_u,no_s,maxnh)
+  
+  implicit none
+
+  ! Input parameters
+  character(len=*), intent(in) :: fname
+  logical, intent(out) :: Gamma
+  integer, intent(out) :: no_u, no_s, nspin, maxnh
+  
+! Define f2py intents
+!f2py intent(in)  :: fname
+!f2py intent(out) :: Gamma, no_u, no_s, nspin, maxnh
+
+! Internal variables and arrays
+  integer :: iu
+
+  ! Open file
+  call free_unit(iu)
+  open( iu, file=trim(fname), form='unformatted', status='unknown' )      
+  
+! Read overall data
+  read(iu) no_u, no_s, nspin, maxnh
+
+! Read logical
+  read(iu) Gamma
+
+  close(iu)
+  
+end subroutine read_hsx_header
+
 subroutine read_hsx( fname, Gamma, no_u, no_s, nspin, maxnh, &
      numh, listhptr, listh, H, S, xij)
   
@@ -10,20 +40,17 @@ subroutine read_hsx( fname, Gamma, no_u, no_s, nspin, maxnh, &
   real(sp), parameter :: Ang = 0.529177_sp
 
   ! Input parameters
-  character(len=*) :: fname
-  logical :: Gamma
-  integer :: no_u, no_s, nspin, maxnh
-  integer :: listh(maxnh), numh(no_u), listhptr(no_u)
-  real(sp) :: H(maxnh,nspin), S(maxnh), xij(3,maxnh)
+  character(len=*), intent(in) :: fname
+  logical, intent(in) :: Gamma
+  integer, intent(in) :: no_u, no_s, nspin, maxnh
+  integer, intent(out) :: listh(maxnh), numh(no_u), listhptr(no_u)
+  real(sp), intent(out) :: H(maxnh,nspin), S(maxnh), xij(3,maxnh)
   
 ! Define f2py intents
 !f2py intent(in) :: fname
 !f2py intent(in) :: Gamma, no_u, no_s, nspin, maxnh
-!f2py intent(out) :: numh, listhptr
-!f2py intent(out) :: listh
-!f2py intent(out) :: S
-!f2py intent(out) :: H
-!f2py intent(out) :: xij
+!f2py intent(out) :: numh, listhptr, listh
+!f2py intent(out) :: H, S, xij
 
 ! Internal variables and arrays
   integer :: iu

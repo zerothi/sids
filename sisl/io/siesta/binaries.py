@@ -16,22 +16,26 @@ from .sile import SileBinSiesta
 from ..sile import *
 
 # Import the geometry object
+import sisl._numpy_scipy as ns_
 from sisl import Geometry, Atom, SuperCell, Grid
 from sisl.units.siesta import unit_convert
 from sisl.physics import Hamiltonian
 
+Ang2Bohr = unit_convert('Ang', 'Bohr')
+eV2Ry = unit_convert('eV', 'Ry')
+Bohr2Ang = unit_convert('Bohr', 'Ang')
+Ry2eV = unit_convert('Ry', 'eV')
 
 __all__ = ['TSHSSileSiesta']
-__all__ += ['rhoSileSiesta', 'vSileSiesta']
+__all__ += ['GridSileSiesta', 'EnergyGridSileSiesta']
+__all__ += ['TSGFSileSiesta', 'TBTGFSileSiesta']
 
 
 class TSHSSileSiesta(SileBinSiesta):
     """ TranSIESTA file object """
 
     def read_supercell(self):
-        """ Returns a SuperCell object from a siesta.TSHS file
-        """
-
+        """ Returns a SuperCell object from a siesta.TSHS file """
         n_s = _siesta.read_tshs_sizes(self.file)[3]
         arr = _siesta.read_tshs_cell(self.file, n_s)
         nsc = np.array(arr[0].T, np.int32)
@@ -94,7 +98,7 @@ class TSHSSileSiesta(SileBinSiesta):
         spin = sizes[0]
         no = sizes[2]
         nnz = sizes[4]
-        ncol, col, dH, dS = _siesta.read_tshs_es(self.file, spin, no, nnz)
+        ncol, col, dH, dS = _siesta.read_tshs_hs(self.file, spin, no, nnz)
 
         # Create the Hamiltonian container
         H = Hamiltonian(geom, spin, nnzpr=1, orthogonal=False)
@@ -112,11 +116,55 @@ class TSHSSileSiesta(SileBinSiesta):
 
         return H
 
+    def write_hamiltonian(self, H, **kwargs):
+        """ Writes the Hamiltonian to a `TSHS` file """
+        # Ensure the Hamiltonian is finalized
+        H.finalize()
+
+        # Extract the data to pass to the fortran routine
+
+        cell = H.geom.cell * Ang2Bohr
+        xyz = H.geom.xyz * Ang2Bohr
+
+        # Pointer to CSR matrix
+        csr = H._csr
+
+        # Get H and S
+        if H.orthogonal:
+            h = csr._D * eV2Ry
+            s = csr.diags(1., dim=1)
+            # Ensure all data is correctly formatted (i.e. have the same sparsity pattern
+            s.align(csr)
+            s.finalize()
+            if s.nnz != len(h):
+                raise ValueError(("The diagonal elements of your orthogonal Hamiltonian have not been defined, "
+                                  "this is a requirement."))
+            s = s._D[:, 0]
+        else:
+            h = csr._D[:, :H.S_idx-1] * eV2Ry
+            s = csr._D[:, H.S_idx]
+        # Ensure shapes (say if only 1 spin)
+        h.shape = (-1, len(H.spin))
+        s.shape = (-1,)
+
+        # Get shorter variants
+        nsc = H.geom.nsc[:]
+        isc = H.geom.sc.sc_off[:, :]
+
+        # I can't seem to figure out the usage of f2py
+        # Below I get an error if xyz is not transposed and h is transposed,
+        # however, they are both in C-contiguous arrays and this is indeed weird... :(
+        _siesta.write_tshs_hs(self.file, nsc[0], nsc[1], nsc[2],
+                              cell.T, xyz.T, H.geom.firsto,
+                              csr.ncol, csr.col + 1, h, s, isc.T,
+                              nspin=len(H.spin), na_u=H.geom.na, no_u=H.geom.no, nnz=H.nnz)
+
 
 class GridSileSiesta(SileBinSiesta):
     """ Grid file object from a binary Siesta output file """
 
-    grid_unit = 1.
+    def _setup(self, *args, **kwargs):
+        self.grid_unit = 1.
 
     def read_supercell(self, *args, **kwargs):
 
@@ -124,15 +172,23 @@ class GridSileSiesta(SileBinSiesta):
         cell = np.array(cell.T, np.float64)
         cell.shape = (3, 3)
 
-        SC = SuperCell(cell)
-        return SC
+        return SuperCell(cell)
 
-    def read_grid(self, *args, **kwargs):
-        """ Read grid contained in the Grid file """
+    def read_grid(self, spin=0, *args, **kwargs):
+        """ Read grid contained in the Grid file
+
+        Parameters
+        ----------
+        spin : int, optional
+           the returned spin
+        """
         # Read the sizes
         nspin, mesh = _siesta.read_grid_sizes(self.file)
         # Read the cell and grid
         cell, grid = _siesta.read_grid(self.file, nspin, mesh[0], mesh[1], mesh[2])
+
+        if grid.ndim == 4:
+            grid = grid[spin, :, :, :]
 
         cell = np.array(cell.T, np.float64)
         cell.shape = (3, 3)
@@ -142,23 +198,154 @@ class GridSileSiesta(SileBinSiesta):
         return g
 
 
-class rhoSileSiesta(GridSileSiesta):
-    """ .*RHO* file object from a binary Siesta output file """
-    grid_unit = 1.
+class EnergyGridSileSiesta(GridSileSiesta):
+    """ Energy grid file object from a binary Siesta output file """
+
+    def _setup(self, *args, **kwargs):
+        self.grid_unit = Ry2eV
 
 
-class vSileSiesta(GridSileSiesta):
-    """ .V* file object from a binary Siesta output file """
-    grid_unit = unit_convert('Ry', 'eV')
+class _GFSileSiesta(SileBinSiesta):
+    """ Surface Green function file for inclusion in TranSiesta and TBtrans """
 
+    def _setup(self, *args, **kwargs):
+        """ Simple setup that needs to be overwritten """
+        self._iu = -1
+
+    def _is_open(self):
+        return self._iu > 0
+
+    def _open_gf(self):
+        self._iu = _siesta.open_gf(self.file)
+        # Counters to keep track
+        self._ie = 0
+        self._ik = 0
+
+    def _close_gf(self):
+        if not self._is_open():
+            return
+        # Close it
+        _siesta.close_gf(self._iu)
+        del self._ie
+        del self._ik
+        try:
+            del self._E
+            del self._k
+        except:
+            pass
+
+    def write_header(self, E, bz, obj, mu=0.):
+        """ Write to the binary file the header of the file
+
+        Parameters
+        ----------
+        E : array_like of cmplx or float
+           the energy points. If `obj` is an instance of `SelfEnergy` where an
+           associated ``eta`` is defined then `E` may be float, otherwise
+           it *has* to be a complex array.
+        bz : BrillouinZone
+           contains the k-points and their weights
+        obj : ...
+           an object that contains the Hamiltonian definitions
+        """
+        nspin = len(obj.spin)
+        cell = obj.geom.sc.cell * Ang2Bohr
+        na_u = obj.geom.na
+        no_u = obj.geom.no
+        xa = obj.geom.xyz * Ang2Bohr
+        # The lasto in siesta requires lasto(0) == 0
+        # and secondly, the Python index to fortran
+        # index makes firsto behave like fortran lasto
+        lasto = obj.geom.firsto
+        bloch = ns_.onesi(3)
+        mu = mu * eV2Ry
+        NE = len(E)
+        if E.dtype not in [np.complex64, np.complex128]:
+            E = E + 1j * obj.eta
+        Nk = len(bz)
+        k = bz.k
+        w = bz.weight
+
+        sizes = {
+            'na_used': na_u,
+            'nkpt': Nk,
+            'ne': NE,
+        }
+
+        self._E = np.copy(E) * eV2Ry
+        self._k = np.copy(k)
+
+        # Ensure it is open
+        self._close_gf()
+        self._open_gf()
+
+        # Now write to it...
+        _siesta.write_gf_header(self._iu, nspin, cell.T, na_u, no_u, no_u, xa.T, lasto,
+                                bloch, 0, mu, k.T, w, self._E, **sizes)
+
+    def write_hamiltonian(self, H, S):
+        """ Write the current energy, k-point and H and S to the file
+
+        Parameters
+        ----------
+        H : matrix
+           a square matrix corresponding to the Hamiltonian
+        S : matrix
+           a square matrix corresponding to the overlap
+        """
+        # Step k
+        self._ik += 1
+        self._ie = 1
+        no = len(H)
+        _siesta.write_gf_hs(self._iu, self._ik, self._ie, self._E[self._ie-1],
+                            H.T * eV2Ry, S.T, no_u=no)
+
+    def write_self_energy(self, SE):
+        """ Write the current energy, k-point and H and S to the file
+
+        Parameters
+        ----------
+        SE : matrix
+           a square matrix corresponding to the self-energy (Green function)
+        """
+        no = len(SE)
+        _siesta.write_gf_se(self._iu, self._ik, self._ie,
+                            self._E[self._ie-1], SE.T * eV2Ry, no_u=no)
+        # Step energy counter
+        self._ie += 1
+
+    def __iter__(self):
+        """ Iterate through the energies and k-points that this GF file is associated with 
+
+        Yields
+        ------
+        bool, list of float, float
+        """
+        for k in self._k:
+            yield True, k, self._E[0] * Ry2eV
+            for E in self._E[1:] * Ry2eV:
+                yield False, k, E
+        # We will automatically close once we hit the end
+        self._close_gf()
+
+
+def _type(name, obj):
+    return type(name, (obj, ), {})
+
+# Faster than class ... \ pass
+TSGFSileSiesta = _type("TSGFSileSiesta", _GFSileSiesta)
+TBTGFSileSiesta = _type("TBTGFSileSiesta", _GFSileSiesta)
 
 if found_module:
     add_sile('TSHS', TSHSSileSiesta)
-    add_sile('RHO', rhoSileSiesta)
-    add_sile('RHOINIT', rhoSileSiesta)
-    add_sile('DRHO', rhoSileSiesta)
-    add_sile('IOCH', rhoSileSiesta)
-    add_sile('TOCH', rhoSileSiesta)
-    add_sile('VH', vSileSiesta)
-    add_sile('VNA', vSileSiesta)
-    add_sile('VT', vSileSiesta)
+    add_sile('RHO', _type("RhoSileSiesta", GridSileSiesta))
+    add_sile('RHOINIT', _type("RhoInitSileSiesta", GridSileSiesta))
+    add_sile('DRHO', _type("dRhoSileSiesta", GridSileSiesta))
+    add_sile('IOCH', _type("IoRhoSileSiesta", GridSileSiesta))
+    add_sile('TOCH', _type("TotalRhoSileSiesta", GridSileSiesta))
+    add_sile('VH', _type("HartreeSileSiesta", EnergyGridSileSiesta))
+    add_sile('VNA', _type("NeutralAtomHartreeSileSiesta", EnergyGridSileSiesta))
+    add_sile('VT', _type("TotalHartreeSileSiesta", EnergyGridSileSiesta))
+
+    add_sile('TSGF', TSGFSileSiesta)
+    add_sile('TBTGF', TBTGFSileSiesta)

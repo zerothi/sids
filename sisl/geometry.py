@@ -19,11 +19,12 @@ from numbers import Integral, Real
 from six import string_types
 from math import acos
 from itertools import product
+from functools import partial
 
 import numpy as np
 
 import sisl.plot as plt
-import sisl._numpy as n_
+import sisl._numpy_scipy as ns_
 from ._help import _str
 from ._help import _range as range
 from ._help import ensure_array, ensure_dtype
@@ -116,13 +117,6 @@ class Geometry(SuperCellChild):
 
         # Create the local Atoms object
         self._atom = Atoms(atom, na=self.na)
-
-        # Get total number of orbitals
-        orbs = self.atom.orbitals
-
-        # Create local first
-        firsto = np.append(np.array(0, np.int32), orbs)
-        self.firsto = np.cumsum(firsto, dtype=np.int32)
 
         self.__init_sc(sc)
 
@@ -219,16 +213,21 @@ class Geometry(SuperCellChild):
         return self.no * self.n_s
 
     @property
+    def firsto(self):
+        """ The first orbital on the corresponding atom """
+        return self.atom.firsto
+
+    @property
+    def lasto(self):
+        """ The last orbital on the corresponding atom """
+        return self.atom.lasto
+
+    @property
     def orbitals(self):
         """ List of orbitals per atom """
         return self.atom.orbitals
 
     ## End size of geometry
-
-    @property
-    def lasto(self):
-        """ The last orbital on the corresponding atom """
-        return self.firsto[1:] - 1
 
     def __getitem__(self, atom):
         """ Geometry coordinates (allows supercell indices) """
@@ -252,6 +251,24 @@ class Geometry(SuperCellChild):
             return self.axyz()[:, atom[1]]
 
         return self.axyz(atom)
+
+    def reorder(self):
+        """ Reorders atoms according to first occurence in the geometry
+
+        Notes
+        -----
+        This is an in-place operation.
+        """
+        self._atom = self._atom.reorder()
+
+    def reduce(self):
+        """ Remove all atoms not currently used in the ``self.atom`` object
+
+        Notes
+        -----
+        This is an in-place operation.
+        """
+        self._atom = self._atom.reduce()
 
     def rij(self, ia, ja):
         r""" Distance between atom `ia` and `ja`, atoms can be in super-cell indices
@@ -845,7 +862,7 @@ class Geometry(SuperCellChild):
         sub : the negative of this routine, i.e. retain a subset of atoms
         """
         atom = self.sc2uc(atom)
-        atom = np.delete(n_.arangei(self.na), atom)
+        atom = np.delete(ns_.arangei(self.na), atom)
         return self.sub(atom)
 
     def tile(self, reps, axis):
@@ -1549,7 +1566,7 @@ class Geometry(SuperCellChild):
     @property
     def fxyz(self):
         """ Returns geometry coordinates in fractional coordinates """
-        return np.linalg.solve(self.cell.T, self.xyz.T).T
+        return ns_.solve(self.cell.T, self.xyz.T).T
 
     def axyz(self, atom=None, isc=None):
         """ Return the atomic coordinates in the supercell of a given atom.
@@ -1909,7 +1926,8 @@ class Geometry(SuperCellChild):
         # than our delta-R
         # The linear algebra norm function could be used, but it
         # has a lot of checks, hence we do it manually
-        #xaR = np.linalg.norm(dxa,axis=-1)
+        # xaR = np.linalg.norm(dxa,axis=-1)
+
         # It is faster to do a single multiplacation than
         # a sqrt of MANY values
         # After having reduced the dxa array, we may then
@@ -2241,16 +2259,17 @@ class Geometry(SuperCellChild):
              `False`, return only the first orbital corresponding to the atom,
              `True`, returns list of the full atom
         """
+        ia = ns_.asarrayi(ia)
         if not all:
-            ia = np.asarray(ia)
             return self.firsto[ia % self.na] + (ia // self.na) * self.no
-        ia = np.asarray(ia, np.int32)
-        ob = self.a2o(ia)
-        oe = self.a2o(ia + 1)
+        off = (ia // self.na) * self.no
+        ia = ia % self.na
+        ob = self.firsto[ia] + off
+        oe = self.lasto[ia] + off + 1
 
         # Create ranges
         if isinstance(ob, Integral):
-            return np.arange(ob, oe, dtype=np.int32)
+            return ns_.arangei(ob, oe)
 
         return array_arange(ob, oe)
 
@@ -2530,7 +2549,7 @@ class Geometry(SuperCellChild):
 
         # Correct atom input
         if atom is None:
-            atom = np.arange(len(self), dtype=np.int32)
+            atom = ns_.arangei(len(self))
         else:
             atom = ensure_array(atom)
 
@@ -2543,10 +2562,21 @@ class Geometry(SuperCellChild):
                                   "The internal `maxR()` is negative and thus not set. "
                                   "Set an explicit value for `R`."))
         else:
-            # In case R is infinity or some ridiculousy large number
-            # we reduce it to the maximum distance possible
-            maxR = self.sc.offset(self.nsc // 2) + np.dot([1]*3, self.cell)
-            maxR = np.sum(maxR ** 2) ** .5
+            maxR = 0.
+            # These loops could be leveraged if we look at angles...
+            for i, j, k in product([0, self.nsc[0] // 2],
+                                   [0, self.nsc[1] // 2],
+                                   [0, self.nsc[2] // 2]):
+                if i == 0 and j == 0 and k == 0:
+                    continue
+                sc = [i, j, k]
+                off = self.sc.offset(sc)
+
+                for ii, jj, kk in product([0, 1], [0, 1], [0, 1]):
+                    o = self.cell[0, :] * ii + \
+                        self.cell[1, :] * jj + \
+                        self.cell[2, :] * kk
+                    maxR = max(maxR, np.sum((off + o) ** 2) ** 0.5)
 
             if R > maxR:
                 R = maxR
