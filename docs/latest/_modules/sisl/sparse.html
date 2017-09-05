@@ -65,7 +65,7 @@
             
             
               <div class="version">
-                0.8.5-126
+                0.8.5-178
               </div>
             
           
@@ -192,7 +192,7 @@
 <span class="kn">from</span> <span class="nn">scipy.sparse</span> <span class="k">import</span> <span class="n">isspmatrix_csc</span>
 <span class="kn">from</span> <span class="nn">scipy.sparse</span> <span class="k">import</span> <span class="n">isspmatrix_lil</span>
 
-<span class="kn">import</span> <span class="nn">sisl._numpy</span> <span class="k">as</span> <span class="nn">n_</span>
+<span class="kn">import</span> <span class="nn">sisl._numpy_scipy</span> <span class="k">as</span> <span class="nn">ns_</span>
 <span class="kn">from</span> <span class="nn">._help</span> <span class="k">import</span> <span class="n">array_fill_repeat</span><span class="p">,</span> <span class="n">ensure_array</span><span class="p">,</span> <span class="n">get_dtype</span>
 <span class="kn">from</span> <span class="nn">._help</span> <span class="k">import</span> <span class="n">_range</span> <span class="k">as</span> <span class="nb">range</span><span class="p">,</span> <span class="n">_zip</span> <span class="k">as</span> <span class="nb">zip</span>
 <span class="kn">from</span> <span class="nn">.utils.ranges</span> <span class="k">import</span> <span class="n">array_arange</span>
@@ -392,11 +392,11 @@
 
         <span class="c1"># Store number of columns currently hold</span>
         <span class="c1"># in the sparsity pattern</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">ncol</span> <span class="o">=</span> <span class="n">n_</span><span class="o">.</span><span class="n">zerosi</span><span class="p">([</span><span class="n">M</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ncol</span> <span class="o">=</span> <span class="n">ns_</span><span class="o">.</span><span class="n">zerosi</span><span class="p">([</span><span class="n">M</span><span class="p">])</span>
         <span class="c1"># Create pointer array</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">ptr</span> <span class="o">=</span> <span class="n">n_</span><span class="o">.</span><span class="n">cumsumi</span><span class="p">(</span><span class="n">n_</span><span class="o">.</span><span class="n">arrayi</span><span class="p">([</span><span class="n">nnzpr</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="n">M</span><span class="o">+</span><span class="mi">1</span><span class="p">)))</span> <span class="o">-</span> <span class="n">nnzpr</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ptr</span> <span class="o">=</span> <span class="n">ns_</span><span class="o">.</span><span class="n">cumsumi</span><span class="p">(</span><span class="n">ns_</span><span class="o">.</span><span class="n">arrayi</span><span class="p">([</span><span class="n">nnzpr</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="n">M</span><span class="o">+</span><span class="mi">1</span><span class="p">)))</span> <span class="o">-</span> <span class="n">nnzpr</span>
         <span class="c1"># Create column array</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">col</span> <span class="o">=</span> <span class="n">n_</span><span class="o">.</span><span class="n">emptyi</span><span class="p">(</span><span class="n">nnz</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">col</span> <span class="o">=</span> <span class="n">ns_</span><span class="o">.</span><span class="n">emptyi</span><span class="p">(</span><span class="n">nnz</span><span class="p">)</span>
         <span class="c1"># Store current number of non-zero elements</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_nnz</span> <span class="o">=</span> <span class="mi">0</span>
 
@@ -408,9 +408,8 @@
         <span class="c1"># Denote that this sparsity pattern hasn&#39;t been finalized</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_finalized</span> <span class="o">=</span> <span class="kc">False</span>
 
-<div class="viewcode-block" id="SparseCSR.diags"><a class="viewcode-back" href="../../sisl/sisl.sparse.html#sisl.sparse.SparseCSR.diags">[docs]</a>    <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">diags</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">diagonals</span><span class="p">,</span> <span class="n">offsets</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot; Create a `SparseCSR` with diagonal elements</span>
+<div class="viewcode-block" id="SparseCSR.diags"><a class="viewcode-back" href="../../sisl/sisl.sparse.html#sisl.sparse.SparseCSR.diags">[docs]</a>    <span class="k">def</span> <span class="nf">diags</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">diagonals</span><span class="p">,</span> <span class="n">offsets</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Create a `SparseCSR` with diagonal elements with the same shape as the routine</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
@@ -419,29 +418,33 @@
 <span class="sd">        offsets : scalar or array_like</span>
 <span class="sd">           the offsets from the diagonal for each of the components (defaults</span>
 <span class="sd">           to the diagonal)</span>
-<span class="sd">        shape : tuple or list of int</span>
-<span class="sd">           matrix dimensions, if un-specified the size will be a square matrix</span>
-<span class="sd">           with size ``len(diagonals)``</span>
+<span class="sd">        dim : int, optional</span>
+<span class="sd">           the extra dimension of the new diagonal matrix (default to the current</span>
+<span class="sd">           extra dimension)</span>
 <span class="sd">        dtype : numpy.dtype, optional</span>
 <span class="sd">           the data-type to create (default to ``numpy.float64``)</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="n">shape</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">shape</span> <span class="o">=</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">diagonals</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="n">diagonals</span><span class="p">),</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">dim</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">dim</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">dtype</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">dtype</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dtype</span>
 
         <span class="c1"># Now create the sparse matrix</span>
-        <span class="n">S</span> <span class="o">=</span> <span class="bp">cls</span><span class="p">(</span><span class="n">shape</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span>
+        <span class="n">shape</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+        <span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">dim</span>
+        <span class="n">shape</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">shape</span><span class="p">)</span>
 
-        <span class="c1"># Get default dtype from the sparse matrix</span>
-        <span class="n">dtype</span> <span class="o">=</span> <span class="n">S</span><span class="o">.</span><span class="n">dtype</span>
+        <span class="c1"># Delete the last entry, regardless of the size, the diagonal</span>
+        <span class="n">D</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="p">(</span><span class="n">shape</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span>
 
-        <span class="n">diagonals</span> <span class="o">=</span> <span class="n">array_fill_repeat</span><span class="p">(</span><span class="n">diagonals</span><span class="p">,</span> <span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="bp">cls</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span>
-        <span class="n">offsets</span> <span class="o">=</span> <span class="n">array_fill_repeat</span><span class="p">(</span><span class="n">offsets</span><span class="p">,</span> <span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="bp">cls</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span>
+        <span class="n">diagonals</span> <span class="o">=</span> <span class="n">array_fill_repeat</span><span class="p">(</span><span class="n">diagonals</span><span class="p">,</span> <span class="n">D</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="bp">cls</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span>
+        <span class="n">offsets</span> <span class="o">=</span> <span class="n">array_fill_repeat</span><span class="p">(</span><span class="n">offsets</span><span class="p">,</span> <span class="n">D</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="bp">cls</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span>
 
         <span class="c1"># Create diagonal elements</span>
-        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">S</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
-            <span class="n">S</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">i</span> <span class="o">+</span> <span class="n">offsets</span><span class="p">[</span><span class="n">i</span><span class="p">]]</span> <span class="o">=</span> <span class="n">diagonals</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">D</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
+            <span class="n">D</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">i</span> <span class="o">+</span> <span class="n">offsets</span><span class="p">[</span><span class="n">i</span><span class="p">]]</span> <span class="o">=</span> <span class="n">diagonals</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
 
-        <span class="k">return</span> <span class="n">S</span></div>
+        <span class="k">return</span> <span class="n">D</span></div>
 
 <div class="viewcode-block" id="SparseCSR.empty"><a class="viewcode-back" href="../../sisl/sisl.sparse.html#sisl.sparse.SparseCSR.empty">[docs]</a>    <span class="k">def</span> <span class="nf">empty</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">keep</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Delete all sparse information from the sparsity pattern</span>
@@ -531,7 +534,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_D</span> <span class="o">=</span> <span class="n">take</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_D</span><span class="p">,</span> <span class="n">idx</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
         <span class="k">del</span> <span class="n">idx</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">ptr</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
-        <span class="n">n_</span><span class="o">.</span><span class="n">cumsumi</span><span class="p">(</span><span class="n">ncol</span><span class="p">,</span> <span class="n">out</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">ptr</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span>
+        <span class="n">ns_</span><span class="o">.</span><span class="n">cumsumi</span><span class="p">(</span><span class="n">ncol</span><span class="p">,</span> <span class="n">out</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">ptr</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span>
 
         <span class="n">ptr</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ptr</span><span class="o">.</span><span class="n">view</span><span class="p">()</span>
         <span class="n">col</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">col</span><span class="o">.</span><span class="n">view</span><span class="p">()</span>
@@ -634,13 +637,13 @@
             <span class="n">update_col</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">columns</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">n_cols</span><span class="p">)</span>
 
         <span class="c1"># Correct number of elements per column, and the pointers</span>
-        <span class="n">idx</span> <span class="o">=</span> <span class="n">n_</span><span class="o">.</span><span class="n">arrayi</span><span class="p">([</span><span class="nb">len</span><span class="p">(</span><span class="n">r</span><span class="p">)</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">idx</span><span class="p">])</span>
+        <span class="n">idx</span> <span class="o">=</span> <span class="n">ns_</span><span class="o">.</span><span class="n">arrayi</span><span class="p">([</span><span class="nb">len</span><span class="p">(</span><span class="n">r</span><span class="p">)</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">idx</span><span class="p">])</span>
         <span class="n">ncol</span><span class="p">[:]</span> <span class="o">-=</span> <span class="n">idx</span>
-        <span class="n">ptr</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span> <span class="o">-=</span> <span class="n">n_</span><span class="o">.</span><span class="n">cumsumi</span><span class="p">(</span><span class="n">idx</span><span class="p">)</span>
+        <span class="n">ptr</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span> <span class="o">-=</span> <span class="n">ns_</span><span class="o">.</span><span class="n">cumsumi</span><span class="p">(</span><span class="n">idx</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="n">update_col</span><span class="p">:</span>
             <span class="c1"># Create a count array to subtract</span>
-            <span class="n">count</span> <span class="o">=</span> <span class="n">n_</span><span class="o">.</span><span class="n">zerosi</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+            <span class="n">count</span> <span class="o">=</span> <span class="n">ns_</span><span class="o">.</span><span class="n">zerosi</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
             <span class="c1"># This is probably not the fastest solution</span>
             <span class="c1"># But it works!</span>
             <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">columns</span><span class="p">:</span>
@@ -711,7 +714,7 @@
             <span class="n">end_clean</span> <span class="o">=</span> <span class="kc">True</span>
 
         <span class="c1"># Now do the translation</span>
-        <span class="n">new_col</span> <span class="o">=</span> <span class="n">n_</span><span class="o">.</span><span class="n">arangei</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+        <span class="n">new_col</span> <span class="o">=</span> <span class="n">ns_</span><span class="o">.</span><span class="n">arangei</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
         <span class="n">new_col</span><span class="p">[</span><span class="n">old</span><span class="p">]</span> <span class="o">=</span> <span class="n">new</span>
 
         <span class="c1"># Update the columns</span>
@@ -867,7 +870,7 @@
         <span class="c1"># Ensure flattened array...</span>
         <span class="n">j</span> <span class="o">=</span> <span class="n">ensure_array</span><span class="p">(</span><span class="n">j</span><span class="p">)</span>
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">j</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="k">return</span> <span class="n">n_</span><span class="o">.</span><span class="n">arrayi</span><span class="p">([])</span>
+            <span class="k">return</span> <span class="n">ns_</span><span class="o">.</span><span class="n">arrayi</span><span class="p">([])</span>
 
         <span class="c1"># fast reference</span>
         <span class="n">ptr</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ptr</span>
@@ -885,7 +888,7 @@
             <span class="n">exists</span> <span class="o">=</span> <span class="n">intersect1d</span><span class="p">(</span><span class="n">j</span><span class="p">,</span> <span class="n">col</span><span class="p">[</span><span class="n">ptr</span><span class="p">[</span><span class="n">i</span><span class="p">]:</span><span class="n">ptr</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">+</span><span class="n">ncol</span><span class="p">[</span><span class="n">i</span><span class="p">]],</span>
                                  <span class="n">assume_unique</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="n">exists</span> <span class="o">=</span> <span class="n">n_</span><span class="o">.</span><span class="n">arrayi</span><span class="p">([])</span>
+            <span class="n">exists</span> <span class="o">=</span> <span class="n">ns_</span><span class="o">.</span><span class="n">arrayi</span><span class="p">([])</span>
 
         <span class="c1"># Get list of new elements to be added</span>
         <span class="n">new_j</span> <span class="o">=</span> <span class="n">setdiff1d</span><span class="p">(</span><span class="n">j</span><span class="p">,</span> <span class="n">exists</span><span class="p">,</span> <span class="n">assume_unique</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
@@ -969,7 +972,7 @@
 <span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="c1"># Ensure flattened array...</span>
-        <span class="n">j</span> <span class="o">=</span> <span class="n">n_</span><span class="o">.</span><span class="n">asarrayi</span><span class="p">(</span><span class="n">j</span><span class="p">)</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+        <span class="n">j</span> <span class="o">=</span> <span class="n">ns_</span><span class="o">.</span><span class="n">asarrayi</span><span class="p">(</span><span class="n">j</span><span class="p">)</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
 
         <span class="c1"># Make it a little easier</span>
         <span class="n">ptr</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ptr</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
@@ -1014,7 +1017,7 @@
 
         <span class="c1"># Now create the compressed data...</span>
         <span class="n">index</span> <span class="o">-=</span> <span class="n">ptr</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
-        <span class="n">keep</span> <span class="o">=</span> <span class="n">isin</span><span class="p">(</span><span class="n">n_</span><span class="o">.</span><span class="n">arangei</span><span class="p">(</span><span class="n">ncol</span><span class="p">[</span><span class="n">i</span><span class="p">]),</span> <span class="n">index</span><span class="p">,</span> <span class="n">invert</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">keep</span> <span class="o">=</span> <span class="n">isin</span><span class="p">(</span><span class="n">ns_</span><span class="o">.</span><span class="n">arangei</span><span class="p">(</span><span class="n">ncol</span><span class="p">[</span><span class="n">i</span><span class="p">]),</span> <span class="n">index</span><span class="p">,</span> <span class="n">invert</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
         <span class="c1"># Update new count of the number of</span>
         <span class="c1"># non-zero elements</span>
@@ -1093,7 +1096,11 @@
 
         <span class="k">else</span><span class="p">:</span>
             <span class="c1"># Ensure correct shape</span>
-            <span class="n">data</span><span class="o">.</span><span class="n">shape</span> <span class="o">=</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
+            <span class="k">if</span> <span class="n">data</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">data</span><span class="p">])</span>
+                <span class="n">data</span><span class="o">.</span><span class="n">shape</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">data</span><span class="o">.</span><span class="n">shape</span> <span class="o">=</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
 
             <span class="c1"># Now there are two cases</span>
             <span class="k">if</span> <span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
@@ -1108,6 +1115,39 @@
         <span class="sd">&quot;&quot;&quot; Check whether a sparse index is non-zero &quot;&quot;&quot;</span>
         <span class="c1"># Get indices of sparse data (-1 if non-existing)</span>
         <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span><span class="n">key</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">key</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">)</span>
+
+<div class="viewcode-block" id="SparseCSR.nonzero"><a class="viewcode-back" href="../../sisl/sisl.sparse.html#sisl.sparse.SparseCSR.nonzero">[docs]</a>    <span class="k">def</span> <span class="nf">nonzero</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">row</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">only_col</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Row and column indices where non-zero elements exists</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        row : int or array_like of int, optional</span>
+<span class="sd">           only return the tuples for the requested rows, default is all rows</span>
+<span class="sd">        only_col : bool, optional</span>
+<span class="sd">           only return then non-zero columns</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">row</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">idx</span> <span class="o">=</span> <span class="n">array_arange</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ptr</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">n</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">ncol</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">only_col</span><span class="p">:</span>
+                <span class="n">rows</span> <span class="o">=</span> <span class="n">ns_</span><span class="o">.</span><span class="n">emptyi</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">nnz</span><span class="p">])</span>
+                <span class="n">j</span> <span class="o">=</span> <span class="mi">0</span>
+                <span class="k">for</span> <span class="n">r</span><span class="p">,</span> <span class="n">N</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ncol</span><span class="p">):</span>
+                    <span class="n">rows</span><span class="p">[</span><span class="n">j</span><span class="p">:</span><span class="n">j</span><span class="o">+</span><span class="n">N</span><span class="p">]</span> <span class="o">=</span> <span class="n">r</span>
+                    <span class="n">j</span> <span class="o">+=</span> <span class="n">N</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">row</span> <span class="o">=</span> <span class="n">ensure_array</span><span class="p">(</span><span class="n">row</span><span class="p">)</span>
+            <span class="n">idx</span> <span class="o">=</span> <span class="n">array_arange</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ptr</span><span class="p">[</span><span class="n">row</span><span class="p">],</span> <span class="n">n</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">ncol</span><span class="p">[</span><span class="n">row</span><span class="p">])</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">only_col</span><span class="p">:</span>
+                <span class="n">N</span> <span class="o">=</span> <span class="n">ns_</span><span class="o">.</span><span class="n">sumi</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ncol</span><span class="p">[</span><span class="n">row</span><span class="p">])</span>
+                <span class="n">rows</span> <span class="o">=</span> <span class="n">ns_</span><span class="o">.</span><span class="n">emptyi</span><span class="p">([</span><span class="n">N</span><span class="p">])</span>
+                <span class="n">j</span> <span class="o">=</span> <span class="mi">0</span>
+                <span class="k">for</span> <span class="n">r</span><span class="p">,</span> <span class="n">N</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ncol</span><span class="p">[</span><span class="n">row</span><span class="p">]):</span>
+                    <span class="n">rows</span><span class="p">[</span><span class="n">j</span><span class="p">:</span><span class="n">j</span><span class="o">+</span><span class="n">N</span><span class="p">]</span> <span class="o">=</span> <span class="n">r</span>
+                    <span class="n">j</span> <span class="o">+=</span> <span class="n">N</span>
+
+        <span class="k">if</span> <span class="n">only_col</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">col</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">rows</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">col</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span></div>
 
 <div class="viewcode-block" id="SparseCSR.eliminate_zeros"><a class="viewcode-back" href="../../sisl/sisl.sparse.html#sisl.sparse.SparseCSR.eliminate_zeros">[docs]</a>    <span class="k">def</span> <span class="nf">eliminate_zeros</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Remove all zero elememts from the sparse matrix</span>
@@ -1205,10 +1245,10 @@
 
         <span class="c1"># Check if we have a square matrix or a rectangular one</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]:</span>
-            <span class="n">rindices</span> <span class="o">=</span> <span class="n">delete</span><span class="p">(</span><span class="n">n_</span><span class="o">.</span><span class="n">arangei</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span> <span class="n">indices</span><span class="p">)</span>
+            <span class="n">rindices</span> <span class="o">=</span> <span class="n">delete</span><span class="p">(</span><span class="n">ns_</span><span class="o">.</span><span class="n">arangei</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span> <span class="n">indices</span><span class="p">)</span>
 
         <span class="k">else</span><span class="p">:</span>
-            <span class="n">rindices</span> <span class="o">=</span> <span class="n">delete</span><span class="p">(</span><span class="n">n_</span><span class="o">.</span><span class="n">arangei</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span> <span class="n">indices</span><span class="p">)</span>
+            <span class="n">rindices</span> <span class="o">=</span> <span class="n">delete</span><span class="p">(</span><span class="n">ns_</span><span class="o">.</span><span class="n">arangei</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span> <span class="n">indices</span><span class="p">)</span>
 
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="n">rindices</span><span class="p">)</span></div>
 
@@ -1227,21 +1267,21 @@
             <span class="c1"># Easy</span>
             <span class="n">ridx</span> <span class="o">=</span> <span class="n">indices</span><span class="o">.</span><span class="n">view</span><span class="p">()</span>
             <span class="n">nc</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">indices</span><span class="p">)</span>
-            <span class="n">pvt</span> <span class="o">=</span> <span class="n">n_</span><span class="o">.</span><span class="n">emptyi</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]])</span>
+            <span class="n">pvt</span> <span class="o">=</span> <span class="n">ns_</span><span class="o">.</span><span class="n">emptyi</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]])</span>
 
         <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]:</span>
             <span class="n">ridx</span> <span class="o">=</span> <span class="n">indices</span><span class="p">[</span><span class="n">indices</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span>
             <span class="n">nc</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">indices</span><span class="p">)</span>
-            <span class="n">pvt</span> <span class="o">=</span> <span class="n">n_</span><span class="o">.</span><span class="n">emptyi</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]])</span>
+            <span class="n">pvt</span> <span class="o">=</span> <span class="n">ns_</span><span class="o">.</span><span class="n">emptyi</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]])</span>
 
         <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]:</span>
             <span class="n">ridx</span> <span class="o">=</span> <span class="n">indices</span><span class="o">.</span><span class="n">view</span><span class="p">()</span>
             <span class="n">nc</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">count_nonzero</span><span class="p">(</span><span class="n">indices</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
-            <span class="n">pvt</span> <span class="o">=</span> <span class="n">n_</span><span class="o">.</span><span class="n">emptyi</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]])</span>
+            <span class="n">pvt</span> <span class="o">=</span> <span class="n">ns_</span><span class="o">.</span><span class="n">emptyi</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]])</span>
 
         <span class="c1"># Fix the pivoting indices with the new indices</span>
         <span class="n">pvt</span><span class="o">.</span><span class="n">fill</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
-        <span class="n">pvt</span><span class="p">[</span><span class="n">indices</span><span class="p">]</span> <span class="o">=</span> <span class="n">n_</span><span class="o">.</span><span class="n">arangei</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">indices</span><span class="p">))</span>
+        <span class="n">pvt</span><span class="p">[</span><span class="n">indices</span><span class="p">]</span> <span class="o">=</span> <span class="n">ns_</span><span class="o">.</span><span class="n">arangei</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">indices</span><span class="p">))</span>
 
         <span class="c1"># Create the new SparseCSR</span>
         <span class="c1"># We use nnzpr = 1 because we will overwrite all quantities afterwards.</span>
@@ -1268,7 +1308,7 @@
         <span class="c1"># First recreate the new (temporary) pointer</span>
         <span class="n">ptr1</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
         <span class="c1"># Place it directly where it should be</span>
-        <span class="n">n_</span><span class="o">.</span><span class="n">cumsumi</span><span class="p">(</span><span class="n">ncol1</span><span class="p">,</span> <span class="n">out</span><span class="o">=</span><span class="n">ptr1</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span>
+        <span class="n">ns_</span><span class="o">.</span><span class="n">cumsumi</span><span class="p">(</span><span class="n">ncol1</span><span class="p">,</span> <span class="n">out</span><span class="o">=</span><span class="n">ptr1</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span>
         <span class="n">cnnz</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">count_nonzero</span>
         <span class="c1"># Note ncol1 is a view of csr.ncol</span>
         <span class="n">ncol1</span><span class="p">[:]</span> <span class="o">=</span> <span class="n">ensure_array</span><span class="p">([</span><span class="n">cnnz</span><span class="p">(</span><span class="n">col1</span><span class="p">[</span><span class="n">ptr1</span><span class="p">[</span><span class="n">r</span><span class="p">]:</span><span class="n">ptr1</span><span class="p">[</span><span class="n">r</span><span class="o">+</span><span class="mi">1</span><span class="p">]]</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">)</span>
@@ -1290,7 +1330,7 @@
 
         <span class="c1"># Set the data for the new sparse csr</span>
         <span class="n">csr</span><span class="o">.</span><span class="n">ptr</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
-        <span class="n">n_</span><span class="o">.</span><span class="n">cumsumi</span><span class="p">(</span><span class="n">ncol1</span><span class="p">,</span> <span class="n">out</span><span class="o">=</span><span class="n">csr</span><span class="o">.</span><span class="n">ptr</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span>
+        <span class="n">ns_</span><span class="o">.</span><span class="n">cumsumi</span><span class="p">(</span><span class="n">ncol1</span><span class="p">,</span> <span class="n">out</span><span class="o">=</span><span class="n">csr</span><span class="o">.</span><span class="n">ptr</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span>
         <span class="n">csr</span><span class="o">.</span><span class="n">_nnz</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">csr</span><span class="o">.</span><span class="n">col</span><span class="p">)</span>
 
         <span class="k">return</span> <span class="n">csr</span></div>
@@ -1777,7 +1817,7 @@
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'../../',
-            VERSION:'0.8.5-126',
+            VERSION:'0.8.5-178',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true,

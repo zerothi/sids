@@ -65,7 +65,7 @@
             
             
               <div class="version">
-                0.8.5-126
+                0.8.5-178
               </div>
             
           
@@ -184,11 +184,12 @@
 <span class="kn">from</span> <span class="nn">six</span> <span class="k">import</span> <span class="n">string_types</span>
 <span class="kn">from</span> <span class="nn">math</span> <span class="k">import</span> <span class="n">acos</span>
 <span class="kn">from</span> <span class="nn">itertools</span> <span class="k">import</span> <span class="n">product</span>
+<span class="kn">from</span> <span class="nn">functools</span> <span class="k">import</span> <span class="n">partial</span>
 
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 
 <span class="kn">import</span> <span class="nn">sisl.plot</span> <span class="k">as</span> <span class="nn">plt</span>
-<span class="kn">import</span> <span class="nn">sisl._numpy</span> <span class="k">as</span> <span class="nn">n_</span>
+<span class="kn">import</span> <span class="nn">sisl._numpy_scipy</span> <span class="k">as</span> <span class="nn">ns_</span>
 <span class="kn">from</span> <span class="nn">._help</span> <span class="k">import</span> <span class="n">_str</span>
 <span class="kn">from</span> <span class="nn">._help</span> <span class="k">import</span> <span class="n">_range</span> <span class="k">as</span> <span class="nb">range</span>
 <span class="kn">from</span> <span class="nn">._help</span> <span class="k">import</span> <span class="n">ensure_array</span><span class="p">,</span> <span class="n">ensure_dtype</span>
@@ -281,13 +282,6 @@
 
         <span class="c1"># Create the local Atoms object</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_atom</span> <span class="o">=</span> <span class="n">Atoms</span><span class="p">(</span><span class="n">atom</span><span class="p">,</span> <span class="n">na</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">na</span><span class="p">)</span>
-
-        <span class="c1"># Get total number of orbitals</span>
-        <span class="n">orbs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">atom</span><span class="o">.</span><span class="n">orbitals</span>
-
-        <span class="c1"># Create local first</span>
-        <span class="n">firsto</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">),</span> <span class="n">orbs</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">firsto</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cumsum</span><span class="p">(</span><span class="n">firsto</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">__init_sc</span><span class="p">(</span><span class="n">sc</span><span class="p">)</span>
 
@@ -384,16 +378,21 @@
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">no</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_s</span>
 
     <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">firsto</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; The first orbital on the corresponding atom &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">atom</span><span class="o">.</span><span class="n">firsto</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">lasto</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; The last orbital on the corresponding atom &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">atom</span><span class="o">.</span><span class="n">lasto</span>
+
+    <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">orbitals</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; List of orbitals per atom &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">atom</span><span class="o">.</span><span class="n">orbitals</span>
 
     <span class="c1">## End size of geometry</span>
-
-    <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">lasto</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot; The last orbital on the corresponding atom &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">firsto</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span> <span class="o">-</span> <span class="mi">1</span>
 
     <span class="k">def</span> <span class="nf">__getitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">atom</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Geometry coordinates (allows supercell indices) &quot;&quot;&quot;</span>
@@ -417,6 +416,24 @@
             <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">axyz</span><span class="p">()[:,</span> <span class="n">atom</span><span class="p">[</span><span class="mi">1</span><span class="p">]]</span>
 
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">axyz</span><span class="p">(</span><span class="n">atom</span><span class="p">)</span>
+
+<div class="viewcode-block" id="Geometry.reorder"><a class="viewcode-back" href="../../sisl/sisl.geometry.html#sisl.geometry.Geometry.reorder">[docs]</a>    <span class="k">def</span> <span class="nf">reorder</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Reorders atoms according to first occurence in the geometry</span>
+
+<span class="sd">        Notes</span>
+<span class="sd">        -----</span>
+<span class="sd">        This is an in-place operation.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_atom</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_atom</span><span class="o">.</span><span class="n">reorder</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="Geometry.reduce"><a class="viewcode-back" href="../../sisl/sisl.geometry.html#sisl.geometry.Geometry.reduce">[docs]</a>    <span class="k">def</span> <span class="nf">reduce</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Remove all atoms not currently used in the ``self.atom`` object</span>
+
+<span class="sd">        Notes</span>
+<span class="sd">        -----</span>
+<span class="sd">        This is an in-place operation.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_atom</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_atom</span><span class="o">.</span><span class="n">reduce</span><span class="p">()</span></div>
 
 <div class="viewcode-block" id="Geometry.rij"><a class="viewcode-back" href="../../sisl/sisl.geometry.html#sisl.geometry.Geometry.rij">[docs]</a>    <span class="k">def</span> <span class="nf">rij</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ia</span><span class="p">,</span> <span class="n">ja</span><span class="p">):</span>
         <span class="sa">r</span><span class="sd">&quot;&quot;&quot; Distance between atom `ia` and `ja`, atoms can be in super-cell indices</span>
@@ -1010,7 +1027,7 @@
 <span class="sd">        sub : the negative of this routine, i.e. retain a subset of atoms</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">atom</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sc2uc</span><span class="p">(</span><span class="n">atom</span><span class="p">)</span>
-        <span class="n">atom</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="n">n_</span><span class="o">.</span><span class="n">arangei</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">na</span><span class="p">),</span> <span class="n">atom</span><span class="p">)</span>
+        <span class="n">atom</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="n">ns_</span><span class="o">.</span><span class="n">arangei</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">na</span><span class="p">),</span> <span class="n">atom</span><span class="p">)</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="n">atom</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="Geometry.tile"><a class="viewcode-back" href="../../sisl/sisl.geometry.html#sisl.geometry.Geometry.tile">[docs]</a>    <span class="k">def</span> <span class="nf">tile</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">reps</span><span class="p">,</span> <span class="n">axis</span><span class="p">):</span>
@@ -1714,7 +1731,7 @@
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">fxyz</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Returns geometry coordinates in fractional coordinates &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">solve</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cell</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">xyz</span><span class="o">.</span><span class="n">T</span><span class="p">)</span><span class="o">.</span><span class="n">T</span>
+        <span class="k">return</span> <span class="n">ns_</span><span class="o">.</span><span class="n">solve</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cell</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">xyz</span><span class="o">.</span><span class="n">T</span><span class="p">)</span><span class="o">.</span><span class="n">T</span>
 
 <div class="viewcode-block" id="Geometry.axyz"><a class="viewcode-back" href="../../sisl/sisl.geometry.html#sisl.geometry.Geometry.axyz">[docs]</a>    <span class="k">def</span> <span class="nf">axyz</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">atom</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">isc</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Return the atomic coordinates in the supercell of a given atom.</span>
@@ -2074,7 +2091,8 @@
         <span class="c1"># than our delta-R</span>
         <span class="c1"># The linear algebra norm function could be used, but it</span>
         <span class="c1"># has a lot of checks, hence we do it manually</span>
-        <span class="c1">#xaR = np.linalg.norm(dxa,axis=-1)</span>
+        <span class="c1"># xaR = np.linalg.norm(dxa,axis=-1)</span>
+
         <span class="c1"># It is faster to do a single multiplacation than</span>
         <span class="c1"># a sqrt of MANY values</span>
         <span class="c1"># After having reduced the dxa array, we may then</span>
@@ -2406,16 +2424,17 @@
 <span class="sd">             `False`, return only the first orbital corresponding to the atom,</span>
 <span class="sd">             `True`, returns list of the full atom</span>
 <span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">ia</span> <span class="o">=</span> <span class="n">ns_</span><span class="o">.</span><span class="n">asarrayi</span><span class="p">(</span><span class="n">ia</span><span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="nb">all</span><span class="p">:</span>
-            <span class="n">ia</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">ia</span><span class="p">)</span>
             <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">firsto</span><span class="p">[</span><span class="n">ia</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">na</span><span class="p">]</span> <span class="o">+</span> <span class="p">(</span><span class="n">ia</span> <span class="o">//</span> <span class="bp">self</span><span class="o">.</span><span class="n">na</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">no</span>
-        <span class="n">ia</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">ia</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
-        <span class="n">ob</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">a2o</span><span class="p">(</span><span class="n">ia</span><span class="p">)</span>
-        <span class="n">oe</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">a2o</span><span class="p">(</span><span class="n">ia</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">off</span> <span class="o">=</span> <span class="p">(</span><span class="n">ia</span> <span class="o">//</span> <span class="bp">self</span><span class="o">.</span><span class="n">na</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">no</span>
+        <span class="n">ia</span> <span class="o">=</span> <span class="n">ia</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">na</span>
+        <span class="n">ob</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">firsto</span><span class="p">[</span><span class="n">ia</span><span class="p">]</span> <span class="o">+</span> <span class="n">off</span>
+        <span class="n">oe</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">lasto</span><span class="p">[</span><span class="n">ia</span><span class="p">]</span> <span class="o">+</span> <span class="n">off</span> <span class="o">+</span> <span class="mi">1</span>
 
         <span class="c1"># Create ranges</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">ob</span><span class="p">,</span> <span class="n">Integral</span><span class="p">):</span>
-            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">ob</span><span class="p">,</span> <span class="n">oe</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">ns_</span><span class="o">.</span><span class="n">arangei</span><span class="p">(</span><span class="n">ob</span><span class="p">,</span> <span class="n">oe</span><span class="p">)</span>
 
         <span class="k">return</span> <span class="n">array_arange</span><span class="p">(</span><span class="n">ob</span><span class="p">,</span> <span class="n">oe</span><span class="p">)</span></div>
 
@@ -2695,7 +2714,7 @@
 
         <span class="c1"># Correct atom input</span>
         <span class="k">if</span> <span class="n">atom</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">atom</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
+            <span class="n">atom</span> <span class="o">=</span> <span class="n">ns_</span><span class="o">.</span><span class="n">arangei</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">atom</span> <span class="o">=</span> <span class="n">ensure_array</span><span class="p">(</span><span class="n">atom</span><span class="p">)</span>
 
@@ -2708,10 +2727,21 @@
                                   <span class="s2">&quot;The internal `maxR()` is negative and thus not set. &quot;</span>
                                   <span class="s2">&quot;Set an explicit value for `R`.&quot;</span><span class="p">))</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="c1"># In case R is infinity or some ridiculousy large number</span>
-            <span class="c1"># we reduce it to the maximum distance possible</span>
-            <span class="n">maxR</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sc</span><span class="o">.</span><span class="n">offset</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nsc</span> <span class="o">//</span> <span class="mi">2</span><span class="p">)</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">([</span><span class="mi">1</span><span class="p">]</span><span class="o">*</span><span class="mi">3</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">cell</span><span class="p">)</span>
-            <span class="n">maxR</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">maxR</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span> <span class="o">**</span> <span class="o">.</span><span class="mi">5</span>
+            <span class="n">maxR</span> <span class="o">=</span> <span class="mf">0.</span>
+            <span class="c1"># These loops could be leveraged if we look at angles...</span>
+            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">,</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">product</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">nsc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">//</span> <span class="mi">2</span><span class="p">],</span>
+                                   <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">nsc</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">//</span> <span class="mi">2</span><span class="p">],</span>
+                                   <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">nsc</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">//</span> <span class="mi">2</span><span class="p">]):</span>
+                <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">j</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">k</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="k">continue</span>
+                <span class="n">sc</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">,</span> <span class="n">k</span><span class="p">]</span>
+                <span class="n">off</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sc</span><span class="o">.</span><span class="n">offset</span><span class="p">(</span><span class="n">sc</span><span class="p">)</span>
+
+                <span class="k">for</span> <span class="n">ii</span><span class="p">,</span> <span class="n">jj</span><span class="p">,</span> <span class="n">kk</span> <span class="ow">in</span> <span class="n">product</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]):</span>
+                    <span class="n">o</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cell</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="p">:]</span> <span class="o">*</span> <span class="n">ii</span> <span class="o">+</span> \
+                        <span class="bp">self</span><span class="o">.</span><span class="n">cell</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="p">:]</span> <span class="o">*</span> <span class="n">jj</span> <span class="o">+</span> \
+                        <span class="bp">self</span><span class="o">.</span><span class="n">cell</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="p">:]</span> <span class="o">*</span> <span class="n">kk</span>
+                    <span class="n">maxR</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">maxR</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">((</span><span class="n">off</span> <span class="o">+</span> <span class="n">o</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span> <span class="o">**</span> <span class="mf">0.5</span><span class="p">)</span>
 
             <span class="k">if</span> <span class="n">R</span> <span class="o">&gt;</span> <span class="n">maxR</span><span class="p">:</span>
                 <span class="n">R</span> <span class="o">=</span> <span class="n">maxR</span>
@@ -3278,7 +3308,7 @@
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'../../',
-            VERSION:'0.8.5-126',
+            VERSION:'0.8.5-178',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true,

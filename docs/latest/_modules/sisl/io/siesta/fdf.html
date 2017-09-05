@@ -65,7 +65,7 @@
             
             
               <div class="version">
-                0.8.5-126
+                0.8.5-178
               </div>
             
           
@@ -174,7 +174,7 @@
 <span class="kn">import</span> <span class="nn">warnings</span> <span class="k">as</span> <span class="nn">warn</span>
 
 <span class="c1"># Import sile objects</span>
-<span class="kn">from</span> <span class="nn">sisl._help</span> <span class="k">import</span> <span class="n">_str</span>
+<span class="kn">from</span> <span class="nn">sisl._help</span> <span class="k">import</span> <span class="n">_str</span><span class="p">,</span> <span class="n">ensure_array</span>
 <span class="kn">from</span> <span class="nn">.sile</span> <span class="k">import</span> <span class="n">SileSiesta</span>
 <span class="kn">from</span> <span class="nn">..sile</span> <span class="k">import</span> <span class="o">*</span>
 <span class="kn">from</span> <span class="nn">sisl.io._help</span> <span class="k">import</span> <span class="o">*</span>
@@ -451,11 +451,11 @@
         <span class="sd">&quot;&quot;&quot; Returns the arguments following the keyword in the FDF file &quot;&quot;&quot;</span>
         <span class="n">k</span> <span class="o">=</span> <span class="n">key</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
         <span class="n">f</span><span class="p">,</span> <span class="n">fdf</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">step_to</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">case</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">force</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">f</span><span class="p">:</span>
-            <span class="c1"># The user requests that the block *MUST* be found</span>
-            <span class="k">raise</span> <span class="n">SileError</span><span class="p">((</span><span class="s1">&#39;Requested forced block could not be found: &#39;</span> <span class="o">+</span>
-                             <span class="nb">str</span><span class="p">(</span><span class="n">key</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;.&#39;</span><span class="p">),</span> <span class="bp">self</span><span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">f</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">force</span><span class="p">:</span>
+                <span class="c1"># The user requests that the block *MUST* be found</span>
+                <span class="k">raise</span> <span class="n">SileError</span><span class="p">((</span><span class="s1">&#39;Requested forced block could not be found: &#39;</span> <span class="o">+</span>
+                                 <span class="nb">str</span><span class="p">(</span><span class="n">key</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;.&#39;</span><span class="p">),</span> <span class="bp">self</span><span class="p">)</span>
             <span class="k">return</span> <span class="kc">False</span><span class="p">,</span> <span class="p">[]</span>  <span class="c1"># not found</span>
 
         <span class="c1"># If the block is piped in from another file...</span>
@@ -469,6 +469,11 @@
                     <span class="n">li</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">line</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">))</span>
                     <span class="n">line</span> <span class="o">=</span> <span class="n">sub_fdf</span><span class="o">.</span><span class="n">readline</span><span class="p">()</span>
             <span class="k">return</span> <span class="kc">True</span><span class="p">,</span> <span class="n">li</span>
+
+        <span class="c1"># Check whether we have accidentially found the endblock construct</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">line_has_key</span><span class="p">(</span><span class="n">fdf</span><span class="p">,</span> <span class="s1">&#39;</span><span class="si">%e</span><span class="s1">ndblock&#39;</span><span class="p">,</span> <span class="n">case</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+            <span class="c1"># Return a re-read</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_read_block</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">force</span><span class="o">=</span><span class="n">force</span><span class="p">)</span>
 
         <span class="n">li</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
@@ -596,22 +601,15 @@
         <span class="c1"># If the user requests a shifted geometry</span>
         <span class="c1"># we correct for this</span>
         <span class="n">origo</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">([</span><span class="mi">3</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
-        <span class="n">run</span> <span class="o">=</span> <span class="s1">&#39;origin&#39;</span> <span class="ow">in</span> <span class="n">kwargs</span>
-        <span class="k">if</span> <span class="n">run</span><span class="p">:</span>
-            <span class="n">run</span> <span class="o">=</span> <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;origin&#39;</span><span class="p">]</span>
-        <span class="k">if</span> <span class="n">run</span><span class="p">:</span>
-            <span class="n">f</span><span class="p">,</span> <span class="n">lor</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_read_block</span><span class="p">(</span><span class="s1">&#39;AtomicCoordinatesOrigin&#39;</span><span class="p">)</span>
-            <span class="k">if</span> <span class="n">f</span><span class="p">:</span>
+        <span class="n">f</span><span class="p">,</span> <span class="n">lor</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_read_block</span><span class="p">(</span><span class="s1">&#39;AtomicCoordinatesOrigin&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">f</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;origin&#39;</span><span class="p">,</span> <span class="kc">True</span><span class="p">):</span>
                 <span class="n">origo</span> <span class="o">=</span> <span class="n">ensure_array</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="nb">float</span><span class="p">,</span> <span class="n">lor</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">()[:</span><span class="mi">3</span><span class="p">]))</span> <span class="o">*</span> <span class="n">s</span>
         <span class="c1"># Origo cannot be interpreted with fractional coordinates</span>
         <span class="c1"># hence, it is not transformed.</span>
 
         <span class="c1"># Read atom block</span>
-        <span class="n">f</span><span class="p">,</span> <span class="n">atms</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_read_block</span><span class="p">(</span>
-            <span class="s1">&#39;AtomicCoordinatesAndAtomicSpecies&#39;</span><span class="p">,</span> <span class="n">force</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">f</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="s1">&#39;Could not find AtomicCoordinatesAndAtomicSpecies in fdf file.&#39;</span><span class="p">)</span>
+        <span class="n">f</span><span class="p">,</span> <span class="n">atms</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_read_block</span><span class="p">(</span><span class="s1">&#39;AtomicCoordinatesAndAtomicSpecies&#39;</span><span class="p">,</span> <span class="n">force</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
         <span class="c1"># Read number of atoms and block</span>
         <span class="n">f</span><span class="p">,</span> <span class="n">l</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_read</span><span class="p">(</span><span class="s1">&#39;NumberOfAtoms&#39;</span><span class="p">)</span>
@@ -859,7 +857,7 @@
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'../../../../',
-            VERSION:'0.8.5-126',
+            VERSION:'0.8.5-178',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true,
