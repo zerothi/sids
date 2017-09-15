@@ -65,7 +65,7 @@
             
             
               <div class="version">
-                0.8.5-178
+                0.8.5-213
               </div>
             
           
@@ -169,12 +169,13 @@
 <span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">print_function</span><span class="p">,</span> <span class="n">division</span>
 
 <span class="kn">import</span> <span class="nn">re</span>
+<span class="kn">from</span> <span class="nn">functools</span> <span class="k">import</span> <span class="n">partial</span>
 <span class="kn">from</span> <span class="nn">itertools</span> <span class="k">import</span> <span class="n">groupby</span>
 
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-<span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">arange</span><span class="p">,</span> <span class="n">hstack</span><span class="p">,</span> <span class="n">empty</span><span class="p">,</span> <span class="nb">sum</span>
+<span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">zeros</span><span class="p">,</span> <span class="n">ones</span><span class="p">,</span> <span class="n">cumsum</span><span class="p">,</span> <span class="n">take</span>
 
-<span class="kn">from</span> <span class="nn">sisl._help</span> <span class="k">import</span> <span class="n">_zip</span> <span class="k">as</span> <span class="nb">zip</span>
+<span class="kn">from</span> <span class="nn">sisl._help</span> <span class="k">import</span> <span class="n">_map</span> <span class="k">as</span> <span class="nb">map</span>
 
 <span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;strmap&#39;</span><span class="p">,</span> <span class="s1">&#39;strseq&#39;</span><span class="p">,</span> <span class="s1">&#39;lstranges&#39;</span><span class="p">,</span> <span class="s1">&#39;erange&#39;</span><span class="p">,</span> <span class="s1">&#39;list2range&#39;</span><span class="p">,</span> <span class="s1">&#39;fileindex&#39;</span><span class="p">]</span>
 <span class="n">__all__</span> <span class="o">+=</span> <span class="p">[</span><span class="s1">&#39;array_arange&#39;</span><span class="p">]</span>
@@ -421,26 +422,41 @@
 <span class="sd">    &gt;&gt;&gt; array_arange([1, 6], n=[2, 2])</span>
 <span class="sd">    [1, 2, 6, 7]</span>
 <span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">_z</span> <span class="o">=</span> <span class="n">partial</span><span class="p">(</span><span class="n">zeros</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span>
+    <span class="n">_o</span> <span class="o">=</span> <span class="n">partial</span><span class="p">(</span><span class="n">ones</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span>
+    <span class="n">_c</span> <span class="o">=</span> <span class="n">partial</span><span class="p">(</span><span class="n">cumsum</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span>
 
-    <span class="c1"># Tests show that the below code is faster for large</span>
-    <span class="c1"># array_arange calls.</span>
-    <span class="c1"># I.e. pre-allocation is faster than hstack</span>
-    <span class="n">j</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="c1"># Tests show that the below code is faster than</span>
+    <span class="c1"># implicit for-loops, or list-comprehensions</span>
+    <span class="c1"># concatenate(map(..)</span>
+    <span class="c1"># This below is much faster and does not require _any_</span>
+    <span class="c1"># loops</span>
     <span class="k">if</span> <span class="n">n</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="n">size</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">end</span> <span class="o">-</span> <span class="n">start</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span>
-        <span class="n">array</span> <span class="o">=</span> <span class="n">empty</span><span class="p">([</span><span class="n">size</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span>
-        <span class="k">for</span> <span class="n">s</span><span class="p">,</span> <span class="n">e</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="p">):</span>
-            <span class="n">N</span> <span class="o">=</span> <span class="n">e</span> <span class="o">-</span> <span class="n">s</span>
-            <span class="n">array</span><span class="p">[</span><span class="n">j</span><span class="p">:</span><span class="n">j</span><span class="o">+</span><span class="n">N</span><span class="p">]</span> <span class="o">=</span> <span class="n">arange</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">e</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span>
-            <span class="n">j</span> <span class="o">+=</span> <span class="n">N</span>
-    <span class="k">else</span><span class="p">:</span>
-        <span class="c1"># Count and pre-allocate, this should reduce the memory overhead</span>
-        <span class="n">size</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span>
-        <span class="n">array</span> <span class="o">=</span> <span class="n">empty</span><span class="p">([</span><span class="n">size</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span>
-        <span class="k">for</span> <span class="n">s</span><span class="p">,</span> <span class="n">N</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">n</span><span class="p">):</span>
-            <span class="n">array</span><span class="p">[</span><span class="n">j</span><span class="p">:</span><span class="n">j</span><span class="o">+</span><span class="n">N</span><span class="p">]</span> <span class="o">=</span> <span class="n">arange</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">s</span> <span class="o">+</span> <span class="n">N</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span>
-            <span class="n">j</span> <span class="o">+=</span> <span class="n">N</span>
-    <span class="k">return</span> <span class="n">array</span></div>
+        <span class="c1"># We really do need n to speed things up</span>
+        <span class="n">n</span> <span class="o">=</span> <span class="n">end</span> <span class="o">-</span> <span class="n">start</span>
+    <span class="c1"># The below algorithm only works for non-zero n</span>
+    <span class="n">idx</span> <span class="o">=</span> <span class="n">n</span><span class="o">.</span><span class="n">nonzero</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+
+    <span class="c1"># Grab corner case</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">idx</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">_z</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+
+    <span class="c1"># Reduce size</span>
+    <span class="n">start</span> <span class="o">=</span> <span class="n">take</span><span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">idx</span><span class="p">)</span>
+    <span class="n">n</span> <span class="o">=</span> <span class="n">take</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">idx</span><span class="p">)</span>
+
+    <span class="c1"># Create array</span>
+    <span class="n">a</span> <span class="o">=</span> <span class="n">_o</span><span class="p">(</span><span class="n">n</span><span class="o">.</span><span class="n">sum</span><span class="p">())</span>
+
+    <span class="c1"># set pointers such that we can</span>
+    <span class="c1"># correct for final cumsum</span>
+    <span class="n">ptr</span> <span class="o">=</span> <span class="n">_c</span><span class="p">(</span><span class="n">n</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+    <span class="n">a</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">start</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">a</span><span class="p">[</span><span class="n">ptr</span><span class="p">]</span> <span class="o">=</span> <span class="n">start</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
+    <span class="c1"># Correct for previous values</span>
+    <span class="n">a</span><span class="p">[</span><span class="n">ptr</span><span class="p">]</span> <span class="o">-=</span> <span class="n">start</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">n</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span>
+
+    <span class="k">return</span> <span class="n">_c</span><span class="p">(</span><span class="n">a</span><span class="p">)</span></div>
 </pre></div>
 
            </div>
@@ -477,7 +493,7 @@
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'../../../',
-            VERSION:'0.8.5-178',
+            VERSION:'0.8.5-213',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true,

@@ -65,7 +65,7 @@
             
             
               <div class="version">
-                0.8.5-178
+                0.8.5-213
               </div>
             
           
@@ -203,9 +203,9 @@
 
 <span class="sd">Support files to complement TBtrans</span>
 <span class="sd">-----------------------------------</span>
-<span class="sd">- `deltacSileSiesta` adding :math:`\delta H` or :math:`\delta\Sigma` elements to a TBtrans calculation</span>
+<span class="sd">- `deltancSileSiesta` adding :math:`\delta H` or :math:`\delta\Sigma` elements to a TBtrans calculation</span>
 <span class="sd">- `dHncSileSiesta` adding :math:`\delta H` elements to a TBtrans calculation</span>
-<span class="sd">  (this class is deprecated for with `deltancSileSiesta` which is generic for :math:`\delta H` and :math:`\delta\Sigma`)</span>
+<span class="sd">  (this class is deprecated by `deltancSileSiesta` which is generic for :math:`\delta H` and :math:`\delta\Sigma`)</span>
 
 <span class="sd">&quot;&quot;&quot;</span>
 <span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">print_function</span><span class="p">,</span> <span class="n">division</span>
@@ -232,10 +232,11 @@
 <span class="kn">from</span> <span class="nn">.sile</span> <span class="k">import</span> <span class="n">SileCDFSiesta</span>
 <span class="kn">from</span> <span class="nn">..sile</span> <span class="k">import</span> <span class="o">*</span>
 <span class="kn">from</span> <span class="nn">sisl.utils</span> <span class="k">import</span> <span class="o">*</span>
-
+<span class="kn">import</span> <span class="nn">sisl._numpy_scipy</span> <span class="k">as</span> <span class="nn">ns_</span>
 
 <span class="c1"># Import the geometry object</span>
-<span class="kn">from</span> <span class="nn">sisl</span> <span class="k">import</span> <span class="n">Geometry</span><span class="p">,</span> <span class="n">Atom</span><span class="p">,</span> <span class="n">Atoms</span><span class="p">,</span> <span class="n">SuperCell</span><span class="p">,</span> <span class="n">Hamiltonian</span>
+<span class="kn">from</span> <span class="nn">sisl</span> <span class="k">import</span> <span class="n">Geometry</span><span class="p">,</span> <span class="n">Atom</span><span class="p">,</span> <span class="n">Atoms</span><span class="p">,</span> <span class="n">SuperCell</span>
+<span class="kn">from</span> <span class="nn">sisl</span> <span class="k">import</span> <span class="n">SparseOrbitalBZSpin</span>
 <span class="kn">from</span> <span class="nn">sisl._help</span> <span class="k">import</span> <span class="n">_str</span>
 <span class="kn">from</span> <span class="nn">sisl._help</span> <span class="k">import</span> <span class="n">_range</span> <span class="k">as</span> <span class="nb">range</span>
 <span class="kn">from</span> <span class="nn">sisl.units.siesta</span> <span class="k">import</span> <span class="n">unit_convert</span>
@@ -258,7 +259,7 @@
 
 <span class="sd">    Although the TBtrans code is in fortran and the resulting NetCDF file variables</span>
 <span class="sd">    are in fortran indexing (1-based), everything is returned as Python indexing (0-based)</span>
-<span class="sd">    when creating scripts.</span>
+<span class="sd">    when using Python scripts.</span>
 
 <span class="sd">    In the following equations we will use this notation:</span>
 
@@ -413,11 +414,11 @@
             <span class="k">try</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="p">[</span><span class="s1">&#39;kpt&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_value</span><span class="p">(</span><span class="s1">&#39;kpt&#39;</span><span class="p">)</span>
             <span class="k">except</span><span class="p">:</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="p">[</span><span class="s1">&#39;kpt&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">([</span><span class="mi">3</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="p">[</span><span class="s1">&#39;kpt&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">ns_</span><span class="o">.</span><span class="n">zerosd</span><span class="p">([</span><span class="mi">3</span><span class="p">])</span>
             <span class="k">try</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="p">[</span><span class="s1">&#39;wkpt&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_value</span><span class="p">(</span><span class="s1">&#39;wkpt&#39;</span><span class="p">)</span>
             <span class="k">except</span><span class="p">:</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="p">[</span><span class="s1">&#39;wkpt&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">([</span><span class="mi">1</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="p">[</span><span class="s1">&#39;wkpt&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">ns_</span><span class="o">.</span><span class="n">onesd</span><span class="p">([</span><span class="mi">1</span><span class="p">])</span>
 
             <span class="c1"># Create the geometry in the data file</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="p">[</span><span class="s1">&#39;_geom&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">read_geometry</span><span class="p">()</span>
@@ -427,7 +428,7 @@
 
 <div class="viewcode-block" id="tbtncSileSiesta.read_supercell"><a class="viewcode-back" href="../../../../sisl/sisl.io.siesta.tbtrans.html#sisl.io.tbtncSileSiesta.read_supercell">[docs]</a>    <span class="k">def</span> <span class="nf">read_supercell</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Returns `SuperCell` object from this file &quot;&quot;&quot;</span>
-        <span class="n">cell</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cell</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+        <span class="n">cell</span> <span class="o">=</span> <span class="n">ns_</span><span class="o">.</span><span class="n">arrayd</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cell</span><span class="p">))</span>
         <span class="n">cell</span><span class="o">.</span><span class="n">shape</span> <span class="o">=</span> <span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
 
         <span class="k">try</span><span class="p">:</span>
@@ -448,13 +449,13 @@
         <span class="sd">&quot;&quot;&quot; Returns `Geometry` object from this file &quot;&quot;&quot;</span>
         <span class="n">sc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">read_supercell</span><span class="p">()</span>
 
-        <span class="n">xyz</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">xa</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+        <span class="n">xyz</span> <span class="o">=</span> <span class="n">ns_</span><span class="o">.</span><span class="n">arrayd</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">xa</span><span class="p">))</span>
         <span class="n">xyz</span><span class="o">.</span><span class="n">shape</span> <span class="o">=</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
 
         <span class="c1"># Create list with correct number of orbitals</span>
-        <span class="n">lasto</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">lasto</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
+        <span class="n">lasto</span> <span class="o">=</span> <span class="n">ns_</span><span class="o">.</span><span class="n">arrayi</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">lasto</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
         <span class="n">nos</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">lasto</span><span class="p">[</span><span class="mi">0</span><span class="p">]],</span> <span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">lasto</span><span class="p">))</span>
-        <span class="n">nos</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">nos</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
+        <span class="n">nos</span> <span class="o">=</span> <span class="n">ns_</span><span class="o">.</span><span class="n">arrayi</span><span class="p">(</span><span class="n">nos</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="s1">&#39;atom&#39;</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="p">:</span>
             <span class="c1"># The user &quot;knows&quot; which atoms are present</span>
@@ -520,7 +521,7 @@
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">a_d</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot; Atomic indices (1-based) of device atoms &quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot; Atomic indices (0-based) of device atoms &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_value</span><span class="p">(</span><span class="s1">&#39;a_dev&#39;</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span>
     <span class="n">a_dev</span> <span class="o">=</span> <span class="n">a_d</span>
 
@@ -610,7 +611,7 @@
 <span class="sd">        k : array_like of float</span>
 <span class="sd">           the queried k-point in reduced coordinates :math:`]-0.5;0.5]`.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">ik</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">kpt</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)[</span><span class="kc">None</span><span class="p">,</span> <span class="p">:]),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">argmin</span><span class="p">()</span>
+        <span class="n">ik</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">kpt</span> <span class="o">-</span> <span class="n">ns_</span><span class="o">.</span><span class="n">asarrayd</span><span class="p">(</span><span class="n">k</span><span class="p">)[</span><span class="kc">None</span><span class="p">,</span> <span class="p">:]),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">argmin</span><span class="p">()</span>
         <span class="n">ret_k</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">kpt</span><span class="p">[</span><span class="n">ik</span><span class="p">,</span> <span class="p">:]</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">allclose</span><span class="p">(</span><span class="n">ret_k</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">atol</span><span class="o">=</span><span class="mf">0.0001</span><span class="p">):</span>
             <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s2">&quot; requesting k-point &quot;</span> <span class="o">+</span>
@@ -735,18 +736,19 @@
 
 <span class="sd">        The normalization can be performed in one of the below methods.</span>
 <span class="sd">        In the following :math:`N` refers to the normalization constant</span>
-<span class="sd">        that is to be used (i.e. the divisor)</span>
+<span class="sd">        that is to be used (i.e. the divisor):</span>
 
-<span class="sd">        #. &#39;none&#39;: :math:`N=1`</span>
-<span class="sd">        #. &#39;all&#39;: :math:`N` is equal to the number of orbitals in the total</span>
-<span class="sd">           device region.</span>
-<span class="sd">        #. &#39;atom&#39;: :math:`N` is equal to the total number of orbitals in the selected</span>
+<span class="sd">        ``&#39;none&#39;``</span>
+<span class="sd">           :math:`N=1`</span>
+<span class="sd">        ``&#39;all&#39;``</span>
+<span class="sd">           :math:`N` equals the number of orbitals in the total device region.</span>
+<span class="sd">        ``&#39;atom&#39;``</span>
+<span class="sd">           :math:`N` equals the total number of orbitals in the selected</span>
 <span class="sd">           atoms. If `orbital` is an argument a conversion of `orbital` to the equivalent</span>
 <span class="sd">           unique atoms is performed, and subsequently the total number of orbitals on the</span>
 <span class="sd">           atoms is used. This makes it possible to compare the fraction of orbital DOS easier.</span>
-<span class="sd">           I.e. for an atom with 4 orbitals one could compare the DOS for orbital `1` with norm:</span>
-<span class="sd">           ``norm(orbital=[1], norm=&#39;atom&#39;)`` for the remaning orbitals ``norm(orbital=[0, 2, 3], norm=&#39;atom&#39;)``.</span>
-<span class="sd">        #. &#39;orbital&#39;: :math:`N` is simply the sum of selected orbitals, if `atom` is specified, this</span>
+<span class="sd">        ``&#39;orbital&#39;``</span>
+<span class="sd">           :math:`N` is the sum of selected orbitals, if `atom` is specified, this</span>
 <span class="sd">           is equivalent to the &#39;atom&#39; option.</span>
 
 <span class="sd">        Parameters</span>
@@ -781,7 +783,7 @@
                 <span class="n">geom</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">geom</span>
                 <span class="n">a</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">geom</span><span class="o">.</span><span class="n">o2a</span><span class="p">(</span><span class="n">orbital</span><span class="p">))</span>
                 <span class="c1"># Now sum the orbitals per atom</span>
-                <span class="n">NORM</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">geom</span><span class="o">.</span><span class="n">firsto</span><span class="p">[</span><span class="n">a</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">geom</span><span class="o">.</span><span class="n">firsto</span><span class="p">[</span><span class="n">a</span><span class="p">]))</span>
+                <span class="n">NORM</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">ns_</span><span class="o">.</span><span class="n">sumi</span><span class="p">(</span><span class="n">geom</span><span class="o">.</span><span class="n">firsto</span><span class="p">[</span><span class="n">a</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">geom</span><span class="o">.</span><span class="n">firsto</span><span class="p">[</span><span class="n">a</span><span class="p">]))</span>
             <span class="k">return</span> <span class="n">NORM</span>
 
         <span class="c1"># atom is specified</span>
@@ -825,7 +827,7 @@
         <span class="k">if</span> <span class="n">atom</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">orbital</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="c1"># We simply return *everything*</span>
             <span class="k">if</span> <span class="nb">sum</span><span class="p">:</span>
-                <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">DOS</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="p">:],</span> <span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span> <span class="o">/</span> <span class="n">NORM</span>
+                <span class="k">return</span> <span class="n">ns_</span><span class="o">.</span><span class="n">sumd</span><span class="p">(</span><span class="n">DOS</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="p">:],</span> <span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span> <span class="o">/</span> <span class="n">NORM</span>
             <span class="c1"># We return the sorted DOS</span>
             <span class="n">p</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pivot</span><span class="p">)</span>
             <span class="k">return</span> <span class="n">DOS</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">p</span><span class="p">]</span> <span class="o">/</span> <span class="n">NORM</span>
@@ -842,10 +844,10 @@
                 <span class="n">geom</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">geom</span>
                 <span class="n">a</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">geom</span><span class="o">.</span><span class="n">o2a</span><span class="p">(</span><span class="n">orbital</span><span class="p">))</span>
                 <span class="c1"># Now sum the orbitals per atom</span>
-                <span class="n">NORM</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">geom</span><span class="o">.</span><span class="n">firsto</span><span class="p">[</span><span class="n">a</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">geom</span><span class="o">.</span><span class="n">firsto</span><span class="p">[</span><span class="n">a</span><span class="p">]))</span>
+                <span class="n">NORM</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">ns_</span><span class="o">.</span><span class="n">sumi</span><span class="p">(</span><span class="n">geom</span><span class="o">.</span><span class="n">firsto</span><span class="p">[</span><span class="n">a</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">geom</span><span class="o">.</span><span class="n">firsto</span><span class="p">[</span><span class="n">a</span><span class="p">]))</span>
 
             <span class="k">if</span> <span class="nb">sum</span><span class="p">:</span>
-                <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">DOS</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">p</span><span class="p">],</span> <span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span> <span class="o">/</span> <span class="n">NORM</span>
+                <span class="k">return</span> <span class="n">ns_</span><span class="o">.</span><span class="n">sumd</span><span class="p">(</span><span class="n">DOS</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">p</span><span class="p">],</span> <span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span> <span class="o">/</span> <span class="n">NORM</span>
             <span class="c1"># Else, we have to return the full subset</span>
             <span class="k">return</span> <span class="n">DOS</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">p</span><span class="p">]</span> <span class="o">/</span> <span class="n">NORM</span>
 
@@ -858,7 +860,7 @@
         <span class="k">if</span> <span class="nb">sum</span> <span class="ow">or</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">atom</span><span class="p">,</span> <span class="n">Integral</span><span class="p">):</span>
             <span class="c1"># Regardless of SUM, when requesting a single atom</span>
             <span class="c1"># we return it</span>
-            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">DOS</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">p</span><span class="p">],</span> <span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span> <span class="o">/</span> <span class="n">NORM</span>
+            <span class="k">return</span> <span class="n">ns_</span><span class="o">.</span><span class="n">sumd</span><span class="p">(</span><span class="n">DOS</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">p</span><span class="p">],</span> <span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span> <span class="o">/</span> <span class="n">NORM</span>
 
         <span class="c1"># We default the case where 1-orbital systems are in use</span>
         <span class="c1"># Then it becomes *very* easy</span>
@@ -880,7 +882,7 @@
             <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">pvt</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
                 <span class="n">nDOS</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.</span>
             <span class="k">else</span><span class="p">:</span>
-                <span class="n">nDOS</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">DOS</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">pvt</span><span class="p">],</span> <span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span> <span class="o">/</span> <span class="n">NORM</span>
+                <span class="n">nDOS</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">ns_</span><span class="o">.</span><span class="n">sumd</span><span class="p">(</span><span class="n">DOS</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">pvt</span><span class="p">],</span> <span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span> <span class="o">/</span> <span class="n">NORM</span>
 
         <span class="k">return</span> <span class="n">nDOS</span>
 
@@ -891,7 +893,7 @@
 
 <span class="sd">        .. math::</span>
 
-<span class="sd">           \mathrm{DOS}(E) = -\frac{1}{\pi N} \sum_{\mu\in \mathrm{atom}/\mathrm{orbital}} \Im \mathbf{G}_{\nu\nu}(E)</span>
+<span class="sd">           \mathrm{DOS}(E) = -\frac{1}{\pi N} \sum_{\nu\in \mathrm{atom}/\mathrm{orbital}} \Im \mathbf{G}_{\nu\nu}(E)</span>
 
 <span class="sd">        The normalization constant (:math:`N`) is defined in the routine `norm` and depends on the</span>
 <span class="sd">        arguments.</span>
@@ -991,7 +993,7 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">elec</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_elec</span><span class="p">(</span><span class="n">elec</span><span class="p">)</span>
         <span class="k">if</span> <span class="nb">sum</span><span class="p">:</span>
-            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_value_E</span><span class="p">(</span><span class="s1">&#39;DOS&#39;</span><span class="p">,</span> <span class="n">elec</span><span class="p">,</span> <span class="n">kavg</span><span class="o">=</span><span class="n">kavg</span><span class="p">,</span> <span class="n">E</span><span class="o">=</span><span class="n">E</span><span class="p">),</span> <span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">eV2Ry</span>
+            <span class="k">return</span> <span class="n">ns_</span><span class="o">.</span><span class="n">sumd</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_value_E</span><span class="p">(</span><span class="s1">&#39;DOS&#39;</span><span class="p">,</span> <span class="n">elec</span><span class="p">,</span> <span class="n">kavg</span><span class="o">=</span><span class="n">kavg</span><span class="p">,</span> <span class="n">E</span><span class="o">=</span><span class="n">E</span><span class="p">),</span> <span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">eV2Ry</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_value_E</span><span class="p">(</span><span class="s1">&#39;DOS&#39;</span><span class="p">,</span> <span class="n">elec</span><span class="p">,</span> <span class="n">kavg</span><span class="o">=</span><span class="n">kavg</span><span class="p">,</span> <span class="n">E</span><span class="o">=</span><span class="n">E</span><span class="p">)</span> <span class="o">*</span> <span class="n">eV2Ry</span></div>
 
@@ -1109,7 +1111,7 @@
         <span class="k">def</span> <span class="nf">nf</span><span class="p">(</span><span class="n">E</span><span class="p">,</span> <span class="n">mu</span><span class="p">,</span> <span class="n">kT</span><span class="p">):</span>
             <span class="k">return</span> <span class="mf">1.</span> <span class="o">/</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">((</span><span class="n">E</span> <span class="o">-</span> <span class="n">mu</span><span class="p">)</span> <span class="o">/</span> <span class="n">kT</span><span class="p">)</span> <span class="o">+</span> <span class="mf">1.</span><span class="p">)</span>
 
-        <span class="n">I</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">T</span> <span class="o">*</span> <span class="n">dE</span> <span class="o">*</span> <span class="p">(</span><span class="n">nf</span><span class="p">(</span><span class="n">E</span><span class="p">,</span> <span class="n">mu_from</span><span class="p">,</span> <span class="n">kt_from</span><span class="p">)</span> <span class="o">-</span> <span class="n">nf</span><span class="p">(</span><span class="n">E</span><span class="p">,</span> <span class="n">mu_to</span><span class="p">,</span> <span class="n">kt_to</span><span class="p">)))</span>
+        <span class="n">I</span> <span class="o">=</span> <span class="n">ns_</span><span class="o">.</span><span class="n">sumd</span><span class="p">(</span><span class="n">T</span> <span class="o">*</span> <span class="n">dE</span> <span class="o">*</span> <span class="p">(</span><span class="n">nf</span><span class="p">(</span><span class="n">E</span><span class="p">,</span> <span class="n">mu_from</span><span class="p">,</span> <span class="n">kt_from</span><span class="p">)</span> <span class="o">-</span> <span class="n">nf</span><span class="p">(</span><span class="n">E</span><span class="p">,</span> <span class="n">mu_to</span><span class="p">,</span> <span class="n">kt_to</span><span class="p">)))</span>
         <span class="k">return</span> <span class="n">I</span> <span class="o">*</span> <span class="mf">1.6021766208e-19</span> <span class="o">/</span> <span class="mf">4.135667662e-15</span></div>
 
 <div class="viewcode-block" id="tbtncSileSiesta.orbital_current"><a class="viewcode-back" href="../../../../sisl/sisl.io.siesta.tbtrans.html#sisl.io.tbtncSileSiesta.orbital_current">[docs]</a>    <span class="k">def</span> <span class="nf">orbital_current</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">elec</span><span class="p">,</span> <span class="n">E</span><span class="p">,</span> <span class="n">kavg</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">isc</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
@@ -1152,7 +1154,7 @@
         <span class="n">geom</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">geom</span>
 
         <span class="c1"># These are the row-pointers...</span>
-        <span class="n">rptr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">cumsum</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_value</span><span class="p">(</span><span class="s1">&#39;n_col&#39;</span><span class="p">)),</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">rptr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="n">ns_</span><span class="o">.</span><span class="n">cumsumi</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_value</span><span class="p">(</span><span class="s1">&#39;n_col&#39;</span><span class="p">)),</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
 
         <span class="c1"># Get column indices</span>
         <span class="n">col</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_value</span><span class="p">(</span><span class="s1">&#39;list_col&#39;</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span>
@@ -1199,15 +1201,15 @@
                 <span class="n">all_col</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">i</span> <span class="o">*</span> <span class="n">geom</span><span class="o">.</span><span class="n">no</span><span class="p">,</span> <span class="p">(</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">geom</span><span class="o">.</span><span class="n">no</span><span class="p">)))</span>
 
             <span class="c1"># Create a logical array for sub-indexing</span>
-            <span class="n">all_col</span> <span class="o">=</span> <span class="n">npisin</span><span class="p">(</span><span class="n">col</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">all_col</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">))</span>
+            <span class="n">all_col</span> <span class="o">=</span> <span class="n">npisin</span><span class="p">(</span><span class="n">col</span><span class="p">,</span> <span class="n">ns_</span><span class="o">.</span><span class="n">arrayi</span><span class="p">(</span><span class="n">all_col</span><span class="p">))</span>
             <span class="n">col</span> <span class="o">=</span> <span class="n">col</span><span class="p">[</span><span class="n">all_col</span><span class="p">]</span>
 
             <span class="c1"># recreate row-pointer</span>
             <span class="n">cnz</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">count_nonzero</span>
             <span class="k">def</span> <span class="nf">func</span><span class="p">(</span><span class="n">ptr1</span><span class="p">,</span> <span class="n">ptr2</span><span class="p">):</span>
                 <span class="k">return</span> <span class="n">cnz</span><span class="p">(</span><span class="n">all_col</span><span class="p">[</span><span class="n">ptr1</span><span class="p">:</span><span class="n">ptr2</span><span class="p">])</span>
-            <span class="n">tmp</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="n">func</span><span class="p">,</span> <span class="n">rptr</span><span class="p">[:</span><span class="n">geom</span><span class="o">.</span><span class="n">no</span><span class="p">],</span> <span class="n">rptr</span><span class="p">[</span><span class="mi">1</span><span class="p">:]),</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
-            <span class="n">rptr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">cumsum</span><span class="p">(</span><span class="n">tmp</span><span class="p">),</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+            <span class="n">tmp</span> <span class="o">=</span> <span class="n">ns_</span><span class="o">.</span><span class="n">arrayi</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="n">func</span><span class="p">,</span> <span class="n">rptr</span><span class="p">[:</span><span class="n">geom</span><span class="o">.</span><span class="n">no</span><span class="p">],</span> <span class="n">rptr</span><span class="p">[</span><span class="mi">1</span><span class="p">:]))</span>
+            <span class="n">rptr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="n">ns_</span><span class="o">.</span><span class="n">cumsumi</span><span class="p">(</span><span class="n">tmp</span><span class="p">),</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
             <span class="k">del</span> <span class="n">tmp</span>
 
         <span class="k">if</span> <span class="n">all_col</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
@@ -1310,7 +1312,7 @@
             <span class="n">fo</span> <span class="o">=</span> <span class="n">geom</span><span class="o">.</span><span class="n">firsto</span>
             <span class="c1"># Automatically create the new index pointer</span>
             <span class="c1"># from first and last orbital</span>
-            <span class="n">indptr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">cumsum</span><span class="p">(</span><span class="n">iptr</span><span class="p">[</span><span class="n">fo</span><span class="p">[</span><span class="mi">1</span><span class="p">:]]</span> <span class="o">-</span> <span class="n">iptr</span><span class="p">[</span><span class="n">fo</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]]),</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+            <span class="n">indptr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="n">ns_</span><span class="o">.</span><span class="n">cumsumi</span><span class="p">(</span><span class="n">iptr</span><span class="p">[</span><span class="n">fo</span><span class="p">[</span><span class="mi">1</span><span class="p">:]]</span> <span class="o">-</span> <span class="n">iptr</span><span class="p">[</span><span class="n">fo</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]]),</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
 
             <span class="c1"># Now we have a new indptr, and the column indices have also</span>
             <span class="c1"># been processed.</span>
@@ -1508,7 +1510,7 @@
 
         <span class="n">na</span> <span class="o">=</span> <span class="n">geom</span><span class="o">.</span><span class="n">na</span>
         <span class="c1"># vector currents</span>
-        <span class="n">Ja</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">([</span><span class="n">na</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+        <span class="n">Ja</span> <span class="o">=</span> <span class="n">ns_</span><span class="o">.</span><span class="n">zerosd</span><span class="p">([</span><span class="n">na</span><span class="p">,</span> <span class="mi">3</span><span class="p">])</span>
 
         <span class="c1"># Create local orbital look-up</span>
         <span class="n">xyz</span> <span class="o">=</span> <span class="n">geom</span><span class="o">.</span><span class="n">xyz</span>
@@ -1771,7 +1773,7 @@
                 <span class="n">E</span> <span class="o">=</span> <span class="p">[]</span>
                 <span class="k">for</span> <span class="n">begin</span><span class="p">,</span> <span class="n">end</span> <span class="ow">in</span> <span class="n">Emap</span><span class="p">:</span>
                     <span class="n">E</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">ns</span><span class="o">.</span><span class="n">_tbt</span><span class="o">.</span><span class="n">Eindex</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">begin</span><span class="p">)),</span> <span class="n">ns</span><span class="o">.</span><span class="n">_tbt</span><span class="o">.</span><span class="n">Eindex</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">end</span><span class="p">))</span><span class="o">+</span><span class="mi">1</span><span class="p">))</span>
-                <span class="n">ns</span><span class="o">.</span><span class="n">_Erng</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">E</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+                <span class="n">ns</span><span class="o">.</span><span class="n">_Erng</span> <span class="o">=</span> <span class="n">ns_</span><span class="o">.</span><span class="n">arrayi</span><span class="p">(</span><span class="n">E</span><span class="p">)</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
         <span class="n">p</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--energy&#39;</span><span class="p">,</span> <span class="s1">&#39;-E&#39;</span><span class="p">,</span>
                        <span class="n">action</span><span class="o">=</span><span class="n">ERange</span><span class="p">,</span>
                        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;&quot;&quot;Denote the sub-section of energies that are extracted: &quot;-1:0,1:2&quot; [eV]</span>
@@ -1838,7 +1840,7 @@
                 <span class="c1"># we have only a subset of the orbitals</span>
                 <span class="n">orbs</span> <span class="o">=</span> <span class="p">[]</span>
                 <span class="n">no</span> <span class="o">=</span> <span class="mi">0</span>
-                <span class="n">asarray</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span>
+                <span class="n">asarrayi</span> <span class="o">=</span> <span class="n">ns_</span><span class="o">.</span><span class="n">asarrayi</span>
                 <span class="k">for</span> <span class="n">atoms</span> <span class="ow">in</span> <span class="n">ranges</span><span class="p">:</span>
                     <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">atoms</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
                         <span class="c1"># this will be</span>
@@ -1853,7 +1855,7 @@
                         <span class="c1"># for same atoms with different sets of orbitals and the</span>
                         <span class="c1"># total will add up.</span>
                         <span class="n">no</span> <span class="o">+=</span> <span class="nb">len</span><span class="p">(</span><span class="n">ob</span><span class="p">)</span>
-                        <span class="n">ob</span> <span class="o">=</span> <span class="n">ob</span><span class="p">[</span><span class="n">asarray</span><span class="p">(</span><span class="n">atoms</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span>
+                        <span class="n">ob</span> <span class="o">=</span> <span class="n">ob</span><span class="p">[</span><span class="n">asarrayi</span><span class="p">(</span><span class="n">atoms</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span>
                     <span class="k">else</span><span class="p">:</span>
                         <span class="n">ob</span> <span class="o">=</span> <span class="n">geom</span><span class="o">.</span><span class="n">a2o</span><span class="p">(</span><span class="n">atoms</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
                         <span class="n">no</span> <span class="o">+=</span> <span class="nb">len</span><span class="p">(</span><span class="n">ob</span><span class="p">)</span>
@@ -2166,7 +2168,7 @@
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">wkpt</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Always return [1.], this is to signal other routines &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">ns_</span><span class="o">.</span><span class="n">onesd</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
 
 <div class="viewcode-block" id="tbtavncSileSiesta.write_tbtav"><a class="viewcode-back" href="../../../../sisl/sisl.io.siesta.tbtrans.html#sisl.io.tbtavncSileSiesta.write_tbtav">[docs]</a>    <span class="k">def</span> <span class="nf">write_tbtav</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Wrapper for writing the k-averaged TBT.AV.nc file.</span>
@@ -2198,7 +2200,7 @@
 
         <span class="c1"># Retrieve k-weights</span>
         <span class="n">nkpt</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">tbt</span><span class="o">.</span><span class="n">dimensions</span><span class="p">[</span><span class="s1">&#39;nkpt&#39;</span><span class="p">])</span>
-        <span class="n">wkpt</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">tbt</span><span class="o">.</span><span class="n">variables</span><span class="p">[</span><span class="s1">&#39;wkpt&#39;</span><span class="p">][:],</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+        <span class="n">wkpt</span> <span class="o">=</span> <span class="n">ns_</span><span class="o">.</span><span class="n">asarrayd</span><span class="p">(</span><span class="n">tbt</span><span class="o">.</span><span class="n">variables</span><span class="p">[</span><span class="s1">&#39;wkpt&#39;</span><span class="p">][:])</span>
 
         <span class="c1"># First copy and re-create all entries in the output file</span>
         <span class="k">for</span> <span class="n">dvg</span> <span class="ow">in</span> <span class="n">tbt</span><span class="p">:</span>
@@ -2300,19 +2302,29 @@
 
 <div class="viewcode-block" id="phtavncSileSiesta"><a class="viewcode-back" href="../../../../sisl/sisl.io.siesta.tbtrans.html#sisl.io.phtavncSileSiesta">[docs]</a><span class="k">class</span> <span class="nc">phtavncSileSiesta</span><span class="p">(</span><span class="n">tbtavncSileSiesta</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot; PHtrans file object &quot;&quot;&quot;</span>
-    <span class="n">_trans_type</span> <span class="o">=</span> <span class="s1">&#39;PHT&#39;</span>
-    <span class="k">pass</span></div>
+    <span class="n">_trans_type</span> <span class="o">=</span> <span class="s1">&#39;PHT&#39;</span></div>
 
 <span class="n">add_sile</span><span class="p">(</span><span class="s1">&#39;PHT.AV.nc&#39;</span><span class="p">,</span> <span class="n">phtavncSileSiesta</span><span class="p">)</span>
 
 
 <span class="c1"># The delta nc file</span>
 <div class="viewcode-block" id="deltancSileSiesta"><a class="viewcode-back" href="../../../../sisl/sisl.io.siesta.tbtrans.html#sisl.io.deltancSileSiesta">[docs]</a><span class="k">class</span> <span class="nc">deltancSileSiesta</span><span class="p">(</span><span class="n">SileCDFSiesta</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot; TBtrans delta file object &quot;&quot;&quot;</span>
+    <span class="sa">r</span><span class="sd">&quot;&quot;&quot; TBtrans delta file object</span>
+
+<span class="sd">    The :math:`\delta` file object is an extension enabled in `TBtrans`_ which</span>
+<span class="sd">    enables changing the Hamiltonian in transport problems.</span>
+
+<span class="sd">    Its main functionality is in the change of Hamiltonian via either :math:`\delta H` or</span>
+<span class="sd">    :math:`\delta \Sigma` terms:</span>
+
+<span class="sd">    .. math::</span>
+<span class="sd">        \mathbf H&#39;(\mathbf k) = \mathbf H(\mathbf k) + \delta\mathbf H + \delta\mathbf\Sigma</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
 
 <div class="viewcode-block" id="deltancSileSiesta.read_supercell"><a class="viewcode-back" href="../../../../sisl/sisl.io.siesta.tbtrans.html#sisl.io.deltancSileSiesta.read_supercell">[docs]</a>    <span class="k">def</span> <span class="nf">read_supercell</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Returns the `SuperCell` object from this file &quot;&quot;&quot;</span>
-        <span class="n">cell</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_value</span><span class="p">(</span><span class="s1">&#39;cell&#39;</span><span class="p">)),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+        <span class="n">cell</span> <span class="o">=</span> <span class="n">ns_</span><span class="o">.</span><span class="n">arrayd</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_value</span><span class="p">(</span><span class="s1">&#39;cell&#39;</span><span class="p">)))</span>
         <span class="n">cell</span><span class="o">.</span><span class="n">shape</span> <span class="o">=</span> <span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
 
         <span class="k">try</span><span class="p">:</span>
@@ -2333,13 +2345,13 @@
         <span class="sd">&quot;&quot;&quot; Returns the `Geometry` object from this file &quot;&quot;&quot;</span>
         <span class="n">sc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">read_supercell</span><span class="p">()</span>
 
-        <span class="n">xyz</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_value</span><span class="p">(</span><span class="s1">&#39;xa&#39;</span><span class="p">)),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+        <span class="n">xyz</span> <span class="o">=</span> <span class="n">ns_</span><span class="o">.</span><span class="n">arrayd</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_value</span><span class="p">(</span><span class="s1">&#39;xa&#39;</span><span class="p">)))</span>
         <span class="n">xyz</span><span class="o">.</span><span class="n">shape</span> <span class="o">=</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
 
         <span class="c1"># Create list with correct number of orbitals</span>
-        <span class="n">lasto</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_value</span><span class="p">(</span><span class="s1">&#39;lasto&#39;</span><span class="p">)),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
+        <span class="n">lasto</span> <span class="o">=</span> <span class="n">ns_</span><span class="o">.</span><span class="n">arrayi</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_value</span><span class="p">(</span><span class="s1">&#39;lasto&#39;</span><span class="p">)))</span>
         <span class="n">nos</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">lasto</span><span class="p">[</span><span class="mi">0</span><span class="p">]],</span> <span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">lasto</span><span class="p">))</span>
-        <span class="n">nos</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">nos</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
+        <span class="n">nos</span> <span class="o">=</span> <span class="n">ns_</span><span class="o">.</span><span class="n">arrayi</span><span class="p">(</span><span class="n">nos</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="s1">&#39;atom&#39;</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="p">:</span>
             <span class="c1"># The user &quot;knows&quot; which atoms are present</span>
@@ -2402,9 +2414,6 @@
         <span class="n">v</span><span class="o">.</span><span class="n">info</span> <span class="o">=</span> <span class="s1">&#39;Atomic coordinates&#39;</span>
         <span class="n">v</span><span class="o">.</span><span class="n">unit</span> <span class="o">=</span> <span class="s1">&#39;Bohr&#39;</span>
 
-        <span class="c1"># Create designation of the creation</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">method</span> <span class="o">=</span> <span class="s1">&#39;sisl&#39;</span>
-
         <span class="c1"># Save stuff</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">variables</span><span class="p">[</span><span class="s1">&#39;xa&#39;</span><span class="p">][:]</span> <span class="o">=</span> <span class="n">geom</span><span class="o">.</span><span class="n">xyz</span> <span class="o">/</span> <span class="n">Bohr2Ang</span>
 
@@ -2412,7 +2421,7 @@
         <span class="n">b</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_crt_var</span><span class="p">(</span><span class="n">bs</span><span class="p">,</span> <span class="s1">&#39;basis&#39;</span><span class="p">,</span> <span class="s1">&#39;i4&#39;</span><span class="p">,</span> <span class="p">(</span><span class="s1">&#39;na_u&#39;</span><span class="p">,))</span>
         <span class="n">b</span><span class="o">.</span><span class="n">info</span> <span class="o">=</span> <span class="s2">&quot;Basis of each atom by ID&quot;</span>
 
-        <span class="n">orbs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">([</span><span class="n">geom</span><span class="o">.</span><span class="n">na</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
+        <span class="n">orbs</span> <span class="o">=</span> <span class="n">ns_</span><span class="o">.</span><span class="n">emptyi</span><span class="p">([</span><span class="n">geom</span><span class="o">.</span><span class="n">na</span><span class="p">])</span>
 
         <span class="k">for</span> <span class="n">ia</span><span class="p">,</span> <span class="n">a</span><span class="p">,</span> <span class="n">isp</span> <span class="ow">in</span> <span class="n">geom</span><span class="o">.</span><span class="n">iter_species</span><span class="p">():</span>
             <span class="n">b</span><span class="p">[</span><span class="n">ia</span><span class="p">]</span> <span class="o">=</span> <span class="n">isp</span> <span class="o">+</span> <span class="mi">1</span>
@@ -2433,7 +2442,7 @@
                 <span class="n">ba</span><span class="o">.</span><span class="n">Number_of_orbitals</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">(</span><span class="n">a</span><span class="o">.</span><span class="n">orbs</span><span class="p">)</span>
 
         <span class="c1"># Store the lasto variable as the remaining thing to do</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">variables</span><span class="p">[</span><span class="s1">&#39;lasto&#39;</span><span class="p">][:]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cumsum</span><span class="p">(</span><span class="n">orbs</span><span class="p">)</span></div>
+        <span class="bp">self</span><span class="o">.</span><span class="n">variables</span><span class="p">[</span><span class="s1">&#39;lasto&#39;</span><span class="p">][:]</span> <span class="o">=</span> <span class="n">ns_</span><span class="o">.</span><span class="n">cumsumi</span><span class="p">(</span><span class="n">orbs</span><span class="p">)</span></div>
 
     <span class="k">def</span> <span class="nf">_get_lvl_k_E</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Return level, k and E indices, in that order.</span>
@@ -2468,7 +2477,7 @@
         <span class="c1"># Now determine the energy and k-indices</span>
         <span class="n">iE</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
         <span class="k">if</span> <span class="n">ilvl</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">]:</span>
-            <span class="n">Es</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">lvl</span><span class="o">.</span><span class="n">variables</span><span class="p">[</span><span class="s1">&#39;E&#39;</span><span class="p">][:])</span>
+            <span class="n">Es</span> <span class="o">=</span> <span class="n">ns_</span><span class="o">.</span><span class="n">arrayd</span><span class="p">(</span><span class="n">lvl</span><span class="o">.</span><span class="n">variables</span><span class="p">[</span><span class="s1">&#39;E&#39;</span><span class="p">][:])</span>
             <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">Es</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
                 <span class="n">iE</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argmin</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">Es</span> <span class="o">-</span> <span class="n">E</span><span class="p">))</span>
                 <span class="k">if</span> <span class="nb">abs</span><span class="p">(</span><span class="n">Es</span><span class="p">[</span><span class="n">iE</span><span class="p">]</span> <span class="o">-</span> <span class="n">E</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mf">0.0001</span><span class="p">:</span>
@@ -2476,7 +2485,7 @@
 
         <span class="n">ik</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
         <span class="k">if</span> <span class="n">ilvl</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">4</span><span class="p">]:</span>
-            <span class="n">kpt</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">lvl</span><span class="o">.</span><span class="n">variables</span><span class="p">[</span><span class="s1">&#39;kpt&#39;</span><span class="p">][:])</span>
+            <span class="n">kpt</span> <span class="o">=</span> <span class="n">ns_</span><span class="o">.</span><span class="n">arrayd</span><span class="p">(</span><span class="n">lvl</span><span class="o">.</span><span class="n">variables</span><span class="p">[</span><span class="s1">&#39;kpt&#39;</span><span class="p">][:])</span>
             <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">kpt</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
                 <span class="n">ik</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argmin</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">kpt</span> <span class="o">-</span> <span class="n">k</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="p">:]),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">))</span>
                 <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">allclose</span><span class="p">(</span><span class="n">kpt</span><span class="p">[</span><span class="n">ik</span><span class="p">,</span> <span class="p">:],</span> <span class="n">k</span><span class="p">,</span> <span class="n">atol</span><span class="o">=</span><span class="mf">0.0001</span><span class="p">):</span>
@@ -2510,23 +2519,21 @@
 
         <span class="k">return</span> <span class="n">lvl</span>
 
-<div class="viewcode-block" id="deltancSileSiesta.write_hamiltonian"><a class="viewcode-back" href="../../../../sisl/sisl.io.siesta.tbtrans.html#sisl.io.deltancSileSiesta.write_hamiltonian">[docs]</a>    <span class="k">def</span> <span class="nf">write_hamiltonian</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">H</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<div class="viewcode-block" id="deltancSileSiesta.write_delta"><a class="viewcode-back" href="../../../../sisl/sisl.io.siesta.tbtrans.html#sisl.io.deltancSileSiesta.write_delta">[docs]</a>    <span class="k">def</span> <span class="nf">write_delta</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">delta</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Writes Hamiltonian model to file</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
-<span class="sd">        H : Hamiltonian</span>
+<span class="sd">        delta : SparseOrbitalBZSpin</span>
 <span class="sd">           the model to be saved in the NC file</span>
-<span class="sd">        spin : int, optional</span>
-<span class="sd">           the spin-index of the Hamiltonian object that is stored. Default is the first index.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># Ensure finalization</span>
-        <span class="n">H</span><span class="o">.</span><span class="n">finalize</span><span class="p">()</span>
+        <span class="n">delta</span><span class="o">.</span><span class="n">finalize</span><span class="p">()</span>
 
         <span class="c1"># Ensure that the geometry is written</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">write_geometry</span><span class="p">(</span><span class="n">H</span><span class="o">.</span><span class="n">geom</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">write_geometry</span><span class="p">(</span><span class="n">delta</span><span class="o">.</span><span class="n">geom</span><span class="p">)</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">_crt_dim</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;spin&#39;</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">H</span><span class="o">.</span><span class="n">spin</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_crt_dim</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;spin&#39;</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">delta</span><span class="o">.</span><span class="n">spin</span><span class="p">))</span>
 
         <span class="c1"># Determine the type of delta we are storing...</span>
         <span class="n">k</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;k&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
@@ -2538,30 +2545,30 @@
         <span class="c1"># Append the sparsity pattern</span>
         <span class="c1"># Create basis group</span>
         <span class="k">if</span> <span class="s1">&#39;n_col&#39;</span> <span class="ow">in</span> <span class="n">lvl</span><span class="o">.</span><span class="n">variables</span><span class="p">:</span>
-            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">lvl</span><span class="o">.</span><span class="n">dimensions</span><span class="p">[</span><span class="s1">&#39;nnzs&#39;</span><span class="p">])</span> <span class="o">!=</span> <span class="n">H</span><span class="o">.</span><span class="n">nnz</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">lvl</span><span class="o">.</span><span class="n">dimensions</span><span class="p">[</span><span class="s1">&#39;nnzs&#39;</span><span class="p">])</span> <span class="o">!=</span> <span class="n">delta</span><span class="o">.</span><span class="n">nnz</span><span class="p">:</span>
                 <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;The sparsity pattern stored in delta *MUST* be equivalent for &quot;</span>
                                  <span class="s2">&quot;all delta entries [nnz].&quot;</span><span class="p">)</span>
-            <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">lvl</span><span class="o">.</span><span class="n">variables</span><span class="p">[</span><span class="s1">&#39;n_col&#39;</span><span class="p">][:]</span> <span class="o">!=</span> <span class="n">H</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">ncol</span><span class="p">[:]):</span>
+            <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">lvl</span><span class="o">.</span><span class="n">variables</span><span class="p">[</span><span class="s1">&#39;n_col&#39;</span><span class="p">][:]</span> <span class="o">!=</span> <span class="n">delta</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">ncol</span><span class="p">[:]):</span>
                 <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;The sparsity pattern stored in delta *MUST* be equivalent for &quot;</span>
                                  <span class="s2">&quot;all delta entries [n_col].&quot;</span><span class="p">)</span>
-            <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">lvl</span><span class="o">.</span><span class="n">variables</span><span class="p">[</span><span class="s1">&#39;list_col&#39;</span><span class="p">][:]</span> <span class="o">!=</span> <span class="n">H</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">col</span><span class="p">[:]</span><span class="o">+</span><span class="mi">1</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">lvl</span><span class="o">.</span><span class="n">variables</span><span class="p">[</span><span class="s1">&#39;list_col&#39;</span><span class="p">][:]</span> <span class="o">!=</span> <span class="n">delta</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">col</span><span class="p">[:]</span><span class="o">+</span><span class="mi">1</span><span class="p">):</span>
                 <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;The sparsity pattern stored in delta *MUST* be equivalent for &quot;</span>
                                  <span class="s2">&quot;all delta entries [list_col].&quot;</span><span class="p">)</span>
-            <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">lvl</span><span class="o">.</span><span class="n">variables</span><span class="p">[</span><span class="s1">&#39;isc_off&#39;</span><span class="p">][:]</span> <span class="o">!=</span> <span class="n">H</span><span class="o">.</span><span class="n">geom</span><span class="o">.</span><span class="n">sc</span><span class="o">.</span><span class="n">sc_off</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">lvl</span><span class="o">.</span><span class="n">variables</span><span class="p">[</span><span class="s1">&#39;isc_off&#39;</span><span class="p">][:]</span> <span class="o">!=</span> <span class="n">delta</span><span class="o">.</span><span class="n">geom</span><span class="o">.</span><span class="n">sc</span><span class="o">.</span><span class="n">sc_off</span><span class="p">):</span>
                 <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;The sparsity pattern stored in delta *MUST* be equivalent for &quot;</span>
                                  <span class="s2">&quot;all delta entries [sc_off].&quot;</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_crt_dim</span><span class="p">(</span><span class="n">lvl</span><span class="p">,</span> <span class="s1">&#39;nnzs&#39;</span><span class="p">,</span> <span class="n">H</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">col</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_crt_dim</span><span class="p">(</span><span class="n">lvl</span><span class="p">,</span> <span class="s1">&#39;nnzs&#39;</span><span class="p">,</span> <span class="n">delta</span><span class="o">.</span><span class="n">nnz</span><span class="p">)</span>
             <span class="n">v</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_crt_var</span><span class="p">(</span><span class="n">lvl</span><span class="p">,</span> <span class="s1">&#39;n_col&#39;</span><span class="p">,</span> <span class="s1">&#39;i4&#39;</span><span class="p">,</span> <span class="p">(</span><span class="s1">&#39;no_u&#39;</span><span class="p">,))</span>
             <span class="n">v</span><span class="o">.</span><span class="n">info</span> <span class="o">=</span> <span class="s2">&quot;Number of non-zero elements per row&quot;</span>
-            <span class="n">v</span><span class="p">[:]</span> <span class="o">=</span> <span class="n">H</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">ncol</span><span class="p">[:]</span>
+            <span class="n">v</span><span class="p">[:]</span> <span class="o">=</span> <span class="n">delta</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">ncol</span><span class="p">[:]</span>
             <span class="n">v</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_crt_var</span><span class="p">(</span><span class="n">lvl</span><span class="p">,</span> <span class="s1">&#39;list_col&#39;</span><span class="p">,</span> <span class="s1">&#39;i4&#39;</span><span class="p">,</span> <span class="p">(</span><span class="s1">&#39;nnzs&#39;</span><span class="p">,),</span>
-                              <span class="n">chunksizes</span><span class="o">=</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">H</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">col</span><span class="p">),),</span> <span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">_cmp_args</span><span class="p">)</span>
+                              <span class="n">chunksizes</span><span class="o">=</span><span class="p">(</span><span class="n">delta</span><span class="o">.</span><span class="n">nnz</span><span class="p">,),</span> <span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">_cmp_args</span><span class="p">)</span>
             <span class="n">v</span><span class="o">.</span><span class="n">info</span> <span class="o">=</span> <span class="s2">&quot;Supercell column indices in the sparse format&quot;</span>
-            <span class="n">v</span><span class="p">[:]</span> <span class="o">=</span> <span class="n">H</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">col</span><span class="p">[:]</span> <span class="o">+</span> <span class="mi">1</span>  <span class="c1"># correct for fortran indices</span>
+            <span class="n">v</span><span class="p">[:]</span> <span class="o">=</span> <span class="n">delta</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">col</span><span class="p">[:]</span> <span class="o">+</span> <span class="mi">1</span>  <span class="c1"># correct for fortran indices</span>
             <span class="n">v</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_crt_var</span><span class="p">(</span><span class="n">lvl</span><span class="p">,</span> <span class="s1">&#39;isc_off&#39;</span><span class="p">,</span> <span class="s1">&#39;i4&#39;</span><span class="p">,</span> <span class="p">(</span><span class="s1">&#39;n_s&#39;</span><span class="p">,</span> <span class="s1">&#39;xyz&#39;</span><span class="p">))</span>
             <span class="n">v</span><span class="o">.</span><span class="n">info</span> <span class="o">=</span> <span class="s2">&quot;Index of supercell coordinates&quot;</span>
-            <span class="n">v</span><span class="p">[:]</span> <span class="o">=</span> <span class="n">H</span><span class="o">.</span><span class="n">geom</span><span class="o">.</span><span class="n">sc</span><span class="o">.</span><span class="n">sc_off</span><span class="p">[:,</span> <span class="p">:]</span>
+            <span class="n">v</span><span class="p">[:]</span> <span class="o">=</span> <span class="n">delta</span><span class="o">.</span><span class="n">geom</span><span class="o">.</span><span class="n">sc</span><span class="o">.</span><span class="n">sc_off</span><span class="p">[:,</span> <span class="p">:]</span>
 
         <span class="n">warn_E</span> <span class="o">=</span> <span class="kc">True</span>
         <span class="k">if</span> <span class="n">ilvl</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">]:</span>
@@ -2611,33 +2618,30 @@
             <span class="n">csize</span> <span class="o">=</span> <span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="mi">4</span>
 
         <span class="c1"># Number of non-zero elements</span>
-        <span class="n">csize</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">H</span><span class="o">.</span><span class="n">nnz</span>
+        <span class="n">csize</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">delta</span><span class="o">.</span><span class="n">nnz</span>
 
-        <span class="k">if</span> <span class="n">H</span><span class="o">.</span><span class="n">dtype</span><span class="o">.</span><span class="n">kind</span> <span class="o">==</span> <span class="s1">&#39;c&#39;</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">delta</span><span class="o">.</span><span class="n">dtype</span><span class="o">.</span><span class="n">kind</span> <span class="o">==</span> <span class="s1">&#39;c&#39;</span><span class="p">:</span>
             <span class="n">v1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_crt_var</span><span class="p">(</span><span class="n">lvl</span><span class="p">,</span> <span class="s1">&#39;Redelta&#39;</span><span class="p">,</span> <span class="s1">&#39;f8&#39;</span><span class="p">,</span> <span class="n">dim</span><span class="p">,</span>
                                <span class="n">chunksizes</span><span class="o">=</span><span class="n">csize</span><span class="p">,</span>
                                <span class="n">attr</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;info&#39;</span><span class="p">:</span> <span class="s2">&quot;Real part of delta&quot;</span><span class="p">,</span>
                                        <span class="s1">&#39;unit&#39;</span><span class="p">:</span> <span class="s2">&quot;Ry&quot;</span><span class="p">},</span> <span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">_cmp_args</span><span class="p">)</span>
-            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">H</span><span class="o">.</span><span class="n">spin</span><span class="p">)):</span>
-                <span class="n">sl</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">i</span>
-                <span class="n">v1</span><span class="p">[</span><span class="n">sl</span><span class="p">]</span> <span class="o">=</span> <span class="n">H</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">_D</span><span class="p">[:,</span> <span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">real</span> <span class="o">*</span> <span class="n">eV2Ry</span>
-
             <span class="n">v2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_crt_var</span><span class="p">(</span><span class="n">lvl</span><span class="p">,</span> <span class="s1">&#39;Imdelta&#39;</span><span class="p">,</span> <span class="s1">&#39;f8&#39;</span><span class="p">,</span> <span class="n">dim</span><span class="p">,</span>
                                <span class="n">chunksizes</span><span class="o">=</span><span class="n">csize</span><span class="p">,</span>
                                <span class="n">attr</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;info&#39;</span><span class="p">:</span> <span class="s2">&quot;Imaginary part of delta&quot;</span><span class="p">,</span>
                                        <span class="s1">&#39;unit&#39;</span><span class="p">:</span> <span class="s2">&quot;Ry&quot;</span><span class="p">},</span> <span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">_cmp_args</span><span class="p">)</span>
-            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">H</span><span class="o">.</span><span class="n">spin</span><span class="p">)):</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">delta</span><span class="o">.</span><span class="n">spin</span><span class="p">)):</span>
                 <span class="n">sl</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">i</span>
-                <span class="n">v2</span><span class="p">[</span><span class="n">sl</span><span class="p">]</span> <span class="o">=</span> <span class="n">H</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">_D</span><span class="p">[:,</span> <span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">imag</span> <span class="o">*</span> <span class="n">eV2Ry</span>
+                <span class="n">v1</span><span class="p">[</span><span class="n">sl</span><span class="p">]</span> <span class="o">=</span> <span class="n">delta</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">_D</span><span class="p">[:,</span> <span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">real</span> <span class="o">*</span> <span class="n">eV2Ry</span>
+                <span class="n">v2</span><span class="p">[</span><span class="n">sl</span><span class="p">]</span> <span class="o">=</span> <span class="n">delta</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">_D</span><span class="p">[:,</span> <span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">imag</span> <span class="o">*</span> <span class="n">eV2Ry</span>
 
         <span class="k">else</span><span class="p">:</span>
             <span class="n">v</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_crt_var</span><span class="p">(</span><span class="n">lvl</span><span class="p">,</span> <span class="s1">&#39;delta&#39;</span><span class="p">,</span> <span class="s1">&#39;f8&#39;</span><span class="p">,</span> <span class="n">dim</span><span class="p">,</span>
                               <span class="n">chunksizes</span><span class="o">=</span><span class="n">csize</span><span class="p">,</span>
                               <span class="n">attr</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;info&#39;</span><span class="p">:</span> <span class="s2">&quot;delta&quot;</span><span class="p">,</span>
                                       <span class="s1">&#39;unit&#39;</span><span class="p">:</span> <span class="s2">&quot;Ry&quot;</span><span class="p">},</span>  <span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">_cmp_args</span><span class="p">)</span>
-            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">H</span><span class="o">.</span><span class="n">spin</span><span class="p">)):</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">delta</span><span class="o">.</span><span class="n">spin</span><span class="p">)):</span>
                 <span class="n">sl</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">i</span>
-                <span class="n">v</span><span class="p">[</span><span class="n">sl</span><span class="p">]</span> <span class="o">=</span> <span class="n">H</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">_D</span><span class="p">[:,</span> <span class="n">i</span><span class="p">]</span> <span class="o">*</span> <span class="n">eV2Ry</span></div>
+                <span class="n">v</span><span class="p">[</span><span class="n">sl</span><span class="p">]</span> <span class="o">=</span> <span class="n">delta</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">_D</span><span class="p">[:,</span> <span class="n">i</span><span class="p">]</span> <span class="o">*</span> <span class="n">eV2Ry</span></div>
 
     <span class="k">def</span> <span class="nf">_read_class</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="bp">cls</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Reads a class model from a file &quot;&quot;&quot;</span>
@@ -2680,30 +2684,36 @@
             <span class="n">is_complex</span> <span class="o">=</span> <span class="kc">False</span>
             <span class="n">dtype</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span>
 
-        <span class="c1"># Now create the tight-binding stuff (we re-create the</span>
-        <span class="c1"># array, hence just allocate the smallest amount possible)</span>
-        <span class="n">C</span> <span class="o">=</span> <span class="bp">cls</span><span class="p">(</span><span class="n">geom</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">nnzpr</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">,</span> <span class="n">orthogonal</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="c1"># Get number of spins</span>
+        <span class="n">nspin</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dimensions</span><span class="p">[</span><span class="s1">&#39;spin&#39;</span><span class="p">])</span>
 
-        <span class="n">C</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">ncol</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">lvl</span><span class="o">.</span><span class="n">variables</span><span class="p">[</span><span class="s1">&#39;n_col&#39;</span><span class="p">][:],</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
+        <span class="c1"># Now create the sparse matrix stuff (we re-create the</span>
+        <span class="c1"># array, hence just allocate the smallest amount possible)</span>
+        <span class="n">C</span> <span class="o">=</span> <span class="bp">cls</span><span class="p">(</span><span class="n">geom</span><span class="p">,</span> <span class="n">nspin</span><span class="p">,</span> <span class="n">nnzpr</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">,</span> <span class="n">orthogonal</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+        <span class="n">C</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">ncol</span> <span class="o">=</span> <span class="n">ns_</span><span class="o">.</span><span class="n">arrayi</span><span class="p">(</span><span class="n">lvl</span><span class="o">.</span><span class="n">variables</span><span class="p">[</span><span class="s1">&#39;n_col&#39;</span><span class="p">][:])</span>
         <span class="c1"># Update maximum number of connections (in case future stuff happens)</span>
-        <span class="n">C</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">ptr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">cumsum</span><span class="p">(</span><span class="n">C</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">ncol</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">),</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
-        <span class="n">C</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">col</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">lvl</span><span class="o">.</span><span class="n">variables</span><span class="p">[</span><span class="s1">&#39;list_col&#39;</span><span class="p">][:],</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span>
+        <span class="n">C</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">ptr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="n">ns_</span><span class="o">.</span><span class="n">cumsumi</span><span class="p">(</span><span class="n">C</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">ncol</span><span class="p">),</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">C</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">col</span> <span class="o">=</span> <span class="n">ns_</span><span class="o">.</span><span class="n">arrayi</span><span class="p">(</span><span class="n">lvl</span><span class="o">.</span><span class="n">variables</span><span class="p">[</span><span class="s1">&#39;list_col&#39;</span><span class="p">][:])</span> <span class="o">-</span> <span class="mi">1</span>
 
         <span class="c1"># Copy information over</span>
         <span class="n">C</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">_nnz</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">C</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">col</span><span class="p">)</span>
-        <span class="n">C</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">_D</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">([</span><span class="n">C</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">ptr</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="mi">1</span><span class="p">],</span> <span class="n">dtype</span><span class="p">)</span>
+        <span class="n">C</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">_D</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">([</span><span class="n">C</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">ptr</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">nspin</span><span class="p">],</span> <span class="n">dtype</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">is_complex</span><span class="p">:</span>
-            <span class="n">C</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">_D</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">real</span> <span class="o">=</span> <span class="n">lvl</span><span class="o">.</span><span class="n">variables</span><span class="p">[</span><span class="s1">&#39;Redelta&#39;</span><span class="p">][</span><span class="n">sl</span><span class="p">]</span> <span class="o">*</span> <span class="n">Ry2eV</span>
-            <span class="n">C</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">_D</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">imag</span> <span class="o">=</span> <span class="n">lvl</span><span class="o">.</span><span class="n">variables</span><span class="p">[</span><span class="s1">&#39;Imdelta&#39;</span><span class="p">][</span><span class="n">sl</span><span class="p">]</span> <span class="o">*</span> <span class="n">Ry2eV</span>
+            <span class="k">for</span> <span class="n">ispin</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nspin</span><span class="p">):</span>
+                <span class="n">sl</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">ispin</span>
+                <span class="n">C</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">_D</span><span class="p">[:,</span> <span class="n">ispin</span><span class="p">]</span><span class="o">.</span><span class="n">real</span> <span class="o">=</span> <span class="n">lvl</span><span class="o">.</span><span class="n">variables</span><span class="p">[</span><span class="s1">&#39;Redelta&#39;</span><span class="p">][</span><span class="n">sl</span><span class="p">]</span> <span class="o">*</span> <span class="n">Ry2eV</span>
+                <span class="n">C</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">_D</span><span class="p">[:,</span> <span class="n">ispin</span><span class="p">]</span><span class="o">.</span><span class="n">imag</span> <span class="o">=</span> <span class="n">lvl</span><span class="o">.</span><span class="n">variables</span><span class="p">[</span><span class="s1">&#39;Imdelta&#39;</span><span class="p">][</span><span class="n">sl</span><span class="p">]</span> <span class="o">*</span> <span class="n">Ry2eV</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="n">C</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">_D</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">lvl</span><span class="o">.</span><span class="n">variables</span><span class="p">[</span><span class="s1">&#39;delta&#39;</span><span class="p">][</span><span class="n">sl</span><span class="p">]</span> <span class="o">*</span> <span class="n">Ry2eV</span>
+            <span class="k">for</span> <span class="n">ispin</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nspin</span><span class="p">):</span>
+                <span class="n">sl</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">ispin</span>
+                <span class="n">C</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">_D</span><span class="p">[:,</span> <span class="n">ispin</span><span class="p">]</span> <span class="o">=</span> <span class="n">lvl</span><span class="o">.</span><span class="n">variables</span><span class="p">[</span><span class="s1">&#39;delta&#39;</span><span class="p">][</span><span class="n">sl</span><span class="p">]</span> <span class="o">*</span> <span class="n">Ry2eV</span>
 
         <span class="k">return</span> <span class="n">C</span>
 
-<div class="viewcode-block" id="deltancSileSiesta.read_hamiltonian"><a class="viewcode-back" href="../../../../sisl/sisl.io.siesta.tbtrans.html#sisl.io.deltancSileSiesta.read_hamiltonian">[docs]</a>    <span class="k">def</span> <span class="nf">read_hamiltonian</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot; Reads a Hamiltonian model from the file &quot;&quot;&quot;</span>
-
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_read_class</span><span class="p">(</span><span class="n">Hamiltonian</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div></div>
+<div class="viewcode-block" id="deltancSileSiesta.read_delta"><a class="viewcode-back" href="../../../../sisl/sisl.io.siesta.tbtrans.html#sisl.io.deltancSileSiesta.read_delta">[docs]</a>    <span class="k">def</span> <span class="nf">read_delta</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Reads a delta model from the file &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_read_class</span><span class="p">(</span><span class="n">SparseOrbitalBZSpin</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div></div>
 
 <span class="n">add_sile</span><span class="p">(</span><span class="s1">&#39;delta.nc&#39;</span><span class="p">,</span> <span class="n">deltancSileSiesta</span><span class="p">)</span>
 
@@ -2886,10 +2896,10 @@
         <span class="c1"># array, hence just allocate the smallest amount possible)</span>
         <span class="n">C</span> <span class="o">=</span> <span class="bp">cls</span><span class="p">(</span><span class="n">geom</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">nnzpr</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">,</span> <span class="n">orthogonal</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
-        <span class="n">C</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">ncol</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">lvl</span><span class="o">.</span><span class="n">variables</span><span class="p">[</span><span class="s1">&#39;n_col&#39;</span><span class="p">][:],</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
+        <span class="n">C</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">ncol</span> <span class="o">=</span> <span class="n">ns_</span><span class="o">.</span><span class="n">arrayi</span><span class="p">(</span><span class="n">lvl</span><span class="o">.</span><span class="n">variables</span><span class="p">[</span><span class="s1">&#39;n_col&#39;</span><span class="p">][:])</span>
         <span class="c1"># Update maximum number of connections (in case future stuff happens)</span>
-        <span class="n">C</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">ptr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">cumsum</span><span class="p">(</span><span class="n">C</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">ncol</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">),</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
-        <span class="n">C</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">col</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">lvl</span><span class="o">.</span><span class="n">variables</span><span class="p">[</span><span class="s1">&#39;list_col&#39;</span><span class="p">][:],</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span>
+        <span class="n">C</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">ptr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="n">ns_</span><span class="o">.</span><span class="n">cumsumi</span><span class="p">(</span><span class="n">C</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">ncol</span><span class="p">),</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">C</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">col</span> <span class="o">=</span> <span class="n">ns_</span><span class="o">.</span><span class="n">arrayi</span><span class="p">(</span><span class="n">lvl</span><span class="o">.</span><span class="n">variables</span><span class="p">[</span><span class="s1">&#39;list_col&#39;</span><span class="p">][:])</span> <span class="o">-</span> <span class="mi">1</span>
 
         <span class="c1"># Copy information over</span>
         <span class="n">C</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">_nnz</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">C</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">col</span><span class="p">)</span>
@@ -2939,7 +2949,7 @@
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'../../../../',
-            VERSION:'0.8.5-178',
+            VERSION:'0.8.5-213',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true,
