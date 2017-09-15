@@ -8,11 +8,12 @@ from __future__ import print_function, division
 
 import warnings
 
+import functools as ftool
 import numpy as np
 
 import sisl._numpy_scipy as ns_
 from ._help import get_dtype, ensure_array
-from ._help import _zip as zip, _range as range
+from ._help import _zip as zip, _range as range, _map as map
 from .utils.ranges import array_arange
 from .sparse import SparseCSR
 
@@ -45,6 +46,10 @@ class SparseGeometry(object):
     def _size(self):
         """ The size of the sparse object """
         return self.geom.na
+
+    def __len__(self):
+        """ Number of rows in the basis """
+        return self._size
 
     def _cls_kwargs(self):
         """ Custom keyword arguments when creating a new instance """
@@ -90,9 +95,9 @@ class SparseGeometry(object):
         # Denote that one *must* specify all details of the elements
         self._def_dim = -1
 
-    def empty(self, keep=False):
+    def empty(self, keep_nnz=False):
         """ See `SparseCSR.empty` for details """
-        self._csr.empty(keep)
+        self._csr.empty(keep_nnz)
 
     def copy(self, dtype=None):
         """ A copy of this object
@@ -140,6 +145,128 @@ class SparseGeometry(object):
     def nnz(self):
         """ Number of non-zero elements """
         return self._csr.nnz
+
+    def edges(self, atom, exclude=None):
+        """ Retrieve edges (connections) of a given `atom` or list of `atom`'s
+
+        The returned edges are unique and sorted (see ``numpy.unique``) and are returned
+        in supercell indices (i.e. ``0 <= edge < self.geom.na_s``).
+
+        Parameters
+        ----------
+        atom : int or list of int
+            the edges are returned only for the given atom
+        exclude : int or list of int, optional
+           remove edges which are in the `exclude` list.
+           Default to `atom`.
+
+        See Also
+        --------
+        SparseCSR.edges: the underlying routine used for extracting the edges
+        """
+        return self._csr.edges(atom, exclude)
+
+    def rij(self, what=None, dtype=np.float64, uniq=None):
+        r""" Create a sparse matrix with the distances between atoms/orbitals
+
+        Parameters
+        ----------
+        what : {None, 'atom', 'orbital'}
+            which kind of sparse distance matrix to return, either an atomic distance matrix
+            or an orbital distance matrix. The orbital matrix is equivalent to the atomic
+            one with the same distance repeated for the same atomic orbitals.
+            The default is the same type as the parent class.
+        dtype : numpy.dtype, optional
+            the data-type of the sparse matrix.
+        uniq : bool, optional
+            if true only a sparse matrix with unique distances are returned. Else,
+            duplicates may exist if the parent object has duplicates. The default
+            depends on what the calling object is and the value of `what`.
+            There are two cases:
+              - defaults to ``False`` for
+                ``isinstance(self, SparseAtom) and what == 'atom'``, or
+                ``isinstance(self, SparseOrbital) and what == 'orbital'``.
+              - defaults to ``True`` for
+                ``isinstance(self, SparseAtom) and what != 'atom'``, or
+                ``isinstance(self, SparseOrbital) and what != 'orbital'``.
+
+        Notes
+        -----
+        The returned sparse matrix with distances are taken from the current sparse pattern.
+        I.e. a subsequent addition of sparse elements will make them inequivalent.
+        It is thus important to *only* create the sparse distance matrix when the sparse
+        structure is completed.
+        """
+        geom = self.geom
+
+        # Define default of what
+        if what is None:
+            uniq = True
+            if isinstance(self, SparseOrbital):
+                what = 'orbital'
+            else:
+                what = 'atom'
+
+        # Conversion before doing rij on geometry
+        # We default to expect atoms
+        dconv = lambda val: val
+        conv = lambda val: val
+        col_conv = lambda val: val
+
+        if what == 'atom':
+            cls = SparseAtom
+            if isinstance(self, SparseOrbital):
+                conv = self.geom.o2a
+                col_conv = np.unique
+            elif isinstance(self, SparseAtom):
+                if uniq:
+                    # in principle not neccessary as SparseCSR will
+                    # never have duplicates
+                    col_conv = np.unique
+                dconv = geom.o2a
+            else:
+                raise ValueError(self.__class__.__name__ + ' is not a SparseAtom/Orbital and can thus not be converted to rij')
+        elif what in ['orbital', 'orb']:
+            cls = SparseOrbital
+            if isinstance(self, SparseOrbital):
+                if uniq:
+                    # in principle not neccessary as SparseCSR will
+                    # never have duplicates
+                    col_conv = np.unique
+                dconv = geom.o2a
+            elif isinstance(self, SparseAtom):
+                conv = ftool.partial(self.geom.a2o, all=True)
+                col_conv = np.unique
+            else:
+                raise ValueError(self.__class__.__name__ + ' is not a SparseAtom/Orbital and can thus not be converted to rij')
+        else:
+            raise ValueError(self.__class__.__name__ + '.rij what= must be "atom", "orbital" or "orb".')
+
+        ncol = self._csr.ncol.view()
+        if self.finalized:
+            ptr = self._csr.ptr.view()
+            col = conv(self._csr.col)
+        else:
+            ptr = self._csr.ptr.view()
+            idx = array_arange(ptr[:-1], n=ncol)
+            col = conv(np.take(self._csr.col, idx))
+            del ptr, idx
+            ptr = np.insert(ns_.cumsumi(ncol), 0, 0)
+
+        # Create the output class
+        rij = cls(geom, 1, dtype, nnzpr=np.amax(ncol))
+
+        orow = ns_.arangei(self.shape[0])
+        nrow = conv(orow)
+
+        for ro, rn in zip(orow, nrow):
+            # Reduce to the unique columns
+            coln = col_conv(col[ptr[ro]:ptr[ro]+ncol[ro]])
+            rij[rn, coln] = geom.rij(dconv(ro), dconv(coln))
+
+        del ptr
+
+        return rij
 
     def __repr__(self):
         """ Representation of the sparse model """
@@ -659,7 +786,7 @@ class SparseAtom(SparseGeometry):
 
     @property
     def _size(self):
-        return self.geometry.na
+        return self.geom.na
 
     def nonzero(self, atom=None, only_col=False):
         """ Indices row and column indices where non-zero elements exists
@@ -754,8 +881,8 @@ class SparseAtom(SparseGeometry):
         new = ns_.arrayi(new)
 
         # Assert that there are only unique values
-        assert len(np.unique(old)) == len(old), "non-unique values in set_nsc"
-        assert len(np.unique(new)) == len(new), "non-unique values in set_nsc"
+        assert len(np.unique(old)) == len(old), "non-unique values in old set_nsc"
+        assert len(np.unique(new)) == len(new), "non-unique values in new set_nsc"
 
         # Remove all elements where old == new
         # I.e. this should prevent us doing unnecessary work
@@ -1096,9 +1223,9 @@ class SparseAtom(SparseGeometry):
         if geom.na == 1:
             D = np.tile(D, (reps, 1))
         else:
-            D = np.vstack([np.tile(d, (reps, 1))
-                           for d in np.split(D, ns_.cumsumi(self._csr.ncol[:-1]), axis=0)
-                       ])
+            ntile = ftool.partial(np.tile, reps=(reps, 1))
+            D = np.vstack(map(ntile, np.split(D, ns_.cumsumi(self._csr.ncol[:-1]), axis=0)))
+
         S._csr = SparseCSR((D, indices, indptr),
                            shape=(geom_n.na, geom_n.na_s))
 
@@ -1146,6 +1273,33 @@ class SparseOrbital(SparseGeometry):
     @property
     def _size(self):
         return self.geom.no
+
+    def edges(self, atom=None, exclude=None, orbital=None):
+        """ Retrieve edges (connections) of a given `atom` or list of `atom`'s
+
+        The returned edges are unique and sorted (see ``numpy.unique``) and are returned
+        in supercell indices (i.e. ``0 <= edge < self.geom.no_s``).
+
+        Parameters
+        ----------
+        atom : int or list of int
+            the edges are returned only for the given atom (but by using  all orbitals of the
+            requested atom). The returned edges are also atoms.
+        exclude : int or list of int, optional
+           remove edges which are in the `exclude` list. 
+           Default to `atom`.
+        orbital : int or list of int
+            the edges are returned only for the given orbital. The returned edges are orbitals.
+
+        See Also
+        --------
+        SparseCSR.edges: the underlying routine used for extracting the edges
+        """
+        if atom is None and orbital is None:
+            raise ValueError(self.__class__.__name__ + '.edges must have either "atom" or "orbital" keyword defined.')
+        if orbital is None:
+            return np.unique(self.geom.o2a(self._csr.edges(self.geom.a2o(atom, True), exclude)))
+        return self._csr.edges(orbital, exclude)
 
     def nonzero(self, atom=None, only_col=False):
         """ Indices row and column indices where non-zero elements exists
@@ -1410,9 +1564,10 @@ class SparseOrbital(SparseGeometry):
         remove : the negative of `sub`, i.e. remove a subset of atoms
         """
         atom = self.sc2uc(atom)
+        orbs = self.a2o(atom, all=True)
         geom = self.geom.sub(atom)
 
-        idx = np.tile(atom, self.n_s)
+        idx = np.tile(orbs, self.n_s)
         # Use broadcasting rules
         idx.shape = (self.n_s, -1)
         tmp = ns_.arangei(self.n_s) * self.no
@@ -1614,9 +1769,8 @@ class SparseOrbital(SparseGeometry):
         if geom.na == 1:
             D = np.tile(D, (reps, 1))
         else:
-            D = np.vstack([np.tile(d, (reps, 1))
-                           for d in np.split(D, ns_.cumsumi(ncol)[geom.lasto[:geom.na-1]], axis=0)
-                       ])
+            ntile = ftool.partial(np.tile, reps=(reps, 1))
+            D = np.vstack(map(ntile, np.split(D, ns_.cumsumi(ncol)[geom.lasto[:geom.na-1]], axis=0)))
         S._csr = SparseCSR((D, indices, indptr),
                            shape=(geom_n.no, geom_n.no_s))
 

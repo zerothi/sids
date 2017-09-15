@@ -161,8 +161,6 @@ class SuperCell(object):
     @sc_off.setter
     def sc_off(self, sc_off):
         """ Set the supercell offset """
-        if len(sc_off) != self.n_s:
-            raise ValueError("Overriding the supercell indices requires the same shape")
         self._sc_off[:, :] = np.array(sc_off, order='C', dtype=np.int32)
         self._update_isc_off()
 
@@ -691,8 +689,8 @@ class SuperCell(object):
             fig_axes.plot(v0[1, 0] + v1[:, 0], v0[1, 1] + v1[:, 1], *args, **kwargs)
             fig_axes.plot(v1[1, 0] + v0[:, 0], v1[1, 1] + v0[:, 1], *args, **kwargs)
 
-        mlibplt.xlabel('Ang')
-        mlibplt.ylabel('Ang')
+        plt.mlibplt.xlabel('Ang')
+        plt.mlibplt.ylabel('Ang')
 
 
 class SuperCellChild(object):

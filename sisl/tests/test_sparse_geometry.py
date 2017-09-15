@@ -28,6 +28,7 @@ class TestSparseAtom(object):
     @pytest.mark.xfail(raises=ValueError)
     def test_fail_align1(self, setup):
         s = SparseAtom(setup.g * 2)
+        print(s)
         setup.s1.align(s)
 
     def test_create1(self, setup):
@@ -36,7 +37,7 @@ class TestSparseAtom(object):
         assert setup.s1[0, 1] == 1
         setup.s1[2, [1, 2, 3]] = 1
         assert setup.s1.nnz == 6
-        setup.s1.empty(keep=True)
+        setup.s1.empty(keep_nnz=True)
         assert setup.s1.nnz == 6
         setup.s1.empty()
         assert setup.s1.nnz == 0
@@ -97,6 +98,35 @@ class TestSparseAtom(object):
         s2 = s2.cut(2, 1)
         assert s1.spsame(s2)
 
+    @pytest.mark.xfail(raises=ValueError)
+    def test_rij1(self, setup):
+        s = SparseAtom(setup.g.copy())
+        s.construct([[0.1, 1.5], [1, 2]])
+        s.rij(what='none')
+
+    def test_rij2(self, setup):
+        s = SparseAtom(setup.g.copy())
+        s.construct([[0.1, 1.5], [1, 2]])
+        atom = s.rij()
+        orb = s.rij('orbital')
+        assert atom.spsame(orb)
+
+    def test_rij3(self, setup):
+        sa = SparseAtom(setup.g.copy())
+        so = SparseOrbital(setup.g.copy())
+        sa.construct([[0.1, 1.5], [1, 2]])
+        so.construct([[0.1, 1.5], [1, 2]])
+        atom = sa.rij()
+        orbital = so.rij()
+        assert atom.spsame(orbital)
+        atom = sa.rij('atom', uniq=True)
+        orbital = so.rij('atom')
+        assert atom.spsame(orbital)
+        # This only works because there is 1 orbital per atom
+        atom = sa.rij('orbital')
+        orbital = so.rij()
+        assert atom.spsame(orbital)
+
     def test_remove1(self, setup):
         for i in range(len(setup.g)):
             setup.s1.construct([[0.1, 1.5], [1, 2]])
@@ -117,6 +147,7 @@ class TestSparseAtom(object):
             s2 = SparseAtom(setup.g.sub(sub))
             s2.construct([[0.1, 1.5], [1, 2]])
             assert s1.spsame(s2)
+            assert len(s2) == len(sub)
 
     def test_tile1(self, setup):
         setup.s1.construct([[0.1, 1.5], [1, 2]])
@@ -202,6 +233,13 @@ class TestSparseAtom(object):
         s.set_nsc([None, 1, 1])
         assert s.nnz == 4
         assert s[0, 0] == 1
+
+    def test_edges1(self, setup):
+        g = graphene(atom=Atom(6, R=1.43))
+        s = SparseAtom(g)
+        s.construct([[0.1, 1.43], [1, 2]])
+        assert len(s.edges(0)) == 3
+        assert len(s.edges(0, exclude=[])) == 4
 
     def test_fromsp1(self, setup):
         g = setup.g.repeat(2, 0).tile(2, 1)

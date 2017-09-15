@@ -19,7 +19,6 @@ from numbers import Integral, Real
 from six import string_types
 from math import acos
 from itertools import product
-from functools import partial
 
 import numpy as np
 
@@ -36,7 +35,7 @@ from .quaternion import Quaternion
 from .supercell import SuperCell, SuperCellChild
 from .atom import Atom, Atoms
 from .shape import Shape, Sphere, Cube
-from .sparse import SparseCSR
+from .sparse_geometry import SparseAtom
 
 __all__ = ['Geometry', 'sgeom']
 
@@ -659,7 +658,7 @@ class Geometry(SuperCellChild):
     def iter_block(self, iR=10, R=None, atom=None, method='rand'):
         """ Iterator for performance critical loops
 
-        NOTE: This requires that R has been set correctly as the maximum interaction range.
+        NOTE: This requires that `R` has been set correctly as the maximum interaction range.
 
         I.e. the loop would look like this:
 
@@ -689,7 +688,7 @@ class Geometry(SuperCellChild):
 
         Returns
         -------
-        Two lists with `[0]` being a list of atoms to be looped and `[1]` being the atoms that
+        Two lists with ``[0]`` being a list of atoms to be looped and ``[1]`` being the atoms that
         need searched.
         """
         method = method.lower()
@@ -717,7 +716,7 @@ class Geometry(SuperCellChild):
                               atom=self.atom.copy(), sc=self.sc.copy())
 
     def optimize_nsc(self, axis=None, R=None):
-        """ Optimize the number of supercell connections based on `self.maxR()`
+        """ Optimize the number of supercell connections based on ``self.maxR()``
 
         After this routine the number of supercells may not necessarily be the same.
 
@@ -2273,7 +2272,7 @@ class Geometry(SuperCellChild):
 
         return array_arange(ob, oe)
 
-    def o2a(self, io):
+    def o2a(self, io, uniq=False):
         """ Atomic index corresponding to the orbital indicies.
 
         This is a particurlaly slow algorithm due to for-loops.
@@ -2284,12 +2283,21 @@ class Geometry(SuperCellChild):
         ----------
         io: array_like
              List of indices to return the atoms for
+        uniq : bool, optional
+             If True only return the unique atoms.
         """
         if isinstance(io, Integral):
+            if uniq:
+                return np.unique(np.argmax(io % self.no <= self.lasto) + (io // self.no) * self.na)
             return np.argmax(io % self.no <= self.lasto) + (io // self.no) * self.na
-        iio = np.asarray(io) % self.no
-        a = np.array([np.argmax(i <= self.lasto) for i in iio], np.int32)
-        return a + (iio // self.no) * self.na
+
+        a = ns_.asarrayi(io) % self.no
+        # Use b-casting rules
+        a.shape = (-1, 1)
+        a = np.argmax(a <= self.lasto, axis=1)
+        if uniq:
+            return np.unique(a + (io // self.no) * self.na)
+        return a + (io // self.no) * self.na
 
     def sc2uc(self, atom, uniq=False):
         """ Returns atom from super-cell indices to unit-cell indices, possibly removing dublicates """
@@ -2389,12 +2397,12 @@ class Geometry(SuperCellChild):
         if isinstance(fig_axes, plt.mlib3d.Axes3D):
             # We should plot in 3D plots
             fig_axes.scatter(xyz[:, 0], xyz[:, 1], xyz[:, 2], s=area, c=colors, alpha=0.8)
-            mlibplt.zlabel('Ang')
+            plt.mlibplt.zlabel('Ang')
         else:
             fig_axes.scatter(xyz[:, axes[0]], xyz[:, axes[1]], s=area, c=colors, alpha=0.8)
 
-        mlibplt.xlabel('Ang')
-        mlibplt.ylabel('Ang')
+        plt.mlibplt.xlabel('Ang')
+        plt.mlibplt.ylabel('Ang')
 
     @classmethod
     def fromASE(cls, aseg):
@@ -2464,7 +2472,7 @@ class Geometry(SuperCellChild):
 
         Returns
         -------
-        SparseCSR
+        SparseAtom
            sparse matrix with all rij elements
 
         See Also
@@ -2472,7 +2480,7 @@ class Geometry(SuperCellChild):
         iter_block : the method for looping the atoms
         distance : create a list of distances
         """
-        rij = SparseCSR((self.na, self.na_s), nnzpr=20, dtype=dtype)
+        rij = SparseAtom(self, nnzpr=20, dtype=dtype)
 
         # Get R
         R = (0.1, self.maxR())
@@ -2743,20 +2751,13 @@ class Geometry(SuperCellChild):
                 if value in ['translate', 'tr', 't']:
                     # Simple translation
                     tmp = np.amin(ns._geometry.xyz, axis=0)
-                    # Find the smallest distance from the first atom
-                    _, d = ns._geometry.close(0, R=(0.1, 20.), ret_rij=True)
-                    d = np.amin(d[1]) / 2
-                    ns._geometry = ns._geometry.translate(-tmp + np.array([d, d, d]))
+                    ns._geometry = ns._geometry.translate(-tmp)
                 elif value in ['mod']:
-                    # Change all coordinates using the reciprocal cell
-                    rcell = ns._geometry.rcell / (2. * np.pi)
-                    idx = np.abs(np.array(np.dot(ns._geometry.xyz, rcell), np.int32))
-                    # change supercell
-                    nsc = np.amax(idx * 2 + 1, axis=0)
-                    ns._geometry.set_nsc(nsc)
-                    # Change the coordinates
-                    for ia in ns._geometry:
-                        ns._geometry.xyz[ia, :] = ns._geometry.axyz(isc=idx[ia, :], atom=ia)
+                    g = ns._geometry
+                    # Change all coordinates using the reciprocal cell and move to unit-cell (% 1.)
+                    fxyz = g.fxyz % 1.
+                    fxyz -= np.amin(fxyz, axis=0)
+                    ns._geometry.xyz[:, :] = np.dot(fxyz, g.cell)
         p.add_argument(*opts('--unit-cell', '-uc'), choices=['translate', 'tr', 't', 'mod'],
                        action=MoveUnitCell,
                        help='Moves the coordinates into the unit-cell by translation or the mod-operator')
@@ -3065,7 +3066,7 @@ lattice vector.
         argv = ['fake.xyz'] + argv
 
     elif isinstance(geom, BaseSile):
-        geom = sile.read_geometry()
+        geom = geom.read_geometry()
         # Store the input file...
         input_file = geom.file
         argv = ['fake.xyz'] + argv

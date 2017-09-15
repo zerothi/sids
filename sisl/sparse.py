@@ -14,12 +14,11 @@ from numpy import empty, zeros, asarray, arange
 from numpy import insert, take, delete, copyto
 from numpy import where, intersect1d, setdiff1d, unique
 from numpy import diff
-from numpy import hstack, argsort, sort
+from numpy import argsort, sort
 try:
     isin = np.isin
 except Exception:
     isin = np.in1d
-
 
 from scipy.sparse import isspmatrix
 from scipy.sparse import isspmatrix_coo
@@ -29,7 +28,7 @@ from scipy.sparse import isspmatrix_lil
 
 import sisl._numpy_scipy as ns_
 from ._help import array_fill_repeat, ensure_array, get_dtype
-from ._help import _range as range, _zip as zip
+from ._help import _range as range, _zip as zip, _map as map
 from .utils.ranges import array_arange
 
 # Although this re-implements the CSR in scipy.sparse.csr_matrix
@@ -281,14 +280,14 @@ class SparseCSR(object):
 
         return D
 
-    def empty(self, keep=False):
+    def empty(self, keep_nnz=False):
         """ Delete all sparse information from the sparsity pattern
 
         Essentially this deletes all entries.
 
         Parameters
         ----------
-        keep: boolean, optional
+        keep_nnz: boolean, optional
            if ``True`` keeps the sparse elements *as is*.
            I.e. it will merely set the stored sparse elements to zero.
            This may be advantagegous when re-constructing a new sparse
@@ -296,7 +295,7 @@ class SparseCSR(object):
         """
         self._D[:, :] = 0.
 
-        if not keep:
+        if not keep_nnz:
             self._finalized = False
             # The user does not wish to retain the
             # sparse pattern
@@ -399,15 +398,11 @@ class SparseCSR(object):
                 if unique(col[ptr1:ptr2]).shape[0] != ptr2 - ptr1:
                     raise ValueError(('You cannot have two elements between the same ' +
                                       'i,j index ({}), something has went terribly wrong.'.format(ptr1)))
-        for r in range(self.shape[0]):
-            # Apparently map, may create stuff on the stack in P3,
-            # hence we require a for-loop
-            func(r)
+        # Since map puts it on the stack, we have to force the evaluation.
+        list(map(func, range(self.shape[0])))
 
-        if len(col) != self.nnz:
-            print(len(col), self.nnz)
-            raise ValueError(('Final size in the sparse matrix finalization '
-                              'went wrong.'))
+        assert len(col) == self.nnz, ('Final size in the sparse matrix finalization '
+                                      'went wrong.')
 
         # Check that all column indices are within the expected shape
         if np.any(self.shape[1] <= self.col):
@@ -417,14 +412,43 @@ class SparseCSR(object):
         # Signal that we indeed have finalized the data
         self._finalized = True
 
-    def delete_columns(self, columns, keep=False):
+    def edges(self, row, exclude=None):
+        """ Retrieve edges (connections) of a given `row` or list of `row`'s
+
+        The returned edges are unique and sorted (see ``numpy.unique``).
+
+        Parameters
+        ----------
+        row : int or list of int
+            the edges are returned only for the given row
+        exclude : int or list of int, optional
+           remove edges which are in the `exclude` list.
+           Default to `row`.
+        """
+        row = np.unique(ensure_array(row))
+        if exclude is None:
+            exclude = row.view()
+        else:
+            exclude = np.unique(ensure_array(exclude))
+
+        # Now get the edges
+        ptr = self.ptr.view()
+        ncol = self.ncol.view()
+
+        # Create column indices
+        edges = np.unique(self.col[array_arange(ptr[row], n=ncol[row])])
+
+        # Return the difference to the exclude region, we know both are unique
+        return np.setdiff1d(edges, exclude, assume_unique=True)
+
+    def delete_columns(self, columns, keep_shape=False):
         """ Delete all columns in `columns`
 
         Parameters
         ----------
         columns : int or array_like
            columns to delete from the sparse pattern
-        keep : bool, optional
+        keep_shape : bool, optional
            whether the ``shape`` of the object should be retained, if ``True`` all higher
            columns will be shifted according to the number of columns deleted below,
            if ``False``, only the elements will be deleted.
@@ -441,14 +465,20 @@ class SparseCSR(object):
         ncol = self.ncol.view()
         col = self.col.view()
 
-        # Indices of deleted columns
-        idx = [ptr[r] + isin(col[ptr[r]:ptr[r]+ncol[r]], columns).nonzero()[0]
-               for r in range(self.shape[0])]
-        lidx = hstack(idx)
+        # Get indices of deleted columns
+        idx = array_arange(ptr[:-1], n=ncol)
+        # Convert to boolean array where we have columns to be deleted
+        lidx = isin(col[idx], columns)
+        # Count number of deleted entries per row
+        ndel = ensure_array(map(np.count_nonzero, np.split(lidx, ns_.cumsumi(ncol[:-1]))))
+        # Backconvert lidx to deleted indices
+        lidx = idx[lidx]
+        del idx
+
         if len(lidx) == 0:
             # Simply update the shape and return
             # We have nothing to delete!
-            if not keep:
+            if not keep_shape:
                 shape = list(self.shape)
                 shape[1] -= n_cols
                 self._shape = tuple(shape)
@@ -466,32 +496,30 @@ class SparseCSR(object):
         # Figure out if it is necessary to update columns
         # This is only necessary when the deleted columns
         # are not the *last* columns
-        update_col = not keep
+        update_col = not keep_shape
         if update_col:
             # Check that we really do have to update
             update_col = np.any(columns < self.shape[1] - n_cols)
 
         # Correct number of elements per column, and the pointers
-        idx = ns_.arrayi([len(r) for r in idx])
-        ncol[:] -= idx
-        ptr[1:] -= ns_.cumsumi(idx)
+        ncol[:] -= ndel
+        ptr[1:] -= ns_.cumsumi(ndel)
 
         if update_col:
             # Create a count array to subtract
             count = ns_.zerosi(self.shape[1])
-            # This is probably not the fastest solution
-            # But it works!
-            for c in columns:
-                count[c:] += 1
+            count[columns] = 1
+            count = ns_.cumsumi(count)
 
+            # Recreate pointers due to deleted indices
             idx = array_arange(ptr[:-1], n=ncol)
             col[idx] -= count[col[idx]]
-        del idx
+            del idx
 
         # Update number of non-zeroes
         self._nnz = np.sum(ncol)
 
-        if not keep:
+        if not keep_shape:
             shape = list(self.shape)
             shape[1] -= n_cols
             self._shape = tuple(shape)
@@ -506,19 +534,23 @@ class SparseCSR(object):
         # Number of columns
         nc = self.shape[1]
 
-        # Only update counts and pointers
-        idx = [None] * self.shape[0]
-        for r in range(self.shape[0]):
-            idx[r] = ptr[r] + (col[ptr[r]:ptr[r]+ncol[r]] >= nc).nonzero()[0]
-            ndel = len(idx[r])
-            ncol[r] -= ndel
-            ptr[r+1:] -= ndel
-
-        # Deleted columns
-        idx = hstack(idx)
-        self.col = delete(self.col, idx)
-        self._D = delete(self._D, idx, axis=0)
+        # Get indices of columns
+        idx = array_arange(ptr[:-1], n=ncol)
+        # Convert to boolean array where we have columns to be deleted
+        lidx = col[idx] >= nc
+        # Count number of deleted entries per row
+        ndel = ensure_array(map(np.count_nonzero, np.split(lidx, ns_.cumsumi(ncol[:-1]))))
+        # Backconvert lidx to deleted indices
+        lidx = idx[lidx]
         del idx
+
+        # Update number of entries per row, and pointers
+        ncol[:] -= ndel
+        ptr[1:] -= ns_.cumsumi(ndel)
+
+        self.col = delete(self.col, lidx)
+        self._D = delete(self._D, lidx, axis=0)
+        del lidx
 
         # Update number of non-zeroes
         self._nnz = np.sum(ncol)
@@ -557,9 +589,8 @@ class SparseCSR(object):
         ptr = self.ptr.view()
         ncol = self.ncol.view()
         col = self.col.view()
-        for r in range(self.shape[0]):
-            sl = slice(ptr[r], ptr[r] + ncol[r])
-            col[sl] = new_col[col[sl]]
+        idx = array_arange(ptr[:-1], n=ncol)
+        col[idx] = new_col[col[idx]]
 
         # After translation, the finalization step *must*
         # be set to false.
@@ -593,12 +624,11 @@ class SparseCSR(object):
         if np.count_nonzero(sncol == oncol) != self.shape[0]:
             return False
 
-        def samesect1d(a, b):
-            return len(intersect1d(a, b)) == len(a)
-
+        llen = len
+        lintersect1d = intersect1d
         for r in range(self.shape[0]):
-            if not samesect1d(scol[sptr[r]:sptr[r]+sncol[r]],
-                              ocol[optr[r]:optr[r]+oncol[r]]):
+            if llen(lintersect1d(scol[sptr[r]:sptr[r]+sncol[r]],
+                                 ocol[optr[r]:optr[r]+oncol[r]])) != sncol[r]:
                 return False
         return True
 
@@ -621,15 +651,21 @@ class SparseCSR(object):
         if self.shape[:2] != other.shape[:2]:
             raise ValueError('Aligning two sparse matrices requires same shapes')
 
+        lsetdiff1d = setdiff1d
+        sptr = self.ptr.view()
+        sncol = self.ncol.view()
+        scol = self.col.view()
+        optr = other.ptr.view()
+        oncol = other.ncol.view()
+        ocol = other.col.view()
         for r in range(self.shape[0]):
-
             # pointers
-            sptr = self.ptr[r]
-            sn = self.ncol[r]
-            optr = other.ptr[r]
-            on = other.ncol[r]
+            sp = sptr[r]
+            sn = sncol[r]
+            op = optr[r]
+            on = oncol[r]
 
-            adds = setdiff1d(other.col[optr:optr+on], self.col[sptr:sptr+sn])
+            adds = lsetdiff1d(ocol[op:op+on], scol[sp:sp+sn])
             if len(adds) > 0:
                 # simply extend the elements
                 self._extend(r, adds)
@@ -995,6 +1031,8 @@ class SparseCSR(object):
         D = self._D.view()
 
         # Get short-hand
+        nsum = np.sum
+        nabs = np.abs
         for i in range(self.shape[0]):
 
             # Create short-hand slice
@@ -1003,7 +1041,7 @@ class SparseCSR(object):
             # Get current column entries for the row
             C = col[sl]
             # Retrieve columns with zero values (summed over all elements)
-            C0 = (np.sum(np.abs(D[sl, :]), axis=1) == 0).nonzero()[0]
+            C0 = (nsum(nabs(D[sl, :]), axis=1) == 0).nonzero()[0]
             if len(C0) == 0:
                 continue
             # Remove all entries with 0 values
@@ -1121,6 +1159,8 @@ class SparseCSR(object):
         # Create the new SparseCSR
         # We use nnzpr = 1 because we will overwrite all quantities afterwards.
         csr = self.__class__((len(ridx), nc, self.shape[2]), dtype=self.dtype, nnz=1)
+        # Limit memory
+        csr._D = np.empty([1])
 
         # Get views
         ptr1 = csr.ptr.view()
@@ -1131,37 +1171,44 @@ class SparseCSR(object):
         # Place directly where it should be (i.e. re-use space)
         take(self.ncol, ridx, out=ncol1)
 
+        # Create a 2D array to contain
+        #   [0, :] the column indices to keep
+        #   [1, :] the new column data
+        # We do this because we can then use take on this array
+        # and not two arrays.
+        col_data = ns_.emptyi([2, ncol1.sum()])
+        # Create views to limit the memory
+        col_idx = col_data[0, :].view()
+        col1 = col_data[1, :].view()
+
         # Create a list of ndarrays with indices of elements per row
         # and transfer to a linear index
-        col_idx = array_arange(ptr1[1:], n=ncol1)
+        col_data[0, :] = array_arange(ptr1[1:], n=ncol1)
 
         # Reduce the column indices (note this also ensures that
         # it will work on non-finalized sparse matrices)
-        col1 = pvt[take(self.col, col_idx)]
+        col_data[1, :] = pvt[take(self.col, col_data[0, :])]
 
         # Count the number of items that are left in the sparse pattern
         # First recreate the new (temporary) pointer
         ptr1[0] = 0
         # Place it directly where it should be
         ns_.cumsumi(ncol1, out=ptr1[1:])
-        cnnz = np.count_nonzero
-        # Note ncol1 is a view of csr.ncol
-        ncol1[:] = ensure_array([cnnz(col1[ptr1[r]:ptr1[r+1]] >= 0)
-                                 for r in range(len(ptr1) - 1)])
 
-        # Now we should figure out how to remove those entries
-        # that are from the old structure
-        # Because this is `sub`, it probably means that
-        # we are dealing with a relatively small number of
-        # indices compared to the original one. Hence,
-        # we use the take function here.
-        idx_take = (col1 >= 0).nonzero()[0]
+        # Count number of entries
+        idx_take = col_data[1, :] >= 0
+        ncol1[:] = ensure_array(map(np.count_nonzero,
+                                    np.split(idx_take, ptr1[1:-1])))
 
-        # Decrease col1 and also extract the data
-        csr.col = take(col1, idx_take)
-        del col1
-        csr._D = take(self._D[col_idx, :], idx_take, 0)
-        del col_idx, idx_take
+        # Convert to indices
+        idx_take = idx_take.nonzero()[0]
+
+        # Decrease column data and also extract the data
+        col_data = take(col_data, idx_take, axis=1)
+        del idx_take
+        csr._D = take(self._D, col_data[0, :], axis=0)
+        csr.col = col_data[1, :].copy()
+        del col_data
 
         # Set the data for the new sparse csr
         csr.ptr[0] = 0

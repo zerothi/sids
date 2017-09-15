@@ -149,7 +149,7 @@ class TestSparseCSR(object):
         assert setup.s1d.nnz == 3
         setup.s1d[2, [1, 2, 3]] = 1
         assert setup.s1d.nnz == 6
-        setup.s1d.empty(keep=True)
+        setup.s1d.empty(keep_nnz=True)
         assert setup.s1d.nnz == 6
         setup.s1d.empty()
         assert setup.s1d.nnz == 0
@@ -194,7 +194,7 @@ class TestSparseCSR(object):
         # of the pointers and ncol
         assert np.allclose(setup.s1.col[p[1]:p[1]+n[1]], [1, 2, 3])
         assert setup.s1.finalized
-        setup.s1.empty(keep=True)
+        setup.s1.empty(keep_nnz=True)
         assert setup.s1.finalized
         setup.s1.empty()
         assert not setup.s1.finalized
@@ -347,6 +347,10 @@ class TestSparseCSR(object):
         s1.delete_columns(2, True)
         assert s1.nnz == 1
         assert s1.shape[1] == nc - 1
+        # Delete a non-existing column
+        s1.delete_columns(100000, True)
+        assert s1.nnz == 1
+        assert s1.shape[1] == nc - 1
 
     def test_delete_col2(self, setup):
         s1 = setup.s1.copy()
@@ -370,7 +374,7 @@ class TestSparseCSR(object):
         s1.finalize()
         s2.finalize()
         assert s1.nnz == 10*3
-        s1.delete_columns([3, 1], keep=True)
+        s1.delete_columns([3, 1], keep_shape=True)
         assert s1.ptr[-1] == s1.nnz
         assert s2.ptr[-1] == s2.nnz
         assert s1.nnz == 10 * 1
@@ -402,6 +406,27 @@ class TestSparseCSR(object):
         assert s1.nnz == 3
         assert s1[1, 1] == 3
         assert s1[1, 3] == 1
+
+    def test_translate_col2(self, setup):
+        s1 = setup.s1.copy()
+        s1[1, 1] = 1
+        s1[1, 2] = 2
+        s1[1, 3] = 3
+        assert s1.nnz == 3
+        s1.translate_columns([1, 3], [3, s1.shape[1] + 100])
+        assert s1.nnz == 2
+        assert s1[1, 3] == 1
+        assert s1[1, 1] == 0
+
+    def test_edges1(self, setup):
+        s1 = setup.s1.copy()
+        s1[1, 1] = 1
+        s1[1, 2] = 2
+        s1[1, 3] = 3
+        assert np.all(s1.edges(1, exclude=[]) == [1, 2, 3])
+        assert np.all(s1.edges(1) == [2, 3])
+        assert np.all(s1.edges(1, exclude=2) == [1, 3])
+        assert len(s1.edges(2)) == 0
 
     def test_nonzero1(self, setup):
         s1 = setup.s1.copy()

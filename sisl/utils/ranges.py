@@ -4,12 +4,13 @@ Basic functionality of creating ranges from text-input and/or other types of inf
 from __future__ import print_function, division
 
 import re
+from functools import partial
 from itertools import groupby
 
 import numpy as np
-from numpy import arange, hstack, empty, sum
+from numpy import zeros, ones, cumsum, take
 
-from sisl._help import _zip as zip
+from sisl._help import _map as map
 
 __all__ = ['strmap', 'strseq', 'lstranges', 'erange', 'list2range', 'fileindex']
 __all__ += ['array_arange']
@@ -256,23 +257,38 @@ def array_arange(start, end=None, n=None, dtype=np.int32):
     >>> array_arange([1, 6], n=[2, 2])
     [1, 2, 6, 7]
     """
+    _z = partial(zeros, dtype=dtype)
+    _o = partial(ones, dtype=dtype)
+    _c = partial(cumsum, dtype=dtype)
 
-    # Tests show that the below code is faster for large
-    # array_arange calls.
-    # I.e. pre-allocation is faster than hstack
-    j = 0
+    # Tests show that the below code is faster than
+    # implicit for-loops, or list-comprehensions
+    # concatenate(map(..)
+    # This below is much faster and does not require _any_
+    # loops
     if n is None:
-        size = sum(end - start, dtype=dtype)
-        array = empty([size], dtype=dtype)
-        for s, e in zip(start, end):
-            N = e - s
-            array[j:j+N] = arange(s, e, dtype=dtype)
-            j += N
-    else:
-        # Count and pre-allocate, this should reduce the memory overhead
-        size = sum(n, dtype=dtype)
-        array = empty([size], dtype=dtype)
-        for s, N in zip(start, n):
-            array[j:j+N] = arange(s, s + N, dtype=dtype)
-            j += N
-    return array
+        # We really do need n to speed things up
+        n = end - start
+    # The below algorithm only works for non-zero n
+    idx = n.nonzero()[0]
+
+    # Grab corner case
+    if len(idx) == 0:
+        return _z(0)
+
+    # Reduce size
+    start = take(start, idx)
+    n = take(n, idx)
+
+    # Create array
+    a = _o(n.sum())
+
+    # set pointers such that we can
+    # correct for final cumsum
+    ptr = _c(n[:-1])
+    a[0] = start[0]
+    a[ptr] = start[1:]
+    # Correct for previous values
+    a[ptr] -= start[:-1] + n[:-1] - 1
+
+    return _c(a)
