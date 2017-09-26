@@ -1,9 +1,3 @@
-"""
-A generic sparse matrix which is based on a hosting `Geometry`.
-
-The sparse matrix can in this case represent _any_ data and should be
-sub-classed for specific uses.
-"""
 from __future__ import print_function, division
 
 import warnings
@@ -17,10 +11,10 @@ from ._help import _zip as zip, _range as range, _map as map
 from .utils.ranges import array_arange
 from .sparse import SparseCSR
 
-__all__ = ['SparseGeometry', 'SparseAtom', 'SparseOrbital']
+__all__ = ['SparseAtom', 'SparseOrbital']
 
 
-class SparseGeometry(object):
+class _SparseGeometry(object):
     """ Sparse object containing sparse elements for a given geometry.
 
     This is a base class intended to be sub-classed because the sparsity information
@@ -149,7 +143,7 @@ class SparseGeometry(object):
     def edges(self, atom, exclude=None):
         """ Retrieve edges (connections) of a given `atom` or list of `atom`'s
 
-        The returned edges are unique and sorted (see ``numpy.unique``) and are returned
+        The returned edges are unique and sorted (see `numpy.unique`) and are returned
         in supercell indices (i.e. ``0 <= edge < self.geom.na_s``).
 
         Parameters
@@ -183,10 +177,11 @@ class SparseGeometry(object):
             duplicates may exist if the parent object has duplicates. The default
             depends on what the calling object is and the value of `what`.
             There are two cases:
-              - defaults to ``False`` for
+
+             - defaults to ``False`` for
                 ``isinstance(self, SparseAtom) and what == 'atom'``, or
                 ``isinstance(self, SparseOrbital) and what == 'orbital'``.
-              - defaults to ``True`` for
+             - defaults to ``True`` for
                 ``isinstance(self, SparseAtom) and what != 'atom'``, or
                 ``isinstance(self, SparseOrbital) and what != 'orbital'``.
 
@@ -287,33 +282,93 @@ class SparseGeometry(object):
         """ Delete elements of the sparse elements """
         del self._csr[key]
 
-    def __getitem__(self, key):
-        """ Elements for the index(s) """
-        dd = self._def_dim
-        if dd >= 0:
-            key = tuple(key) + (dd,)
-            self._def_dim = -1
-        d = self._csr[key]
-        return d
-
-    def __setitem__(self, key, val):
-        """ Set or create elements in the sparse data
-
-        Override set item for slicing operations and enables easy
-        setting of parameters in a sparse matrix
-        """
-        dd = self._def_dim
-        if dd >= 0:
-            key = tuple(key) + (dd,)
-            self._def_dim = -1
-        self._csr[key] = val
-
     def __contains__(self, key):
         """ Check whether a sparse index is non-zero """
         return key in self._csr
 
-    def align(self, other):
-        """ See ``SparseCSR.align`` for details """
+    def set_nsc(self, size, *args, **kwargs):
+        """ Reset the number of allowed supercells in the sparse geometry
+
+        If one reduces the number of supercells, *any* sparse element
+        that references the supercell will be deleted.
+
+        See `SuperCell.set_nsc` for allowed parameters.
+
+        See Also
+        --------
+        SuperCell.set_nsc : the underlying called method
+        """
+        sc = self.sc.copy()
+        # Try first in the new one, then we figure out what to do
+        sc.set_nsc(*args, **kwargs)
+        if np.all(sc.nsc == self.sc.nsc):
+            return
+
+        # Create an array of all things that should be translated
+        old = []
+        new = []
+        deleted = np.empty(self.n_s, np.bool_)
+        deleted[:] = True
+        for i, sc_off in sc:
+            try:
+                # Luckily there are *only* one time wrap-arounds
+                j = self.sc.sc_index(sc_off)
+                # Now do translation
+                old.append(j)
+                new.append(i)
+                deleted[j] = False
+            except:
+                # Not found, i.e. new, so no need to translate
+                pass
+
+        assert len(old) in [self.n_s, sc.n_s], "Not all supercells are accounted for"
+
+        # 1. Ensure that any one of the *old* supercells that
+        #    are now deleted are put in the end
+        for i, j in enumerate(deleted.nonzero()[0]):
+            # Old index (j)
+            old.append(j)
+            # Move to the end (*HAS* to be higher than the number of
+            # cells in the new supercell structure)
+            new.append(sc.n_s + i)
+
+        old = ns_.arrayi(old)
+        new = ns_.arrayi(new)
+
+        # Assert that there are only unique values
+        assert len(np.unique(old)) == len(old), "non-unique values in old set_nsc"
+        assert len(np.unique(new)) == len(new), "non-unique values in new set_nsc"
+        assert self.n_s == len(old), "non-valid size of in old set_nsc"
+
+        # Figure out if we need to do any work
+        keep = (old != new).nonzero()[0]
+        if len(keep) > 0:
+            # Reduce pivoting work
+            old = old[keep]
+            new = new[keep]
+
+            # Create the translation tables
+            n = np.tile([size], len(old))
+
+            old = array_arange(old * size, n=n)
+            new = array_arange(new * size, n=n)
+
+            # Move data to new positions
+            self._csr.translate_columns(old, new)
+
+            max_n = new.max() + 1
+        else:
+            max_n = 0
+
+        # Make sure we delete all column values where we have put fake values
+        delete = ns_.arangei(sc.n_s * size, max(max_n, self.shape[1]))
+        if len(delete) > 0:
+            self._csr.delete_columns(delete)
+
+        self.geom.set_nsc(*args, **kwargs)
+
+    def spalign(self, other):
+        """ See `SparseCSR.align` for details """
         if isinstance(other, SparseCSR):
             self._csr.align(other)
         else:
@@ -574,15 +629,6 @@ class SparseGeometry(object):
             raise NotImplementedError("Requesting sub-sparse has not been implemented yet")
         return self._csr.tocsr(index, **kwargs)
 
-    def spalign(self, other):
-        """ Aligns two sparse objects and by extending `self` with the elements in `other` which are not in `self`
-
-        See Also
-        --------
-        SparseCSR.spalign : the resulting function called
-        """
-        return self._csr.spalign(other._csr)
-
     def spsame(self, other):
         """ Compare two sparse objects and check whether they have the same entries.
 
@@ -645,7 +691,7 @@ class SparseGeometry(object):
     __radd__ = __add__
 
     def __iadd__(a, b):
-        if isinstance(b, SparseGeometry):
+        if isinstance(b, _SparseGeometry):
             a._csr += b._csr
         else:
             a._csr += b
@@ -657,7 +703,7 @@ class SparseGeometry(object):
         return c
 
     def __rsub__(a, b):
-        if isinstance(b, SparseGeometry):
+        if isinstance(b, _SparseGeometry):
             c = b.copy(dtype=get_dtype(a, other=b.dtype))
             c._csr += -1 * a._csr
         else:
@@ -665,7 +711,7 @@ class SparseGeometry(object):
         return c
 
     def __isub__(a, b):
-        if isinstance(b, SparseGeometry):
+        if isinstance(b, _SparseGeometry):
             a._csr -= b._csr
         else:
             a._csr -= b
@@ -678,7 +724,7 @@ class SparseGeometry(object):
     __rmul__ = __mul__
 
     def __imul__(a, b):
-        if isinstance(b, SparseGeometry):
+        if isinstance(b, _SparseGeometry):
             a._csr *= b._csr
         else:
             a._csr *= b
@@ -695,34 +741,34 @@ class SparseGeometry(object):
         return c
 
     def __idiv__(a, b):
-        if isinstance(b, SparseGeometry):
+        if isinstance(b, _SparseGeometry):
             a._csr /= b._csr
         else:
             a._csr /= b
         return a
 
     def __floordiv__(a, b):
-        if isinstance(b, SparseGeometry):
+        if isinstance(b, _SparseGeometry):
             raise NotImplementedError
         c = a.copy(dtype=get_dtype(b, other=a.dtype))
         c //= b
         return c
 
     def __ifloordiv__(a, b):
-        if isinstance(b, SparseGeometry):
+        if isinstance(b, _SparseGeometry):
             raise NotImplementedError
         a._csr //= b
         return a
 
     def __truediv__(a, b):
-        if isinstance(b, SparseGeometry):
+        if isinstance(b, _SparseGeometry):
             raise NotImplementedError
         c = a.copy(dtype=get_dtype(b, other=a.dtype))
         c /= b
         return c
 
     def __itruediv__(a, b):
-        if isinstance(b, SparseGeometry):
+        if isinstance(b, _SparseGeometry):
             raise NotImplementedError
         a._csr /= b
         return a
@@ -738,16 +784,15 @@ class SparseGeometry(object):
         return c
 
     def __ipow__(a, b):
-        if isinstance(b, SparseGeometry):
+        if isinstance(b, _SparseGeometry):
             a._csr **= b._csr
         else:
             a._csr **= b
         return a
 
 
-class SparseAtom(SparseGeometry):
-    """ Sparse object with number of rows equal to the total number of atoms in the `Geometry`
-    """
+class SparseAtom(_SparseGeometry):
+    """ Sparse object with number of rows equal to the total number of atoms in the `Geometry` """
 
     def __getitem__(self, key):
         """ Elements for the index(s) """
@@ -839,71 +884,7 @@ class SparseAtom(SparseGeometry):
         --------
         SuperCell.set_nsc : the underlying called method
         """
-        sc = self.sc.copy()
-        # Try first in the new one, then we figure out what to do
-        sc.set_nsc(*args, **kwargs)
-        if np.all(sc.nsc == self.sc.nsc):
-            return
-
-        # Create an array of all things that should be translated
-        old = []
-        new = []
-        deleted = np.empty(self.n_s, np.bool_)
-        deleted[:] = True
-        for i, sc_off in sc:
-            try:
-                # Luckily there are *only* one time wrap-arounds
-                j = self.sc.sc_index(sc_off)
-                # Now do translation
-                old.append(j)
-                new.append(i)
-                deleted[j] = False
-            except:
-                # Not found, i.e. new, so no need to translate
-                pass
-
-        assert len(old) == self.n_s or len(old) == sc.n_s, \
-            "Not all supercells are accounted for"
-
-        # Maximum column translated too
-        max_n = max(sc.n_s, self.sc.n_s)
-        # 1. Ensure that any one of the *old* supercells that
-        #    are now deleted are put in the end
-        for i, j in enumerate(deleted.nonzero()[0]):
-            # Old index (j)
-            old.append(j)
-            # Move to the end (*HAS* to be higher than the number of
-            # cells in the new supercell structure)
-            new.append(sc.n_s + i)
-            max_n = sc.n_s + i
-
-        old = ns_.arrayi(old)
-        new = ns_.arrayi(new)
-
-        # Assert that there are only unique values
-        assert len(np.unique(old)) == len(old), "non-unique values in old set_nsc"
-        assert len(np.unique(new)) == len(new), "non-unique values in new set_nsc"
-
-        # Remove all elements where old == new
-        # I.e. this should prevent us doing unnecessary work
-        keep = (old != new).nonzero()[0]
-        old = old[keep]
-        new = new[keep]
-
-        if len(old) > 0:
-            # Create the translation tables
-            old = array_arange(old * self.na, (old+1) * self.na)
-            new = array_arange(new * self.na, (new+1) * self.na)
-
-            # Move data to new positions
-            self._csr.translate_columns(old, new)
-
-        # Create array of deleted values
-        max_n = max(max_n, self.sc.n_s)
-        delete = ns_.arangei(sc.n_s * self.na, (max_n + 1) * self.na)
-        self._csr.delete_columns(delete)
-
-        self.geom.set_nsc(*args, **kwargs)
+        super(SparseAtom, self).set_nsc(self.na, *args, **kwargs)
 
     def cut(self, seps, axis, *args, **kwargs):
         """ Cuts the sparse atom model into different parts.
@@ -1232,7 +1213,7 @@ class SparseAtom(SparseGeometry):
         return S
 
 
-class SparseOrbital(SparseGeometry):
+class SparseOrbital(_SparseGeometry):
     """ Sparse object with number of rows equal to the total number of orbitals in the `Geometry` """
 
     def __getitem__(self, key):
@@ -1277,7 +1258,7 @@ class SparseOrbital(SparseGeometry):
     def edges(self, atom=None, exclude=None, orbital=None):
         """ Retrieve edges (connections) of a given `atom` or list of `atom`'s
 
-        The returned edges are unique and sorted (see ``numpy.unique``) and are returned
+        The returned edges are unique and sorted (see `numpy.unique`) and are returned
         in supercell indices (i.e. ``0 <= edge < self.geom.no_s``).
 
         Parameters
@@ -1363,71 +1344,7 @@ class SparseOrbital(SparseGeometry):
         --------
         SuperCell.set_nsc : the underlying called method
         """
-        sc = self.sc.copy()
-        # Try first in the new one, then we figure out what to do
-        sc.set_nsc(*args, **kwargs)
-        if np.all(sc.nsc == self.sc.nsc):
-            return
-
-        # Create an array of all things that should be translated
-        old = []
-        new = []
-        deleted = np.empty(self.n_s, np.bool_)
-        deleted[:] = True
-        for i, sc_off in sc:
-            try:
-                # Luckily there are *only* one time wrap-arounds
-                j = self.sc.sc_index(sc_off)
-                # Now do translation
-                old.append(j)
-                new.append(i)
-                deleted[j] = False
-            except:
-                # Not found, i.e. new, so no need to translate
-                pass
-
-        assert len(old) == self.n_s or len(old) == sc.n_s, \
-            "Not all supercells are accounted for"
-
-        # Maximum column translated too
-        max_n = max(sc.n_s, self.sc.n_s)
-        # 1. Ensure that any one of the *old* supercells that
-        #    are now deleted are put in the end
-        for i, j in enumerate(deleted.nonzero()[0]):
-            # Old index (j)
-            old.append(j)
-            # Move to the end (*HAS* to be higher than the number of
-            # cells in the new supercell structure)
-            new.append(sc.n_s + i)
-            max_n = sc.n_s + i
-
-        old = ns_.arrayi(old)
-        new = ns_.arrayi(new)
-
-        # Assert that there are only unique values
-        assert len(np.unique(old)) == len(old), "non-unique values in old set_nsc"
-        assert len(np.unique(new)) == len(new), "non-unique values in new set_nsc"
-
-        # Remove all elements where old == new
-        # I.e. this should prevent us doing unnecessary work
-        keep = (old != new).nonzero()[0]
-        old = old[keep]
-        new = new[keep]
-
-        if len(old) > 0:
-            # Create the translation tables
-            old = array_arange(old * self.no, (old+1) * self.no)
-            new = array_arange(new * self.no, (new+1) * self.no)
-
-            # Move data to new positions
-            self._csr.translate_columns(old, new)
-
-        # Create array of deleted values
-        max_n = max(max_n, self.sc.n_s)
-        delete = ns_.arangei(sc.n_s * self.no, (max_n + 1) * self.no)
-        self._csr.delete_columns(delete)
-
-        self.geom.sc.set_nsc(*args, **kwargs)
+        super(SparseOrbital, self).set_nsc(self.no, *args, **kwargs)
 
     def cut(self, seps, axis, *args, **kwargs):
         """ Cuts the sparse orbital model into different parts.
@@ -1546,7 +1463,7 @@ class SparseOrbital(SparseGeometry):
         return S
 
     def sub(self, atom):
-        """ Create a subset of this sparse matrix by only retaining the atoms corresponding to the `atom`
+        """ Create a subset of this sparse matrix by only retaining the atoms corresponding to `atom`
 
         Indices passed *MUST* be unique.
 

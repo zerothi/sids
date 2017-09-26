@@ -19,12 +19,14 @@ def setup():
                                           [0., 0., 10.]], np.float64) * alat, nsc=[3, 3, 1])
             self.g = Grid([10, 10, 100], sc=self.sc)
             self.g[:, :, :] = 2.
-            g = Grid(sc=self.sc)
     return t()
 
 
 @pytest.mark.grid
 class TestGrid(object):
+
+    def test_print(self, setup):
+        print(setup.g)
 
     def test_append(self, setup):
         g = setup.g.append(setup.g, 0)
@@ -84,6 +86,21 @@ class TestGrid(object):
         g = setup.g + setup.g
         assert np.allclose(g.grid, setup.g.grid * 2)
 
+    @pytest.mark.xfail(raises=ValueError)
+    def test_add_fail1(self, setup):
+        g = Grid(np.array(setup.g.shape) // 2 + 1, sc=setup.g.sc.copy())
+        setup.g + g
+
+    def test_iadd1(self):
+        g = Grid([10, 10, 10])
+        g[:] = 1
+        old = g.copy()
+        g += g
+        g -= old
+        assert np.allclose(g.grid, 1)
+        g -= g
+        assert np.allclose(g.grid, 0)
+
     def test_op1(self, setup):
         g = setup.g * setup.g
         assert np.allclose(g.grid, setup.g.grid * setup.g.grid)
@@ -126,6 +143,10 @@ class TestGrid(object):
         for i in range(3):
             assert setup.g.cross_section(1, i).shape[i] == 1
 
+    @pytest.mark.xfail(raises=ValueError)
+    def test_cross_section_fail(self, setup):
+        setup.g.cross_section(1, -1)
+
     def test_remove_part(self, setup):
         for i in range(3):
             assert setup.g.remove_part(1, i, above=True).shape[i] == 1
@@ -146,6 +167,14 @@ class TestGrid(object):
             assert setup.g.remove(1, i).shape[i] == setup.g.shape[i]-1
         for i in range(3):
             assert setup.g.remove([1, 2], i).shape[i] == setup.g.shape[i]-2
+
+    def test_bc1(self, setup):
+        assert np.all(setup.g.bc == setup.g.PERIODIC)
+        setup.g.set_bc(a=setup.g.NEUMANN)
+        setup.g.set_bc(b=setup.g.NEUMANN, c=setup.g.NEUMANN)
+        assert np.all(setup.g.bc == setup.g.NEUMANN)
+        setup.g.set_bc(setup.g.PERIODIC)
+        assert np.all(setup.g.bc == setup.g.PERIODIC)
 
     def test_argumentparser(self, setup):
         setup.g.ArgumentParser()

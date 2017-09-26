@@ -1,6 +1,3 @@
-"""
-Sparsity pattern used to express matrices in concise manners.
-"""
 from __future__ import print_function, division
 
 import warnings
@@ -11,10 +8,10 @@ from collections import Iterable
 # the lookup table
 import numpy as np
 from numpy import empty, zeros, asarray, arange
-from numpy import insert, take, delete, copyto
+from numpy import insert, take, delete, copyto, split
 from numpy import where, intersect1d, setdiff1d, unique
-from numpy import diff
-from numpy import argsort, sort
+from numpy import diff, count_nonzero
+from numpy import argsort
 try:
     isin = np.isin
 except Exception:
@@ -101,7 +98,7 @@ class SparseCSR(object):
         dim : int, optional
            number of elements stored per sparse element, only used if (M,N) is passed
         dtype : numpy.dtype, optional
-           data type of the matrix, defaults to ``numpy.float64``
+           data type of the matrix, defaults to `numpy.float64`
         nnzpr : int, optional
            initial number of non-zero elements per row.
            Only used if `nnz` is not supplied
@@ -181,7 +178,7 @@ class SparseCSR(object):
                 self.ncol = diff(self.ptr)
                 self.col = arg1[1].astype(np.int32, copy=False)
                 self._nnz = len(self.col)
-                self._D = np.empty([len(arg1[1]), self.shape[-1]], dtype=self.dtype)
+                self._D = empty([len(arg1[1]), self.shape[-1]], dtype=self.dtype)
                 if len(arg1[0].shape) == 2:
                     self._D[:, :] = arg1[0]
                 else:
@@ -237,7 +234,7 @@ class SparseCSR(object):
         # Important that this is zero
         # For instance one may set one dimension at a time
         # thus automatically zeroing the other dimensions.
-        self._D = np.zeros([nnz, K], dtype)
+        self._D = zeros([nnz, K], dtype)
 
         # Denote that this sparsity pattern hasn't been finalized
         self._finalized = False
@@ -256,7 +253,7 @@ class SparseCSR(object):
            the extra dimension of the new diagonal matrix (default to the current
            extra dimension)
         dtype : numpy.dtype, optional
-           the data-type to create (default to ``numpy.float64``)
+           the data-type to create (default to `numpy.float64`)
         """
         if dim is None:
             dim = self.shape[2]
@@ -415,7 +412,7 @@ class SparseCSR(object):
     def edges(self, row, exclude=None):
         """ Retrieve edges (connections) of a given `row` or list of `row`'s
 
-        The returned edges are unique and sorted (see ``numpy.unique``).
+        The returned edges are unique and sorted (see `numpy.unique`).
 
         Parameters
         ----------
@@ -425,21 +422,21 @@ class SparseCSR(object):
            remove edges which are in the `exclude` list.
            Default to `row`.
         """
-        row = np.unique(ensure_array(row))
+        row = unique(ensure_array(row))
         if exclude is None:
             exclude = row.view()
         else:
-            exclude = np.unique(ensure_array(exclude))
+            exclude = unique(ensure_array(exclude))
 
         # Now get the edges
         ptr = self.ptr.view()
         ncol = self.ncol.view()
 
         # Create column indices
-        edges = np.unique(self.col[array_arange(ptr[row], n=ncol[row])])
+        edges = unique(self.col[array_arange(ptr[row], n=ncol[row])])
 
         # Return the difference to the exclude region, we know both are unique
-        return np.setdiff1d(edges, exclude, assume_unique=True)
+        return setdiff1d(edges, exclude, assume_unique=True)
 
     def delete_columns(self, columns, keep_shape=False):
         """ Delete all columns in `columns`
@@ -454,10 +451,10 @@ class SparseCSR(object):
            if ``False``, only the elements will be deleted.
         """
         # Shorthand function for retrieval
-        cnz = np.count_nonzero
+        cnz = count_nonzero
 
         # Sort the columns
-        columns = sort(ensure_array(columns))
+        columns = unique(ensure_array(columns))
         n_cols = cnz(columns < self.shape[1])
 
         # Grab pointers
@@ -470,7 +467,7 @@ class SparseCSR(object):
         # Convert to boolean array where we have columns to be deleted
         lidx = isin(col[idx], columns)
         # Count number of deleted entries per row
-        ndel = ensure_array(map(np.count_nonzero, np.split(lidx, ns_.cumsumi(ncol[:-1]))))
+        ndel = ensure_array(map(count_nonzero, split(lidx, ns_.cumsumi(ncol[:-1]))))
         # Backconvert lidx to deleted indices
         lidx = idx[lidx]
         del idx
@@ -539,18 +536,19 @@ class SparseCSR(object):
         # Convert to boolean array where we have columns to be deleted
         lidx = col[idx] >= nc
         # Count number of deleted entries per row
-        ndel = ensure_array(map(np.count_nonzero, np.split(lidx, ns_.cumsumi(ncol[:-1]))))
+        ndel = ensure_array(map(count_nonzero, split(lidx, ns_.cumsumi(ncol[:-1]))))
         # Backconvert lidx to deleted indices
         lidx = idx[lidx]
         del idx
 
-        # Update number of entries per row, and pointers
-        ncol[:] -= ndel
-        ptr[1:] -= ns_.cumsumi(ndel)
-
+        # Reduce column indices and data
         self.col = delete(self.col, lidx)
         self._D = delete(self._D, lidx, axis=0)
         del lidx
+
+        # Update number of entries per row, and pointers
+        ncol[:] -= ndel
+        ptr[1:] -= ns_.cumsumi(ndel)
 
         # Update number of non-zeroes
         self._nnz = np.sum(ncol)
@@ -571,29 +569,25 @@ class SparseCSR(object):
         # Sort the columns
         old = ensure_array(old)
         new = ensure_array(new)
-        if len(old) != len(new):
-            raise ValueError(self.__class__.__name__+".translate_columns has un-even length `old` and `new`.")
 
-        end_clean = False
         if np.any(old >= self.shape[1]):
             raise ValueError(self.__class__.__name__+".translate_columns has non-existing old column values")
+
+        end_clean = False
         if np.any(new >= self.shape[1]):
             end_clean = True
 
         # Now do the translation
-        new_col = ns_.arangei(self.shape[1])
-        new_col[old] = new
+        pvt = ns_.arangei(self.shape[1])
+        pvt[old] = new
 
-        # Update the columns
-        # Sadly, due to possible un-finalization we have to loop on rows
-        ptr = self.ptr.view()
-        ncol = self.ncol.view()
+        # Get indices of valid column entries
+        idx = array_arange(self.ptr[:-1], n=self.ncol)
+        # Convert the old column indices to new ones
         col = self.col.view()
-        idx = array_arange(ptr[:-1], n=ncol)
-        col[idx] = new_col[col[idx]]
+        col[idx] = pvt[col[idx]]
 
-        # After translation, the finalization step *must*
-        # be set to false.
+        # After translation, set to not finalized
         self._finalized = False
         if end_clean:
             self._clean_columns()
@@ -609,7 +603,6 @@ class SparseCSR(object):
         -------
         True if the same non-zero elements are in the matrices (but not necessarily the same values)
         """
-
         if self.shape[:2] != other.shape[:2]:
             return False
 
@@ -621,7 +614,7 @@ class SparseCSR(object):
         ocol = other.col.view()
 
         # Easy check for non-equal number of elements
-        if np.count_nonzero(sncol == oncol) != self.shape[0]:
+        if (sncol == oncol).sum() != self.shape[0]:
             return False
 
         llen = len
@@ -908,14 +901,21 @@ class SparseCSR(object):
         """ Intrinsic sparse matrix retrieval of a non-zero element """
 
         # Get indices of sparse data (-1 if non-existing)
-        index = self._get(key[0], key[1])
+        get_idx = self._get(key[0], key[1])
+        n = len(get_idx)
+
+        # Indices of existing values in return array
+        ret_idx = (get_idx >= 0).nonzero()[0]
+        # Indices of existing values in get array
+        get_idx = get_idx[ret_idx]
 
         # Check which data to retrieve
         if len(key) > 2:
 
             # user requests a specific element
             # get dimension retrieved
-            return where(index >= 0, self._D[index, key[2]], 0)
+            r = np.zeros(n, dtype=self.dtype)
+            r[ret_idx] = self._D[get_idx, key[2]]
 
         else:
 
@@ -923,9 +923,13 @@ class SparseCSR(object):
 
             s = self.shape[2]
             if s == 1:
-                return where(index >= 0, self._D[index, 0], 0)
+                r = np.zeros(n, dtype=self.dtype)
+                r[ret_idx] = self._D[get_idx, 0]
             else:
-                return where(index >= 0, self._D[index, :], [0] * s)
+                r = np.zeros([n, s], dtype=self.dtype)
+                r[ret_idx, :] = self._D[get_idx, :]
+
+        return r
 
     def __setitem__(self, key, data):
         """ Intrinsic sparse matrix assignment of the item.
@@ -1054,7 +1058,7 @@ class SparseCSR(object):
         ----------
         dims: array-like, optional
            which dimensions to store in the copy, defaults to all.
-        dtype : ``numpy.dtype``
+        dtype : `numpy.dtype`
            this defaults to the dtype of the object,
            but one may change it if supplied.
         """
@@ -1101,10 +1105,15 @@ class SparseCSR(object):
         **kwargs:
            arguments passed to the ``scipy.sparse.csr_matrix`` routine
         """
+        # We finalize because we do not expect the sparse pattern to change once
+        # we request a csr matrix in another format.
+        # Otherwise we *could* do array_arange
         self.finalize()
 
         shape = self.shape[:2]
-        return csr_matrix((self._D[:, dim], self.col, self.ptr), shape=shape, **kwargs)
+        return csr_matrix((self._D[:, dim], self.col.astype(np.int32, copy=False),
+                           self.ptr.astype(np.int32, copy=False)),
+                          shape=shape, **kwargs)
 
     def remove(self, indices):
         """ Return a new sparse CSR matrix with all the indices removed
@@ -1137,30 +1146,28 @@ class SparseCSR(object):
 
         # Check if we have a square matrix or a rectangular one
         if self.shape[0] == self.shape[1]:
-            # Easy
             ridx = indices.view()
-            nc = len(indices)
-            pvt = ns_.emptyi([self.shape[0]])
 
         elif self.shape[0] < self.shape[1]:
             ridx = indices[indices < self.shape[0]]
-            nc = len(indices)
-            pvt = ns_.emptyi([self.shape[1]])
 
         elif self.shape[0] > self.shape[1]:
             ridx = indices.view()
-            nc = np.count_nonzero(indices < self.shape[1])
-            pvt = ns_.emptyi([self.shape[0]])
+
+        # Number of rows, columns
+        nr = len(ridx)
+        nc = count_nonzero(indices < self.shape[1])
 
         # Fix the pivoting indices with the new indices
+        pvt = ns_.emptyi([max(self.shape[0], self.shape[1])])
         pvt.fill(-1)
         pvt[indices] = ns_.arangei(len(indices))
 
         # Create the new SparseCSR
         # We use nnzpr = 1 because we will overwrite all quantities afterwards.
-        csr = self.__class__((len(ridx), nc, self.shape[2]), dtype=self.dtype, nnz=1)
+        csr = self.__class__((nr, nc, self.shape[2]), dtype=self.dtype, nnz=1)
         # Limit memory
-        csr._D = np.empty([1])
+        csr._D = empty([1])
 
         # Get views
         ptr1 = csr.ptr.view()
@@ -1177,9 +1184,6 @@ class SparseCSR(object):
         # We do this because we can then use take on this array
         # and not two arrays.
         col_data = ns_.emptyi([2, ncol1.sum()])
-        # Create views to limit the memory
-        col_idx = col_data[0, :].view()
-        col1 = col_data[1, :].view()
 
         # Create a list of ndarrays with indices of elements per row
         # and transfer to a linear index
@@ -1197,8 +1201,8 @@ class SparseCSR(object):
 
         # Count number of entries
         idx_take = col_data[1, :] >= 0
-        ncol1[:] = ensure_array(map(np.count_nonzero,
-                                    np.split(idx_take, ptr1[1:-1])))
+        ncol1[:] = ensure_array(map(count_nonzero,
+                                    split(idx_take, ptr1[1:-1])))
 
         # Convert to indices
         idx_take = idx_take.nonzero()[0]

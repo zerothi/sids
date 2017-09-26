@@ -1,5 +1,3 @@
-""" Different tools for contsructing k-points and paths in the Brillouin zone """
-
 from __future__ import print_function, division
 
 import types
@@ -234,11 +232,10 @@ class BrillouinZone(object):
         getattr(self, attr)(k, *args, **kwargs) : whatever this returns
         """
         try:
-            # We have to by-pass the getattr because the __call__ is a
-            # special method.
-            return getattr(self, '__call__')(*args, **kwargs)
-        except:
+            call = getattr(self, '__call__')
+        except Exception as e:
             raise NotImplementedError("Could not call the object it self")
+        return call(*args, **kwargs)
 
     def __iter__(self):
         """ Returns all k-points associated with this Brillouin zone object
@@ -429,21 +426,7 @@ class PathBZ(BrillouinZone):
 
     def lineartick(self):
         """ The tick-marks corresponding to the linear-k values """
-        n = len(self.point)
-        xtick = np.zeros(n, np.float64)
-
-        ii = 0
-        for i in range(n-1):
-            xtick[i] = ii
-            ii += self.division[i]
-
-        # Final tick-mark
-        xtick[n-1] = ii - 1
-
-        # Get label tick
-        label_tick = [a for a in self.name]
-
-        return xtick, label_tick
+        return self.lineark(True)[0:2]
 
     def lineark(self, ticks=False):
         """ A 1D array which corresponds to the delta-k values of the path
@@ -469,7 +452,7 @@ class PathBZ(BrillouinZone):
         # Calculate points
         k = [self.tocartesian(pnt) for pnt in self.point]
         dk = np.diff(k, axis=0)
-        xtick = np.zeros(len(k), np.float64)
+        xtick = [None] * len(k)
         # Prepare output array
         dK = np.empty(len(self), np.float64)
 
@@ -501,7 +484,7 @@ class PathBZ(BrillouinZone):
         # Get label tick
         label_tick = [a for a in self.name]
         if ticks:
-            return xtick, label_tick, dK
+            return dK[xtick], label_tick, dK
         return dK
 
     def __len__(self):
