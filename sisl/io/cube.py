@@ -52,7 +52,7 @@ class CUBESile(Sile):
             self._write(_fmt.format(geom.atom[ia].Z, *geom.xyz[ia, :] * Ang2Bohr))
 
     @Sile_fh_open
-    def write_grid(self, grid, fmt='%.5e', *args, **kwargs):
+    def write_grid(self, grid, fmt='.5e', *args, **kwargs):
         """ Writes the geometry to the contained file """
         # Check that we can write to the file
         sile_raise_write(self)
@@ -60,17 +60,20 @@ class CUBESile(Sile):
         # Write the geometry
         self.write_geometry(grid.geom, size=grid.grid.shape, *args, **kwargs)
 
-        g_size = np.copy(grid.grid.shape)
+        buffersize = kwargs.get('buffersize', min(6144, grid.grid.size))
 
-        grid.grid.shape = (-1,)
-
-        # Write the grid
-        np.savetxt(self.fh, grid.grid[:], fmt)
+        # A CUBE file contains grid-points aligned like this:
+        # for x
+        #   for y
+        #     for z
+        #       write...
+        _fmt = '{:' + fmt + '}\n'
+        for z in np.nditer(np.asarray(grid.grid, order='C').reshape(-1), flags=['external_loop', 'buffered'],
+                           op_flags=[['readonly']], order='C', buffersize=buffersize):
+            self._write((_fmt * z.shape[0]).format(*tuple(z)))
 
         # Add a finishing line to ensure empty ending
         self._write('\n')
-
-        grid.grid.shape = g_size
 
     @Sile_fh_open
     def read_supercell(self, na=False):
@@ -137,8 +140,14 @@ class CUBESile(Sile):
         for i in range(na):
             self.readline()
 
-        grid = Grid(ngrid, dtype=np.float32, geom=geom)
-        grid.grid = np.loadtxt(self.fh, dtype=grid.dtype)
+        grid = Grid(ngrid, dtype=np.float64, geom=geom)
+        grid.grid.shape = (-1,)
+
+        for i, l in enumerate(self.fh):
+            if i >= grid.grid.size:
+                break
+            grid.grid[i] = float(l)
+
         grid.grid.shape = ngrid
 
         return grid
