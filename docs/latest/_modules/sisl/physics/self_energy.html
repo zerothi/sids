@@ -65,7 +65,7 @@
             
             
               <div class="version">
-                0.8.5-282
+                0.8.5-305
               </div>
             
           
@@ -175,7 +175,8 @@
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">dot</span>
 <span class="kn">from</span> <span class="nn">sisl.utils.ranges</span> <span class="k">import</span> <span class="n">array_arange</span>
-<span class="kn">import</span> <span class="nn">sisl._numpy_scipy</span> <span class="k">as</span> <span class="nn">ns_</span>
+<span class="kn">import</span> <span class="nn">sisl._array</span> <span class="k">as</span> <span class="nn">_a</span>
+<span class="kn">import</span> <span class="nn">sisl.linalg</span> <span class="k">as</span> <span class="nn">lin</span>
 
 <span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;SelfEnergy&#39;</span><span class="p">,</span> <span class="s1">&#39;SemiInfinite&#39;</span><span class="p">]</span>
 <span class="n">__all__</span> <span class="o">+=</span> <span class="p">[</span><span class="s1">&#39;RecursiveSI&#39;</span><span class="p">]</span>
@@ -230,9 +231,9 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">eta</span> <span class="o">=</span> <span class="n">eta</span>
         <span class="k">if</span> <span class="n">bloch</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">bloch</span> <span class="o">=</span> <span class="n">ns_</span><span class="o">.</span><span class="n">onesi</span><span class="p">([</span><span class="mi">3</span><span class="p">])</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">bloch</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">onesi</span><span class="p">([</span><span class="mi">3</span><span class="p">])</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">bloch</span> <span class="o">=</span> <span class="n">ns_</span><span class="o">.</span><span class="n">arrayi</span><span class="p">(</span><span class="n">bloch</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">bloch</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">arrayi</span><span class="p">(</span><span class="n">bloch</span><span class="p">)</span>
 
         <span class="c1"># Determine whether we are in plus/minus direction</span>
         <span class="k">if</span> <span class="n">infinite</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;+&#39;</span><span class="p">):</span>
@@ -269,7 +270,7 @@
 <span class="sd">        semi-infinite direction.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">k</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">k</span> <span class="o">=</span> <span class="n">ns_</span><span class="o">.</span><span class="n">zerosd</span><span class="p">([</span><span class="mi">3</span><span class="p">])</span>
+            <span class="n">k</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">zerosd</span><span class="p">([</span><span class="mi">3</span><span class="p">])</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">k</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_fill</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
             <span class="n">k</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">semi_inf</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.</span>
@@ -310,8 +311,8 @@
         <span class="n">nsc</span> <span class="o">=</span> <span class="p">[</span><span class="kc">None</span><span class="p">]</span> <span class="o">*</span> <span class="mi">3</span>
         <span class="n">nsc</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">semi_inf</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">semi_inf_dir</span>
         <span class="c1"># Get all supercell indices that we should delete</span>
-        <span class="n">idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="n">ns_</span><span class="o">.</span><span class="n">arangei</span><span class="p">(</span><span class="n">n_s</span><span class="p">),</span>
-                        <span class="n">ns_</span><span class="o">.</span><span class="n">arrayi</span><span class="p">(</span><span class="n">spgeom</span><span class="o">.</span><span class="n">geom</span><span class="o">.</span><span class="n">sc</span><span class="o">.</span><span class="n">sc_index</span><span class="p">(</span><span class="n">nsc</span><span class="p">)))</span>
+        <span class="n">idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="n">_a</span><span class="o">.</span><span class="n">arangei</span><span class="p">(</span><span class="n">n_s</span><span class="p">),</span>
+                        <span class="n">_a</span><span class="o">.</span><span class="n">arrayi</span><span class="p">(</span><span class="n">spgeom</span><span class="o">.</span><span class="n">geom</span><span class="o">.</span><span class="n">sc</span><span class="o">.</span><span class="n">sc_index</span><span class="p">(</span><span class="n">nsc</span><span class="p">)))</span>
 
         <span class="n">cols</span> <span class="o">=</span> <span class="n">array_arange</span><span class="p">(</span><span class="n">idx</span> <span class="o">*</span> <span class="n">n</span><span class="p">,</span> <span class="p">(</span><span class="n">idx</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">n</span><span class="p">)</span>
         <span class="c1"># Delete all values in columns, but keep them to retain the supercell information</span>
@@ -376,7 +377,7 @@
         <span class="k">else</span><span class="p">:</span>
             <span class="n">GS</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">GB</span><span class="p">)</span>
 
-        <span class="n">solve</span> <span class="o">=</span> <span class="n">ns_</span><span class="o">.</span><span class="n">solve</span>
+        <span class="n">solve</span> <span class="o">=</span> <span class="n">lin</span><span class="o">.</span><span class="n">solve</span>
 
         <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span>
         <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
@@ -440,7 +441,7 @@
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'../../../',
-            VERSION:'0.8.5-282',
+            VERSION:'0.8.5-305',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true,

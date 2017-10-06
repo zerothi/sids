@@ -65,7 +65,7 @@
             
             
               <div class="version">
-                0.8.5-282
+                0.8.5-305
               </div>
             
           
@@ -174,7 +174,10 @@
 
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 
-<span class="kn">from</span> <span class="nn">.utils</span> <span class="k">import</span> <span class="n">cmd</span><span class="p">,</span> <span class="n">strseq</span><span class="p">,</span> <span class="n">direction</span><span class="p">,</span> <span class="n">default_namespace</span>
+<span class="kn">from</span> <span class="nn">._help</span> <span class="k">import</span> <span class="n">ensure_array</span>
+<span class="kn">import</span> <span class="nn">sisl._array</span> <span class="k">as</span> <span class="nn">_a</span>
+<span class="kn">from</span> <span class="nn">.utils</span> <span class="k">import</span> <span class="n">dec_default_AP</span><span class="p">,</span> <span class="n">default_namespace</span>
+<span class="kn">from</span> <span class="nn">.utils</span> <span class="k">import</span> <span class="n">cmd</span><span class="p">,</span> <span class="n">strseq</span><span class="p">,</span> <span class="n">direction</span>
 <span class="kn">from</span> <span class="nn">.supercell</span> <span class="k">import</span> <span class="n">SuperCellChild</span>
 <span class="kn">from</span> <span class="nn">.atom</span> <span class="k">import</span> <span class="n">Atom</span>
 <span class="kn">from</span> <span class="nn">.geometry</span> <span class="k">import</span> <span class="n">Geometry</span>
@@ -195,22 +198,20 @@
     <span class="n">NEUMANN</span> <span class="o">=</span> <span class="mi">2</span>
     <span class="n">DIRICHLET</span> <span class="o">=</span> <span class="mi">3</span>
 
-    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">bc</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">sc</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">geom</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">shape</span><span class="p">,</span> <span class="n">bc</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">sc</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">geom</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Initialize a `Grid` object.</span>
 
 <span class="sd">        Initialize a `Grid` object.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
-<span class="sd">        shape : `list of ints`</span>
+<span class="sd">        shape : list of ints</span>
 <span class="sd">           the size of each grid dimension</span>
-<span class="sd">        bc : `int`</span>
+<span class="sd">        bc : int, optional</span>
 <span class="sd">           the boundary condition (`Grid.PERIODIC/Grid.NEUMANN/Grid.DIRICHLET`)</span>
-<span class="sd">        sc : `SuperCell/list`</span>
-<span class="sd">           the associated supercell (</span>
+<span class="sd">        sc : SuperCell or list, optional</span>
+<span class="sd">           the associated supercell</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="n">shape</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">shape</span> <span class="o">=</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span>
         <span class="k">if</span> <span class="n">bc</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">bc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">PERIODIC</span>
 
@@ -223,7 +224,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">set_bc</span><span class="p">(</span><span class="n">bc</span><span class="p">)</span>
 
         <span class="c1"># Create the atomic structure in the grid, if possible</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">set_geom</span><span class="p">(</span><span class="n">geom</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_geometry</span><span class="p">(</span><span class="n">geom</span><span class="p">)</span>
 
         <span class="c1"># If the user sets the super-cell, that has precedence.</span>
         <span class="k">if</span> <span class="n">sc</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
@@ -336,9 +337,9 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">boundary</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">boundary</span><span class="p">,</span> <span class="n">Integral</span><span class="p">):</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">bc</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">boundary</span><span class="p">]</span> <span class="o">*</span> <span class="mi">3</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">bc</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">arrayi</span><span class="p">([</span><span class="n">boundary</span><span class="p">]</span> <span class="o">*</span> <span class="mi">3</span><span class="p">)</span>
             <span class="k">else</span><span class="p">:</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">bc</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">boundary</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">bc</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">asarrayi</span><span class="p">(</span><span class="n">boundary</span><span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">a</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">bc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">a</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">b</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
@@ -366,7 +367,7 @@
 <span class="sd">        If ``swapaxes(0,1)`` it returns the 0 in the 1 values.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># Create index vector</span>
-        <span class="n">idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
+        <span class="n">idx</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">arangei</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
         <span class="n">idx</span><span class="p">[</span><span class="n">b</span><span class="p">]</span> <span class="o">=</span> <span class="n">a</span>
         <span class="n">idx</span><span class="p">[</span><span class="n">a</span><span class="p">]</span> <span class="o">=</span> <span class="n">b</span>
         <span class="n">s</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
@@ -395,11 +396,11 @@
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">sc</span><span class="o">.</span><span class="n">vol</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">size</span>
 
 <div class="viewcode-block" id="Grid.cross_section"><a class="viewcode-back" href="../../api-generated/sisl.Grid.html#sisl.Grid.cross_section">[docs]</a>    <span class="k">def</span> <span class="nf">cross_section</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">idx</span><span class="p">,</span> <span class="n">axis</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot; Takes a cross-section of the grid along axis ``axis``</span>
+        <span class="sd">&quot;&quot;&quot; Takes a cross-section of the grid along axis `axis`</span>
 
 <span class="sd">        Remark: This API entry might change to handle arbitrary</span>
 <span class="sd">        cuts via rotation of the axis &quot;&quot;&quot;</span>
-        <span class="n">idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">idx</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+        <span class="n">idx</span> <span class="o">=</span> <span class="n">ensure_array</span><span class="p">(</span><span class="n">idx</span><span class="p">)</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
         <span class="c1"># First calculate the new shape</span>
         <span class="n">shape</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
         <span class="n">cell</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cell</span><span class="p">)</span>
@@ -422,7 +423,7 @@
         <span class="k">return</span> <span class="n">grid</span></div>
 
 <div class="viewcode-block" id="Grid.sum"><a class="viewcode-back" href="../../api-generated/sisl.Grid.html#sisl.Grid.sum">[docs]</a>    <span class="k">def</span> <span class="nf">sum</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">axis</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot; Returns the grid summed along axis ``axis``. &quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot; Returns the grid summed along axis `axis`. &quot;&quot;&quot;</span>
         <span class="c1"># First calculate the new shape</span>
         <span class="n">shape</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
         <span class="n">cell</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cell</span><span class="p">)</span>
@@ -439,7 +440,7 @@
         <span class="k">return</span> <span class="n">grid</span></div>
 
 <div class="viewcode-block" id="Grid.average"><a class="viewcode-back" href="../../api-generated/sisl.Grid.html#sisl.Grid.average">[docs]</a>    <span class="k">def</span> <span class="nf">average</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">axis</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot; Returns the average grid along direction ``axis`` &quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot; Returns the average grid along direction `axis` &quot;&quot;&quot;</span>
         <span class="n">n</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span>
         <span class="n">g</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">axis</span><span class="p">)</span>
         <span class="n">g</span> <span class="o">/=</span> <span class="nb">float</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
@@ -456,16 +457,16 @@
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
 <span class="sd">        idx : array_like</span>
-<span class="sd">           the indices of the grid axis ``axis`` to be removed</span>
+<span class="sd">           the indices of the grid axis `axis` to be removed</span>
 <span class="sd">           for ``above=True`` grid[:idx,...]</span>
 <span class="sd">           for ``above=False`` grid[idx:,...]</span>
 <span class="sd">        axis : int</span>
 <span class="sd">           the axis segment from which we retain the indices `idx`</span>
 <span class="sd">        above: bool</span>
-<span class="sd">           if `True` will retain the grid:</span>
-<span class="sd">              `grid[:idx,...]`</span>
+<span class="sd">           if ``True`` will retain the grid:</span>
+<span class="sd">              ``grid[:idx,...]``</span>
 <span class="sd">           else it will retain the grid:</span>
-<span class="sd">              `grid[idx:,...]`</span>
+<span class="sd">              ``grid[idx:,...]``</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">sub_part</span><span class="p">(</span><span class="n">idx</span><span class="p">,</span> <span class="n">axis</span><span class="p">,</span> <span class="ow">not</span> <span class="n">above</span><span class="p">)</span></div>
 
@@ -477,11 +478,11 @@
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
 <span class="sd">        idx : array_like</span>
-<span class="sd">           the indices of the grid axis ``axis`` to be retained</span>
+<span class="sd">           the indices of the grid axis `axis` to be retained</span>
 <span class="sd">           for ``above=True`` grid[idx:,...]</span>
 <span class="sd">           for ``above=False`` grid[:idx,...]</span>
 <span class="sd">        axis : int</span>
-<span class="sd">           the axis segment from which we retain the indices ``idx``</span>
+<span class="sd">           the axis segment from which we retain the indices `idx`</span>
 <span class="sd">        above: bool</span>
 <span class="sd">           if ``True`` will retain the grid:</span>
 <span class="sd">              ``grid[idx:,...]``</span>
@@ -489,9 +490,9 @@
 <span class="sd">              ``grid[:idx,...]``</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">above</span><span class="p">:</span>
-            <span class="n">sub</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">idx</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="n">axis</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
+            <span class="n">sub</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">arangei</span><span class="p">(</span><span class="n">idx</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="n">axis</span><span class="p">])</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="n">sub</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">idx</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
+            <span class="n">sub</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">arangei</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">idx</span><span class="p">)</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="n">sub</span><span class="p">,</span> <span class="n">axis</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="Grid.sub"><a class="viewcode-back" href="../../api-generated/sisl.Grid.html#sisl.Grid.sub">[docs]</a>    <span class="k">def</span> <span class="nf">sub</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">idx</span><span class="p">,</span> <span class="n">axis</span><span class="p">):</span>
@@ -502,11 +503,11 @@
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
 <span class="sd">        idx : array_like</span>
-<span class="sd">           the indices of the grid axis ``axis`` to be retained</span>
+<span class="sd">           the indices of the grid axis `axis` to be retained</span>
 <span class="sd">        axis : int</span>
-<span class="sd">           the axis segment from which we retain the indices ``idx``</span>
+<span class="sd">           the axis segment from which we retain the indices `idx`</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">idx</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+        <span class="n">idx</span> <span class="o">=</span> <span class="n">ensure_array</span><span class="p">(</span><span class="n">idx</span><span class="p">)</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
 
         <span class="c1"># Calculate new shape</span>
         <span class="n">shape</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
@@ -544,13 +545,11 @@
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
 <span class="sd">        idx : array_like</span>
-<span class="sd">           the indices of the grid axis ``axis`` to be removed</span>
+<span class="sd">           the indices of the grid axis `axis` to be removed</span>
 <span class="sd">        axis : int</span>
-<span class="sd">           the axis segment from which we remove all indices ``idx``</span>
+<span class="sd">           the axis segment from which we remove all indices `idx`</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">uidx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">idx</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span><span class="p">))</span>
-        <span class="n">ret_idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">setdiff1d</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="n">axis</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">),</span>
-                               <span class="n">uidx</span><span class="p">,</span> <span class="n">assume_unique</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">ret_idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="n">_a</span><span class="o">.</span><span class="n">arangei</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="n">axis</span><span class="p">]),</span> <span class="n">ensure_array</span><span class="p">(</span><span class="n">idx</span><span class="p">))</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="n">ret_idx</span><span class="p">,</span> <span class="n">axis</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="Grid.index"><a class="viewcode-back" href="../../api-generated/sisl.Grid.html#sisl.Grid.index">[docs]</a>    <span class="k">def</span> <span class="nf">index</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">coord</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
@@ -568,7 +567,7 @@
         <span class="k">if</span> <span class="n">axis</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">rcell</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">rcell</span> <span class="o">/</span> <span class="p">(</span><span class="mf">2.</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">)</span>
             <span class="c1"># Loop over each direction</span>
-            <span class="n">idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">([</span><span class="mi">3</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
+            <span class="n">idx</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">emptyi</span><span class="p">([</span><span class="mi">3</span><span class="p">])</span>
             <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">]:</span>
                 <span class="c1"># get the coordinate along the direction of the cell vector</span>
                 <span class="n">c</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">rcell</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="p">:],</span> <span class="n">coord</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">cell</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="p">:]</span>
@@ -656,8 +655,7 @@
         <span class="sd">&quot;&quot;&quot; Returns true if the two grids are commensurable</span>
 
 <span class="sd">        There will be no check of the values _on_ the grid. &quot;&quot;&quot;</span>
-        <span class="n">a</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span>
-        <span class="k">return</span> <span class="nb">bool</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">a</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span> <span class="o">==</span> <span class="n">a</span><span class="p">(</span><span class="n">other</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)))</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">shape</span>
 
     <span class="k">def</span> <span class="nf">__ne__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Returns whether two grids have the same shape &quot;&quot;&quot;</span>
@@ -760,12 +758,13 @@
     <span class="c1"># Hook into the Grid class to create</span>
     <span class="c1"># an automatic ArgumentParser which makes actions</span>
     <span class="c1"># as the options are read.</span>
-    <span class="k">def</span> <span class="nf">ArgumentParser</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parser</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="nd">@dec_default_AP</span><span class="p">(</span><span class="s2">&quot;Manipulate a Grid object in sisl.&quot;</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">ArgumentParser</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">p</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Create and return a group of argument parsers which manipulates it self `Grid`.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
-<span class="sd">        parser: ArgumentParser, None</span>
+<span class="sd">        p: ArgumentParser, None</span>
 <span class="sd">           in case the arguments should be added to a specific parser. It defaults</span>
 <span class="sd">           to create a new.</span>
 <span class="sd">        limit_arguments: bool, True</span>
@@ -776,6 +775,7 @@
 <span class="sd">        positional_out: bool, False</span>
 <span class="sd">           If `True`, adds a positional argument which acts as --out. This may be handy if only the geometry is in the argument list.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">limit_args</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;limit_arguments&#39;</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
         <span class="n">short</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;short&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
 
         <span class="k">def</span> <span class="nf">opts</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">):</span>
@@ -785,11 +785,6 @@
 
         <span class="c1"># We limit the import to occur here</span>
         <span class="kn">import</span> <span class="nn">argparse</span>
-
-        <span class="k">if</span> <span class="n">parser</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">p</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">(</span><span class="s2">&quot;Manipulate a Grid object in sisl.&quot;</span><span class="p">)</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">p</span> <span class="o">=</span> <span class="n">parser</span>
 
         <span class="c1"># The first thing we do is adding the Grid to the NameSpace of the</span>
         <span class="c1"># parser.</span>
@@ -806,7 +801,7 @@
 
             <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parser</span><span class="p">,</span> <span class="n">ns</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">option_string</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
                 <span class="n">ns</span><span class="o">.</span><span class="n">_geometry</span> <span class="o">=</span> <span class="n">Geometry</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
-                <span class="n">ns</span><span class="o">.</span><span class="n">_grid</span><span class="o">.</span><span class="n">set_geom</span><span class="p">(</span><span class="n">ns</span><span class="o">.</span><span class="n">_geometry</span><span class="p">)</span>
+                <span class="n">ns</span><span class="o">.</span><span class="n">_grid</span><span class="o">.</span><span class="n">set_geometry</span><span class="p">(</span><span class="n">ns</span><span class="o">.</span><span class="n">_geometry</span><span class="p">)</span>
         <span class="n">p</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="o">*</span><span class="n">opts</span><span class="p">(</span><span class="s1">&#39;--geometry&#39;</span><span class="p">,</span> <span class="s1">&#39;-G&#39;</span><span class="p">),</span> <span class="n">action</span><span class="o">=</span><span class="n">SetGeometry</span><span class="p">,</span>
                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Define the geometry attached to the Grid.&#39;</span><span class="p">)</span>
 
@@ -838,23 +833,37 @@
                        <span class="n">action</span><span class="o">=</span><span class="n">AverageGrid</span><span class="p">,</span>
                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Take the average of the grid along DIR.&#39;</span><span class="p">)</span>
 
+        <span class="k">class</span> <span class="nc">SumGrid</span><span class="p">(</span><span class="n">argparse</span><span class="o">.</span><span class="n">Action</span><span class="p">):</span>
+
+            <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parser</span><span class="p">,</span> <span class="n">ns</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">option_string</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+                <span class="n">ns</span><span class="o">.</span><span class="n">_grid</span> <span class="o">=</span> <span class="n">ns</span><span class="o">.</span><span class="n">_grid</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">direction</span><span class="p">(</span><span class="n">value</span><span class="p">))</span>
+        <span class="n">p</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="o">*</span><span class="n">opts</span><span class="p">(</span><span class="s1">&#39;--sum&#39;</span><span class="p">),</span> <span class="n">metavar</span><span class="o">=</span><span class="s1">&#39;DIR&#39;</span><span class="p">,</span>
+                       <span class="n">action</span><span class="o">=</span><span class="n">SumGrid</span><span class="p">,</span>
+                       <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Take the sum of the grid along DIR.&#39;</span><span class="p">)</span>
+
         <span class="c1"># Create-subsets of the grid</span>
         <span class="k">class</span> <span class="nc">SubDirectionGrid</span><span class="p">(</span><span class="n">argparse</span><span class="o">.</span><span class="n">Action</span><span class="p">):</span>
 
             <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parser</span><span class="p">,</span> <span class="n">ns</span><span class="p">,</span> <span class="n">values</span><span class="p">,</span> <span class="n">option_string</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
                 <span class="c1"># The unit-cell direction</span>
-                <span class="n">axis</span> <span class="o">=</span> <span class="n">direction</span><span class="p">(</span><span class="n">values</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+                <span class="n">axis</span> <span class="o">=</span> <span class="n">direction</span><span class="p">(</span><span class="n">values</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
                 <span class="c1"># Figure out whether this is a fractional or</span>
                 <span class="c1"># distance in Ang</span>
-                <span class="n">is_frac</span> <span class="o">=</span> <span class="s1">&#39;f&#39;</span> <span class="ow">in</span> <span class="n">values</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
-                <span class="n">rng</span> <span class="o">=</span> <span class="n">strseq</span><span class="p">(</span><span class="nb">float</span><span class="p">,</span> <span class="n">values</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;f&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">))</span>
+                <span class="n">is_frac</span> <span class="o">=</span> <span class="s1">&#39;f&#39;</span> <span class="ow">in</span> <span class="n">values</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="n">rng</span> <span class="o">=</span> <span class="n">strseq</span><span class="p">(</span><span class="nb">float</span><span class="p">,</span> <span class="n">values</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;f&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">))</span>
                 <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">rng</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">):</span>
                     <span class="k">if</span> <span class="n">is_frac</span><span class="p">:</span>
                         <span class="n">rng</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">rng</span><span class="p">)</span>
                     <span class="c1"># we have bounds</span>
-                    <span class="n">idx1</span> <span class="o">=</span> <span class="n">ns</span><span class="o">.</span><span class="n">_grid</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">rng</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="n">axis</span><span class="p">)</span>
-                    <span class="n">idx2</span> <span class="o">=</span> <span class="n">ns</span><span class="o">.</span><span class="n">_grid</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">rng</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="n">axis</span><span class="p">)</span>
-                    <span class="n">ns</span><span class="o">.</span><span class="n">_grid</span> <span class="o">=</span> <span class="n">ns</span><span class="o">.</span><span class="n">_grid</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">idx1</span><span class="p">,</span> <span class="n">idx2</span><span class="o">+</span><span class="mi">1</span><span class="p">),</span> <span class="n">d</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">rng</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                        <span class="n">idx1</span> <span class="o">=</span> <span class="mi">0</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">idx1</span> <span class="o">=</span> <span class="n">ns</span><span class="o">.</span><span class="n">_grid</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">rng</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="n">axis</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">rng</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                        <span class="n">idx2</span> <span class="o">=</span> <span class="n">ns</span><span class="o">.</span><span class="n">_grid</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">idx2</span> <span class="o">=</span> <span class="n">ns</span><span class="o">.</span><span class="n">_grid</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">rng</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="n">axis</span><span class="p">)</span>
+                    <span class="n">ns</span><span class="o">.</span><span class="n">_grid</span> <span class="o">=</span> <span class="n">ns</span><span class="o">.</span><span class="n">_grid</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="n">_a</span><span class="o">.</span><span class="n">arangei</span><span class="p">(</span><span class="n">idx1</span><span class="p">,</span> <span class="n">idx2</span><span class="p">),</span> <span class="n">axis</span><span class="p">)</span>
                     <span class="k">return</span>
                 <span class="k">elif</span> <span class="n">rng</span> <span class="o">&lt;</span> <span class="mf">0.</span><span class="p">:</span>
                     <span class="k">if</span> <span class="n">is_frac</span><span class="p">:</span>
@@ -866,7 +875,7 @@
                     <span class="n">b</span> <span class="o">=</span> <span class="kc">True</span>
                 <span class="n">idx</span> <span class="o">=</span> <span class="n">ns</span><span class="o">.</span><span class="n">_grid</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">rng</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="n">axis</span><span class="p">)</span>
                 <span class="n">ns</span><span class="o">.</span><span class="n">_grid</span> <span class="o">=</span> <span class="n">ns</span><span class="o">.</span><span class="n">_grid</span><span class="o">.</span><span class="n">sub_part</span><span class="p">(</span><span class="n">idx</span><span class="p">,</span> <span class="n">axis</span><span class="p">,</span> <span class="n">b</span><span class="p">)</span>
-        <span class="n">p</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="o">*</span><span class="n">opts</span><span class="p">(</span><span class="s1">&#39;--sub&#39;</span><span class="p">),</span> <span class="n">nargs</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">metavar</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;DIR&#39;</span><span class="p">,</span> <span class="s1">&#39;COORD&#39;</span><span class="p">),</span>
+        <span class="n">p</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="o">*</span><span class="n">opts</span><span class="p">(</span><span class="s1">&#39;--sub&#39;</span><span class="p">),</span> <span class="n">nargs</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">metavar</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;COORD&#39;</span><span class="p">,</span> <span class="s1">&#39;DIR&#39;</span><span class="p">),</span>
                        <span class="n">action</span><span class="o">=</span><span class="n">SubDirectionGrid</span><span class="p">,</span>
                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Reduce the grid by taking a subset of the grid (along DIR).&#39;</span><span class="p">)</span>
 
@@ -875,13 +884,25 @@
 
             <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parser</span><span class="p">,</span> <span class="n">ns</span><span class="p">,</span> <span class="n">values</span><span class="p">,</span> <span class="n">option_string</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
                 <span class="c1"># The unit-cell direction</span>
-                <span class="n">axis</span> <span class="o">=</span> <span class="n">direction</span><span class="p">(</span><span class="n">values</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+                <span class="n">axis</span> <span class="o">=</span> <span class="n">direction</span><span class="p">(</span><span class="n">values</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
                 <span class="c1"># Figure out whether this is a fractional or</span>
                 <span class="c1"># distance in Ang</span>
-                <span class="n">is_frac</span> <span class="o">=</span> <span class="s1">&#39;f&#39;</span> <span class="ow">in</span> <span class="n">values</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
-                <span class="n">rng</span> <span class="o">=</span> <span class="n">strseq</span><span class="p">(</span><span class="nb">float</span><span class="p">,</span> <span class="n">values</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;f&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">))</span>
+                <span class="n">is_frac</span> <span class="o">=</span> <span class="s1">&#39;f&#39;</span> <span class="ow">in</span> <span class="n">values</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="n">rng</span> <span class="o">=</span> <span class="n">strseq</span><span class="p">(</span><span class="nb">float</span><span class="p">,</span> <span class="n">values</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;f&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">))</span>
                 <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">rng</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">):</span>
-                    <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s1">&#39;Can not figure out how to apply mid-removal of grids.&#39;</span><span class="p">)</span>
+                    <span class="c1"># we have bounds</span>
+                    <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">rng</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">rng</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">):</span>
+                        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s1">&#39;Can not figure out how to apply mid-removal of grids.&#39;</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">rng</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                        <span class="n">idx1</span> <span class="o">=</span> <span class="mi">0</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">idx1</span> <span class="o">=</span> <span class="n">ns</span><span class="o">.</span><span class="n">_grid</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">rng</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="n">axis</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">rng</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                        <span class="n">idx2</span> <span class="o">=</span> <span class="n">ns</span><span class="o">.</span><span class="n">_grid</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">idx2</span> <span class="o">=</span> <span class="n">ns</span><span class="o">.</span><span class="n">_grid</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">rng</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="n">axis</span><span class="p">)</span>
+                    <span class="n">ns</span><span class="o">.</span><span class="n">_grid</span> <span class="o">=</span> <span class="n">ns</span><span class="o">.</span><span class="n">_grid</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">_a</span><span class="o">.</span><span class="n">arangei</span><span class="p">(</span><span class="n">idx1</span><span class="p">,</span> <span class="n">idx2</span><span class="p">),</span> <span class="n">axis</span><span class="p">)</span>
+                    <span class="k">return</span>
                 <span class="k">elif</span> <span class="n">rng</span> <span class="o">&lt;</span> <span class="mf">0.</span><span class="p">:</span>
                     <span class="k">if</span> <span class="n">is_frac</span><span class="p">:</span>
                         <span class="n">rng</span> <span class="o">=</span> <span class="n">ns</span><span class="o">.</span><span class="n">_grid</span><span class="o">.</span><span class="n">cell</span><span class="p">[</span><span class="n">axis</span><span class="p">,</span> <span class="p">:]</span> <span class="o">*</span> <span class="nb">abs</span><span class="p">(</span><span class="n">rng</span><span class="p">)</span>
@@ -891,8 +912,8 @@
                         <span class="n">rng</span> <span class="o">=</span> <span class="n">ns</span><span class="o">.</span><span class="n">_grid</span><span class="o">.</span><span class="n">cell</span><span class="p">[</span><span class="n">axis</span><span class="p">,</span> <span class="p">:]</span> <span class="o">*</span> <span class="n">rng</span>
                     <span class="n">b</span> <span class="o">=</span> <span class="kc">False</span>
                 <span class="n">idx</span> <span class="o">=</span> <span class="n">ns</span><span class="o">.</span><span class="n">_grid</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">rng</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="n">axis</span><span class="p">)</span>
-                <span class="n">ns</span><span class="o">.</span><span class="n">_grid</span> <span class="o">=</span> <span class="n">ns</span><span class="o">.</span><span class="n">_grid</span><span class="o">.</span><span class="n">sub_part</span><span class="p">(</span><span class="n">idx</span><span class="p">,</span> <span class="n">axis</span><span class="p">,</span> <span class="n">b</span><span class="p">)</span>
-        <span class="n">p</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="o">*</span><span class="n">opts</span><span class="p">(</span><span class="s1">&#39;--remove&#39;</span><span class="p">),</span> <span class="n">nargs</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">metavar</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;DIR&#39;</span><span class="p">,</span> <span class="s1">&#39;COORD&#39;</span><span class="p">),</span>
+                <span class="n">ns</span><span class="o">.</span><span class="n">_grid</span> <span class="o">=</span> <span class="n">ns</span><span class="o">.</span><span class="n">_grid</span><span class="o">.</span><span class="n">remove_part</span><span class="p">(</span><span class="n">idx</span><span class="p">,</span> <span class="n">axis</span><span class="p">,</span> <span class="n">b</span><span class="p">)</span>
+        <span class="n">p</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="o">*</span><span class="n">opts</span><span class="p">(</span><span class="s1">&#39;--remove&#39;</span><span class="p">),</span> <span class="n">nargs</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">metavar</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;COORD&#39;</span><span class="p">,</span> <span class="s1">&#39;DIR&#39;</span><span class="p">),</span>
                        <span class="n">action</span><span class="o">=</span><span class="n">RemoveDirectionGrid</span><span class="p">,</span>
                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Reduce the grid by removing a subset of the grid (along DIR).&#39;</span><span class="p">)</span>
 
@@ -900,6 +921,7 @@
         <span class="k">class</span> <span class="nc">PrintInfo</span><span class="p">(</span><span class="n">argparse</span><span class="o">.</span><span class="n">Action</span><span class="p">):</span>
 
             <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parser</span><span class="p">,</span> <span class="n">ns</span><span class="p">,</span> <span class="n">values</span><span class="p">,</span> <span class="n">option_string</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+                <span class="n">ns</span><span class="o">.</span><span class="n">_stored_grid</span> <span class="o">=</span> <span class="kc">True</span>
                 <span class="nb">print</span><span class="p">(</span><span class="n">ns</span><span class="o">.</span><span class="n">_grid</span><span class="p">)</span>
         <span class="n">p</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="o">*</span><span class="n">opts</span><span class="p">(</span><span class="s1">&#39;--info&#39;</span><span class="p">),</span> <span class="n">nargs</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
                        <span class="n">action</span><span class="o">=</span><span class="n">PrintInfo</span><span class="p">,</span>
@@ -913,7 +935,7 @@
                 <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
                     <span class="k">return</span>
                 <span class="n">ns</span><span class="o">.</span><span class="n">_grid</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">value</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
-                <span class="c1"># Issue to the namespace that the geometry has been written, at least once.</span>
+                <span class="c1"># Issue to the namespace that the grid has been written, at least once.</span>
                 <span class="n">ns</span><span class="o">.</span><span class="n">_stored_grid</span> <span class="o">=</span> <span class="kc">True</span>
         <span class="n">p</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="o">*</span><span class="n">opts</span><span class="p">(</span><span class="s1">&#39;--out&#39;</span><span class="p">,</span> <span class="s1">&#39;-o&#39;</span><span class="p">),</span> <span class="n">nargs</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="n">Out</span><span class="p">,</span>
                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Store the grid (at its current invocation) to the out file.&#39;</span><span class="p">)</span>
@@ -929,18 +951,18 @@
 
 
 <span class="k">def</span> <span class="nf">sgrid</span><span class="p">(</span><span class="n">grid</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">argv</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">ret_grid</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot; Main script for sgrid script.</span>
+    <span class="sd">&quot;&quot;&quot; Main script for sgrid.</span>
 
 <span class="sd">    This routine may be called with `argv` and/or a `Sile` which is the grid at hand.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    grid : `Grid`/`BaseSile`</span>
+<span class="sd">    grid : Grid or BaseSile</span>
 <span class="sd">       this may either be the grid, as-is, or a `Sile` which contains</span>
 <span class="sd">       the grid.</span>
-<span class="sd">    argv : `list of str`</span>
-<span class="sd">       the arguments passed to sgeom</span>
-<span class="sd">    ret_grid : `bool` (`False`)</span>
+<span class="sd">    argv : list of str</span>
+<span class="sd">       the arguments passed to sgrid</span>
+<span class="sd">    ret_grid : bool, optional</span>
 <span class="sd">       whether the function should return the grid</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="kn">import</span> <span class="nn">sys</span>
@@ -989,23 +1011,16 @@
     <span class="c1"># First read the input &quot;Sile&quot;</span>
     <span class="k">if</span> <span class="n">grid</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">argv</span><span class="p">,</span> <span class="n">input_file</span> <span class="o">=</span> <span class="n">cmd</span><span class="o">.</span><span class="n">collect_input</span><span class="p">(</span><span class="n">argv</span><span class="p">)</span>
-        <span class="k">try</span><span class="p">:</span>
-            <span class="n">grid</span> <span class="o">=</span> <span class="n">get_sile</span><span class="p">(</span><span class="n">input_file</span><span class="p">)</span><span class="o">.</span><span class="n">read_grid</span><span class="p">()</span>
-        <span class="k">except</span><span class="p">:</span>
-            <span class="n">grid</span> <span class="o">=</span> <span class="n">Grid</span><span class="p">([</span><span class="mi">10</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">10</span><span class="p">])</span>
+        <span class="n">grid</span> <span class="o">=</span> <span class="n">get_sile</span><span class="p">(</span><span class="n">input_file</span><span class="p">)</span><span class="o">.</span><span class="n">read_grid</span><span class="p">()</span>
 
     <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">grid</span><span class="p">,</span> <span class="n">Grid</span><span class="p">):</span>
-        <span class="c1"># Do nothing, the geometry is already created</span>
-        <span class="n">argv</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;fake.grid.nc&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="n">argv</span>
+        <span class="c1"># Do nothing, the grid is already created</span>
+        <span class="k">pass</span>
 
     <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">grid</span><span class="p">,</span> <span class="n">BaseSile</span><span class="p">):</span>
-        <span class="k">try</span><span class="p">:</span>
-            <span class="n">grid</span> <span class="o">=</span> <span class="n">grid</span><span class="o">.</span><span class="n">read_grid</span><span class="p">()</span>
-            <span class="c1"># Store the input file...</span>
-            <span class="n">input_file</span> <span class="o">=</span> <span class="n">grid</span><span class="o">.</span><span class="n">file</span>
-        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
-            <span class="n">grid</span> <span class="o">=</span> <span class="n">Grid</span><span class="p">([</span><span class="mi">10</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">10</span><span class="p">])</span>
-        <span class="n">argv</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;fake.grid.nc&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="n">argv</span>
+        <span class="n">grid</span> <span class="o">=</span> <span class="n">grid</span><span class="o">.</span><span class="n">read_grid</span><span class="p">()</span>
+        <span class="c1"># Store the input file...</span>
+        <span class="n">input_file</span> <span class="o">=</span> <span class="n">grid</span><span class="o">.</span><span class="n">file</span>
 
     <span class="c1"># Do the argument parser</span>
     <span class="n">p</span><span class="p">,</span> <span class="n">ns</span> <span class="o">=</span> <span class="n">grid</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="o">**</span><span class="n">grid</span><span class="o">.</span><span class="n">_ArgumentParser_args_single</span><span class="p">())</span>
@@ -1072,7 +1087,7 @@
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'../../',
-            VERSION:'0.8.5-282',
+            VERSION:'0.8.5-305',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true,

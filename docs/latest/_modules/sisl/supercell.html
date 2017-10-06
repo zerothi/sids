@@ -65,7 +65,7 @@
             
             
               <div class="version">
-                0.8.5-282
+                0.8.5-305
               </div>
             
           
@@ -178,12 +178,25 @@
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="kn">from</span> <span class="nn">numbers</span> <span class="k">import</span> <span class="n">Integral</span>
 
-<span class="kn">import</span> <span class="nn">sisl._numpy_scipy</span> <span class="k">as</span> <span class="nn">ns_</span>
+<span class="kn">import</span> <span class="nn">sisl._array</span> <span class="k">as</span> <span class="nn">_a</span>
+<span class="kn">import</span> <span class="nn">sisl.linalg</span> <span class="k">as</span> <span class="nn">lin</span>
 <span class="kn">import</span> <span class="nn">sisl.plot</span> <span class="k">as</span> <span class="nn">plt</span>
 <span class="kn">from</span> <span class="nn">._help</span> <span class="k">import</span> <span class="n">ensure_array</span>
 <span class="kn">from</span> <span class="nn">.quaternion</span> <span class="k">import</span> <span class="n">Quaternion</span>
 
 <span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;SuperCell&#39;</span><span class="p">,</span> <span class="s1">&#39;SuperCellChild&#39;</span><span class="p">]</span>
+
+
+<span class="k">def</span> <span class="nf">_cross</span><span class="p">(</span><span class="n">u</span><span class="p">,</span> <span class="n">v</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Cross product u x v &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">u</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="n">v</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">-</span> <span class="n">u</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">*</span> <span class="n">v</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+                     <span class="n">u</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">*</span> <span class="n">v</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">u</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">v</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span>
+                     <span class="n">u</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">v</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">u</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="n">v</span><span class="p">[</span><span class="mi">0</span><span class="p">]])</span>
+
+
+<span class="k">def</span> <span class="nf">_dot</span><span class="p">(</span><span class="n">u</span><span class="p">,</span> <span class="n">v</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Dot product u . v &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">u</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">v</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">u</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="n">v</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">u</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">*</span> <span class="n">v</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
 
 
 <div class="viewcode-block" id="SuperCell"><a class="viewcode-back" href="../../api-generated/sisl.SuperCell.html#sisl.SuperCell">[docs]</a><span class="k">class</span> <span class="nc">SuperCell</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
@@ -388,7 +401,7 @@
         <span class="n">cell</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cell</span><span class="p">[:,</span> <span class="p">:])</span>
 
         <span class="c1"># Solve to get the divisions in the current cell</span>
-        <span class="n">x</span> <span class="o">=</span> <span class="n">ns_</span><span class="o">.</span><span class="n">solve</span><span class="p">(</span><span class="n">cell</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">xyz</span><span class="o">.</span><span class="n">T</span><span class="p">)</span><span class="o">.</span><span class="n">T</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">lin</span><span class="o">.</span><span class="n">solve</span><span class="p">(</span><span class="n">cell</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">xyz</span><span class="o">.</span><span class="n">T</span><span class="p">)</span><span class="o">.</span><span class="n">T</span>
 
         <span class="c1"># Now we should figure out the correct repetitions</span>
         <span class="c1"># by rounding to integer positions of the cell vectors</span>
@@ -440,11 +453,80 @@
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cell</span><span class="p">[</span><span class="n">idx</span><span class="p">,</span> <span class="p">:],</span> <span class="n">order</span><span class="o">=</span><span class="s1">&#39;C&#39;</span><span class="p">),</span>
                               <span class="n">nsc</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">nsc</span><span class="p">[</span><span class="n">idx</span><span class="p">])</span></div>
 
+<div class="viewcode-block" id="SuperCell.plane"><a class="viewcode-back" href="../../api-generated/sisl.SuperCell.html#sisl.SuperCell.plane">[docs]</a>    <span class="k">def</span> <span class="nf">plane</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ax1</span><span class="p">,</span> <span class="n">ax2</span><span class="p">,</span> <span class="n">origo</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Query point and plane-normal for the plane spanning `ax1` and `ax2`</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        ax1 : int</span>
+<span class="sd">           the first axis vector</span>
+<span class="sd">        ax2 : int</span>
+<span class="sd">           the second axis vector</span>
+<span class="sd">        origo : bool, optional</span>
+<span class="sd">           whether the plane intersects the origo or the opposite corner of the</span>
+<span class="sd">           unit-cell.</span>
+
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
+
+<span class="sd">        All 6 faces of the supercell can be retrieved like this:</span>
+
+<span class="sd">        &gt;&gt;&gt; n1, p1 = self.plane(0, 1, True)</span>
+<span class="sd">        &gt;&gt;&gt; n2, p2 = self.plane(0, 1, False)</span>
+<span class="sd">        &gt;&gt;&gt; n3, p3 = self.plane(0, 2, True)</span>
+<span class="sd">        &gt;&gt;&gt; n4, p4 = self.plane(0, 2, False)</span>
+<span class="sd">        &gt;&gt;&gt; n5, p5 = self.plane(1, 2, True)</span>
+<span class="sd">        &gt;&gt;&gt; n6, p6 = self.plane(1, 2, False)</span>
+
+<span class="sd">        However, for performance critical calculations it may be advantegeous to</span>
+<span class="sd">        do this:</span>
+
+<span class="sd">        &gt;&gt;&gt; uc = self.cell.sum(0)</span>
+<span class="sd">        &gt;&gt;&gt; n1, p1 = self.sc.plane(0, 1)</span>
+<span class="sd">        &gt;&gt;&gt; n2 = -n1</span>
+<span class="sd">        &gt;&gt;&gt; p2 = p1 + uc</span>
+<span class="sd">        &gt;&gt;&gt; n3, p3 = self.sc.plane(0, 2)</span>
+<span class="sd">        &gt;&gt;&gt; n4 = -n3</span>
+<span class="sd">        &gt;&gt;&gt; p4 = p3 + uc</span>
+<span class="sd">        &gt;&gt;&gt; n5, p5 = self.sc.plane(1, 2)</span>
+<span class="sd">        &gt;&gt;&gt; n6 = -n5</span>
+<span class="sd">        &gt;&gt;&gt; p6 = p5 + uc</span>
+
+<span class="sd">        Secondly, the variables `p1`, `p3` and `p5` are always the origo and hence</span>
+<span class="sd">        can be neglected in many calculations.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        n : array_like</span>
+<span class="sd">           planes normal vector (pointing outwards with regards to the cell)</span>
+<span class="sd">        p : array_like</span>
+<span class="sd">           a point on the plane</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">cell</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cell</span>
+        <span class="n">n</span> <span class="o">=</span> <span class="n">_cross</span><span class="p">(</span><span class="n">cell</span><span class="p">[</span><span class="n">ax1</span><span class="p">,</span> <span class="p">:],</span> <span class="n">cell</span><span class="p">[</span><span class="n">ax2</span><span class="p">,</span> <span class="p">:])</span>
+        <span class="c1"># Normalize</span>
+        <span class="n">n</span> <span class="o">/=</span> <span class="n">_dot</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">n</span><span class="p">)</span> <span class="o">**</span> <span class="o">.</span><span class="mi">5</span>
+        <span class="c1"># Now we need to figure out if the normal vector</span>
+        <span class="c1"># is pointing outwards</span>
+        <span class="c1"># Take the cell center</span>
+        <span class="n">up</span> <span class="o">=</span> <span class="n">cell</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="c1"># Calculate the distance from the plane to the center of the cell</span>
+
+        <span class="c1"># If d is positive then the normal vector is pointing towards</span>
+        <span class="c1"># the center, so rotate 180</span>
+        <span class="k">if</span> <span class="n">_dot</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">up</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mf">0.</span><span class="p">:</span>
+            <span class="n">n</span> <span class="o">*=</span> <span class="o">-</span><span class="mi">1</span>
+
+        <span class="k">if</span> <span class="n">origo</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">n</span><span class="p">,</span> <span class="n">_a</span><span class="o">.</span><span class="n">zerosd</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+        <span class="c1"># We have to reverse the normal vector</span>
+        <span class="k">return</span> <span class="o">-</span><span class="n">n</span><span class="p">,</span> <span class="n">up</span></div>
+
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">rcell</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Returns the reciprocal cell for the `SuperCell` without ``2*np.pi``</span>
 
-<span class="sd">        Note: The returned vectors are still in [0,:] format</span>
+<span class="sd">        Note: The returned vectors are still in [0, :] format</span>
 <span class="sd">        and not as returned by an inverse LAPACK algorithm.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># Calculate the reciprocal cell</span>
@@ -1013,7 +1095,7 @@
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'../../',
-            VERSION:'0.8.5-282',
+            VERSION:'0.8.5-305',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true,
