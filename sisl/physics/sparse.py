@@ -6,7 +6,8 @@ from numpy import dot
 import numpy as np
 from scipy.sparse import csr_matrix, diags, SparseEfficiencyWarning
 
-import sisl._numpy_scipy as ns_
+import sisl._array as _a
+import sisl.linalg as lin
 from sisl._help import _range as range
 from sisl.selector import TimeSelector
 from sisl.sparse import isspmatrix
@@ -255,7 +256,7 @@ class SparseOrbitalBZ(SparseOrbital):
         phases = np.exp(-1j * dot(dot(dot(self.rcell, k), self.cell), self.sc.sc_off.T))
 
         # Now create offsets
-        offsets = - ns_.arangei(0, len(phases) * self.no, self.no)
+        offsets = - _a.arangei(0, len(phases) * self.no, self.no)
         # Do not cast to dtype, that is done below, then we retain precision
         diag = diags(phases, offsets, shape=(self.shape[1], self.shape[0]))
 
@@ -295,7 +296,7 @@ class SparseOrbitalBZ(SparseOrbital):
         phases = np.exp(-1j * dot(dot(dot(self.rcell, k), self.cell), self.sc.sc_off.T))
 
         # Now create offsets
-        offsets = - ns_.arangei(0, len(phases) * self.no, self.no)
+        offsets = - _a.arangei(0, len(phases) * self.no, self.no)
         # Do not cast to dtype, that is done below, then we retain precision
         diag = diags(phases, offsets, shape=(self.shape[1], self.shape[0])).toarray()
 
@@ -408,9 +409,9 @@ class SparseOrbitalBZ(SparseOrbital):
                 S = S[orbs, orbs].toarray()
 
         if self.orthogonal:
-            return ns_.eigh_destroy(P, eigvals_only=eigvals_only, **kwargs)
+            return lin.eigh_destroy(P, eigvals_only=eigvals_only, **kwargs)
 
-        return ns_.eigh_destroy(P, S, eigvals_only=eigvals_only, **kwargs)
+        return lin.eigh_destroy(P, S, eigvals_only=eigvals_only, **kwargs)
 
     def eigsh(self, k=(0, 0, 0), n=10, atoms=None, gauge='R',
               eigvals_only=True, **kwargs):
@@ -445,7 +446,7 @@ class SparseOrbitalBZ(SparseOrbital):
             # Reduce space
             P = P[orbs, orbs]
 
-        return ns_.eigsh(P, k=n, return_eigenvectors=not eigvals_only, **kwargs)
+        return lin.eigsh(P, k=n, return_eigenvectors=not eigvals_only, **kwargs)
 
 
 class SparseOrbitalBZSpin(SparseOrbitalBZ):
@@ -470,7 +471,17 @@ class SparseOrbitalBZSpin(SparseOrbitalBZ):
         as the underlying geometry for the parameters that connects orbital elements.
         """
         # Check that the passed parameters are correct
-        self._spin = Spin(kwargs.get('spin', dim), dtype)
+        if 'spin' not in kwargs:
+            if isinstance(dim, Spin):
+                spin = dim
+            else:
+                spin = {1: Spin.UNPOLARIZED,
+                        2: Spin.POLARIZED,
+                        4: Spin.NONCOLINEAR,
+                        8: Spin.SPINORBIT}.get(dim)
+        else:
+            spin = kwargs.get('spin')
+        self._spin = Spin(spin, dtype)
 
         super(SparseOrbitalBZSpin, self).__init__(geom, len(self.spin), self.spin.dtype, nnzpr, **kwargs)
 
@@ -533,7 +544,7 @@ class SparseOrbitalBZSpin(SparseOrbitalBZ):
 
     # Override to enable spin configuration and orthogonality
     def _cls_kwargs(self):
-        return {'spin': self.spin, 'orthogonal': self.orthogonal}
+        return {'spin': self.spin.kind, 'orthogonal': self.orthogonal}
 
     @property
     def spin(self):
@@ -1050,9 +1061,9 @@ class SparseOrbitalBZSpin(SparseOrbitalBZ):
                 S = self.Sk(k=k, gauge=gauge)[orbs, orbs].toarray()
 
         if self.orthogonal:
-            return ns_.eigh_destroy(P, eigvals_only=eigvals_only, **kwargs)
+            return lin.eigh_destroy(P, eigvals_only=eigvals_only, **kwargs)
 
-        return ns_.eigh_destroy(P, S, eigvals_only=eigvals_only, **kwargs)
+        return lin.eigh_destroy(P, S, eigvals_only=eigvals_only, **kwargs)
 
     def eigsh(self, k=(0, 0, 0), n=10, atoms=None, gauge='R',
               eigvals_only=True, **kwargs):
@@ -1090,4 +1101,4 @@ class SparseOrbitalBZSpin(SparseOrbitalBZ):
             # Reduce space
             P = P[orbs, orbs]
 
-        return ns_.eigsh(P, k=n, return_eigenvectors=not eigvals_only, **kwargs)
+        return lin.eigsh(P, k=n, return_eigenvectors=not eigvals_only, **kwargs)

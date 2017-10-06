@@ -1,14 +1,11 @@
 from __future__ import print_function, division
 
 import re
-from functools import partial
 from itertools import groupby
 
 from numpy import zeros, ones, cumsum, take, int32
 
-from sisl._help import _map as map
-
-__all__ = ['strmap', 'strseq', 'lstranges', 'erange', 'list2range', 'fileindex']
+__all__ = ['strmap', 'strseq', 'lstranges', 'erange', 'list2str', 'fileindex']
 __all__ += ['array_arange']
 
 
@@ -31,19 +28,18 @@ def strmap(func, s, sep='b'):
        function to parse every match with
     s    : str
        the string that should be parsed
-    sep  : {'b', 'c', '*', 's'}, optional
-       separator used, ``'b'`` is square brackets, ``'c'``, curly braces, and ``'*'``/``'s'`` is the star
+    sep  : {'b', 'c'}
+       separator used, ``'b'`` is square brackets, ``'c'``, curly braces
     """
 
     if sep == 'b':
         segment = re.compile(r'\[(.+)\]\[(.+)\]|(.+)\[(.+)\]|(.+)')
         sep1, sep2 = '[', ']'
-    elif sep == '*' or sep == 's':
-        segment = re.compile(r'\*(.+)\*\*(.+)\*|(.+)\*(.+)\*|(.+)')
-        sep1, sep2 = '*', '*'
     elif sep == 'c':
         segment = re.compile(r'\{(.+)\}\{(.+)\}|(.+)\{(.+)\}|(.+)')
         sep1, sep2 = '{', '}'
+    else:
+        raise ValueError('Unknown separator for the sequence')
 
     # Create list
     l = []
@@ -75,13 +71,13 @@ def strmap(func, s, sep='b'):
 
         if len(m[0]) > 0:
             # this is: [..][..]
-            rhs = strmap(func, m[1])
-            for el in strmap(func, m[0]):
+            rhs = strmap(func, m[1], sep)
+            for el in strmap(func, m[0], sep):
                 l.append((el, rhs))
 
         elif len(m[2]) > 0:
             # this is: ..[..]
-            l.append((strseq(func, m[2]), strmap(func, m[3])))
+            l.append((strseq(func, m[2]), strmap(func, m[3], sep)))
 
         elif len(m[4]) > 0:
             l.append(strseq(func, m[4]))
@@ -111,9 +107,9 @@ def strseq(cast, s):
     (3.2, 6.3)
     """
     if ':' in s:
-        return tuple(map(cast, s.split(':')))
+        return tuple(cast(ss) if len(ss.strip()) > 0 else None for ss in s.split(':'))
     elif '-' in s:
-        return tuple(map(cast, s.split('-')))
+        return tuple(cast(ss) if len(ss.strip()) > 0 else None for ss in s.split('-'))
     return cast(s)
 
 
@@ -157,14 +153,14 @@ def lstranges(lst, cast=erange):
     return l
 
 
-def list2range(lst):
+def list2str(lst):
     """ Convert a list of elements into a string of ranges
 
     Examples
     --------
-    >>> list2range([2, 4, 5, 6])
+    >>> list2str([2, 4, 5, 6])
     2, 4-6
-    >>> list2range([2, 4, 5, 6, 8, 9])
+    >>> list2str([2, 4, 5, 6, 8, 9])
     2, 4-6, 8-9
     """
     lst = lst[:]
@@ -252,10 +248,6 @@ def array_arange(start, end=None, n=None, dtype=int32):
     >>> array_arange([1, 6], n=[2, 2])
     [1, 2, 6, 7]
     """
-    _z = partial(zeros, dtype=dtype)
-    _o = partial(ones, dtype=dtype)
-    _c = partial(cumsum, dtype=dtype)
-
     # Tests show that the below code is faster than
     # implicit for-loops, or list-comprehensions
     # concatenate(map(..)
@@ -269,20 +261,20 @@ def array_arange(start, end=None, n=None, dtype=int32):
 
     # Grab corner case
     if len(idx) == 0:
-        return _z(0)
+        return zeros(0, dtype=dtype)
 
     # Reduce size
     start = take(start, idx)
     n = take(n, idx)
 
     # Create array
-    a = _o(n.sum())
+    a = ones(n.sum(), dtype=dtype)
 
     # set pointers such that we can
     # correct for final cumsum
-    ptr = _c(n[:-1])
+    ptr = cumsum(n[:-1], dtype=dtype)
     a[0] = start[0]
     # Define start and correct for previous values
     a[ptr] = start[1:] - start[:-1] - n[:-1] + 1
 
-    return _c(a)
+    return cumsum(a, dtype=dtype)

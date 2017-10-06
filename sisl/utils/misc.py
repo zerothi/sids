@@ -53,8 +53,11 @@ def merge_instances(*args, **kwargs):
 
     Parameters
     ----------
-    name: str or MergedClass
-       name of class to merge
+    *args : obj
+       all objects dictionaries gets appended to a new class
+       which is returned.
+    name: str, optional
+       name of class to merge, default to ``'MergedClass'``
     """
     name = kwargs.get('name', 'MergedClass')
     # We must make a new-type class
@@ -162,17 +165,21 @@ def direction(d):
     1
     >>> direction('z')
     2
+    >>> direction('2')
+    2
+    >>> direction(' 2')
+    2
     """
     if isinstance(d, Integral):
         return d
 
     # We take it as a string
-    d = d.lower()
-    # We must use an arry to not allow 'xy' input
-    if d in 'x y z a b c'.split():
-        return 'xaybzc'.index(d) // 2
+    d = d.lower().strip()
+    # We must use an array to not allow 'xy' input
+    if d in 'x y z a b c 0 1 2'.split():
+        return 'xa0yb1zc2'.index(d) // 3
 
-    raise ValueError('Input direction is not an integer, nor a string in "xyzabc".')
+    raise ValueError('Input direction is not an integer, nor a string in "xyz/abc/012".')
 
 
 # Transform an input to an angle

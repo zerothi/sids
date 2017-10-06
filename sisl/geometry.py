@@ -10,7 +10,9 @@ from itertools import product
 import numpy as np
 
 import sisl.plot as plt
-import sisl._numpy_scipy as ns_
+import sisl._array as _a
+import sisl.linalg as lin
+
 from ._help import _str
 from ._help import _range as range
 from ._help import ensure_array, ensure_dtype
@@ -457,21 +459,18 @@ class Geometry(SuperCellChild):
                         yield ia, io
 
     def iR(self, na=1000, iR=20, R=None):
-        """ Return an integer number of maximum radii (`self.maxR()`) which holds approximately `na` atoms
+        """ Return an integer number of maximum radii (``self.maxR()``) which holds approximately `na` atoms
 
         Parameters
         ----------
         na : int, optional
            number of atoms within the radius
         iR : int, optional
-           initial ``iR`` value, which the sphere is estitametd from
+           initial `iR` value, which the sphere is estitametd from
         R : float, optional
            the value used for atomic range (defaults to ``self.maxR()``)
         """
-        if len(self) == 1:
-            ia = 0
-        else:
-            ia = np.random.randint(len(self) - 1)
+        ia = np.random.randint(len(self))
 
         # default block iterator
         if R is None:
@@ -752,7 +751,7 @@ class Geometry(SuperCellChild):
             # Initialize the isc for this direction
             # (note we do not take non-orthogonal directions
             #  into account)
-            isc = np.zeros(3, np.int32)
+            isc = _a.zerosi(3)
             # Initialize the actual number of supercell connections
             # along this direction.
             prev_isc = 0
@@ -838,7 +837,7 @@ class Geometry(SuperCellChild):
         # List of atoms
         n = self.na // seps
         off = n * lseg
-        new = self.sub(np.arange(off, off + n, dtype=np.int32), cell=sc)
+        new = self.sub(_a.arangei(off, off + n), cell=sc)
         if not np.allclose(new.tile(seps, axis).xyz, self.xyz,
                            rtol=rtol, atol=atol):
             st = 'The cut structure cannot be re-created by tiling'
@@ -863,7 +862,7 @@ class Geometry(SuperCellChild):
         sub : the negative of this routine, i.e. retain a subset of atoms
         """
         atom = self.sc2uc(atom)
-        atom = np.delete(ns_.arangei(self.na), atom)
+        atom = np.delete(_a.arangei(self.na), atom)
         return self.sub(atom)
 
     def tile(self, reps, axis):
@@ -912,7 +911,7 @@ class Geometry(SuperCellChild):
         xyz = np.tile(self.xyz, (reps, 1))
         # We may use broadcasting rules instead of repeating stuff
         xyz.shape = (reps, self.na, 3)
-        nr = np.arange(reps, dtype=np.float64)
+        nr = _a.arangei(reps)
         nr.shape = (reps, 1)
         for i in range(3):
             # Correct the unit-cell offsets along `i`
@@ -987,7 +986,7 @@ class Geometry(SuperCellChild):
         xyz = np.repeat(self.xyz, reps, axis=0)
         # We may use broadcasting rules instead of repeating stuff
         xyz.shape = (self.na, reps, 3)
-        nr = np.arange(reps, dtype=np.float64)
+        nr = _a.arangei(reps)
         nr.shape = (1, reps)
         for i in range(3):
             # Correct the unit-cell offsets along `i`
@@ -1198,8 +1197,8 @@ class Geometry(SuperCellChild):
             atom = self.sc2uc(atom, uniq=True)
 
         # Ensure the normal vector is normalized...
-        vn = np.copy(np.asarray(v, dtype=np.float64)[:])
-        vn /= np.sum(vn ** 2) ** .5
+        vn = np.copy(_a.asarrayd(v))
+        vn /= (vn ** 2).sum() ** .5
 
         # Prepare quaternion...
         q = Quaternion(angle, vn, rad=rad)
@@ -1228,15 +1227,15 @@ class Geometry(SuperCellChild):
         """
         # Create normal vector to miller direction and cartesian
         # direction
-        cp = np.array([m[1] * v[2] - m[2] * v[1],
-                       m[2] * v[0] - m[0] * v[2],
-                       m[0] * v[1] - m[1] * v[0]], np.float64)
-        cp /= np.sum(cp**2) ** .5
+        cp = _a.arrayd([m[1] * v[2] - m[2] * v[1],
+                        m[2] * v[0] - m[0] * v[2],
+                        m[0] * v[1] - m[1] * v[0]])
+        cp /= (cp ** 2).sum() ** .5
 
-        lm = np.array(m, np.float64)
-        lm /= np.sum(lm**2) ** .5
-        lv = np.array(v, np.float64)
-        lv /= np.sum(lv**2) ** .5
+        lm = _a.arrayd(m)
+        lm /= (lm ** 2).sum() ** .5
+        lv = _a.arrayd(v)
+        lv /= (lv ** 2).sum() ** .5
 
         # Now rotate the angle between them
         a = acos(np.sum(lm * lv))
@@ -1613,7 +1612,7 @@ class Geometry(SuperCellChild):
     @property
     def fxyz(self):
         """ Returns geometry coordinates in fractional coordinates """
-        return ns_.solve(self.cell.T, self.xyz.T).T
+        return lin.solve(self.cell.T, self.xyz.T).T
 
     def axyz(self, atom=None, isc=None):
         """ Return the atomic coordinates in the supercell of a given atom.
@@ -2228,6 +2227,12 @@ class Geometry(SuperCellChild):
             R = self.maxR()
         R = ensure_array(R, np.float64)
 
+        # Convert inedx coordinate to point
+        if isinstance(xyz_ia, Integral):
+            xyz_ia = self.xyz[xyz_ia, :]
+        elif not isndarray(xyz_ia):
+            xyz_ia = ensure_array(xyz_ia, np.float64)
+
         # Get global calls
         # Is faster for many loops
         concat = np.concatenate
@@ -2245,7 +2250,48 @@ class Geometry(SuperCellChild):
 
         ret_special = ret_xyz or ret_rij
 
+        def _dot(u, v):
+            """ Dot product u . v """
+            return u[0] * v[0] + u[1] * v[1] + u[2] * v[2]
+
+        def sphere_intersect(s, c, r, up):
+
+            # w = point - point-in-plane
+            pp = c - self.sc.offset(self.sc.sc_off[s, :])
+
+            # Check all 6 faces
+            # p1 is always [0, 0, 0]
+            n, _ = self.sc.plane(0, 1)
+            d1 = _dot(n, pp)
+            d2 = _dot(n, pp - up)
+            if d1 > r or -d2 > r:
+                return False
+
+            n, _ = self.sc.plane(0, 2)
+            d1 = _dot(n, pp)
+            d2 = _dot(n, pp - up)
+            if d1 > r or -d2 > r:
+                return False
+            n, _ = self.sc.plane(1, 2)
+            d1 = _dot(n, pp)
+            d2 = _dot(n, pp - up)
+            if d1 > r or -d2 > r:
+                return False
+            return True
+
+        # To reduce calculations of the same quantities
+        up = self.sc.cell.sum(0)
+        r = R[-1]
+
         for s in range(self.n_s):
+
+            # Check if we need to process this supercell
+            # Currently it seems this is overdoing it
+            # I.e. this check is very heavy because it calculates
+            # all planes
+            if not sphere_intersect(s, xyz_ia, r, up):
+                continue
+
             na = self.na * s
             sret = self.close_sc(xyz_ia,
                 self.sc.sc_off[s, :], R=R,
@@ -2306,7 +2352,7 @@ class Geometry(SuperCellChild):
              `False`, return only the first orbital corresponding to the atom,
              `True`, returns list of the full atom
         """
-        ia = ns_.asarrayi(ia)
+        ia = _a.asarrayi(ia)
         if not all:
             return self.firsto[ia % self.na] + (ia // self.na) * self.no
         off = (ia // self.na) * self.no
@@ -2316,7 +2362,7 @@ class Geometry(SuperCellChild):
 
         # Create ranges
         if isinstance(ob, Integral):
-            return ns_.arangei(ob, oe)
+            return _a.arangei(ob, oe)
 
         return array_arange(ob, oe)
 
@@ -2339,7 +2385,7 @@ class Geometry(SuperCellChild):
                 return np.unique(np.argmax(io % self.no <= self.lasto) + (io // self.no) * self.na)
             return np.argmax(io % self.no <= self.lasto) + (io // self.no) * self.na
 
-        a = ns_.asarrayi(io) % self.no
+        a = _a.asarrayi(io) % self.no
         # Use b-casting rules
         a.shape = (-1, 1)
         a = np.argmax(a <= self.lasto, axis=1)
@@ -2605,7 +2651,7 @@ class Geometry(SuperCellChild):
 
         # Correct atom input
         if atom is None:
-            atom = ns_.arangei(len(self))
+            atom = _a.arangei(len(self))
         else:
             atom = ensure_array(atom)
 
@@ -3035,18 +3081,18 @@ class Geometry(SuperCellChild):
 
 
 def sgeom(geom=None, argv=None, ret_geometry=False):
-    """ Main script for sgeom script.
+    """ Main script for sgeom.
 
     This routine may be called with `argv` and/or a `Sile` which is the geometry at hand.
 
     Parameters
     ----------
-    geom : ``Geometry``, ``BaseSile``
+    geom : Geometry or BaseSile
        this may either be the geometry, as-is, or a `Sile` which contains
        the geometry.
-    argv : list of ``str``
+    argv : list of str
        the arguments passed to sgeom
-    ret_geometry : ``bool`` (`False`)
+    ret_geometry : bool, optional
        whether the function should return the geometry
     """
     import sys
@@ -3111,13 +3157,12 @@ lattice vector.
 
     elif isinstance(geom, Geometry):
         # Do nothing, the geometry is already created
-        argv = ['fake.xyz'] + argv
+        pass
 
     elif isinstance(geom, BaseSile):
         geom = geom.read_geometry()
         # Store the input file...
         input_file = geom.file
-        argv = ['fake.xyz'] + argv
 
     # Do the argument parser
     p, ns = geom.ArgumentParser(p, **geom._ArgumentParser_args_single())

@@ -8,12 +8,25 @@ import math
 import numpy as np
 from numbers import Integral
 
-import sisl._numpy_scipy as ns_
+import sisl._array as _a
+import sisl.linalg as lin
 import sisl.plot as plt
 from ._help import ensure_array
 from .quaternion import Quaternion
 
 __all__ = ['SuperCell', 'SuperCellChild']
+
+
+def _cross(u, v):
+    """ Cross product u x v """
+    return np.array([u[1] * v[2] - u[2] * v[1],
+                     u[2] * v[0] - u[0] * v[2],
+                     u[0] * v[1] - u[1] * v[0]])
+
+
+def _dot(u, v):
+    """ Dot product u . v """
+    return u[0] * v[0] + u[1] * v[1] + u[2] * v[2]
 
 
 class SuperCell(object):
@@ -218,7 +231,7 @@ class SuperCell(object):
         cell = np.copy(self.cell[:, :])
 
         # Solve to get the divisions in the current cell
-        x = ns_.solve(cell.T, xyz.T).T
+        x = lin.solve(cell.T, xyz.T).T
 
         # Now we should figure out the correct repetitions
         # by rounding to integer positions of the cell vectors
@@ -270,11 +283,80 @@ class SuperCell(object):
         return self.__class__(np.copy(self.cell[idx, :], order='C'),
                               nsc=self.nsc[idx])
 
+    def plane(self, ax1, ax2, origo=True):
+        """ Query point and plane-normal for the plane spanning `ax1` and `ax2`
+
+        Parameters
+        ----------
+        ax1 : int
+           the first axis vector
+        ax2 : int
+           the second axis vector
+        origo : bool, optional
+           whether the plane intersects the origo or the opposite corner of the
+           unit-cell.
+
+        Examples
+        --------
+
+        All 6 faces of the supercell can be retrieved like this:
+
+        >>> n1, p1 = self.plane(0, 1, True)
+        >>> n2, p2 = self.plane(0, 1, False)
+        >>> n3, p3 = self.plane(0, 2, True)
+        >>> n4, p4 = self.plane(0, 2, False)
+        >>> n5, p5 = self.plane(1, 2, True)
+        >>> n6, p6 = self.plane(1, 2, False)
+
+        However, for performance critical calculations it may be advantegeous to
+        do this:
+
+        >>> uc = self.cell.sum(0)
+        >>> n1, p1 = self.sc.plane(0, 1)
+        >>> n2 = -n1
+        >>> p2 = p1 + uc
+        >>> n3, p3 = self.sc.plane(0, 2)
+        >>> n4 = -n3
+        >>> p4 = p3 + uc
+        >>> n5, p5 = self.sc.plane(1, 2)
+        >>> n6 = -n5
+        >>> p6 = p5 + uc
+
+        Secondly, the variables `p1`, `p3` and `p5` are always the origo and hence
+        can be neglected in many calculations.
+
+        Returns
+        -------
+        n : array_like
+           planes normal vector (pointing outwards with regards to the cell)
+        p : array_like
+           a point on the plane
+        """
+        cell = self.cell
+        n = _cross(cell[ax1, :], cell[ax2, :])
+        # Normalize
+        n /= _dot(n, n) ** .5
+        # Now we need to figure out if the normal vector
+        # is pointing outwards
+        # Take the cell center
+        up = cell.sum(0)
+        # Calculate the distance from the plane to the center of the cell
+
+        # If d is positive then the normal vector is pointing towards
+        # the center, so rotate 180
+        if _dot(n, up / 2) > 0.:
+            n *= -1
+
+        if origo:
+            return n, _a.zerosd(3)
+        # We have to reverse the normal vector
+        return -n, up
+
     @property
     def rcell(self):
         """ Returns the reciprocal cell for the `SuperCell` without ``2*np.pi``
 
-        Note: The returned vectors are still in [0,:] format
+        Note: The returned vectors are still in [0, :] format
         and not as returned by an inverse LAPACK algorithm.
         """
         # Calculate the reciprocal cell

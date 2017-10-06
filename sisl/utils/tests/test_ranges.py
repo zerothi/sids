@@ -2,16 +2,30 @@ from __future__ import print_function, division
 
 import pytest
 
+import math as m
+from functools import partial
+
 from sisl.utils.ranges import *
 
-import math as m
+
+pytestmark = pytest.mark.utils
 
 
+@pytest.mark.ranges
 class TestRanges(object):
 
-    def test_strseq(self):
-        ranges = strseq(int, '1:2:5')
+    @pytest.mark.parametrize("sep", ['-', ':'])
+    def test_strseq(self, sep):
+        ranges = strseq(int, sep.join(['1', '2', '5']))
         assert ranges == (1, 2, 5)
+        ranges = strseq(int, sep.join(['1', '2']))
+        assert ranges == (1, 2)
+        ranges = strseq(int, sep.join(['1', '']))
+        assert ranges == (1, None)
+        ranges = strseq(int, sep.join(['', '4']))
+        assert ranges == (None, 4)
+        ranges = strseq(int, sep.join(['', '4', '']))
+        assert ranges == (None, 4, None)
 
     def test_strmap1(self):
         assert strmap(int, '1') == [1]
@@ -22,6 +36,25 @@ class TestRanges(object):
         assert strmap(int, '[82][10]') == [(82, [10])]
         assert strmap(int, '[82,83][10]') == [(82, [10]), (83, [10])]
         assert strmap(int, '[82,83][10-13]') == [(82, [(10, 13)]), (83, [(10, 13)])]
+
+    @pytest.mark.xfail(raises=ValueError)
+    def test_strmap2(self):
+        strmap(int, '1', sep='*')
+
+    def test_strmap3(self):
+        sm = partial(strmap, sep='c')
+        assert sm(int, '1') == [1]
+        assert sm(int, '1,2') == [1, 2]
+        assert sm(int, '1,2{0,2}') == [1, (2, [0, 2])]
+        assert sm(int, '1,2-3{0,2}') == [1, ((2, 3), [0, 2])]
+        assert sm(int, '1,{2,3}{0,2}') == [1, (2, [0, 2]), (3, [0, 2])]
+        assert sm(int, '{82}{10}') == [(82, [10])]
+        assert sm(int, '{82,83}{10}') == [(82, [10]), (83, [10])]
+        assert sm(int, '{82,83}{10-13}') == [(82, [(10, 13)]), (83, [(10, 13)])]
+
+    @pytest.mark.xfail(raises=ValueError)
+    def test_strmap4(self):
+        strmap(int, '1[oestuh]]')
 
     def test_lstranges1(self):
         ranges = strmap(int, '1,2-3[0,2]')
@@ -72,8 +105,8 @@ class TestRanges(object):
         assert fileindex('hehlo[1-2]')[1] == [1, 2]
         assert fileindex('hehlo[1[1],2]')[1] == [[1, [1]], 2]
 
-    def test_list2range(self):
-        a = list2range([2, 4, 5, 6])
+    def test_list2str(self):
+        a = list2str([2, 4, 5, 6])
         assert a == "2, 4-6"
-        a = list2range([2, 4, 5, 6, 8, 9])
+        a = list2str([2, 4, 5, 6, 8, 9])
         assert a == "2, 4-6, 8-9"
