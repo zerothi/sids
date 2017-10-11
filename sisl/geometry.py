@@ -17,7 +17,7 @@ from ._help import _str
 from ._help import _range as range
 from ._help import ensure_array, ensure_dtype
 from ._help import isndarray
-from .utils import dec_default_AP, default_namespace, cmd
+from .utils import default_ArgumentParser, default_namespace, cmd
 from .utils import angle, direction
 from .utils import lstranges, strmap, array_arange
 from .quaternion import Quaternion
@@ -287,15 +287,37 @@ class Geometry(SuperCellChild):
         ja : int or array_like
            atomic indices
         """
+        R = self.Rij(ia, ja)
+
+        if len(R.shape) == 1:
+            return (R[0] ** 2. + R[1] ** 2 + R[2] ** 2) ** .5
+
+        return np.sqrt(np.sum(R ** 2, axis=1))
+
+    def Rij(self, ia, ja):
+        r""" Vector between atom `ia` and `ja`, atoms can be in super-cell indices
+
+        Returns the vector between two atoms:
+
+        .. math::
+            R_{ij} = r_j - r_i
+
+        Parameters
+        ----------
+        ia : int or array_like
+           atomic index of first atom
+        ja : int or array_like
+           atomic indices
+        """
         xi = self.axyz(ia)
         xj = self.axyz(ja)
 
         if isinstance(ja, Integral):
-            return ((xj[0] - xi[0]) ** 2. + (xj[1] - xi[1]) ** 2 + (xj[2] - xi[2]) ** 2) ** .5
+            return xj[:] - xi[:]
         elif np.all(xi.shape == xj.shape):
-            return np.sqrt(np.sum((xj - xi) ** 2., axis=1))
+            return xj - xi
 
-        return np.sqrt(np.sum((xj - xi[None, :]) ** 2., axis=1))
+        return xj - xi[None, :]
 
     def orij(self, io, jo):
         r""" Distance between orbital `io` and `jo`, orbitals can be in super-cell indices
@@ -313,6 +335,23 @@ class Geometry(SuperCellChild):
            orbital indices
         """
         return self.rij(self.o2a(io), self.o2a(jo))
+
+    def oRij(self, io, jo):
+        r""" Vector between orbital `io` and `jo`, orbitals can be in super-cell indices
+
+        Returns the vector between two orbitals:
+
+        .. math::
+            R_{ij} = r_j - r_i
+
+        Parameters
+        ----------
+        io : int or array_like
+           orbital index of first orbital
+        jo : int or array_like
+           orbital indices
+        """
+        return self.Rij(self.o2a(io), self.o2a(jo))
 
     @staticmethod
     def read(sile, *args, **kwargs):
@@ -478,7 +517,7 @@ class Geometry(SuperCellChild):
         if R < 0:
             raise ValueError("Unable to determine a number of atoms within a sphere with negative radius, is maxR() defined?")
 
-        # Number of atoms in within 20 * R
+        # Number of atoms within 20 * R
         naiR = max(1, len(self.close(ia, R=R * iR)))
 
         # Convert to na atoms spherical radii
@@ -486,7 +525,7 @@ class Geometry(SuperCellChild):
 
         return iR
 
-    def iter_block_rand(self, iR=10, R=None, atom=None):
+    def iter_block_rand(self, iR=20, R=None, atom=None):
         """ Perform the *random* block-iteration by randomly selecting the next center of block """
 
         # We implement yields as we can then do nested iterators
@@ -553,7 +592,7 @@ class Geometry(SuperCellChild):
         if np.any(not_passed):
             raise ValueError('Error on iterations. Not all atoms has been visited.')
 
-    def iter_block_shape(self, shape=None, iR=10, atom=None):
+    def iter_block_shape(self, shape=None, iR=20, atom=None):
         """ Perform the *grid* block-iteration by looping a grid """
 
         # We implement yields as we can then do nested iterators
@@ -655,7 +694,7 @@ class Geometry(SuperCellChild):
             print(np.sum(not_passed), len(self))
             raise ValueError('Error on iterations. Not all atoms has been visited.')
 
-    def iter_block(self, iR=10, R=None, atom=None, method='rand'):
+    def iter_block(self, iR=20, R=None, atom=None, method='rand'):
         """ Iterator for performance critical loops
 
         NOTE: This requires that `R` has been set correctly as the maximum interaction range.
@@ -674,7 +713,7 @@ class Geometry(SuperCellChild):
         Parameters
         ----------
         iR  : int, optional
-            the number of ``R`` ranges taken into account when doing the iterator
+            the number of `R` ranges taken into account when doing the iterator
         R  : float, optional
             enables overwriting the local R quantity. Defaults to ``self.maxR()``
         atom : array_like, optional
@@ -1316,10 +1355,10 @@ class Geometry(SuperCellChild):
             sc = self.sc.copy()
         return self.__class__(xyz, atom=self.atom.copy(), sc=sc)
 
-    def center(self, atom=None, which='xyz'):
+    def center(self, atom=None, what='xyz'):
         """ Returns the center of the geometry
 
-        By specifying ``which`` one can control whether it should be:
+        By specifying `what` one can control whether it should be:
 
         * ``xyz|position``: Center of coordinates (default)
         * ``mass``: Center of mass
@@ -1329,22 +1368,22 @@ class Geometry(SuperCellChild):
         ----------
         atom : array_like
             list of atomic indices to find center of
-        which : {'xyz', 'mass', 'cell'}
+        what : {'xyz', 'mass', 'cell'}
             determine whether center should be of 'cell', mass-centered ('mass'),
             or absolute center of the positions.
         """
-        if 'cell' in which:
+        if 'cell' in what:
             return self.sc.center()
         if atom is None:
             g = self
         else:
             g = self.sub(ensure_array(atom))
-        if 'mass' in which:
+        if 'mass' in what:
             mass = self.mass
             return np.dot(mass, g.xyz) / np.sum(mass)
-        if not ('xyz' in which or 'position' in which):
+        if not ('xyz' in what or 'position' in what):
             raise ValueError(
-                'Unknown which, not one of [xyz,position,mass,cell]')
+                'Unknown what, not one of [xyz,position,mass,cell]')
         return np.mean(g.xyz, axis=0)
 
     def append(self, other, axis):
@@ -2250,34 +2289,32 @@ class Geometry(SuperCellChild):
 
         ret_special = ret_xyz or ret_rij
 
-        def _dot(u, v):
-            """ Dot product u . v """
-            return u[0] * v[0] + u[1] * v[1] + u[2] * v[2]
-
-        def sphere_intersect(s, c, r, up):
+        def sphere_intersect(sc, s, c, r, up):
 
             # w = point - point-in-plane
-            pp = c - self.sc.offset(self.sc.sc_off[s, :])
+            p1 = c - sc.offset(sc.sc_off[s, :])
+            p2 = p1 - up
 
             # Check all 6 faces
-            # p1 is always [0, 0, 0]
-            n, _ = self.sc.plane(0, 1)
-            d1 = _dot(n, pp)
-            d2 = _dot(n, pp - up)
-            if d1 > r or -d2 > r:
+            # See SuperCell.plane documentation for details
+            n, _ = sc.plane(0, 1)
+            if n[0] * p1[0] + n[1] * p1[1] + n[2] * p1[2] > r or \
+               -n[0] * p2[0] - n[1] * p2[1] - n[2] * p2[2] > r:
                 return False
 
-            n, _ = self.sc.plane(0, 2)
-            d1 = _dot(n, pp)
-            d2 = _dot(n, pp - up)
-            if d1 > r or -d2 > r:
+            n, _ = sc.plane(0, 2)
+            if n[0] * p1[0] + n[1] * p1[1] + n[2] * p1[2] > r or \
+               -n[0] * p2[0] - n[1] * p2[1] - n[2] * p2[2] > r:
                 return False
-            n, _ = self.sc.plane(1, 2)
-            d1 = _dot(n, pp)
-            d2 = _dot(n, pp - up)
-            if d1 > r or -d2 > r:
+            n, _ = sc.plane(1, 2)
+            if n[0] * p1[0] + n[1] * p1[1] + n[2] * p1[2] > r or \
+               -n[0] * p2[0] - n[1] * p2[1] - n[2] * p2[2] > r:
                 return False
             return True
+
+        if np.all(self.sc.nsc == 1):
+            def sphere_intersect(*args):
+                return True
 
         # To reduce calculations of the same quantities
         up = self.sc.cell.sum(0)
@@ -2289,7 +2326,7 @@ class Geometry(SuperCellChild):
             # Currently it seems this is overdoing it
             # I.e. this check is very heavy because it calculates
             # all planes
-            if not sphere_intersect(s, xyz_ia, r, up):
+            if not sphere_intersect(self.sc, s, xyz_ia, r, up):
                 continue
 
             na = self.na * s
@@ -2774,7 +2811,7 @@ class Geometry(SuperCellChild):
     # Hook into the Geometry class to create
     # an automatic ArgumentParser which makes actions
     # as the options are read.
-    @dec_default_AP("Manipulate a Geometry object in sisl.")
+    @default_ArgumentParser(description="Manipulate a Geometry object in sisl.")
     def ArgumentParser(self, p=None, *args, **kwargs):
         """ Create and return a group of argument parsers which manipulates it self `Geometry`.
 
@@ -2833,8 +2870,8 @@ class Geometry(SuperCellChild):
         class MoveCenterOf(argparse.Action):
 
             def __call__(self, parser, ns, value, option_string=None):
-                xyz = ns._geometry.center(which='xyz')
-                ns._geometry = ns._geometry.translate(ns._geometry.center(which=value) - xyz)
+                xyz = ns._geometry.center(what='xyz')
+                ns._geometry = ns._geometry.translate(ns._geometry.center(what=value) - xyz)
         p.add_argument(*opts('--center-of', '-co'), choices=['mass', 'xyz', 'position', 'cell'],
                        action=MoveCenterOf,
                        help='Move coordinates to the center of the designated choice.')

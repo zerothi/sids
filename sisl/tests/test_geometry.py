@@ -243,6 +243,17 @@ class TestGeometry(object):
         assert np.allclose(setup.g.orij(0, 2), 1.42)
         assert np.allclose(setup.g.orij(0, [0, 2]), [0., 1.42])
 
+    def test_Rij1(self, setup):
+        assert np.allclose(setup.g.Rij(0, 1), [1.42, 0, 0])
+
+    def test_oRij1(self, setup):
+        assert np.allclose(setup.g.oRij(0, 1), [0., 0, 0])
+        assert np.allclose(setup.g.oRij(0, 2), [1.42, 0, 0])
+        assert np.allclose(setup.g.oRij(0, [0, 1, 2]), [[0., 0, 0],
+                                                        [0., 0, 0],
+                                                        [1.42, 0, 0]])
+        assert np.allclose(setup.g.oRij(0, 2), [1.42, 0, 0])
+
     def test_cut(self, setup):
         with pytest.warns(UserWarning) as warns:
             assert len(setup.g.cut(1, 1)) == 2
@@ -445,11 +456,11 @@ class TestGeometry(object):
         assert np.allclose(setup.g[0], one)
         al = setup.g.center()
         assert np.allclose(np.mean(setup.g.xyz, axis=0), al)
-        al = setup.g.center(which='mass')
+        al = setup.g.center(what='mass')
 
     @pytest.mark.xfail(raises=ValueError)
     def test_center_raise(self, setup):
-        al = setup.g.center(which='unknown')
+        al = setup.g.center(what='unknown')
 
     def test___add__(self, setup):
         n = len(setup.g)
