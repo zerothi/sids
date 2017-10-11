@@ -65,7 +65,7 @@
             
             
               <div class="version">
-                0.8.5-305
+                0.8.5-321
               </div>
             
           
@@ -330,8 +330,8 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">edges</span><span class="p">(</span><span class="n">atom</span><span class="p">,</span> <span class="n">exclude</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">rij</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">what</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">,</span> <span class="n">uniq</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-        <span class="sa">r</span><span class="sd">&quot;&quot;&quot; Create a sparse matrix with the distances between atoms/orbitals</span>
+    <span class="k">def</span> <span class="nf">rij</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">what</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot; Create a sparse matrix with the distance between atoms/orbitals</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
@@ -342,96 +342,89 @@
 <span class="sd">            The default is the same type as the parent class.</span>
 <span class="sd">        dtype : numpy.dtype, optional</span>
 <span class="sd">            the data-type of the sparse matrix.</span>
-<span class="sd">        uniq : bool, optional</span>
-<span class="sd">            if true only a sparse matrix with unique distances are returned. Else,</span>
-<span class="sd">            duplicates may exist if the parent object has duplicates. The default</span>
-<span class="sd">            depends on what the calling object is and the value of `what`.</span>
-<span class="sd">            There are two cases:</span>
-
-<span class="sd">             - defaults to ``False`` for</span>
-<span class="sd">                ``isinstance(self, SparseAtom) and what == &#39;atom&#39;``, or</span>
-<span class="sd">                ``isinstance(self, SparseOrbital) and what == &#39;orbital&#39;``.</span>
-<span class="sd">             - defaults to ``True`` for</span>
-<span class="sd">                ``isinstance(self, SparseAtom) and what != &#39;atom&#39;``, or</span>
-<span class="sd">                ``isinstance(self, SparseOrbital) and what != &#39;orbital&#39;``.</span>
 
 <span class="sd">        Notes</span>
 <span class="sd">        -----</span>
 <span class="sd">        The returned sparse matrix with distances are taken from the current sparse pattern.</span>
 <span class="sd">        I.e. a subsequent addition of sparse elements will make them inequivalent.</span>
-<span class="sd">        It is thus important to *only* create the sparse distance matrix when the sparse</span>
+<span class="sd">        It is thus important to *only* create the sparse distance when the sparse</span>
 <span class="sd">        structure is completed.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">geom</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">geom</span>
+        <span class="n">R</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Rij</span><span class="p">(</span><span class="n">what</span><span class="p">,</span> <span class="n">dtype</span><span class="p">)</span>
+        <span class="n">R</span><span class="o">.</span><span class="n">_csr</span> <span class="o">=</span> <span class="p">(</span><span class="n">R</span><span class="o">.</span><span class="n">_csr</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">R</span>
 
+    <span class="k">def</span> <span class="nf">Rij</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">what</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot; Create a sparse matrix with the vectors between atoms/orbitals</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        what : {None, &#39;atom&#39;, &#39;orbital&#39;}</span>
+<span class="sd">            which kind of sparse vector matrix to return, either an atomic vector matrix</span>
+<span class="sd">            or an orbital vector matrix. The orbital matrix is equivalent to the atomic</span>
+<span class="sd">            one with the same vectors repeated for the same atomic orbitals.</span>
+<span class="sd">            The default is the same type as the parent class.</span>
+<span class="sd">        dtype : numpy.dtype, optional</span>
+<span class="sd">            the data-type of the sparse matrix.</span>
+
+<span class="sd">        Notes</span>
+<span class="sd">        -----</span>
+<span class="sd">        The returned sparse matrix with vectors are taken from the current sparse pattern.</span>
+<span class="sd">        I.e. a subsequent addition of sparse elements will make them inequivalent.</span>
+<span class="sd">        It is thus important to *only* create the sparse vector matrix when the sparse</span>
+<span class="sd">        structure is completed.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># Define default of what</span>
         <span class="k">if</span> <span class="n">what</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">uniq</span> <span class="o">=</span> <span class="kc">True</span>
             <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">SparseOrbital</span><span class="p">):</span>
                 <span class="n">what</span> <span class="o">=</span> <span class="s1">&#39;orbital&#39;</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="n">what</span> <span class="o">=</span> <span class="s1">&#39;atom&#39;</span>
 
-        <span class="c1"># Conversion before doing rij on geometry</span>
+        <span class="n">geom</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">geom</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">SparseAtom</span><span class="p">):</span>
+            <span class="n">Rij</span> <span class="o">=</span> <span class="n">geom</span><span class="o">.</span><span class="n">Rij</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">SparseOrbital</span><span class="p">):</span>
+            <span class="n">Rij</span> <span class="o">=</span> <span class="n">geom</span><span class="o">.</span><span class="n">oRij</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39; is an unknown class. Perhaps the inheritance has been broken.&#39;</span><span class="p">)</span>
+
+        <span class="c1"># Conversion before doing Rij on geometry</span>
         <span class="c1"># We default to expect atoms</span>
-        <span class="n">dconv</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">val</span><span class="p">:</span> <span class="n">val</span>
         <span class="n">conv</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">val</span><span class="p">:</span> <span class="n">val</span>
-        <span class="n">col_conv</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">val</span><span class="p">:</span> <span class="n">val</span>
+        <span class="c1"># Always only keep unique entries</span>
+        <span class="n">col_conv</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span>
 
         <span class="k">if</span> <span class="n">what</span> <span class="o">==</span> <span class="s1">&#39;atom&#39;</span><span class="p">:</span>
             <span class="bp">cls</span> <span class="o">=</span> <span class="n">SparseAtom</span>
             <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">SparseOrbital</span><span class="p">):</span>
-                <span class="n">conv</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">geom</span><span class="o">.</span><span class="n">o2a</span>
-                <span class="n">col_conv</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span>
-            <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">SparseAtom</span><span class="p">):</span>
-                <span class="k">if</span> <span class="n">uniq</span><span class="p">:</span>
-                    <span class="c1"># in principle not neccessary as SparseCSR will</span>
-                    <span class="c1"># never have duplicates</span>
-                    <span class="n">col_conv</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span>
-                <span class="n">dconv</span> <span class="o">=</span> <span class="n">geom</span><span class="o">.</span><span class="n">o2a</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39; is not a SparseAtom/Orbital and can thus not be converted to rij&#39;</span><span class="p">)</span>
+                <span class="n">conv</span> <span class="o">=</span> <span class="n">geom</span><span class="o">.</span><span class="n">o2a</span>
+
         <span class="k">elif</span> <span class="n">what</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;orbital&#39;</span><span class="p">,</span> <span class="s1">&#39;orb&#39;</span><span class="p">]:</span>
             <span class="bp">cls</span> <span class="o">=</span> <span class="n">SparseOrbital</span>
-            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">SparseOrbital</span><span class="p">):</span>
-                <span class="k">if</span> <span class="n">uniq</span><span class="p">:</span>
-                    <span class="c1"># in principle not neccessary as SparseCSR will</span>
-                    <span class="c1"># never have duplicates</span>
-                    <span class="n">col_conv</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span>
-                <span class="n">dconv</span> <span class="o">=</span> <span class="n">geom</span><span class="o">.</span><span class="n">o2a</span>
-            <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">SparseAtom</span><span class="p">):</span>
-                <span class="n">conv</span> <span class="o">=</span> <span class="n">ftool</span><span class="o">.</span><span class="n">partial</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">geom</span><span class="o">.</span><span class="n">a2o</span><span class="p">,</span> <span class="nb">all</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-                <span class="n">col_conv</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39; is not a SparseAtom/Orbital and can thus not be converted to rij&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">SparseAtom</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39; cannot create Rij in SparseAtom from SparseOrbital&#39;</span><span class="p">)</span>
+
         <span class="k">else</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39;.rij what= must be &quot;atom&quot;, &quot;orbital&quot; or &quot;orb&quot;.&#39;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39;.Rij what= must be &quot;atom&quot;, &quot;orbital&quot; or &quot;orb&quot;.&#39;</span><span class="p">)</span>
 
         <span class="n">ncol</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">ncol</span><span class="o">.</span><span class="n">view</span><span class="p">()</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">finalized</span><span class="p">:</span>
-            <span class="n">ptr</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">ptr</span><span class="o">.</span><span class="n">view</span><span class="p">()</span>
-            <span class="n">col</span> <span class="o">=</span> <span class="n">conv</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">col</span><span class="p">)</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">ptr</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">ptr</span><span class="o">.</span><span class="n">view</span><span class="p">()</span>
-            <span class="n">idx</span> <span class="o">=</span> <span class="n">array_arange</span><span class="p">(</span><span class="n">ptr</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">n</span><span class="o">=</span><span class="n">ncol</span><span class="p">)</span>
-            <span class="n">col</span> <span class="o">=</span> <span class="n">conv</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">take</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">col</span><span class="p">,</span> <span class="n">idx</span><span class="p">))</span>
-            <span class="k">del</span> <span class="n">ptr</span><span class="p">,</span> <span class="n">idx</span>
-            <span class="n">ptr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="n">_a</span><span class="o">.</span><span class="n">cumsumi</span><span class="p">(</span><span class="n">ncol</span><span class="p">),</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">ptr</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">ptr</span><span class="o">.</span><span class="n">view</span><span class="p">()</span>
+        <span class="n">col</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">col</span><span class="o">.</span><span class="n">view</span><span class="p">()</span>
 
         <span class="c1"># Create the output class</span>
-        <span class="n">rij</span> <span class="o">=</span> <span class="bp">cls</span><span class="p">(</span><span class="n">geom</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">dtype</span><span class="p">,</span> <span class="n">nnzpr</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">amax</span><span class="p">(</span><span class="n">ncol</span><span class="p">))</span>
+        <span class="n">R</span> <span class="o">=</span> <span class="bp">cls</span><span class="p">(</span><span class="n">geom</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">dtype</span><span class="p">,</span> <span class="n">nnzpr</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">amax</span><span class="p">(</span><span class="n">ncol</span><span class="p">))</span>
 
+        <span class="c1"># Old rows</span>
         <span class="n">orow</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">arangei</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
-        <span class="n">nrow</span> <span class="o">=</span> <span class="n">conv</span><span class="p">(</span><span class="n">orow</span><span class="p">)</span>
 
-        <span class="k">for</span> <span class="n">ro</span><span class="p">,</span> <span class="n">rn</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">orow</span><span class="p">,</span> <span class="n">nrow</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">ro</span><span class="p">,</span> <span class="n">rn</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">orow</span><span class="p">,</span> <span class="n">conv</span><span class="p">(</span><span class="n">orow</span><span class="p">)):</span>
             <span class="c1"># Reduce to the unique columns</span>
-            <span class="n">coln</span> <span class="o">=</span> <span class="n">col_conv</span><span class="p">(</span><span class="n">col</span><span class="p">[</span><span class="n">ptr</span><span class="p">[</span><span class="n">ro</span><span class="p">]:</span><span class="n">ptr</span><span class="p">[</span><span class="n">ro</span><span class="p">]</span><span class="o">+</span><span class="n">ncol</span><span class="p">[</span><span class="n">ro</span><span class="p">]])</span>
-            <span class="n">rij</span><span class="p">[</span><span class="n">rn</span><span class="p">,</span> <span class="n">coln</span><span class="p">]</span> <span class="o">=</span> <span class="n">geom</span><span class="o">.</span><span class="n">rij</span><span class="p">(</span><span class="n">dconv</span><span class="p">(</span><span class="n">ro</span><span class="p">),</span> <span class="n">dconv</span><span class="p">(</span><span class="n">coln</span><span class="p">))</span>
+            <span class="n">coln</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">conv</span><span class="p">(</span><span class="n">col</span><span class="p">[</span><span class="n">ptr</span><span class="p">[</span><span class="n">ro</span><span class="p">]:</span><span class="n">ptr</span><span class="p">[</span><span class="n">ro</span><span class="p">]</span><span class="o">+</span><span class="n">ncol</span><span class="p">[</span><span class="n">ro</span><span class="p">]]))</span>
+            <span class="n">R</span><span class="p">[</span><span class="n">rn</span><span class="p">,</span> <span class="n">coln</span><span class="p">]</span> <span class="o">=</span> <span class="n">Rij</span><span class="p">(</span><span class="n">rn</span><span class="p">,</span> <span class="n">coln</span><span class="p">)</span>
 
-        <span class="k">del</span> <span class="n">ptr</span>
-
-        <span class="k">return</span> <span class="n">rij</span>
+        <span class="k">return</span> <span class="n">R</span>
 
     <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Representation of the sparse model &quot;&quot;&quot;</span>
@@ -1898,7 +1891,7 @@
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'../../',
-            VERSION:'0.8.5-305',
+            VERSION:'0.8.5-321',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true,
