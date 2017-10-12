@@ -10,7 +10,7 @@ from numbers import Integral
 
 import sisl._array as _a
 import sisl.linalg as lin
-import sisl.plot as plt
+import sisl._plot as plt
 from ._help import ensure_array
 from .quaternion import Quaternion
 
@@ -695,7 +695,8 @@ class SuperCell(object):
         if isinstance(sile, BaseSile):
             return sile.read_supercell(*args, **kwargs)
         else:
-            return get_sile(sile).read_supercell(*args, **kwargs)
+            with get_sile(sile) as fh:
+                return fh.read_supercell(*args, **kwargs)
 
     def __repr__(self):
         """ Returns a string representation of the object """
