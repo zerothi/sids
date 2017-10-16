@@ -276,9 +276,10 @@ class tbtncSileTBtrans(SileCDFTBtrans):
     # file.
 
     @property
-    def geom(self):
-        """ Returns the associated geometry from this file """
+    def geometry(self):
+        """ The associated geometry from this file """
         return self.read_geometry()
+    geom = geometry
 
     @property
     def cell(self):
@@ -625,7 +626,7 @@ class tbtncSileTBtrans(SileCDFTBtrans):
         if atom is None and orbital is None:
             # We simply return *everything*
             if sum:
-                return _a.sumd(DOS[..., :], axis=-1) / NORM
+                return _a.sumd(DOS, axis=-1) / NORM
             # We return the sorted DOS
             p = np.argsort(self.pivot)
             return DOS[..., p] / NORM
@@ -1321,12 +1322,8 @@ class tbtncSileTBtrans(SileCDFTBtrans):
         # vector currents
         Ja = _a.zerosd([na, 3])
 
-        # Create local orbital look-up
-        xyz = geom.xyz
-
-        # Short-hands
+        # Short-hand
         sqrt = np.sqrt
-        sum = np.sum
 
         # Loop atoms in the device region
         # These are the only atoms which may have bond-currents,
@@ -1343,9 +1340,9 @@ class tbtncSileTBtrans(SileCDFTBtrans):
 
             # Now calculate the vector elements
             # Remark that the vector goes from ia -> ja
-            rv = geom.axyz(Jia.indices) - xyz[ia, :][None, :]
-            rv = rv / sqrt(sum(rv ** 2, axis=1))[:, None]
-            Ja[ia, :] = sum(Jia.data[:, None] * rv, axis=0)
+            rv = geom.Rij(ia, Jia.indices)
+            rv = rv / sqrt((rv ** 2).sum(1))[:, None]
+            Ja[ia, :] = (Jia.data[:, None] * rv).sum(0)
 
         return Ja
 
@@ -1450,7 +1447,6 @@ class tbtncSileTBtrans(SileCDFTBtrans):
                 prnt("  - " + string + ": false\t\t["+', '.join(fdf) + ']')
 
         # Retrieve the device atoms
-        dev_rng = list2str(self.a_dev + 1)
         prnt("Device information:")
         if self._k_avg:
             prnt("  - all data is k-averaged")
@@ -1475,7 +1471,7 @@ class tbtncSileTBtrans(SileCDFTBtrans):
         else:
             prnt("     {:.5f} -- {:.5f} eV  [{:.3f} -- {:.3f} meV]".format(Em, EM, dEm, dEM))
         prnt("  - atoms with DOS (fortran indices):")
-        prnt("     " + dev_rng)
+        prnt("     " + list2str(self.a_dev + 1))
         truefalse('DOS' in self.variables, "DOS Green function", ['TBT.DOS.Gf'])
         if elec is None:
             elecs = self.elecs
@@ -1526,19 +1522,14 @@ class tbtncSileTBtrans(SileCDFTBtrans):
         # We limit the import to occur here
         import argparse
 
-        d = {
-            "_tbt": self,
-            "_geometry": self.geom,
-            "_data_description": [],
-            "_data_header": [],
-            "_data": [],
-            "_norm": 'atom',
-            "_Ovalue": '',
-            "_Orng": None,
-            "_Erng": None,
-            "_krng": True,
-        }
-        namespace = default_namespace(**d)
+        namespace = default_namespace(_tbt=self,
+                                      _geometry=self.geom,
+                                      _data=[], _data_description=[],
+                                      _data_header=[],
+                                      _norm='atom',
+                                      _Ovalue='',
+                                      _Orng=None, _Erng=None,
+                                      _krng=True)
 
         def ensure_E(func):
             """ This decorater ensures that E is the first element in the _data container """
@@ -1547,10 +1538,7 @@ class tbtncSileTBtrans(SileCDFTBtrans):
                 ns = args[1]
                 if len(ns._data) == 0:
                     # We immediately extract the energies
-                    if ns._Erng is None:
-                        ns._data.append(ns._tbt.E[:])
-                    else:
-                        ns._data.append(ns._tbt.E[ns._Erng])
+                    ns._data.append(ns._tbt.E[ns._Erng].flatten())
                     ns._data_header.append('Energy[eV]')
                 return func(self, *args, **kwargs)
             return assign_E
@@ -1616,11 +1604,8 @@ class tbtncSileTBtrans(SileCDFTBtrans):
                 ns._norm = value
         p.add_argument('--norm', '-N', action=NormAction, default='atom',
                        choices=['atom', 'all', 'none', 'orbital'],
-                       help="""Specify the normalization method:
-                       - "atom" == total orbitals in selected atoms,
-                       - "all" == total orbitals in the device region,
-                       - "none" == no normalization,
-                       - "orbital" == selected orbitals.
+                       help="""Specify the normalization method; "atom") total orbitals in selected atoms,
+                       "all") total orbitals in the device region, "none") no normalization or "orbital") selected orbitals.
                        
                        This flag only takes effect on --dos and --ados and is reset whenever --plot or --out is called""")
 
@@ -1683,9 +1668,7 @@ class tbtncSileTBtrans(SileCDFTBtrans):
                 # region
                 if len(orbs) != len(ns._tbt.o2p(orbs)):
                     print('Device atoms:')
-                    tmp = ns._tbt.a_dev[:] + 1
-                    tmp.sort()
-                    print(tmp[:])
+                    print(list2str(ns._tbt.a_dev[:] + 1))
                     print('Input atoms:')
                     print(value)
                     raise ValueError('Atomic/Orbital requests are not fully included in the device region.')
@@ -1764,15 +1747,7 @@ class tbtncSileTBtrans(SileCDFTBtrans):
                     # we are storing the spectral DOS
                     e = ns._tbt._elec(value)
                     if e not in ns._tbt.elecs:
-                        if e.strip() == '.':
-                            for e in ns._tbt.elecs:
-                                try: # catches if DOS isn't calculated
-                                    self(parser, ns, [e], option_string)
-                                except:
-                                    pass
-                            return
                         raise ValueError('Electrode: "'+e+'" cannot be found in the specified file.')
-                    # Grab the information
                     data = ns._tbt.ADOS(e, kavg=ns._krng, orbital=ns._Orng, norm=ns._norm)
                     ns._data_header.append('ADOS:{}[1/eV]'.format(e))
                 else:
@@ -1780,7 +1755,9 @@ class tbtncSileTBtrans(SileCDFTBtrans):
                     ns._data_header.append('DOS[1/eV]')
                 NORM = int(ns._tbt.norm(orbital=ns._Orng, norm=ns._norm))
 
-                ns._data.append(data[ns._Erng, ...])
+                # The flatten is because when ns._Erng is None, then a new
+                # dimension (of size 1) is created
+                ns._data.append(data[ns._Erng].flatten())
                 if ns._Orng is None:
                     ns._data_description.append('Column {} is sum of all device atoms+orbitals with normalization 1/{}'.format(len(ns._data), NORM))
                 else:
@@ -1802,13 +1779,6 @@ class tbtncSileTBtrans(SileCDFTBtrans):
                 # we are storing the Bulk DOS
                 e = ns._tbt._elec(value[0])
                 if e not in ns._tbt.elecs:
-                    if e.strip() == '.':
-                        for e in ns._tbt.elecs:
-                            try: # catches if BDOS isn't calculated
-                                self(parser, ns, [e], option_string)
-                            except:
-                                pass
-                        return
                     raise ValueError('Electrode: "'+e+'" cannot be found in the specified file.')
                 # Grab the information
                 data = ns._tbt.BDOS(e, kavg=ns._krng, sum=False)
@@ -1827,7 +1797,7 @@ class tbtncSileTBtrans(SileCDFTBtrans):
             @collect_action
             @ensure_E
             def __call__(self, parser, ns, values, option_string=None):
-                e1 = ns._tbt._elec(values[1])
+                e1 = ns._tbt._elec(values[0])
                 if e1 not in ns._tbt.elecs:
                     raise ValueError('Electrode: "'+e1+'" cannot be found in the specified file.')
                 e2 = ns._tbt._elec(values[1])
@@ -1844,10 +1814,10 @@ class tbtncSileTBtrans(SileCDFTBtrans):
 
                 # Grab the information
                 data = ns._tbt.transmission_eig(e1, e2, kavg=ns._krng)
-                # The shape is: k, E, neig
+                # The shape is: E, neig
                 neig = data.shape[-1]
                 for eig in range(neig):
-                    ns._data.append(data[ns._Erng, eig])
+                    ns._data.append(data[ns._Erng, ..., eig].flatten())
                     ns._data_header.append('Teig({}):{}-{}[G]'.format(eig+1, e1, e2))
                     ns._data_description.append('Column {} is transmission eigenvalues from electrode {} to {}'.format(len(ns._data), e1, e2))
         p.add_argument('--transmission-eig', '-Teig', nargs=2, metavar=('ELEC1', 'ELEC2'),
@@ -1889,7 +1859,7 @@ class tbtncSileTBtrans(SileCDFTBtrans):
                     return
 
                 from sisl.io import TableSile
-                TableSile(out, mode='w').write(ns._data,
+                TableSile(out, mode='w').write(*ns._data,
                                                comment=ns._data_description,
                                                header=ns._data_header)
                 # Clean all data
