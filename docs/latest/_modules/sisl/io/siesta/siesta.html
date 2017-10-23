@@ -65,7 +65,7 @@
             
             
               <div class="version">
-                0.9.0-37
+                0.9.1-40
               </div>
             
           
@@ -92,6 +92,7 @@
               <ul>
 <li class="toctree-l1"><a class="reference internal" href="../../../../introduction.html">Introduction</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../../cite.html">Citing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../other.html">Other resources</a></li>
 </ul>
 <p class="caption"><span class="caption-text">User Guide</span></p>
 <ul>
@@ -170,6 +171,8 @@
   <h1>Source code for sisl.io.siesta.siesta</h1><div class="highlight"><pre>
 <span></span><span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">print_function</span>
 
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+
 <span class="c1"># Import sile objects</span>
 <span class="kn">from</span> <span class="nn">.sile</span> <span class="k">import</span> <span class="n">SileCDFSiesta</span>
 <span class="kn">from</span> <span class="nn">..sile</span> <span class="k">import</span> <span class="o">*</span>
@@ -180,7 +183,6 @@
 <span class="kn">from</span> <span class="nn">sisl.physics</span> <span class="k">import</span> <span class="n">EnergyDensityMatrix</span>
 <span class="kn">from</span> <span class="nn">sisl.physics</span> <span class="k">import</span> <span class="n">Hamiltonian</span>
 
-<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 
 <span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;ncSileSiesta&#39;</span><span class="p">]</span>
 
@@ -224,21 +226,21 @@
             <span class="n">n_b</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">bg</span><span class="o">.</span><span class="n">groups</span><span class="p">)</span>
 
             <span class="n">spc</span> <span class="o">=</span> <span class="p">[</span><span class="kc">None</span><span class="p">]</span> <span class="o">*</span> <span class="n">n_b</span>
+            <span class="n">atm</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
             <span class="k">for</span> <span class="n">basis</span> <span class="ow">in</span> <span class="n">bg</span><span class="o">.</span><span class="n">groups</span><span class="p">:</span>
                 <span class="c1"># Retrieve index</span>
                 <span class="n">ID</span> <span class="o">=</span> <span class="n">bg</span><span class="o">.</span><span class="n">groups</span><span class="p">[</span><span class="n">basis</span><span class="p">]</span><span class="o">.</span><span class="n">ID</span>
-                <span class="n">atm</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
                 <span class="n">atm</span><span class="p">[</span><span class="s1">&#39;Z&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">bg</span><span class="o">.</span><span class="n">groups</span><span class="p">[</span><span class="n">basis</span><span class="p">]</span><span class="o">.</span><span class="n">Atomic_number</span><span class="p">)</span>
                 <span class="c1"># We could possibly read in R, however, that is not so easy?</span>
                 <span class="n">atm</span><span class="p">[</span><span class="s1">&#39;mass&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">bg</span><span class="o">.</span><span class="n">groups</span><span class="p">[</span><span class="n">basis</span><span class="p">]</span><span class="o">.</span><span class="n">Mass</span><span class="p">)</span>
                 <span class="n">atm</span><span class="p">[</span><span class="s1">&#39;tag&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">basis</span>
                 <span class="n">atm</span><span class="p">[</span><span class="s1">&#39;orbs&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">bg</span><span class="o">.</span><span class="n">groups</span><span class="p">[</span><span class="n">basis</span><span class="p">]</span><span class="o">.</span><span class="n">Number_of_orbitals</span><span class="p">)</span>
-                <span class="n">spc</span><span class="p">[</span><span class="n">ID</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">Atom</span><span class="p">[</span><span class="n">atm</span><span class="p">]</span>
+                <span class="n">spc</span><span class="p">[</span><span class="n">ID</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">Atom</span><span class="p">(</span><span class="o">**</span><span class="n">atm</span><span class="p">)</span>
             <span class="n">atom</span> <span class="o">=</span> <span class="p">[</span><span class="kc">None</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">xyz</span><span class="p">)</span>
             <span class="k">for</span> <span class="n">ia</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">xyz</span><span class="p">)):</span>
                 <span class="n">atom</span><span class="p">[</span><span class="n">ia</span><span class="p">]</span> <span class="o">=</span> <span class="n">spc</span><span class="p">[</span><span class="n">b_idx</span><span class="p">[</span><span class="n">ia</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="n">atom</span> <span class="o">=</span> <span class="n">Atom</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+            <span class="n">atom</span> <span class="o">=</span> <span class="n">Atom</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
 
         <span class="n">xyz</span> <span class="o">*=</span> <span class="n">Bohr2Ang</span>
 
@@ -657,7 +659,7 @@
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'../../../../',
-            VERSION:'0.9.0-37',
+            VERSION:'0.9.1-40',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true,
