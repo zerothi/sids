@@ -924,7 +924,7 @@ class tbtncSileTBtrans(SileCDFTBtrans):
         I = _a.sumd(T * dE * (nf(E, mu_from, kt_from) - nf(E, mu_to, kt_to)))
         return I * 1.6021766208e-19 / 4.135667662e-15
 
-    def orbital_current(self, elec, E, kavg=True, isc=None):
+    def orbital_current(self, elec, E, kavg=True, isc=None, take='all'):
         """ Orbital current originating from `elec` as a sparse matrix
 
         This will return a sparse matrix, see ``scipy.sparse.csr_matrix`` for details.
@@ -946,6 +946,10 @@ class tbtncSileTBtrans(SileCDFTBtrans):
            the returned bond currents from the unit-cell (``[None, None, None]``) to
            the given supercell, the default is all orbital currents for the supercell.
            To only get unit cell orbital currents, pass ``[0, 0, 0]``.
+        take : {'all', '+', '-'}
+           which orbital currents to return, all, positive or negative values only.
+           Default to ``'all'`` because it can then be used in the subsequent default
+           arguments for `bond_current_from_orbital` and `atom_current_from_orbital`.
 
         Examples
         --------
@@ -956,6 +960,7 @@ class tbtncSileTBtrans(SileCDFTBtrans):
         --------
         bond_current_from_orbital : transfer the orbital current to bond current
         bond_current : the bond current (orbital current summed over orbitals)
+        atom_current_from_orbital : transfer the orbital current to atomic current
         atom_current : the atomic current for each atom (scalar representation of bond-currents)
         vector_current : an atomic field current for each atom (Cartesian representation of bond-currents)
         """
@@ -970,7 +975,7 @@ class tbtncSileTBtrans(SileCDFTBtrans):
         col = self._value('list_col') - 1
 
         # Default matrix size
-        mat_size = (geom.no, geom.no_s)
+        mat_size = [geom.no, geom.no_s]
 
         # Figure out the super-cell indices that are requested
         # First we figure out the indices, then
@@ -1008,7 +1013,15 @@ class tbtncSileTBtrans(SileCDFTBtrans):
             all_col = []
             for ix, iy, iz in itertools.product(x, y, z):
                 i = geom.sc_index([ix, iy, iz])
-                all_col.extend(list(range(i * geom.no, (i+1) * geom.no)))
+                all_col.append(i)
+
+            # If the user requests a single supercell index, we will
+            # return a square matrix
+            if len(all_col) == 1:
+                mat_size[1] = mat_size[0]
+
+            # Transfer all_col to the range
+            all_col = array_arange(all_col, n=[geom.no] * len(all_col))
 
             # Create a logical array for sub-indexing
             all_col = npisin(col, _a.arrayi(all_col))
@@ -1027,9 +1040,22 @@ class tbtncSileTBtrans(SileCDFTBtrans):
         else:
             J = self._value_E('J', elec, kavg, E)[..., all_col]
 
-        return csr_matrix((J, col, rptr), shape=mat_size)
+        J = csr_matrix((J, col, rptr), shape=mat_size)
+        if take == '+':
+            J.data = np.where(J.data > 0, J.data, 0).astype(J.dtype, copy=False)
+        elif take == '-':
+            J.data = np.where(J.data > 0, 0, J.data).astype(J.dtype, copy=False)
+        elif take != 'all':
+            raise ValueError(self.__class__.__name__ + '.orbital_current "take" keyword has '
+                             'wrong value ["all", "+", "-"] allowed.')
 
-    def bond_current_from_orbital(self, Jij, sum='all', uc=False):
+        # We will always remove the zeroes and sort the indices... (they should be sorted anyways)
+        J.eliminate_zeros()
+        J.sort_indices()
+
+        return J
+
+    def bond_current_from_orbital(self, Jij, sum='+', uc=False):
         r""" Bond-current between atoms (sum of orbital currents) from an external orbital current
 
         Conversion routine from orbital currents into bond currents.
@@ -1052,7 +1078,7 @@ class tbtncSileTBtrans(SileCDFTBtrans):
         ----------
         Jij : scipy.sparse.csr_matrix
            the orbital currents as retrieved from `orbital_current`
-        sum : {'all', '+', '-'}
+        sum : {'+', 'all', '-'}
            If "+" is supplied only the positive orbital currents are used,
            for "-", only the negative orbital currents are used,
            else return both.
@@ -1104,12 +1130,11 @@ class tbtncSileTBtrans(SileCDFTBtrans):
             # Just copy to the new data
 
             # Transfer all columns to the new columns
+            Jab.indptr[:] = Jij.indptr.copy()
             if uc:
-                cols = map_col(Jij.indices).astype(np.int32, copy=False)
+                Jab.indices = (Jij.indices % na).astype(np.int32, copy=False)
             else:
-                cols = Jij.indices.view()
-            Jab.indptr[:] = Jij.indptr[:]
-            Jab.indices = np.copy(cols[:])
+                Jab.indices = Jij.indices.copy()
 
         else:
             # The multi-orbital case
@@ -1131,24 +1156,24 @@ class tbtncSileTBtrans(SileCDFTBtrans):
             Jab.indices = map_col(Jij.indices).astype(np.int32, copy=False)
 
         # Copy data
-        if '+' in sum:
+        if sum == '+':
             Jab.data = np.where(Jij.data > 0, Jij.data, 0).astype(Jij.dtype, copy=False)
-        elif '-' in sum:
+        elif sum == '-':
             Jab.data = np.where(Jij.data > 0, 0, Jij.data).astype(Jij.dtype, copy=False)
-        else:
+        elif sum == 'all':
             Jab.data = np.copy(Jij.data)
+        else:
+            raise ValueError(self.__class__.__name__ + '.bond_current_from_orbital "sum" keyword has '
+                             'wrong value ["+", "-", "all"] allowed.')
 
         # Do in-place operations by removing all the things not required
         Jab.sum_duplicates()
         Jab.eliminate_zeros()
         Jab.sort_indices()
 
-        # Rescale to correct magnitude
-        Jab *= 0.5
-
         return Jab
 
-    def bond_current(self, elec, E, kavg=True, isc=None, sum='all', uc=False):
+    def bond_current(self, elec, E, kavg=True, isc=None, sum='+', uc=False):
         """ Bond-current between atoms (sum of orbital currents)
 
         Short hand function for calling `orbital_current` and `bond_current_from_orbital`.
@@ -1168,7 +1193,7 @@ class tbtncSileTBtrans(SileCDFTBtrans):
            the returned bond currents from the unit-cell (``[None, None, None]``) (default) to
            the given supercell. If ``[None, None, None]`` is passed all
            bond currents are returned.
-        sum : {'all', '+', '-'}
+        sum : {'+', 'all', '-'}
            If "+" is supplied only the positive orbital currents are used,
            for "-", only the negative orbital currents are used,
            else return the sum of both.
@@ -1235,7 +1260,7 @@ class tbtncSileTBtrans(SileCDFTBtrans):
 
         Examples
         --------
-        >>> Jij = tbt.orbital_current(0, -1.0, isc=[None]*3) # orbital current @ E = -1 eV originating from electrode ``0`` # doctest: +SKIP
+        >>> Jij = tbt.orbital_current(0, -1.03) # orbital current @ E = -1 eV originating from electrode ``0`` # doctest: +SKIP
         >>> Ja = tbt.atom_current_from_orbital(Jij) # doctest: +SKIP
         """
         # Create the bond-currents with all summations
@@ -1285,7 +1310,7 @@ class tbtncSileTBtrans(SileCDFTBtrans):
         vector_current : an atomic field current for each atom (Cartesian representation of bond-currents)
         """
         elec = self._elec(elec)
-        Jorb = self.orbital_current(elec, E, kavg, isc=[None, None, None])
+        Jorb = self.orbital_current(elec, E, kavg)
 
         return self.atom_current_from_orbital(Jorb, activity=activity)
 
@@ -1346,7 +1371,7 @@ class tbtncSileTBtrans(SileCDFTBtrans):
 
         return Ja
 
-    def vector_current(self, elec, E, kavg=True, sum='all'):
+    def vector_current(self, elec, E, kavg=True, sum='+'):
         """ Vector for each atom describing the *mean* path for the current travelling through the atom
 
         See `vector_current_from_bond` for details.
@@ -1362,9 +1387,12 @@ class tbtncSileTBtrans(SileCDFTBtrans):
         kavg: bool, int or array_like, optional
            whether the returned vector current is k-averaged, an explicit k-point
            or a selection of k-points
-        sum : {'all', '+', '-'}
-           how the summation of the bond-currents will be performed, i.e. only
-           positive ('+'), negative ('-') or all orbital currents
+        sum : {'+', '-', 'all'}
+           By default only sum *outgoing* vector currents (``'+'``).
+           The *incoming* vector currents may be retrieved by ``'-'``, while the
+           average incoming and outgoing direction can be obtained with ``'all'``.
+           In the last case the vector currents are divided by 2 to ensure the length
+           of the vector is compatibile with the other options given a pristine system.
 
         Returns
         -------
@@ -1380,7 +1408,14 @@ class tbtncSileTBtrans(SileCDFTBtrans):
         elec = self._elec(elec)
         # Imperative that we use the entire supercell structure to
         # retain vectors crossing the boundaries
-        Jab = self.bond_current(elec, E, kavg, isc=[None, None, None], sum=sum)
+        Jab = self.bond_current(elec, E, kavg, sum=sum)
+
+        if sum == 'all':
+            # When we divide by two one can *always* compare the bulk
+            # vector currents using either of the sum-rules.
+            # I.e. it will be much easier to distinguish differences
+            # between "incoming" and "outgoing".
+            return self.vector_current_from_bond(Jab) / 2
 
         return self.vector_current_from_bond(Jab)
 
@@ -1566,17 +1601,25 @@ class tbtncSileTBtrans(SileCDFTBtrans):
                        help=('Update the geometry of the output file, this enables one to set the species correctly,'
                              ' note this only affects output-files where species are important'))
 
-        # Energy grabs
         class ERange(argparse.Action):
 
-            @collect_and_run_action
             def __call__(self, parser, ns, value, option_string=None):
-                Emap = strmap(float, value)
+                E = ns._tbt.E
+                Emap = strmap(float, value, E.min(), E.max())
                 # Convert to actual indices
                 E = []
                 for begin, end in Emap:
-                    E.append(range(ns._tbt.Eindex(float(begin)), ns._tbt.Eindex(float(end))+1))
-                ns._Erng = _a.arrayi(E).flatten()
+                    if begin is None and end is None:
+                        ns._Erng = None
+                        return
+                    elif begin is None:
+                        E.append(range(ns._tbt.Eindex(end)+1))
+                    elif end is None:
+                        E.append(range(ns._tbt.Eindex(begin), len(ns._tbt.E)))
+                    else:
+                        E.append(range(ns._tbt.Eindex(begin), ns._tbt.Eindex(end)+1))
+                # Issuing unique also sorts the entries
+                ns._Erng = np.unique(_a.arrayi(E).flatten())
         p.add_argument('--energy', '-E',
                        action=ERange,
                        help="""Denote the sub-section of energies that are extracted: "-1:0,1:2" [eV]
@@ -1586,7 +1629,7 @@ class tbtncSileTBtrans(SileCDFTBtrans):
         # k-range
         class kRange(argparse.Action):
 
-            @collect_and_run_action
+            @collect_action
             def __call__(self, parser, ns, value, option_string=None):
                 ns._krng = lstranges(strmap(int, value))
         if not self._k_avg:
@@ -1599,7 +1642,7 @@ class tbtncSileTBtrans(SileCDFTBtrans):
         # The normalization method
         class NormAction(argparse.Action):
 
-            @collect_and_run_action
+            @collect_action
             def __call__(self, parser, ns, value, option_string=None):
                 ns._norm = value
         p.add_argument('--norm', '-N', action=NormAction, default='atom',
@@ -1612,11 +1655,13 @@ class tbtncSileTBtrans(SileCDFTBtrans):
         # Try and add the atomic specification
         class AtomRange(argparse.Action):
 
-            @collect_and_run_action
+            @collect_action
             def __call__(self, parser, ns, value, option_string=None):
                 value = value.replace(' ', '')
+
                 # Immediately convert to proper indices
                 geom = ns._geometry
+                a_dev = ns._tbt.a_dev[:] + 1
 
                 # Sadly many shell interpreters does not
                 # allow simple [] because they are expansion tokens
@@ -1629,7 +1674,7 @@ class tbtncSileTBtrans(SileCDFTBtrans):
                 failed = True
                 while failed and len(sep) > 0:
                     try:
-                        ranges = lstranges(strmap(int, value, sep.pop()))
+                        ranges = lstranges(strmap(int, value, a_dev.min(), a_dev.max(), sep.pop()))
                         failed = False
                     except:
                         pass
@@ -1646,6 +1691,8 @@ class tbtncSileTBtrans(SileCDFTBtrans):
                         # this will be
                         #  atoms[0] == atom
                         #  atoms[1] == list of orbitals on the atom
+                        if atoms[0] not in a_dev:
+                            continue
 
                         # Get atoms and orbitals
                         ob = geom.a2o(atoms[0] - 1, True)
@@ -1657,25 +1704,34 @@ class tbtncSileTBtrans(SileCDFTBtrans):
                         no += len(ob)
                         ob = ob[asarrayi(atoms[1]) - 1]
                     else:
+                        if atoms not in a_dev:
+                            continue
                         ob = geom.a2o(atoms - 1, True)
                         no += len(ob)
                     orbs.append(ob)
 
+                if len(orbs) == 0:
+                    print('Device atoms:')
+                    print('  ', list2str(a_dev))
+                    print('Input atoms:')
+                    print('  ', value)
+                    raise ValueError('Atomic/Orbital requests are not fully included in the device region.')
+
                 # Add one to make the c-index equivalent to the f-index
                 orbs = np.concatenate(orbs).flatten()
 
-                # Check that the requested orbitals are all in the device
-                # region
+                # Check that the requested orbitals are all in the device region
                 if len(orbs) != len(ns._tbt.o2p(orbs)):
+                    # This should in principle never be called because of the
+                    # checks above.
                     print('Device atoms:')
-                    print(list2str(ns._tbt.a_dev[:] + 1))
+                    print('  ', list2str(a_dev))
                     print('Input atoms:')
-                    print(value)
+                    print('  ', value)
                     raise ValueError('Atomic/Orbital requests are not fully included in the device region.')
 
                 ns._Ovalue = value
                 ns._Orng = orbs
-                #print('Updating Orng and Oscale: ',ns._Orng, ns._Oscale)
 
         p.add_argument('--atom', '-a', type=str, action=AtomRange,
                        help="""Limit orbital resolved quantities to a sub-set of atoms/orbitals: "1-2[3,4]" will yield the 1st and 2nd atom and their 3rd and fourth orbital. Multiple comma-separated specifications are allowed. Note that some shells does not allow [] as text-input (due to expansion), {, [ or * are allowed orbital delimiters.

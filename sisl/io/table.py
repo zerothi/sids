@@ -4,7 +4,7 @@ import numpy as np
 
 # Import sile objects
 from sisl._help import ensure_array
-from .sile import Sile, add_sile, Sile_fh_open
+from .sile import Sile, add_sile, Sile_fh_open, sile_raise_write
 
 __all__ = ['TableSile']
 
@@ -60,6 +60,8 @@ class TableSile(Sile):
         1        2
 
         """
+        sile_raise_write(self)
+
         fmt = kwargs.get('fmt', '.5e')
         newline = kwargs.get('newline', '\n')
         delimiter = kwargs.get('delimiter', '\t')
@@ -181,7 +183,8 @@ class TableSile(Sile):
                 dat[-1] = ensure_array(dat[-1], np.float64)
                 dat.append([])
             else:
-                dat[-1].append(ensure_array(map(float, line.split(sep)), np.float64))
+                line = [l for l in line.split(sep) if len(l) > 0]
+                dat[-1].append(ensure_array(map(float, line), np.float64))
 
             line = self.readline()
         dat[-1] = ensure_array(dat[-1], np.float64)
