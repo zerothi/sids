@@ -292,6 +292,10 @@ class ncSileSiesta(SileCDFSiesta):
         Ef : double=0
            the Fermi level of the electronic structure (in eV)
         """
+        if H.nnz == 0:
+            raise ValueError(self.__class__.__name__ + '.write_hamiltonian + cannot write a Hamiltonian '
+                             'with zero non-zero elements!')
+
         # Ensure finalizations
         H.finalize()
 
@@ -341,6 +345,14 @@ class ncSileSiesta(SileCDFSiesta):
             tmp.empty(keep_nnz=True)
             for i in range(tmp.shape[0]):
                 tmp[i, i] = 1.
+
+            if tmp.nnz != H.nnz:
+                # We have added more stuff, something that we currently do not allow.
+                raise ValueError(self.__class__.__name__ + '.write_hamiltonian '
+                                 'is trying to write a Hamiltonian in Siesta format with '
+                                 'not all on-site terms defined. Please correct. '
+                                 'I.e. add explicitly *all* on-site terms.')
+
             v[:] = tmp._D[:, 0]
             del tmp
         else:
@@ -420,6 +432,14 @@ class ncSileSiesta(SileCDFSiesta):
             tmp.empty(keep_nnz=True)
             for i in range(tmp.shape[0]):
                 tmp[i, i] = 1.
+
+            if tmp.nnz != H.nnz:
+                # We have added more stuff, something that we currently do not allow.
+                raise ValueError(self.__class__.__name__ + '.write_hamiltonian '
+                                 'is trying to write a Hamiltonian in Siesta format with '
+                                 'not all on-site terms defined. Please correct. '
+                                 'I.e. add explicitly *all* on-site terms.')
+
             v[:] = tmp._D[:, 0]
             del tmp
         else:
