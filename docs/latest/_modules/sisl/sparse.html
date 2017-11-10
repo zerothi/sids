@@ -65,7 +65,7 @@
             
             
               <div class="version">
-                0.9.1-40
+                0.9.2-53
               </div>
             
           
@@ -180,13 +180,9 @@
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">empty</span><span class="p">,</span> <span class="n">zeros</span><span class="p">,</span> <span class="n">asarray</span><span class="p">,</span> <span class="n">arange</span>
 <span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">insert</span><span class="p">,</span> <span class="n">take</span><span class="p">,</span> <span class="n">delete</span><span class="p">,</span> <span class="n">copyto</span><span class="p">,</span> <span class="n">split</span>
-<span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">intersect1d</span><span class="p">,</span> <span class="n">setdiff1d</span><span class="p">,</span> <span class="n">unique</span>
+<span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">intersect1d</span><span class="p">,</span> <span class="n">setdiff1d</span><span class="p">,</span> <span class="n">unique</span><span class="p">,</span> <span class="n">in1d</span>
 <span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">diff</span><span class="p">,</span> <span class="n">count_nonzero</span>
 <span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">argsort</span>
-<span class="k">try</span><span class="p">:</span>
-    <span class="n">isin</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">isin</span>
-<span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
-    <span class="n">isin</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">in1d</span>
 
 <span class="kn">from</span> <span class="nn">scipy.sparse</span> <span class="k">import</span> <span class="n">isspmatrix</span>
 <span class="kn">from</span> <span class="nn">scipy.sparse</span> <span class="k">import</span> <span class="n">isspmatrix_coo</span>
@@ -636,7 +632,7 @@
         <span class="c1"># Get indices of deleted columns</span>
         <span class="n">idx</span> <span class="o">=</span> <span class="n">array_arange</span><span class="p">(</span><span class="n">ptr</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">n</span><span class="o">=</span><span class="n">ncol</span><span class="p">)</span>
         <span class="c1"># Convert to boolean array where we have columns to be deleted</span>
-        <span class="n">lidx</span> <span class="o">=</span> <span class="n">isin</span><span class="p">(</span><span class="n">col</span><span class="p">[</span><span class="n">idx</span><span class="p">],</span> <span class="n">columns</span><span class="p">)</span>
+        <span class="n">lidx</span> <span class="o">=</span> <span class="n">in1d</span><span class="p">(</span><span class="n">col</span><span class="p">[</span><span class="n">idx</span><span class="p">],</span> <span class="n">columns</span><span class="p">)</span>
         <span class="c1"># Count number of deleted entries per row</span>
         <span class="n">ndel</span> <span class="o">=</span> <span class="n">ensure_array</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="n">count_nonzero</span><span class="p">,</span> <span class="n">split</span><span class="p">(</span><span class="n">lidx</span><span class="p">,</span> <span class="n">_a</span><span class="o">.</span><span class="n">cumsumi</span><span class="p">(</span><span class="n">ncol</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]))))</span>
         <span class="c1"># Backconvert lidx to deleted indices</span>
@@ -1052,7 +1048,7 @@
 
         <span class="c1"># Now create the compressed data...</span>
         <span class="n">index</span> <span class="o">-=</span> <span class="n">ptr</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
-        <span class="n">keep</span> <span class="o">=</span> <span class="n">isin</span><span class="p">(</span><span class="n">_a</span><span class="o">.</span><span class="n">arangei</span><span class="p">(</span><span class="n">ncol</span><span class="p">[</span><span class="n">i</span><span class="p">]),</span> <span class="n">index</span><span class="p">,</span> <span class="n">invert</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">keep</span> <span class="o">=</span> <span class="n">in1d</span><span class="p">(</span><span class="n">_a</span><span class="o">.</span><span class="n">arangei</span><span class="p">(</span><span class="n">ncol</span><span class="p">[</span><span class="n">i</span><span class="p">]),</span> <span class="n">index</span><span class="p">,</span> <span class="n">invert</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
         <span class="c1"># Update new count of the number of</span>
         <span class="c1"># non-zero elements</span>
@@ -1240,12 +1236,12 @@
         <span class="k">else</span><span class="p">:</span>
             <span class="n">dim</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">dims</span><span class="p">)</span>
 
+        <span class="k">if</span> <span class="n">dtype</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">dtype</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dtype</span>
+
         <span class="c1"># Create correct input</span>
         <span class="n">shape</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[:])</span>
         <span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">dim</span>
-
-        <span class="k">if</span> <span class="n">dtype</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">dtype</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dtype</span>
 
         <span class="n">new</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="p">(</span><span class="n">shape</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">,</span> <span class="n">nnz</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
 
@@ -1260,11 +1256,11 @@
         <span class="k">if</span> <span class="n">dims</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">new</span><span class="o">.</span><span class="n">_D</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_D</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">dtype</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="n">new</span><span class="o">.</span><span class="n">_D</span> <span class="o">=</span> <span class="n">empty</span><span class="p">([</span><span class="nb">len</span><span class="p">(</span><span class="n">new</span><span class="o">.</span><span class="n">col</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="n">dims</span><span class="p">)],</span> <span class="n">dtype</span><span class="p">)</span>
+            <span class="n">new</span><span class="o">.</span><span class="n">_D</span> <span class="o">=</span> <span class="n">empty</span><span class="p">([</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">col</span><span class="p">),</span> <span class="n">dim</span><span class="p">],</span> <span class="n">dtype</span><span class="p">)</span>
             <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">dim</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">dims</span><span class="p">):</span>
                 <span class="n">new</span><span class="o">.</span><span class="n">_D</span><span class="p">[:,</span> <span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_D</span><span class="p">[:,</span> <span class="n">dim</span><span class="p">]</span>
 
-        <span class="c1"># Mark it as finalized, if able</span>
+        <span class="c1"># Mark it as the same state as the other one</span>
         <span class="n">new</span><span class="o">.</span><span class="n">_finalized</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_finalized</span>
 
         <span class="k">return</span> <span class="n">new</span></div>
@@ -1333,8 +1329,7 @@
         <span class="n">nc</span> <span class="o">=</span> <span class="n">count_nonzero</span><span class="p">(</span><span class="n">indices</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
 
         <span class="c1"># Fix the pivoting indices with the new indices</span>
-        <span class="n">pvt</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">emptyi</span><span class="p">([</span><span class="nb">max</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">])])</span>
-        <span class="n">pvt</span><span class="o">.</span><span class="n">fill</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">pvt</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">fulli</span><span class="p">([</span><span class="nb">max</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">])],</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
         <span class="n">pvt</span><span class="p">[</span><span class="n">indices</span><span class="p">]</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">arangei</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">indices</span><span class="p">))</span>
 
         <span class="c1"># Create the new SparseCSR</span>
@@ -1533,7 +1528,7 @@
                 <span class="n">a</span><span class="o">.</span><span class="n">_D</span><span class="p">[</span><span class="n">in_a</span><span class="p">,</span> <span class="p">:]</span> <span class="o">*=</span> <span class="n">b</span><span class="o">.</span><span class="n">_D</span><span class="p">[</span><span class="n">bptr</span><span class="p">:</span><span class="n">bptr</span><span class="o">+</span><span class="n">bn</span><span class="p">,</span> <span class="p">:]</span>
 
                 <span class="c1"># Now set everything *not* in b but in a, to zero</span>
-                <span class="n">not_in_b</span> <span class="o">=</span> <span class="n">isin</span><span class="p">(</span><span class="n">acol</span><span class="p">,</span> <span class="n">bcol</span><span class="p">,</span> <span class="n">invert</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">nonzero</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="n">not_in_b</span> <span class="o">=</span> <span class="n">in1d</span><span class="p">(</span><span class="n">acol</span><span class="p">,</span> <span class="n">bcol</span><span class="p">,</span> <span class="n">invert</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">nonzero</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
                 <span class="n">a</span><span class="o">.</span><span class="n">_D</span><span class="p">[</span><span class="n">aptr</span><span class="o">+</span><span class="n">not_in_b</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="mi">0</span>
 
         <span class="k">else</span><span class="p">:</span>
@@ -1661,7 +1656,7 @@
 
                 <span class="c1"># Now set everything *not* in b but in a, to 1</span>
                 <span class="c1">#  float ** 0 == 1</span>
-                <span class="n">not_in_b</span> <span class="o">=</span> <span class="n">isin</span><span class="p">(</span><span class="n">acol</span><span class="p">,</span> <span class="n">bcol</span><span class="p">,</span> <span class="n">invert</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">nonzero</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="n">not_in_b</span> <span class="o">=</span> <span class="n">in1d</span><span class="p">(</span><span class="n">acol</span><span class="p">,</span> <span class="n">bcol</span><span class="p">,</span> <span class="n">invert</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">nonzero</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
                 <span class="n">a</span><span class="o">.</span><span class="n">_D</span><span class="p">[</span><span class="n">aptr</span><span class="o">+</span><span class="n">not_in_b</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="mi">1</span>
 
         <span class="k">else</span><span class="p">:</span>
@@ -1909,7 +1904,7 @@
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'../../',
-            VERSION:'0.9.1-40',
+            VERSION:'0.9.2-53',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true,

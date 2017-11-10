@@ -65,7 +65,7 @@
             
             
               <div class="version">
-                0.9.1-40
+                0.9.2-53
               </div>
             
           
@@ -250,7 +250,7 @@
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">pos_unit</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">2</span><span class="p">:</span>
             <span class="n">unit</span> <span class="o">=</span> <span class="mf">1.</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="n">unit</span> <span class="o">=</span> <span class="n">unit_convert</span><span class="p">(</span><span class="n">pos_unit</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="s1">&#39;Ang&#39;</span><span class="p">)</span>
+            <span class="n">unit</span> <span class="o">=</span> <span class="n">unit_convert</span><span class="p">(</span><span class="n">pos_unit</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">capitalize</span><span class="p">(),</span> <span class="s1">&#39;Ang&#39;</span><span class="p">)</span>
             <span class="c1"># Remove the line with the unit...</span>
             <span class="n">lines</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
 
@@ -305,7 +305,7 @@
 
         <span class="c1"># Read the next line to determine the units</span>
         <span class="n">unit</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">readline</span><span class="p">()</span>
-        <span class="n">unit</span> <span class="o">=</span> <span class="n">unit_convert</span><span class="p">(</span><span class="n">unit</span><span class="o">.</span><span class="n">strip</span><span class="p">(),</span> <span class="s1">&#39;Ang&#39;</span><span class="p">)</span>
+        <span class="n">unit</span> <span class="o">=</span> <span class="n">unit_convert</span><span class="p">(</span><span class="n">unit</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">capitalize</span><span class="p">(),</span> <span class="s1">&#39;Ang&#39;</span><span class="p">)</span>
 
         <span class="n">s</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="n">xyz</span> <span class="o">=</span> <span class="p">[]</span>
@@ -399,7 +399,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_write_geometry</span><span class="p">(</span><span class="n">geom</span><span class="p">,</span> <span class="n">fmt</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
 
     <span class="nd">@Sile_fh_open</span>
-    <span class="k">def</span> <span class="nf">_read_hamiltonian</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">geom</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">complex128</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">_read_hamiltonian</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">geom</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Reads a Hamiltonian</span>
 
 <span class="sd">        Reads the Hamiltonian model</span>
@@ -411,6 +411,12 @@
 
         <span class="c1"># Time of creation</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">readline</span><span class="p">()</span>
+
+        <span class="c1"># Number of orbitals</span>
+        <span class="n">no</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">readline</span><span class="p">())</span>
+        <span class="k">if</span> <span class="n">no</span> <span class="o">!=</span> <span class="n">geom</span><span class="o">.</span><span class="n">no</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39;.read_hamiltonian has found inconsistent number &#39;</span>
+                             <span class="s1">&#39;of orbitals in _hr.dat vs the geometry. Remember to re-run Wannier90?&#39;</span><span class="p">)</span>
 
         <span class="c1"># Number of Wigner-Seitz degeneracy points</span>
         <span class="n">nrpts</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">readline</span><span class="p">())</span>
@@ -494,7 +500,7 @@
             <span class="n">Hi</span> <span class="o">=</span> <span class="n">Hi</span><span class="o">.</span><span class="n">tocsr</span><span class="p">()</span>
             <span class="n">Hr</span> <span class="o">=</span> <span class="n">Hr</span> <span class="o">+</span> <span class="mi">1</span><span class="n">j</span><span class="o">*</span><span class="n">Hi</span>
 
-        <span class="k">return</span> <span class="n">Hamiltonian</span><span class="o">.</span><span class="n">sp2HS</span><span class="p">(</span><span class="n">geom</span><span class="p">,</span> <span class="n">Hr</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">Hamiltonian</span><span class="o">.</span><span class="n">fromsp</span><span class="p">(</span><span class="n">geom</span><span class="p">,</span> <span class="n">Hr</span><span class="p">)</span>
 
 <div class="viewcode-block" id="winSileWannier90.read_hamiltonian"><a class="viewcode-back" href="../../../../api-generated/sisl.io.wannier90.winSileWannier90.html#sisl.io.wannier90.winSileWannier90.read_hamiltonian">[docs]</a>    <span class="k">def</span> <span class="nf">read_hamiltonian</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Read the electronic structure of the Wannier90 output</span>
@@ -559,7 +565,7 @@
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'../../../../',
-            VERSION:'0.9.1-40',
+            VERSION:'0.9.2-53',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true,
