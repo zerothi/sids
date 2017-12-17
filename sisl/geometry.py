@@ -358,7 +358,7 @@ class Geometry(SuperCellChild):
 
         Parameters
         ----------
-        sile : `Sile`, str
+        sile : `Sile` or str
             a `Sile` object which will be used to read the geometry
             if it is a string it will create a new sile using `get_sile`.
 
@@ -380,7 +380,7 @@ class Geometry(SuperCellChild):
 
         Parameters
         ----------
-        sile : ``Sile``, ``str``
+        sile : Sile or str
             a `Sile` object which will be used to write the geometry
             if it is a string it will create a new sile using `get_sile`
         *args, **kwargs:
@@ -437,7 +437,7 @@ class Geometry(SuperCellChild):
         ...     isinstance(a, Atom) == True # doctest: +SKIP
         ...     isinstance(idx_specie, int) == True # doctest: +SKIP
 
-        with ``ia`` being the atomic index, ``a`` the `Atom` object, `idx_specie`
+        with ``ia`` being the atomic index, ``a`` the `Atom` object, ``idx_specie``
         is the index of the specie
 
         Parameters
@@ -1292,11 +1292,11 @@ class Geometry(SuperCellChild):
         return self.rotate(a, cp)
 
     def move(self, v, atom=None, cell=False):
-        """ Translates the geometry by ``v``
+        """ Translates the geometry by `v`
 
-        One can translate a subset of the atoms by supplying ``atom``.
+        One can translate a subset of the atoms by supplying `atom`.
 
-        Returns a copy of the structure translated by ``v``.
+        Returns a copy of the structure translated by `v`.
 
         Parameters
         ----------
@@ -1346,9 +1346,9 @@ class Geometry(SuperCellChild):
         Parameters
         ----------
         a : int
-           axes 1, swaps with ``b``
+           axes 1, swaps with `b`
         b : int
-           axes 2, swaps with ``a``
+           axes 2, swaps with `a`
         swap : {'cell+xyz', 'cell', 'xyz'}
            decide what to swap, if `'cell'` is in `swap` then
            the cell axis are swapped.
@@ -1398,9 +1398,9 @@ class Geometry(SuperCellChild):
         return np.mean(g.xyz, axis=0)
 
     def append(self, other, axis):
-        """ Appends structure along ``axis``. This will automatically
+        """ Appends structure along `axis`. This will automatically
         add the ``self.cell[axis,:]`` to all atomic coordiates in the
-        ``other`` structure before appending.
+        `other` structure before appending.
 
         The basic algorithm is this:
 
@@ -1416,9 +1416,9 @@ class Geometry(SuperCellChild):
         ----------
         other : Geometry or SuperCell
             Other geometry class which needs to be appended
-            If a ``SuperCell`` only the super cell will be extended
+            If a `SuperCell` only the super cell will be extended
         axis  : int
-            Cell direction to which the ``other`` geometry should be
+            Cell direction to which the `other` geometry should be
             appended.
 
         See Also
@@ -1443,9 +1443,9 @@ class Geometry(SuperCellChild):
 
     def prepend(self, other, axis):
         """
-        Prepends structure along ``axis``. This will automatically
+        Prepends structure along `axis`. This will automatically
         add the ``self.cell[axis,:]`` to all atomic coordiates in the
-        ``other`` structure before prepending.
+        `other` structure before prepending.
 
         The basic algorithm is this:
 
@@ -1461,9 +1461,9 @@ class Geometry(SuperCellChild):
         ----------
         other : Geometry or SuperCell
             Other geometry class which needs to be prepended
-            If a ``SuperCell`` only the super cell will be extended
+            If a `SuperCell` only the super cell will be extended
         axis  : int
-            Cell direction to which the ``other`` geometry should be
+            Cell direction to which the `other` geometry should be
             prepended
 
         See Also
@@ -1487,14 +1487,14 @@ class Geometry(SuperCellChild):
         return self.__class__(xyz, atom=atom, sc=sc)
 
     def add(self, other):
-        """
-        Adds atoms (as is) from the ``other`` geometry.
-        This will not alter the cell vectors.
+        """ Merge two geometries (or a Geometry and SuperCell) by adding the two atoms together
 
         Parameters
         ----------
-        other : Geometry
+        other : Geometry or SuperCell
             Other geometry class which is added
+        only_atoms : bool, optional
+            If ``True`` only the atoms are added, else both the atoms and lattice vectors are added
 
         See Also
         --------
@@ -1503,14 +1503,20 @@ class Geometry(SuperCellChild):
         attach : attach a geometry
         insert : insert a geometry
         """
-        xyz = np.append(self.xyz, other.xyz, axis=0)
-        sc = self.sc.copy()
-        return self.__class__(xyz, atom=self.atom.add(other.atom), sc=sc)
+        if isinstance(other, SuperCell):
+            xyz = self.xyz.copy()
+            sc = self.sc + other
+            atom = self.atom.copy()
+        else:
+            xyz = np.append(self.xyz, other.xyz, axis=0)
+            sc = self.sc.copy()
+            atom = self.atom.add(other.atom)
+        return self.__class__(xyz, atom=atom, sc=sc)
 
     def insert(self, atom, geom):
         """ Inserts other atoms right before index
 
-        We insert the ``geom`` `Geometry` before `atom`.
+        We insert the `geom` `Geometry` before `atom`.
         Note that this will not change the unit cell.
 
         Parameters
@@ -1532,11 +1538,11 @@ class Geometry(SuperCellChild):
         return self.__class__(xyz, atom=atoms, sc=self.sc.copy())
 
     def __add__(a, b):
-        """ Merge two geometries
+        """ Merge two geometries (or geometry and supercell)
 
         Parameters
         ----------
-        a, b : Geometry or tuple or list
+        a, b : Geometry or SuperCell or tuple or list
            when adding a Geometry with a Geometry it defaults to using `add` function
            with the LHS retaining the cell-vectors.
            a tuple/list may be of length 2 with the first element being a Geometry and the second
@@ -1557,24 +1563,31 @@ class Geometry(SuperCellChild):
         append : appending geometries
         prepend : prending geometries
         """
-
         if isinstance(a, Geometry):
-            if isinstance(b, Geometry):
+            if isinstance(b, (SuperCell, Geometry)):
                 return a.add(b)
             return a.append(b[0], b[1])
         elif isinstance(b, Geometry):
-            return a.prepend(b[0], b[1])
+            return b.prepend(a[0], a[1])
 
         raise ValueError('Arguments for adding (add/append/prepend) are incorrect')
 
     __radd__ = __add__
 
     def attach(self, s_idx, other, o_idx, dist='calc', axis=None):
-        """ Attaches another ``Geometry`` at the `s_idx` index with respect to `o_idx` using different methods.
+        """ Attaches another `Geometry` at the `s_idx` index with respect to `o_idx` using different methods.
 
         Parameters
         ----------
-        dist : ``array_like``, ``float``, ``str`` (`'calc'`)
+        s_idx : int
+           atomic index which is the base position of the attachment. The distance
+           between `s_idx` and `o_idx` are `dist`.
+        other : Geometry
+           the other Geometry to attach at the given point. In this case `dist` from
+           `s_idx`.
+        o_idx : int
+           the index of the atom in `other` that is inserted at `s_idx`.
+        dist : array_like or float or str, optional
            the distance (in `Ang`) between the attached coordinates.
            If `dist` is `arraylike it should be the vector between
            the atoms;
@@ -1583,7 +1596,7 @@ class Geometry(SuperCellChild):
            else if `dist` is `str` this will correspond to the
            `method` argument of the ``Atom.radius`` class of the two
            atoms. Here `axis` is also required.
-        axis : ``int``
+        axis : int
            specify the direction of the lattice vectors used.
            Not used if `dist` is an array-like argument.
         """
@@ -1667,7 +1680,7 @@ class Geometry(SuperCellChild):
     def axyz(self, atom=None, isc=None):
         """ Return the atomic coordinates in the supercell of a given atom.
 
-        The `Geometry[...]` slicing is calling this function with appropriate options.
+        The ``Geometry[...]`` slicing is calling this function with appropriate options.
 
         Parameters
         ----------
@@ -1747,12 +1760,12 @@ class Geometry(SuperCellChild):
 
                shapes[0] in shapes[1] in shapes[2] ...
         isc       : array_like, optional
-            The super-cell which the coordinates are checked in. Defaults to `[0, 0, 0]`
+            The super-cell which the coordinates are checked in. Defaults to ``[0, 0, 0]``
         idx       : array_like, optional
             List of atoms that will be considered. This can
             be used to only take out a certain atoms.
         idx_xyz : array_like, optional
-            The atomic coordinates of the equivalent ``idx`` variable (``idx`` must also be passed)
+            The atomic coordinates of the equivalent `idx` variable (`idx` must also be passed)
         ret_xyz : bool, optional
             If True this method will return the coordinates
             for each of the couplings.
@@ -2100,7 +2113,7 @@ class Geometry(SuperCellChild):
             The atom to be displaced according to the atomic radius
         atom : array_like or int
             The atom(s) from which the radius should be reduced.
-        method : ``str``, ``float``
+        method : str, float, optional
             If str will use that as lookup in `Atom.radius`.
             Else it will be the new bond-length.
         """
@@ -2164,12 +2177,12 @@ class Geometry(SuperCellChild):
         idx     : array_like, optional
             List of indices for atoms that are to be considered
         idx_xyz : array_like, optional
-            The atomic coordinates of the equivalent ``idx`` variable (``idx`` must also be passed)
+            The atomic coordinates of the equivalent `idx` variable (`idx` must also be passed)
         ret_xyz : bool, optional
             If true this method will return the coordinates
             for each of the couplings.
         ret_rij : bool, optional
-            If true this method will return the distances from the ``xyz_ia``
+            If true this method will return the distances from the `xyz_ia`
             for each of the couplings.
         """
 
@@ -2251,10 +2264,10 @@ class Geometry(SuperCellChild):
         xyz_ia : coordinate/index
             Either a point in space or an index of an atom.
             If an index is passed it is the equivalent of passing
-            the atomic coordinate `close_sc(self.xyz[xyz_ia,:])`.
+            the atomic coordinate ``close_sc(self.xyz[xyz_ia,:])``.
         R      : (None), float/tuple of float
             The radii parameter to where the atomic connections are found.
-            If ``R`` is an array it will return the indices:
+            If `R` is an array it will return the indices:
             in the ranges:
 
             >>> ( x <= R[0] , R[0] < x <= R[1], R[1] < x <= R[2] ) # doctest: +SKIP
@@ -2266,12 +2279,12 @@ class Geometry(SuperCellChild):
         idx     : array_like, optional
             List of indices for atoms that are to be considered
         idx_xyz : array_like, optional
-            The atomic coordinates of the equivalent ``idx`` variable (``idx`` must also be passed)
+            The atomic coordinates of the equivalent `idx` variable (`idx` must also be passed)
         ret_xyz : bool, optional
             If true this method will return the coordinates
             for each of the couplings.
         ret_rij : bool, optional
-            If true this method will return the distances from the ``xyz_ia``
+            If true this method will return the distances from the `xyz_ia`
             for each of the couplings.
         """
         if R is None:
@@ -2360,8 +2373,8 @@ class Geometry(SuperCellChild):
         ia : array_like
              Atomic indices
         all : bool, optional
-             `False`, return only the first orbital corresponding to the atom,
-             `True`, returns list of the full atom
+             ``False``, return only the first orbital corresponding to the atom,
+             ``True``, returns list of the full atom
         """
         ia = _a.asarrayi(ia)
         if not all:
@@ -2405,23 +2418,38 @@ class Geometry(SuperCellChild):
         return a + (io // self.no) * self.na
 
     def sc2uc(self, atom, uniq=False):
-        """ Returns atom from super-cell indices to unit-cell indices, possibly removing dublicates """
-        atom = ensure_dtype(atom)
+        """ Returns atom from super-cell indices to unit-cell indices, possibly removing dublicates
+
+        Parameters
+        ----------
+        atom : array_like or int
+           the atomic indices converted from supercell indices to unit-cell indices
+        uniq : bool, optional
+           If True the returned indices are unique and sorted.
+        """
+        atom = ensure_dtype(atom) % self.na
         if uniq:
-            return np.unique(atom % self.na)
-        return atom % self.na
+            return np.unique(atom)
+        return atom
     asc2uc = sc2uc
 
-    def osc2uc(self, orbs, uniq=False):
-        """ Returns orbitals from super-cell indices to unit-cell indices, possibly removing dublicates """
-        orbs = ensure_dtype(orbs)
+    def osc2uc(self, orb, uniq=False):
+        """ Returns orbitals from super-cell indices to unit-cell indices, possibly removing dublicates
+
+        Parameters
+        ----------
+        orb : array_like or int
+           the orbital indices converted from supercell indices to unit-cell indices
+        uniq : bool, optional
+           If True the returned indices are unique and sorted.
+        """
+        orb = ensure_dtype(orb) % self.no
         if uniq:
-            return np.unique(orbs % self.no)
-        return orbs % self.no
+            return np.unique(orb)
+        return orb
 
     def a2isc(self, ia):
-        """
-        Returns the super-cell index for a specific/list atom
+        """ Returns super-cell index for a specific/list atom
 
         Returns a vector of 3 numbers with integers.
         """
@@ -2572,7 +2600,7 @@ class Geometry(SuperCellChild):
         na_iR : int, 1000
            number of atoms within the sphere for speeding
            up the `iter_block` loop.
-        method : str, 'rand'
+        method : str, optional
            see `iter_block` for details
 
         Returns
@@ -2607,7 +2635,7 @@ class Geometry(SuperCellChild):
         return rij
 
     def distance(self, atom=None, R=None, tol=0.1, method='average'):
-        """ Calculate the distances for all atoms in shells of radius `tol` within ``max_R``
+        """ Calculate the distances for all atoms in shells of radius `tol` within `max_R`
 
         Parameters
         ----------
@@ -2621,10 +2649,10 @@ class Geometry(SuperCellChild):
            the tolerance for grouping a set of atoms.
            This parameter sets the shell radius for each shell.
            I.e. the returned distances between two shells will be maximally
-           `2*tol`, but only if atoms are within two consecutive lists.
+           ``2*tol``, but only if atoms are within two consecutive lists.
            If this is a list, the shells will be of unequal size.
 
-           The first shell size will be `tol * .5` or `tol[0] * .5` if `tol` is a list.
+           The first shell size will be ``tol * .5`` or ``tol[0] * .5`` if `tol` is a list.
 
         method : {'average', 'mode', '<numpy.func>', func}
            How the distance in each shell is determined.
@@ -2673,8 +2701,8 @@ class Geometry(SuperCellChild):
                                   ".distance cannot determine the `R` parameter. "
                                   "The internal `maxR()` is negative and thus not set. "
                                   "Set an explicit value for `R`."))
-        else:
-            maxR = 0.
+        elif np.any(self.nsc > 1):
+            maxR = (self.cell.sum(-1) ** 2).sum() ** .5
             # These loops could be leveraged if we look at angles...
             for i, j, k in product([0, self.nsc[0] // 2],
                                    [0, self.nsc[1] // 2],
@@ -2798,15 +2826,13 @@ class Geometry(SuperCellChild):
            in case the arguments should be added to a specific parser. It defaults
            to create a new.
         limit_arguments: bool, optional
-           If `False` additional options will be created which are similar to other options.
-           For instance `--repeat-x` which is equivalent to `--repeat x`.
+           If ``False`` additional options will be created which are similar to other options.
+           For instance ``--repeat-x`` which is equivalent to ``--repeat x``.
            Default `True`.
         short: bool, optional
            Create short options for a selected range of options.
-           Default `False`.
         positional_out: bool, optional
-           If `True`, adds a positional argument which acts as --out. This may be handy if only the geometry is in the argument list.
-           Default `False`.
+           If ``True``, adds a positional argument which acts as --out. This may be handy if only the geometry is in the argument list.
         """
         limit_args = kwargs.get('limit_arguments', True)
         short = kwargs.get('short', False)

@@ -19,7 +19,7 @@ def setup():
             self.sc = SuperCell(np.array([[1.5, sq3h, 0.],
                                           [1.5, -sq3h, 0.],
                                           [0., 0., 10.]], np.float64) * bond, nsc=[3, 3, 1])
-            C = Atom(Z=6, R=bond * 1.01, orbs=2)
+            C = Atom(Z=6, R=[bond * 1.01]*2)
             self.g = Geometry(np.array([[0., 0., 0.],
                                         [1., 0., 0.]], np.float64) * bond,
                               atom=C, sc=self.sc)
@@ -212,7 +212,7 @@ class TestGeometry(object):
 
     def test_a2o1(self, setup):
         assert 0 == setup.g.a2o(0)
-        assert setup.g.atom[0].orbs == setup.g.a2o(1)
+        assert setup.g.atom[0].no == setup.g.a2o(1)
         assert setup.g.no == setup.g.a2o(setup.g.na)
 
     def test_sub1(self, setup):
@@ -467,11 +467,11 @@ class TestGeometry(object):
     def test_center_raise(self, setup):
         al = setup.g.center(what='unknown')
 
-    def test___add__(self, setup):
+    def test___add1__(self, setup):
         n = len(setup.g)
-        double = setup.g + setup.g
+        double = setup.g + setup.g + setup.g.sc
         assert len(double) == n * 2
-        assert np.allclose(setup.g.cell, double.cell)
+        assert np.allclose(setup.g.cell * 2, double.cell)
         assert np.allclose(setup.g.xyz[:n, :], double.xyz[:n, :])
 
         double = (setup.g, 1) + setup.g
@@ -485,6 +485,19 @@ class TestGeometry(object):
         assert len(double) == n * 2
         assert np.allclose(setup.g.cell[::2, :], double.cell[::2, :])
         assert np.allclose(double.xyz, d.xyz)
+
+    def test___add2__(self, setup):
+        g1 = setup.g.rotatec(15)
+        g2 = setup.g.rotatec(30)
+
+        assert g1 != g2
+        assert g1 + g2 == g1.add(g2)
+        assert g1 + g2 != g2.add(g1)
+        assert g2 + g1 == g2.add(g1)
+        assert g2 + g1 != g1.add(g2)
+        for i in range(3):
+            assert g1 + (g2, i) == g1.append(g2, i)
+            assert (g1, i) + g2 == g2.append(g1, i)
 
     def test___mul__(self, setup):
         g = setup.g.copy()
@@ -504,6 +517,9 @@ class TestGeometry(object):
         double = setup.g.add(setup.g)
         assert len(double) == len(setup.g) * 2
         assert np.allclose(setup.g.cell, double.cell)
+        double = setup.g.add(setup.g).add(setup.g.sc)
+        assert len(double) == len(setup.g) * 2
+        assert np.allclose(setup.g.cell * 2, double.cell)
 
     def test_insert(self, setup):
         double = setup.g.insert(0, setup.g)
@@ -512,7 +528,7 @@ class TestGeometry(object):
 
     def test_a2o(self, setup):
         # There are 2 orbitals per C atom
-        assert setup.g.a2o(1) == setup.g.atom[0].orbs
+        assert setup.g.a2o(1) == setup.g.atom[0].no
         assert np.all(setup.g.a2o(1, True) == [2, 3])
 
     def test_o2a(self, setup):

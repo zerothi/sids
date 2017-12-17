@@ -135,6 +135,69 @@ class XSFSile(Sile):
             return geom, dat
         return geom
 
+    @Sile_fh_open
+    def write_grid(self, *args, **kwargs):
+        """ Write a grid data to an XSF file """
+        sile_raise_write(self)
+
+        geom = kwargs.get('geometry', args[0].geom)
+        self.write_geometry(geom)
+
+        # Buffer size for writing
+        buffersize = kwargs.get('buffersize', min(6144, args[0].grid.size))
+
+        # Format for precision
+        fmt = kwargs.get('fmt', '.5e')
+
+        self._write('BEGIN_BLOCK_DATAGRID_3D\n')
+        name = kwargs.get('name', 'sisl_grid_{}'.format(len(args)))
+        # Transfer all spaces to underscores (no spaces allowed)
+        self._write(' ' + name.replace(' ', '_') + '\n')
+        _v3 = (('{:' + fmt + '} ') * 3).strip() + '\n'
+
+        def write_cell(grid):
+            # Now write the grid
+            self._write('  {} {} {}\n'.format(*grid.shape))
+            self._write('  ' + _v3.format(*grid.origo))
+            self._write('  ' + _v3.format(*grid.cell[0, :]))
+            self._write('  ' + _v3.format(*grid.cell[1, :]))
+            self._write('  ' + _v3.format(*grid.cell[2, :]))
+
+        for i, grid in enumerate(args):
+            is_complex = np.iscomplexobj(grid.grid)
+
+            name = kwargs.get('grid' + str(i), str(i))
+            if is_complex:
+                self._write(' BEGIN_DATAGRID_3D_real_{}\n'.format(name))
+            else:
+                self._write(' BEGIN_DATAGRID_3D_{}\n'.format(name))
+
+            write_cell(grid)
+
+            # for z
+            #   for y
+            #     for x
+            #       write...
+            _fmt = '{:' + fmt + '}\n'
+            for x in np.nditer(np.asarray(grid.grid.real.T, order='C').reshape(-1), flags=['external_loop', 'buffered'],
+                               op_flags=[['readonly']], order='C', buffersize=buffersize):
+                self._write((_fmt * x.shape[0]).format(*x.tolist()))
+
+            self._write(' END_DATAGRID_3D\n')
+
+            # Skip if not complex
+            if not is_complex:
+                continue
+            self._write(' BEGIN_DATAGRID_3D_imag_{}\n'.format(name))
+            write_cell(grid)
+            for x in np.nditer(np.asarray(grid.grid.imag.T, order='C').reshape(-1), flags=['external_loop', 'buffered'],
+                               op_flags=[['readonly']], order='C', buffersize=buffersize):
+                self._write((_fmt * x.shape[0]).format(*x.tolist()))
+
+            self._write(' END_DATAGRID_3D\n')
+
+        self._write('END_BLOCK_DATAGRID_3D\n')
+
     def ArgumentParser(self, p=None, *args, **kwargs):
         """ Returns the arguments that is available for this Sile """
         newkw = Geometry._ArgumentParser_args_single()
@@ -233,7 +296,7 @@ Any arguments inbetween are passed to the `read_data` function (in order).
         # currently adding an argument that is already there does not remove the
         # old one...
         p.add_argument('--out', '-o', nargs=1, action=Out,
-                       help='Store the geometry (plus any vector fields) the out file.')
+                       help='Store the geometry/grid (plus any vector fields) the out file.')
 
 
 add_sile('xsf', XSFSile, case=False, gzip=True)

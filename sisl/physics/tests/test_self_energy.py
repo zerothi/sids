@@ -6,7 +6,7 @@ import math as m
 import numpy as np
 
 from sisl import Geometry, Atom, SuperCell, Hamiltonian
-from sisl import SelfEnergy, SemiInfinite
+from sisl import SelfEnergy, SemiInfinite, RecursiveSI
 
 
 @pytest.fixture
@@ -19,7 +19,7 @@ def setup():
                                           [1.5, -sq3h, 0.],
                                           [0., 0., 10.]], np.float64) * bond, nsc=[3, 3, 1])
 
-            C = Atom(Z=6, R=bond * 1.01, orbs=1)
+            C = Atom(Z=6, R=[bond * 1.01])
             self.g = Geometry(np.array([[0., 0., 0.],
                                         [1., 0., 0.]], np.float64) * bond,
                             atom=C, sc=self.sc)
@@ -45,4 +45,9 @@ class TestSelfEnergy(object):
             assert SE.semi_inf_dir == sid
 
     def test_sancho1(self, setup):
-        SE = SemiInfinite(setup.H, '+A')
+        SE = RecursiveSI(setup.H, '+A')
+        SE.self_energy(0.1)
+
+    def test_sancho2(self, setup):
+        SE = RecursiveSI(setup.HS, '+A')
+        SE.self_energy(0.1)

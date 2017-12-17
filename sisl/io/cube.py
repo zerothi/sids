@@ -31,12 +31,12 @@ class CUBESile(Sile):
         if size is None:
             size = np.ones([3], np.int32)
         if origo is None:
-            origo = np.zeros([3], np.float64)
+            origo = geom.origo[:]
 
         _fmt = '{:d} {:15.10e} {:15.10e} {:15.10e}\n'
 
         # Add #-of atoms and origo
-        self._write(_fmt.format(len(geom), *origo * Ang2Bohr))
+        self._write(_fmt.format(len(geom), *(origo * Ang2Bohr)))
 
         # Write the cell and voxels
         dcell = np.empty([3, 3], np.float64)
@@ -70,7 +70,7 @@ class CUBESile(Sile):
         _fmt = '{:' + fmt + '}\n'
         for z in np.nditer(np.asarray(grid.grid, order='C').reshape(-1), flags=['external_loop', 'buffered'],
                            op_flags=[['readonly']], order='C', buffersize=buffersize):
-            self._write((_fmt * z.shape[0]).format(*tuple(z)))
+            self._write((_fmt * z.shape[0]).format(*z.tolist()))
 
         # Add a finishing line to ensure empty ending
         self._write('\n')
@@ -79,13 +79,14 @@ class CUBESile(Sile):
     def read_supercell(self, na=False):
         """ Returns `SuperCell` object from the CUBE file
 
-        If `na=True` it will return a tuple (na,SuperCell)
+        If ``na=True`` it will return a tuple (na,SuperCell)
         """
 
         self.readline()  # header 1
         self.readline()  # header 2
-        tmp = self.readline().split()  # origo
-        na = int(tmp[0])
+        origo = self.readline().split() # origo
+        na = int(origo[0])
+        origo = np.array(list(map(float, origo[1:])), np.float64)
 
         cell = np.empty([3, 3], np.float64)
         for i in [0, 1, 2]:
@@ -96,14 +97,18 @@ class CUBESile(Sile):
                 cell[i, j] = float(tmp[j]) * s
 
         cell = cell / Ang2Bohr
+        origo = origo / Ang2Bohr
         if na:
-            return na, SuperCell(cell)
-        return SuperCell(cell)
+            return na, SuperCell(cell, origo=origo)
+        return 0, SuperCell(cell, origo=origo)
 
     @Sile_fh_open
     def read_geometry(self):
         """ Returns `Geometry` object from the CUBE file """
         na, sc = self.read_supercell(na=True)
+
+        if na == 0:
+            raise ValueError("There is no atoms in the CUBE file")
 
         # Start reading the geometry
         xyz = np.empty([na, 3], np.float64)
@@ -143,11 +148,11 @@ class CUBESile(Sile):
         grid = Grid(ngrid, dtype=np.float64, geom=geom)
         grid.grid.shape = (-1,)
 
-        for i, l in enumerate(self.fh):
-            if i >= grid.grid.size:
-                break
-            grid.grid[i] = float(l)
-
+        # TODO check performance of this
+        # We are currently doing this to enable reading
+        #  1-column data and 6-column data.
+        lines = [item for sublist in self.fh.readlines() for item in sublist.split()]
+        grid.grid[:] = np.array(lines).astype(grid.dtype)
         grid.grid.shape = ngrid
 
         return grid

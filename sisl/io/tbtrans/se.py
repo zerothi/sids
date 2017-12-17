@@ -3,7 +3,7 @@ from __future__ import print_function, division
 import warnings
 
 import numpy as np
-from numpy import in1d, argsort, sort
+from numpy import in1d, argsort
 
 # Import sile objects
 from ..sile import add_sile, sile_raise_write
@@ -122,44 +122,62 @@ class tbtsencSileTBtrans(_devncSileTBtrans):
         >>> se = tbtsencSileTBtrans(...) # doctest: +SKIP
         >>> se.pivot()
         [3, 4, 6, 5, 2]
+        >>> se.pivot(sort=True)
+        [2, 3, 4, 5, 6]
         >>> se.pivot(0)
         [2, 3]
         >>> se.pivot(0, in_device=True)
         [4, 0]
         >>> se.pivot(0, in_device=True, sort=True)
-        [0, 4]
+        [0, 1]
         >>> se.pivot(0, sort=True)
         [2, 3]
         """
-        if elec is None or in_device:
+        if elec is None:
+            if in_device and sort:
+                pvt = _a.arangei(self.no_d)
             pvt = self._value('pivot') - 1
-            if elec is None:
-                return pvt
+            if in_device:
+                # Count number of elements that we need to subtract from each orbital
+                subn = _a.onesi(self.no)
+                subn[pvt] = 0
+                pvt -= _a.cumsumi(subn)[pvt]
+            elif sort:
+                pvt = np.sort(pvt)
+            return pvt
+
+        if in_device:
+            pvt = self._value('pivot') - 1
+            if sort:
+                pvt = np.sort(pvt)
 
         # Get electrode pivoting elements
         se_pvt = self._value('pivot', tree=self._elec(elec)) - 1
+        if sort:
+            # Sort pivoting indices
+            # Since we know that pvt is also sorted, then
+            # the resulting in_device would also return sorted
+            # indices
+            se_pvt = np.sort(se_pvt)
 
         if in_device:
             # translate to the device indices
             se_pvt = in1d(pvt, se_pvt, assume_unique=True).nonzero()[0]
-        if sort:
-            # sort the indices
-            return sort(se_pvt)
         return se_pvt
 
-    def self_energy(self, elec, k, E, sort=False):
+    def self_energy(self, elec, E, k, sort=False):
         """ Return the self-energy from the electrode `elec`
 
         Parameters
         ----------
         elec : str or int
            the corresponding electrode to return the self-energy from
-        k : array_like or int
-           k-point to retrieve, if an integer it is the k-index in the file
         E : float or int
            energy to retrieve the self-energy at, if a floating point the closest
            energy value will be found and returned, if an integer it will correspond
            to the exact index
+        k : array_like or int
+           k-point to retrieve, if an integer it is the k-index in the file
         sort : bool, optional
            if ``True`` the returned self-energy will be sorted (equivalent to pivoting the self-energy)
         """

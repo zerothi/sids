@@ -101,14 +101,14 @@ class _ncSileTBtrans(SileCDFTBtrans):
             # Check that all atoms have the correct number of orbitals.
             # Otherwise we will correct them
             for i in range(len(atms)):
-                if atms[i].orbs != nos[i]:
-                    atms[i] = Atom(Z=atms[i].Z, orbs=nos[i], tag=atms[i].tag)
+                if atms[i].no != nos[i]:
+                    atms[i] = Atom(atms[i].Z, [-1] *nos[i], tag=atms[i].tag)
 
         else:
             # Default to Hydrogen atom with nos[ia] orbitals
             # This may be counterintuitive but there is no storage of the
             # actual species
-            atms = [Atom(Z='H', orbs=o) for o in nos]
+            atms = [Atom('H', [-1] * o) for o in nos]
 
         # Create and return geometry object
         geom = Geometry(xyz, atms, sc=sc)
@@ -269,13 +269,44 @@ class _devncSileTBtrans(_ncSileTBtrans):
         return self._value('a_dev') - 1
 
     @property
+    def o_dev(self):
+        """ Orbital indices (0-based) of device orbitals """
+        return self.pivot(sort=True)
+
+    @property
     def no_d(self):
         """ Number of orbitals in the device region """
         return len(self.dimensions['no_d'])
 
-    def pivot(self):
-        """ Pivoting orbitals for the full system """
-        return self._value('pivot') - 1
+    @property
+    def n_btd(self):
+        """ Number of blocks in the BTD partioning """
+        return len(self.dimensions['n_btd'])
+
+    def btd(self):
+        """ Block-sizes for the BTD method """
+        return self._value('btd')
+
+    def pivot(self, in_device=False, sort=False):
+        """ Pivoting orbitals for the full system
+
+        Parameters
+        ----------
+        in_device : bool, optional
+           whether the pivoting elements are with respect to the device region
+        sort : bool, optional
+           whether the pivoting elements are sorted
+        """
+        if in_device and sort:
+            return _a.arangei(self.no_d)
+        pvt = self._value('pivot') - 1
+        if in_device:
+            subn = _a.onesi(self.no)
+            subn[pvt] = 0
+            pvt -= _a.cumsumi(subn)[pvt]
+        elif sort:
+            pvt = np.sort(pvt)
+        return pvt
 
     def a2p(self, atom):
         """ Return the pivoting indices (0-based) for the atoms
@@ -296,4 +327,4 @@ class _devncSileTBtrans(_ncSileTBtrans):
         orbital : array_like or int
            orbital indices (0-based)
         """
-        return in1d(self.pivot, orbital).nonzero()[0]
+        return in1d(self.pivot(), orbital).nonzero()[0]

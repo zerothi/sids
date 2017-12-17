@@ -216,7 +216,7 @@ class tbtncSileTBtrans(_devncSileTBtrans):
             return 0.
 
     def transmission(self, elec_from=0, elec_to=1, kavg=True):
-        """ Transmission from `from` to `to`.
+        """ Transmission from `elec_from` to `elec_to`.
 
         The transmission between two electrodes may be retrieved
         from the `Sile`.
@@ -244,7 +244,7 @@ class tbtncSileTBtrans(_devncSileTBtrans):
         return self._value_avg(elec_to + '.T', elec_from, kavg=kavg)
 
     def transmission_eig(self, elec_from=0, elec_to=1, kavg=True):
-        """ Transmission eigenvalues from `from` to `to`.
+        """ Transmission eigenvalues from `elec_from` to `elec_to`.
 
         Parameters
         ----------
@@ -388,7 +388,7 @@ class tbtncSileTBtrans(_devncSileTBtrans):
             if sum:
                 return _a.sumd(DOS, axis=-1) / NORM
             # We return the sorted DOS
-            p = np.argsort(self.pivot)
+            p = np.argsort(self.pivot())
             return DOS[..., p] / NORM
 
         # Now figure out what to do
@@ -489,7 +489,6 @@ class tbtncSileTBtrans(_devncSileTBtrans):
         Extract the spectral DOS from electrode `elec` on a selected subset of atoms/orbitals in the device region
 
         .. math::
-
            \mathrm{ADOS}_\mathfrak{el}(E) = \frac{1}{2\pi N} \sum_{\nu\in \mathrm{atom}/\mathrm{orbital}} [\mathbf{G}(E)\Gamma_\mathfrak{el}\mathbf{G}^\dagger]_{\nu\nu}(E)
 
         The normalization constant (:math:`N`) is defined in the routine `norm` and depends on the
@@ -684,48 +683,12 @@ class tbtncSileTBtrans(_devncSileTBtrans):
         I = _a.sumd(T * dE * (nf(E, mu_from, kt_from) - nf(E, mu_to, kt_to)))
         return I * 1.6021766208e-19 / 4.135667662e-15
 
-    def orbital_current(self, elec, E, kavg=True, isc=None, take='all'):
-        """ Orbital current originating from `elec` as a sparse matrix
-
-        This will return a sparse matrix, see ``scipy.sparse.csr_matrix`` for details.
-        Each matrix element of the sparse matrix corresponds to the orbital indices of the
-        underlying geometry.
-
-        Parameters
-        ----------
-        elec: str, int
-           the electrode of originating electrons
-        E: float or int
-           the energy or the energy index of the orbital current. If an integer
-           is passed it is the index, otherwise the index corresponding to
-           `Eindex(E)` is used.
-        kavg: bool, int or array_like, optional
-           whether the returned orbital current is k-averaged, an explicit k-point
-           or a selection of k-points
-        isc: array_like, optional
-           the returned bond currents from the unit-cell (``[None, None, None]``) to
-           the given supercell, the default is all orbital currents for the supercell.
-           To only get unit cell orbital currents, pass ``[0, 0, 0]``.
-        take : {'all', '+', '-'}
-           which orbital currents to return, all, positive or negative values only.
-           Default to ``'all'`` because it can then be used in the subsequent default
-           arguments for `bond_current_from_orbital` and `atom_current_from_orbital`.
-
-        Examples
-        --------
-        >>> Jij = tbt.orbital_current(0, -1.0) # orbital current @ E = -1 eV originating from electrode ``0`` # doctest: +SKIP
-        >>> Jij[10, 11] # orbital current from the 11th to the 12th orbital # doctest: +SKIP
-
-        See Also
-        --------
-        bond_current_from_orbital : transfer the orbital current to bond current
-        bond_current : the bond current (orbital current summed over orbitals)
-        atom_current_from_orbital : transfer the orbital current to atomic current
-        atom_current : the atomic current for each atom (scalar representation of bond-currents)
-        vector_current : an atomic field current for each atom (Cartesian representation of bond-currents)
-        """
-        elec = self._elec(elec)
+    def _sparse_data(self, data, elec, E, kavg=True, isc=None):
+        """ Internal routine for retrieving sparse data (orbital current, COOP) """
         # Get the geometry for obtaining the sparsity pattern.
+        if elec is not None:
+            elec = self._elec(elec)
+
         geom = self.geom
 
         # These are the row-pointers...
@@ -796,11 +759,127 @@ class tbtncSileTBtrans(_devncSileTBtrans):
             del tmp
 
         if all_col is None:
-            J = self._value_E('J', elec, kavg, E)
+            D = self._value_E(data, elec, kavg, E)
         else:
-            J = self._value_E('J', elec, kavg, E)[..., all_col]
+            D = self._value_E(data, elec, kavg, E)[..., all_col]
 
-        J = csr_matrix((J, col, rptr), shape=mat_size)
+        return csr_matrix((D, col, rptr), shape=mat_size)
+
+    def _sparse_data_orb_to_atom(self, Dij, uc=False):
+        """ Reduce orbital sparse data to atomic sparse data
+
+        Parameters
+        ----------
+        Dij : scipy.sparse.csr_matrix
+           the input data
+        uc : bool, optional
+           whether the returned data are only in the unit-cell.
+           If ``True`` this will return a sparse matrix of ``shape = (self.na, self.na)``,
+           else, it will return a sparse matrix of ``shape = (self.na, self.na * self.n_s)``.
+           One may figure out the connections via `Geometry.sc_index`.
+        """
+        geom = self.geom
+        na = geom.na
+        o2a = geom.o2a
+
+        if not uc:
+            uc = Dij.shape[0] == Dij.shape[1]
+
+        # We convert to atomic bond-currents
+        if uc:
+            Dab = csr_matrix((na, na), dtype=Dij.dtype)
+
+            def map_col(c):
+                return o2a(c) % na
+
+        else:
+            Dab = csr_matrix((na, na * geom.n_s), dtype=Dij.dtype)
+
+            map_col = o2a
+
+        # Lets do array notation for speeding up the computations
+        if not isspmatrix_csr(Dij):
+            Dij = Dij.tocsr()
+
+        # Check for the simple case of 1-orbital systems
+        if geom.na == geom.no:
+            # In this case it is extremely easy!
+            # Just copy to the new data
+
+            # Transfer all columns to the new columns
+            Dab.indptr[:] = Dij.indptr.copy()
+            if uc:
+                Dab.indices = (Dij.indices % na).astype(np.int32, copy=False)
+            else:
+                Dab.indices = Dij.indices.copy()
+
+        else:
+            # The multi-orbital case
+
+            # Loop all atoms to make the new pointer array
+            # I.e. a consecutive array of pointers starting from
+            #   firsto[.] .. lasto[.]
+            iptr = Dij.indptr
+            # Get first orbital
+            fo = geom.firsto
+            # Automatically create the new index pointer
+            # from first and last orbital
+            indptr = np.insert(_a.cumsumi(iptr[fo[1:]] - iptr[fo[:-1]]), 0, 0)
+
+            # Now we have a new indptr, and the column indices have also
+            # been processed.
+            Dab.indptr[:] = indptr[:]
+            # Transfer all columns to the new columns
+            Dab.indices = map_col(Dij.indices).astype(np.int32, copy=False)
+
+        # Copy data
+        Dab.data = np.copy(Dij.data)
+        # Note that we do not sum duplicates as that depends on the next routine
+        # I.e. sometimes we want to remove negative values, etc.
+        return Dab
+
+    def orbital_current(self, elec, E, kavg=True, isc=None, take='all'):
+        """ Orbital current originating from `elec` as a sparse matrix
+
+        This will return a sparse matrix, see ``scipy.sparse.csr_matrix`` for details.
+        Each matrix element of the sparse matrix corresponds to the orbital indices of the
+        underlying geometry.
+
+        Parameters
+        ----------
+        elec: str, int
+           the electrode of originating electrons
+        E: float or int
+           the energy or the energy index of the orbital current. If an integer
+           is passed it is the index, otherwise the index corresponding to
+           ``Eindex(E)`` is used.
+        kavg: bool, int or array_like, optional
+           whether the returned orbital current is k-averaged, an explicit k-point
+           or a selection of k-points
+        isc: array_like, optional
+           the returned bond currents from the unit-cell (``[None, None, None]``) to
+           the given supercell, the default is all orbital currents for the supercell.
+           To only get unit cell orbital currents, pass ``[0, 0, 0]``.
+        take : {'all', '+', '-'}
+           which orbital currents to return, all, positive or negative values only.
+           Default to ``'all'`` because it can then be used in the subsequent default
+           arguments for `bond_current_from_orbital` and `atom_current_from_orbital`.
+
+        Examples
+        --------
+        >>> Jij = tbt.orbital_current(0, -1.0) # orbital current @ E = -1 eV originating from electrode ``0`` # doctest: +SKIP
+        >>> Jij[10, 11] # orbital current from the 11th to the 12th orbital # doctest: +SKIP
+
+        See Also
+        --------
+        bond_current_from_orbital : transfer the orbital current to bond current
+        bond_current : the bond current (orbital current summed over orbitals)
+        atom_current_from_orbital : transfer the orbital current to atomic current
+        atom_current : the atomic current for each atom (scalar representation of bond-currents)
+        vector_current : an atomic field current for each atom (Cartesian representation of bond-currents)
+        """
+        J = self._sparse_data('J', elec, E, kavg, isc)
+
         if take == '+':
             J.data = np.where(J.data > 0, J.data, 0).astype(J.dtype, copy=False)
         elif take == '-':
@@ -810,8 +889,8 @@ class tbtncSileTBtrans(_devncSileTBtrans):
                              'wrong value ["all", "+", "-"] allowed.')
 
         # We will always remove the zeroes and sort the indices... (they should be sorted anyways)
-        J.eliminate_zeros()
         J.sort_indices()
+        J.eliminate_zeros()
 
         return J
 
@@ -861,75 +940,20 @@ class tbtncSileTBtrans(_devncSileTBtrans):
         atom_current : the atomic current for each atom (scalar representation of bond-currents)
         vector_current : an atomic field current for each atom (Cartesian representation of bond-currents)
         """
-        geom = self.geom
-        na = geom.na
-        o2a = geom.o2a
+        Jab = self._sparse_data_orb_to_atom(Jij, uc)
 
-        if uc is False:
-            uc = Jij.shape[0] == Jij.shape[1]
-
-        # We convert to atomic bond-currents
-        if uc:
-            Jab = csr_matrix((na, na), dtype=Jij.dtype)
-
-            def map_col(c):
-                return o2a(c) % na
-
-        else:
-            Jab = csr_matrix((na, na * geom.n_s), dtype=Jij.dtype)
-
-            map_col = o2a
-
-        # Lets do array notation for speeding up the computations
-        if not isspmatrix_csr(Jij):
-            Jij = Jij.tocsr()
-
-        # Check for the simple case of 1-orbital systems
-        if geom.na == geom.no:
-            # In this case it is extremely easy!
-            # Just copy to the new data
-
-            # Transfer all columns to the new columns
-            Jab.indptr[:] = Jij.indptr.copy()
-            if uc:
-                Jab.indices = (Jij.indices % na).astype(np.int32, copy=False)
-            else:
-                Jab.indices = Jij.indices.copy()
-
-        else:
-            # The multi-orbital case
-
-            # Loop all atoms to make the new pointer array
-            # I.e. a consecutive array of pointers starting from
-            #   firsto[.] .. lasto[.]
-            iptr = Jij.indptr
-            # Get first orbital
-            fo = geom.firsto
-            # Automatically create the new index pointer
-            # from first and last orbital
-            indptr = np.insert(_a.cumsumi(iptr[fo[1:]] - iptr[fo[:-1]]), 0, 0)
-
-            # Now we have a new indptr, and the column indices have also
-            # been processed.
-            Jab.indptr[:] = indptr[:]
-            # Transfer all columns to the new columns
-            Jab.indices = map_col(Jij.indices).astype(np.int32, copy=False)
-
-        # Copy data
         if sum == '+':
-            Jab.data = np.where(Jij.data > 0, Jij.data, 0).astype(Jij.dtype, copy=False)
+            Jab.data = np.where(Jab.data > 0, Jab.data, 0).astype(Jab.dtype, copy=False)
         elif sum == '-':
-            Jab.data = np.where(Jij.data > 0, 0, Jij.data).astype(Jij.dtype, copy=False)
-        elif sum == 'all':
-            Jab.data = np.copy(Jij.data)
-        else:
+            Jab.data = np.where(Jab.data > 0, 0, Jab.data).astype(Jab.dtype, copy=False)
+        elif sum != 'all':
             raise ValueError(self.__class__.__name__ + '.bond_current_from_orbital "sum" keyword has '
                              'wrong value ["+", "-", "all"] allowed.')
 
         # Do in-place operations by removing all the things not required
+        Jab.sort_indices()
         Jab.sum_duplicates()
         Jab.eliminate_zeros()
-        Jab.sort_indices()
 
         return Jab
 
@@ -1138,7 +1162,7 @@ class tbtncSileTBtrans(_devncSileTBtrans):
 
         Parameters
         ----------
-        elec: str, int
+        elec: str or int
            the electrode of originating electrons
         E: float or int
            the energy or energy index of the vector current.
@@ -1178,6 +1202,392 @@ class tbtncSileTBtrans(_devncSileTBtrans):
             return self.vector_current_from_bond(Jab) / 2
 
         return self.vector_current_from_bond(Jab)
+
+    def orbital_COOP(self, E, kavg=True, isc=None):
+        r""" Orbital COOP analysis of the Green function
+
+        This will return a sparse matrix, see ``scipy.sparse.csr_matrix`` for details.
+        Each matrix element of the sparse matrix corresponds to the COOP of the
+        underlying geometry.
+
+        The COOP analysis can be written as:
+
+        .. math::
+            \mathrm{COOP}^{\mathbf G}_{\nu\mu} &= \frac{-1}{2\pi}
+              \Im\big[(\mathbf G - \mathbf G^\dagger)_{\nu\mu} \mathbf S_{\mu\nu} \big]
+
+        The sum of the COOP DOS is equal to the DOS:
+
+        .. math::
+            \mathrm{DOS}_{\nu} &= \sum_\mu \mathrm{COOP}^{\mathbf G}_{\nu\mu}
+
+        Parameters
+        ----------
+        E: float or int
+           the energy or the energy index of COOP. If an integer
+           is passed it is the index, otherwise the index corresponding to
+           ``Eindex(E)`` is used.
+        kavg: bool, int or array_like, optional
+           whether the returned COOP is k-averaged, an explicit k-point
+           or a selection of k-points
+        isc: array_like, optional
+           the returned COOP from unit-cell (``[None, None, None]``) to
+           the given supercell, the default is all COOP for the supercell.
+           To only get unit cell orbital currents, pass ``[0, 0, 0]``.
+
+        Examples
+        --------
+        >>> COOP = tbt.orbital_COOP(-1.0) # COOP @ E = -1 eV  # doctest: +SKIP
+        >>> COOP[10, 11] # COOP value between the 11th and 12th orbital
+        >>> COOP.sum(1).A[tbt.o_dev, 0] == tbt.DOS(sum=False)[tbt.Eindex(-1.0)]
+
+        See Also
+        --------
+        atom_COOP_from_orbital : transfer an orbital COOP to atomic COOP
+        atom_COOP : atomic COOP analysis of the Green function
+        orbital_ACOOP : orbital resolved COOP analysis of the spectral function
+        atom_ACOOP : atomic COOP analysis of the spectral function
+        orbital_COHP : orbital resolved COHP analysis of the Green function
+        atom_COHP_from_orbital : atomic COHP analysis from an orbital COHP
+        atom_COHP : atomic COHP analysis of the Green function
+        orbital_ACOHP : orbital resolved COHP analysis of the spectral function
+        atom_ACOHP : atomic COHP analysis of the spectral function
+        """
+        return self.orbital_ACOOP(None, E, kavg, isc)
+
+    def orbital_ACOOP(self, elec, E, kavg=True, isc=None):
+        r""" Orbital COOP analysis of the spectral function
+
+        This will return a sparse matrix, see ``scipy.sparse.csr_matrix`` for details.
+        Each matrix element of the sparse matrix corresponds to the COOP of the
+        underlying geometry.
+
+        The COOP analysis can be written as:
+
+        .. math::
+            \mathrm{COOP}^{\mathbf A}_{\nu\mu} &= \frac{1}{2\pi} \Re\big[\mathbf A_{\nu\mu} \mathbf S_{\mu\nu} \big]
+
+        The sum of the COOP DOS is equal to the DOS:
+
+        .. math::
+            \mathrm{ADOS}_{\nu} &= \sum_\mu \mathrm{COOP}^{\mathbf A}_{\nu\mu}
+
+        Parameters
+        ----------
+        elec: str or int
+           the electrode of the spectral function
+        E: float or int
+           the energy or the energy index of COOP. If an integer
+           is passed it is the index, otherwise the index corresponding to
+           ``Eindex(E)`` is used.
+        kavg: bool, int or array_like, optional
+           whether the returned COOP is k-averaged, an explicit k-point
+           or a selection of k-points
+        isc: array_like, optional
+           the returned COOP from unit-cell (``[None, None, None]``) to
+           the given supercell, the default is all COOP for the supercell.
+           To only get unit cell orbital currents, pass ``[0, 0, 0]``.
+
+        Examples
+        --------
+        >>> COOP = tbt.orbital_ACOOP(0, -1.0) # COOP @ E = -1 eV from ``0`` spectral function # doctest: +SKIP
+        >>> COOP[10, 11] # COOP value between the 11th and 12th orbital
+        >>> COOP.sum(1).A[tbt.o_dev, 0] == tbt.ADOS(0, sum=False)[tbt.Eindex(-1.0)]
+
+        See Also
+        --------
+        orbital_COOP : orbital resolved COOP analysis of the Green function
+        atom_COOP_from_orbital : transfer an orbital COOP to atomic COOP
+        atom_COOP : atomic COOP analysis of the Green function
+        atom_ACOOP : atomic COOP analysis of the spectral function
+        orbital_COHP : orbital resolved COHP analysis of the Green function
+        atom_COHP_from_orbital : atomic COHP analysis from an orbital COHP
+        atom_COHP : atomic COHP analysis of the Green function
+        orbital_ACOHP : orbital resolved COHP analysis of the spectral function
+        atom_ACOHP : atomic COHP analysis of the spectral function
+        """
+        COOP = self._sparse_data('COOP', elec, E, kavg, isc) * eV2Ry
+        COOP.sort_indices()
+        COOP.eliminate_zeros()
+        return COOP
+
+    def atom_COOP_from_orbital(self, COOP, uc=False):
+        r""" Calculate the atomic COOP curve from the orbital COOP
+
+        The atomic COOP are a sum over all orbital COOP:
+
+        .. math::
+            \mathrm{COOP}_{\alpha\beta} = \sum_{\nu\in\alpha}\sum_{\mu\in\beta} \mathrm{COOP}_{\nu\mu}
+
+        Parameters
+        ----------
+        COOP : scipy.sparse.csr_matrix
+           the orbital COOP as retrieved from `orbital_COOP` or `orbital_ACOOP`
+        uc : bool, optional
+           whether the returned COOP are only in the unit-cell.
+           If ``True`` this will return a sparse matrix of ``shape = (self.na, self.na)``,
+           else, it will return a sparse matrix of ``shape = (self.na, self.na * self.n_s)``.
+           One may figure out the connections via `Geometry.sc_index`.
+
+        See Also
+        --------
+        orbital_COOP : orbital resolved COOP analysis of the Green function
+        orbital_ACOOP : orbital resolved COOP analysis of the spectral function
+        atom_COOP : atomic COOP analysis of the Green function
+        """
+        COOP = self._sparse_data_orb_to_atom(COOP, uc)
+        COOP.sort_indices()
+        COOP.sum_duplicates()
+        COOP.eliminate_zeros()
+        return COOP
+
+    def atom_COOP(self, E, kavg=True, isc=None, uc=False):
+        r""" Atomic COOP curve of the Green function
+
+        Parameters
+        ----------
+        E: float or int
+           the energy or the energy index of COOP. If an integer
+           is passed it is the index, otherwise the index corresponding to
+           ``Eindex(E)`` is used.
+        kavg: bool, int or array_like, optional
+           whether the returned COOP is k-averaged, an explicit k-point
+           or a selection of k-points
+        isc: array_like, optional
+           the returned COOP from unit-cell (``[None, None, None]``) to
+           the given supercell, the default is all COOP for the supercell.
+           To only get unit cell orbital currents, pass ``[0, 0, 0]``.
+        uc : bool, optional
+           whether the returned COOP are only in the unit-cell.
+           If ``True`` this will return a sparse matrix of ``shape = (self.na, self.na)``,
+           else, it will return a sparse matrix of ``shape = (self.na, self.na * self.n_s)``.
+           One may figure out the connections via `Geometry.sc_index`.
+
+        See Also
+        --------
+        orbital_COOP : orbital resolved COOP analysis of the Green function
+        atom_COOP_from_orbital : transfer an orbital COOP to atomic COOP
+        atom_ACOOP : atomic COOP analysis of the spectral function
+        atom_COHP : atomic COHP analysis of the Green function
+        """
+        return self.atom_ACOOP(None, E, kavg, isc, uc)
+
+    def atom_ACOOP(self, elec, E, kavg=True, isc=None, uc=False):
+        r""" Atomic COOP curve of the spectral function
+
+        Parameters
+        ----------
+        elec: str or int
+           the electrode of the spectral function
+        E: float or int
+           the energy or the energy index of COOP. If an integer
+           is passed it is the index, otherwise the index corresponding to
+           ``Eindex(E)`` is used.
+        kavg: bool, int or array_like, optional
+           whether the returned COOP is k-averaged, an explicit k-point
+           or a selection of k-points
+        isc: array_like, optional
+           the returned COOP from unit-cell (``[None, None, None]``) to
+           the given supercell, the default is all COOP for the supercell.
+           To only get unit cell orbital currents, pass ``[0, 0, 0]``.
+        uc : bool, optional
+           whether the returned COOP are only in the unit-cell.
+           If ``True`` this will return a sparse matrix of ``shape = (self.na, self.na)``,
+           else, it will return a sparse matrix of ``shape = (self.na, self.na * self.n_s)``.
+           One may figure out the connections via `Geometry.sc_index`.
+
+        See Also
+        --------
+        orbital_COOP : orbital resolved COOP analysis of the Green function
+        atom_COOP_from_orbital : transfer an orbital COOP to atomic COOP
+        atom_COOP : atomic COOP analysis of the Green function
+        atom_ACOHP : atomic COHP analysis of the spectral function
+        """
+        COOP = self.orbital_ACOOP(elec, E, kavg, isc)
+        return self.atom_COOP_from_orbital(COOP, uc)
+
+    def orbital_COHP(self, E, kavg=True, isc=None):
+        r""" Orbital resolved COHP analysis of the Green function
+
+        This will return a sparse matrix, see ``scipy.sparse.csr_matrix`` for details.
+        Each matrix element of the sparse matrix corresponds to the COHP of the
+        underlying geometry.
+
+        The COHP analysis can be written as:
+
+        .. math::
+            \mathrm{COHP}^{\mathbf G}_{\nu\mu} &= \frac{-1}{2\pi}
+              \Im\big[(\mathbf G - \mathbf G^\dagger)_{\nu\mu} \mathbf H_{\mu\nu} \big]
+
+        Parameters
+        ----------
+        E: float or int
+           the energy or the energy index of COHP. If an integer
+           is passed it is the index, otherwise the index corresponding to
+           ``Eindex(E)`` is used.
+        kavg: bool, int or array_like, optional
+           whether the returned COHP is k-averaged, an explicit k-point
+           or a selection of k-points
+        isc: array_like, optional
+           the returned COHP from unit-cell (``[None, None, None]``) to
+           the given supercell, the default is all COHP for the supercell.
+           To only get unit cell orbital currents, pass ``[0, 0, 0]``.
+
+        Examples
+        --------
+        >>> COHP = tbt.orbital_COHP(-1.0) # COHP @ E = -1 eV  # doctest: +SKIP
+        >>> COHP[10, 11] # COHP value between the 11th and 12th orbital
+
+        See Also
+        --------
+        atom_COHP_from_orbital : atomic COHP analysis from an orbital COHP
+        atom_COHP : atomic COHP analysis of the Green function
+        orbital_ACOHP : orbital resolved COHP analysis of the spectral function
+        atom_ACOHP : atomic COHP analysis of the spectral function
+        orbital_COOP : orbital resolved COOP analysis of the Green function
+        atom_COOP_from_orbital : transfer an orbital COOP to atomic COOP
+        atom_COOP : atomic COOP analysis of the Green function
+        orbital_ACOOP : orbital resolved COOP analysis of the spectral function
+        atom_ACOOP : atomic COOP analysis of the spectral function
+        """
+        return self.orbital_ACOHP(None, E, kavg, isc)
+
+    def orbital_ACOHP(self, elec, E, kavg=True, isc=None):
+        r""" Orbital resolved COHP analysis of the spectral function
+
+        This will return a sparse matrix, see ``scipy.sparse.csr_matrix`` for details.
+        Each matrix element of the sparse matrix corresponds to the COHP of the
+        underlying geometry.
+
+        The COHP analysis can be written as:
+
+        .. math::
+            \mathrm{COHP}^{\mathbf A}_{\nu\mu} &= \frac{1}{2\pi} \Re\big[\mathbf A_{\nu\mu}
+                \mathbf H_{\nu\mu} \big]
+
+        Parameters
+        ----------
+        elec: str or int
+           the electrode of the spectral function
+        E: float or int
+           the energy or the energy index of COHP. If an integer
+           is passed it is the index, otherwise the index corresponding to
+           ``Eindex(E)`` is used.
+        kavg: bool, int or array_like, optional
+           whether the returned COHP is k-averaged, an explicit k-point
+           or a selection of k-points
+        isc: array_like, optional
+           the returned COHP from unit-cell (``[None, None, None]``) to
+           the given supercell, the default is all COHP for the supercell.
+           To only get unit cell orbital currents, pass ``[0, 0, 0]``.
+
+        See Also
+        --------
+        orbital_COHP : orbital resolved COHP analysis of the Green function
+        atom_COHP_from_orbital : atomic COHP analysis from an orbital COHP
+        atom_COHP : atomic COHP analysis of the Green function
+        atom_ACOHP : atomic COHP analysis of the spectral function
+        orbital_COOP : orbital resolved COOP analysis of the Green function
+        atom_COOP_from_orbital : transfer an orbital COOP to atomic COOP
+        atom_COOP : atomic COOP analysis of the Green function
+        orbital_ACOOP : orbital resolved COOP analysis of the spectral function
+        atom_ACOOP : atomic COOP analysis of the spectral function
+        """
+        COHP = self._sparse_data('COHP', elec, E, kavg, isc)
+        COHP.sort_indices()
+        COHP.eliminate_zeros()
+        return COHP
+
+    def atom_COHP_from_orbital(self, COHP, uc=False):
+        r""" Calculate the atomic COHP curve from the orbital COHP
+
+        The atomic COHP are a sum over all orbital COHP:
+
+        .. math::
+            \mathrm{COHP}_{\alpha\beta} = \sum_{\nu\in\alpha}\sum_{\mu\in\beta} \mathrm{COHP}_{\nu\mu}
+
+        Parameters
+        ----------
+        COHP : scipy.sparse.csr_matrix
+           the orbital COHP as retrieved from `orbital_COHP` or `orbital_ACOHP`
+        uc : bool, optional
+           whether the returned COHP are only in the unit-cell.
+           If ``True`` this will return a sparse matrix of ``shape = (self.na, self.na)``,
+           else, it will return a sparse matrix of ``shape = (self.na, self.na * self.n_s)``.
+           One may figure out the connections via `Geometry.sc_index`.
+
+        See Also
+        --------
+        orbital_COHP : orbital resolved COHP analysis of the Green function
+        orbital_ACOHP : orbital resolved COHP analysis of the spectral function
+        atom_COHP : atomic COHP analysis of the Green function
+        """
+        return self.atom_COOP_from_orbital(COHP, uc)
+
+    def atom_COHP(self, E, kavg=True, isc=None, uc=False):
+        r""" Atomic COHP curve of the Green function
+
+        Parameters
+        ----------
+        E: float or int
+           the energy or the energy index of COHP. If an integer
+           is passed it is the index, otherwise the index corresponding to
+           ``Eindex(E)`` is used.
+        kavg: bool, int or array_like, optional
+           whether the returned COHP is k-averaged, an explicit k-point
+           or a selection of k-points
+        isc: array_like, optional
+           the returned COHP from unit-cell (``[None, None, None]``) to
+           the given supercell, the default is all COHP for the supercell.
+           To only get unit cell orbital currents, pass ``[0, 0, 0]``.
+        uc : bool, optional
+           whether the returned COHP are only in the unit-cell.
+           If ``True`` this will return a sparse matrix of ``shape = (self.na, self.na)``,
+           else, it will return a sparse matrix of ``shape = (self.na, self.na * self.n_s)``.
+           One may figure out the connections via `Geometry.sc_index`.
+
+        See Also
+        --------
+        orbital_COHP : orbital resolved COHP analysis of the Green function
+        atom_COHP_from_orbital : transfer an orbital COHP to atomic COHP
+        atom_ACOHP : atomic COHP analysis of the spectral function
+        atom_COOP : atomic COOP analysis of the Green function
+        """
+        return self.atom_ACOHP(None, E, kavg, isc, uc)
+
+    def atom_ACOHP(self, elec, E, kavg=True, isc=None, uc=False):
+        r""" Atomic COHP curve of the spectral function
+
+        Parameters
+        ----------
+        elec: str or int
+           the electrode of the spectral function
+        E: float or int
+           the energy or the energy index of COHP. If an integer
+           is passed it is the index, otherwise the index corresponding to
+           ``Eindex(E)`` is used.
+        kavg: bool, int or array_like, optional
+           whether the returned COHP is k-averaged, an explicit k-point
+           or a selection of k-points
+        isc: array_like, optional
+           the returned COHP from unit-cell (``[None, None, None]``) to
+           the given supercell, the default is all COHP for the supercell.
+           To only get unit cell orbital currents, pass ``[0, 0, 0]``.
+        uc : bool, optional
+           whether the returned COHP are only in the unit-cell.
+           If ``True`` this will return a sparse matrix of ``shape = (self.na, self.na)``,
+           else, it will return a sparse matrix of ``shape = (self.na, self.na * self.n_s)``.
+           One may figure out the connections via `Geometry.sc_index`.
+
+        See Also
+        --------
+        orbital_COHP : orbital resolved COHP analysis of the Green function
+        atom_COHP_from_orbital : transfer an orbital COHP to atomic COHP
+        atom_COHP : atomic COHP analysis of the Green function
+        atom_ACOOP : atomic COOP analysis of the spectral function
+        """
+        COHP = self.orbital_ACOHP(elec, E, kavg, isc)
+        return self.atom_COHP_from_orbital(COHP, uc)
 
     def read_data(self, *args, **kwargs):
         """ Read specific type of data.
@@ -1221,7 +1631,7 @@ class tbtncSileTBtrans(_devncSileTBtrans):
 
         Parameters
         ----------
-        elec : str, int
+        elec : str or int
            the electrode to request information from
         """
         if not elec is None:
@@ -1352,7 +1762,7 @@ class tbtncSileTBtrans(_devncSileTBtrans):
                 atoms = [None] * len(old_g)
                 for a, idx in g.atom:
                     for i in idx:
-                        atoms[i] = a.copy(orbs=old_g.atom[i].orbs)
+                        atoms[i] = a.copy(orbital=old_g.atom[i].R)
                 g._atom = Atoms(atoms)
 
                 ns._geometry = g
@@ -1396,7 +1806,7 @@ class tbtncSileTBtrans(_devncSileTBtrans):
             p.add_argument('--kpoint', '-k',
                            action=kRange,
                            help="""Denote the sub-section of k-indices that are extracted.
-                           
+
                            This flag takes effect on all k-resolved quantities and is reset whenever --plot or --out is called""")
 
         # The normalization method
@@ -1409,7 +1819,7 @@ class tbtncSileTBtrans(_devncSileTBtrans):
                        choices=['atom', 'all', 'none', 'orbital'],
                        help="""Specify the normalization method; "atom") total orbitals in selected atoms,
                        "all") total orbitals in the device region, "none") no normalization or "orbital") selected orbitals.
-                       
+
                        This flag only takes effect on --dos and --ados and is reset whenever --plot or --out is called""")
 
         # Try and add the atomic specification
@@ -1495,7 +1905,7 @@ class tbtncSileTBtrans(_devncSileTBtrans):
 
         p.add_argument('--atom', '-a', type=str, action=AtomRange,
                        help="""Limit orbital resolved quantities to a sub-set of atoms/orbitals: "1-2[3,4]" will yield the 1st and 2nd atom and their 3rd and fourth orbital. Multiple comma-separated specifications are allowed. Note that some shells does not allow [] as text-input (due to expansion), {, [ or * are allowed orbital delimiters.
-                           
+
                        This flag takes effect on all atom/orbital resolved quantities (except BDOS, transmission_bulk) and is reset whenever --plot or --out is called""")
 
         class DataT(argparse.Action):
