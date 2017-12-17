@@ -65,7 +65,7 @@
             
             
               <div class="version">
-                0.9.2-53
+                0.9.2-100
               </div>
             
           
@@ -171,7 +171,8 @@
   <h1>Source code for sisl.grid</h1><div class="highlight"><pre>
 <span></span><span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">print_function</span><span class="p">,</span> <span class="n">division</span>
 
-<span class="kn">from</span> <span class="nn">numbers</span> <span class="k">import</span> <span class="n">Integral</span>
+<span class="kn">import</span> <span class="nn">warnings</span>
+<span class="kn">from</span> <span class="nn">numbers</span> <span class="k">import</span> <span class="n">Integral</span><span class="p">,</span> <span class="n">Real</span>
 
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 
@@ -198,6 +199,7 @@
     <span class="n">PERIODIC</span> <span class="o">=</span> <span class="mi">1</span>
     <span class="n">NEUMANN</span> <span class="o">=</span> <span class="mi">2</span>
     <span class="n">DIRICHLET</span> <span class="o">=</span> <span class="mi">3</span>
+    <span class="n">OPEN</span> <span class="o">=</span> <span class="mi">4</span>
 
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">shape</span><span class="p">,</span> <span class="n">bc</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">sc</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">geom</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Initialize a `Grid` object.</span>
@@ -206,10 +208,10 @@
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
-<span class="sd">        shape : list of ints</span>
-<span class="sd">           the size of each grid dimension</span>
+<span class="sd">        shape : list of ints or float</span>
+<span class="sd">           the size of each grid dimension, if a float it is the grid-spacing in Ang</span>
 <span class="sd">        bc : int, optional</span>
-<span class="sd">           the boundary condition (`Grid.PERIODIC/Grid.NEUMANN/Grid.DIRICHLET`)</span>
+<span class="sd">           the boundary condition (``Grid.PERIODIC/Grid.NEUMANN/Grid.DIRICHLET/Grid.OPEN``)</span>
 <span class="sd">        sc : SuperCell or list, optional</span>
 <span class="sd">           the associated supercell</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -218,14 +220,18 @@
 
         <span class="bp">self</span><span class="o">.</span><span class="n">set_supercell</span><span class="p">(</span><span class="n">sc</span><span class="p">)</span>
 
+        <span class="c1"># Create the atomic structure in the grid, if possible</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_geometry</span><span class="p">(</span><span class="n">geom</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">shape</span><span class="p">,</span> <span class="n">Real</span><span class="p">):</span>
+            <span class="n">d</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cell</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="o">**</span> <span class="mf">0.5</span>
+            <span class="n">shape</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">rint</span><span class="p">(</span><span class="n">d</span> <span class="o">/</span> <span class="n">shape</span><span class="p">)))</span>
+
         <span class="c1"># Create the grid</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">set_grid</span><span class="p">(</span><span class="n">shape</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span>
 
         <span class="c1"># Create the grid boundary conditions</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">set_bc</span><span class="p">(</span><span class="n">bc</span><span class="p">)</span>
-
-        <span class="c1"># Create the atomic structure in the grid, if possible</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">set_geometry</span><span class="p">(</span><span class="n">geom</span><span class="p">)</span>
 
         <span class="c1"># If the user sets the super-cell, that has precedence.</span>
         <span class="k">if</span> <span class="n">sc</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
@@ -240,7 +246,15 @@
         <span class="sd">&quot;&quot;&quot; Updates the grid contained &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">grid</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">val</span>
 
-<div class="viewcode-block" id="Grid.set_geometry"><a class="viewcode-back" href="../../api-generated/sisl.Grid.html#sisl.Grid.set_geometry">[docs]</a>    <span class="k">def</span> <span class="nf">set_geometry</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">geom</span><span class="p">):</span>
+<div class="viewcode-block" id="Grid.dSuperCell"><a class="viewcode-back" href="../../api-generated/sisl.Grid.html#sisl.Grid.dSuperCell">[docs]</a>    <span class="k">def</span> <span class="nf">dSuperCell</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Create a supercell with the size of the voxels &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">SuperCell</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dcell</span><span class="p">)</span></div>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">geom</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">geometry</span>
+
+<div class="viewcode-block" id="Grid.set_geometry"><a class="viewcode-back" href="../../api-generated/sisl.Grid.html#sisl.Grid.set_geometry">[docs]</a>    <span class="k">def</span> <span class="nf">set_geometry</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">geometry</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Sets the `Geometry` for the grid.</span>
 
 <span class="sd">        Setting the `Geometry` for the grid is a possibility</span>
@@ -248,12 +262,12 @@
 
 <span class="sd">        It is not a necessary entity.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="n">geom</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">geometry</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="c1"># Fake geometry</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">set_geometry</span><span class="p">(</span><span class="n">Geometry</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">Atom</span><span class="p">[</span><span class="s1">&#39;H&#39;</span><span class="p">],</span> <span class="n">sc</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">sc</span><span class="p">))</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">geom</span> <span class="o">=</span> <span class="n">geom</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">set_sc</span><span class="p">(</span><span class="n">geom</span><span class="o">.</span><span class="n">sc</span><span class="p">)</span></div>
+            <span class="bp">self</span><span class="o">.</span><span class="n">geometry</span> <span class="o">=</span> <span class="n">geometry</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">set_sc</span><span class="p">(</span><span class="n">geometry</span><span class="o">.</span><span class="n">sc</span><span class="p">)</span></div>
     <span class="n">set_geom</span> <span class="o">=</span> <span class="n">set_geometry</span>
 
 <div class="viewcode-block" id="Grid.interp"><a class="viewcode-back" href="../../api-generated/sisl.Grid.html#sisl.Grid.interp">[docs]</a>    <span class="k">def</span> <span class="nf">interp</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">shape</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s1">&#39;linear&#39;</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
@@ -391,10 +405,9 @@
         <span class="k">return</span> <span class="n">dcell</span>
 
     <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">dvol</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot; Volume of the grids voxel elements</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">sc</span><span class="o">.</span><span class="n">vol</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">size</span>
+    <span class="k">def</span> <span class="nf">dvolume</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Volume of the grids voxel elements &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">sc</span><span class="o">.</span><span class="n">volume</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">size</span>
 
 <div class="viewcode-block" id="Grid.cross_section"><a class="viewcode-back" href="../../api-generated/sisl.Grid.html#sisl.Grid.cross_section">[docs]</a>    <span class="k">def</span> <span class="nf">cross_section</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">idx</span><span class="p">,</span> <span class="n">axis</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Takes a cross-section of the grid along axis `axis`</span>
@@ -634,9 +647,114 @@
             <span class="k">with</span> <span class="n">get_sile</span><span class="p">(</span><span class="n">sile</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">fh</span><span class="p">:</span>
                 <span class="n">fh</span><span class="o">.</span><span class="n">write_grid</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
 
+<div class="viewcode-block" id="Grid.psi"><a class="viewcode-back" href="../../api-generated/sisl.Grid.html#sisl.Grid.psi">[docs]</a>    <span class="k">def</span> <span class="nf">psi</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">v</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Add the wave-function (`Orbital.psi`) component of each orbital to the grid</span>
+
+<span class="sd">        This routine takes a vector `v` which may be of complex values and calculates the</span>
+<span class="sd">        real-space wave-function components in the specified grid. The length of `v` should</span>
+<span class="sd">        correspond to the number of orbitals in the geometry associated with this grid.</span>
+
+<span class="sd">        This is an *in-place* operation that *adds* to the current values in the grid.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        v : array_like</span>
+<span class="sd">           the coefficients for all orbitals in the geometry</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">v</span> <span class="o">=</span> <span class="n">ensure_array</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">no</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s2">&quot;.psi &quot;</span>
+                             <span class="s2">&quot;requires the coefficient to have length as the number of orbitals.&quot;</span><span class="p">)</span>
+
+        <span class="n">dcell</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dcell</span>
+        <span class="n">da</span> <span class="o">=</span> <span class="n">dcell</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">db</span> <span class="o">=</span> <span class="n">dcell</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">dc</span> <span class="o">=</span> <span class="n">dcell</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">def</span> <span class="nf">idx2R</span><span class="p">(</span><span class="n">idx</span><span class="p">,</span> <span class="n">offset</span><span class="p">):</span>
+            <span class="n">R</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">emptyd</span><span class="p">([</span><span class="n">idx</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">size</span><span class="p">,</span> <span class="n">idx</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">size</span><span class="p">,</span> <span class="n">idx</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">size</span><span class="p">,</span> <span class="mi">3</span><span class="p">])</span>
+            <span class="n">R</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">idx</span><span class="p">[</span><span class="mi">0</span><span class="p">][:,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="kc">None</span><span class="p">]</span> <span class="o">*</span> <span class="n">da</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">+</span> <span class="n">da</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">*</span> <span class="mf">0.5</span> <span class="o">-</span> <span class="n">offset</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">R</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">idx</span><span class="p">[</span><span class="mi">1</span><span class="p">][:,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="kc">None</span><span class="p">]</span> <span class="o">*</span> <span class="n">db</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">+</span> <span class="n">db</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">*</span> <span class="mf">0.5</span> <span class="o">-</span> <span class="n">offset</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+            <span class="n">R</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">idx</span><span class="p">[</span><span class="mi">2</span><span class="p">][:,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="kc">None</span><span class="p">]</span> <span class="o">*</span> <span class="n">dc</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">+</span> <span class="n">dc</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">*</span> <span class="mf">0.5</span> <span class="o">-</span> <span class="n">offset</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+            <span class="k">return</span> <span class="n">R</span>
+
+        <span class="k">def</span> <span class="nf">min_max</span><span class="p">(</span><span class="n">idxm</span><span class="p">,</span> <span class="n">idxM</span><span class="p">,</span> <span class="n">idx</span><span class="p">):</span>
+            <span class="n">idxm</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">idxm</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">idx</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+            <span class="n">idxM</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">idxM</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">idx</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+            <span class="n">idxm</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">idxm</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">idx</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+            <span class="n">idxM</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">idxM</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">idx</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+            <span class="n">idxm</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">idxm</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">idx</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
+            <span class="n">idxM</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">idxM</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">idx</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
+
+        <span class="c1"># Loop over all atoms</span>
+        <span class="n">io</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+        <span class="k">for</span> <span class="n">ia</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">geometry</span><span class="p">:</span>
+            <span class="c1"># The coordinates are relative to origo, so we need to shift</span>
+            <span class="n">xyz</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">xyz</span><span class="p">[</span><span class="n">ia</span><span class="p">,</span> <span class="p">:]</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">origo</span>
+            <span class="n">IDX</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">xyz</span><span class="p">)</span>
+
+            <span class="c1"># Loop on orbitals on this atom</span>
+            <span class="k">for</span> <span class="n">o</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">atom</span><span class="p">[</span><span class="n">ia</span><span class="p">]:</span>
+                <span class="n">io</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="c1"># Plotting this orbital now</span>
+                <span class="n">R</span> <span class="o">=</span> <span class="n">o</span><span class="o">.</span><span class="n">R</span>
+                <span class="k">if</span> <span class="n">R</span> <span class="o">&lt;</span> <span class="mf">0.</span><span class="p">:</span>
+                    <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s2">&quot;Orbital &#39;</span><span class="si">{}</span><span class="s2">&#39; does not have a wave-function, skipping orbital.&quot;</span><span class="p">)</span>
+                    <span class="c1"># Skip this one.</span>
+                    <span class="k">continue</span>
+
+                <span class="n">idxm</span> <span class="o">=</span> <span class="n">IDX</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+                <span class="n">idxM</span> <span class="o">=</span> <span class="n">IDX</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+
+                <span class="c1"># Figure out the number of indices in each direction</span>
+                <span class="n">xyzR</span> <span class="o">=</span> <span class="n">xyz</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+
+                <span class="n">xyzR</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+=</span> <span class="n">R</span>
+                <span class="n">min_max</span><span class="p">(</span><span class="n">idxm</span><span class="p">,</span> <span class="n">idxM</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">xyzR</span><span class="p">))</span>
+                <span class="n">xyzR</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+=</span> <span class="n">R</span>
+                <span class="n">min_max</span><span class="p">(</span><span class="n">idxm</span><span class="p">,</span> <span class="n">idxM</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">xyzR</span><span class="p">))</span>
+                <span class="n">xyzR</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">+=</span> <span class="n">R</span>
+                <span class="n">min_max</span><span class="p">(</span><span class="n">idxm</span><span class="p">,</span> <span class="n">idxM</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">xyzR</span><span class="p">))</span>
+                <span class="n">xyzR</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-=</span> <span class="n">R</span>
+                <span class="n">min_max</span><span class="p">(</span><span class="n">idxm</span><span class="p">,</span> <span class="n">idxM</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">xyzR</span><span class="p">))</span>
+                <span class="n">xyzR</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-=</span> <span class="n">R</span>
+                <span class="n">min_max</span><span class="p">(</span><span class="n">idxm</span><span class="p">,</span> <span class="n">idxM</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">xyzR</span><span class="p">))</span>
+                <span class="n">xyzR</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">-=</span> <span class="n">R</span>
+
+                <span class="n">xyzR</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-=</span> <span class="n">R</span>
+                <span class="n">min_max</span><span class="p">(</span><span class="n">idxm</span><span class="p">,</span> <span class="n">idxM</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">xyzR</span><span class="p">))</span>
+                <span class="n">xyzR</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-=</span> <span class="n">R</span>
+                <span class="n">min_max</span><span class="p">(</span><span class="n">idxm</span><span class="p">,</span> <span class="n">idxM</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">xyzR</span><span class="p">))</span>
+                <span class="n">xyzR</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">-=</span> <span class="n">R</span>
+                <span class="n">min_max</span><span class="p">(</span><span class="n">idxm</span><span class="p">,</span> <span class="n">idxM</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">xyzR</span><span class="p">))</span>
+                <span class="n">xyzR</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+=</span> <span class="n">R</span>
+                <span class="n">min_max</span><span class="p">(</span><span class="n">idxm</span><span class="p">,</span> <span class="n">idxM</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">xyzR</span><span class="p">))</span>
+                <span class="n">xyzR</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+=</span> <span class="n">R</span>
+                <span class="n">min_max</span><span class="p">(</span><span class="n">idxm</span><span class="p">,</span> <span class="n">idxM</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">xyzR</span><span class="p">))</span>
+
+                <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">):</span>
+                    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">bc</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">PERIODIC</span><span class="p">:</span>
+                        <span class="n">idxm</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">idxm</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+                        <span class="n">idxM</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">idxM</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+
+                <span class="c1"># Now idxM/m contains max/min indices used</span>
+                <span class="c1"># Convert to a xyz-coordinate</span>
+                <span class="n">idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ogrid</span><span class="p">[</span><span class="n">idxm</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span><span class="n">idxM</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span> <span class="n">idxm</span><span class="p">[</span><span class="mi">1</span><span class="p">]:</span><span class="n">idxM</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span> <span class="n">idxm</span><span class="p">[</span><span class="mi">2</span><span class="p">]:</span><span class="n">idxM</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span>
+
+                <span class="c1"># Extract the vectors for this (note that we are subtracting xyz</span>
+                <span class="c1"># to concentrate the vector on the basis-orbital)</span>
+                <span class="n">R</span> <span class="o">=</span> <span class="n">idx2R</span><span class="p">(</span><span class="n">idx</span><span class="p">,</span> <span class="n">xyz</span><span class="p">)</span>
+
+                <span class="c1"># Wrap-around for continuous grids</span>
+                <span class="n">idx</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">idx</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="n">idx</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">idx</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+                <span class="n">idx</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">idx</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+
+                <span class="c1"># Evaluate the psi component of the wavefunction</span>
+                <span class="c1"># and add it directly to the grid</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">grid</span><span class="p">[</span><span class="n">idx</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">idx</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">idx</span><span class="p">[</span><span class="mi">2</span><span class="p">]]</span> <span class="o">+=</span> <span class="n">o</span><span class="o">.</span><span class="n">psi</span><span class="p">(</span><span class="n">R</span><span class="p">)</span> <span class="o">*</span> <span class="n">v</span><span class="p">[</span><span class="n">io</span><span class="p">]</span></div>
+
     <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Representation of object &quot;&quot;&quot;</span>
-
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39;{{[</span><span class="si">{}</span><span class="s1"> </span><span class="si">{}</span><span class="s1"> </span><span class="si">{}</span><span class="s1">]}}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">_check_compatibility</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">,</span> <span class="n">msg</span><span class="p">):</span>
@@ -1091,7 +1209,7 @@
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'../../',
-            VERSION:'0.9.2-53',
+            VERSION:'0.9.2-100',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true,

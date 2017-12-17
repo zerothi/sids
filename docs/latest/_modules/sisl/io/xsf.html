@@ -65,7 +65,7 @@
             
             
               <div class="version">
-                0.9.2-53
+                0.9.2-100
               </div>
             
           
@@ -306,6 +306,69 @@
             <span class="k">return</span> <span class="n">geom</span><span class="p">,</span> <span class="n">dat</span>
         <span class="k">return</span> <span class="n">geom</span>
 
+    <span class="nd">@Sile_fh_open</span>
+    <span class="k">def</span> <span class="nf">write_grid</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Write a grid data to an XSF file &quot;&quot;&quot;</span>
+        <span class="n">sile_raise_write</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+
+        <span class="n">geom</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;geometry&#39;</span><span class="p">,</span> <span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">geom</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">write_geometry</span><span class="p">(</span><span class="n">geom</span><span class="p">)</span>
+
+        <span class="c1"># Buffer size for writing</span>
+        <span class="n">buffersize</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;buffersize&#39;</span><span class="p">,</span> <span class="nb">min</span><span class="p">(</span><span class="mi">6144</span><span class="p">,</span> <span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">size</span><span class="p">))</span>
+
+        <span class="c1"># Format for precision</span>
+        <span class="n">fmt</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;fmt&#39;</span><span class="p">,</span> <span class="s1">&#39;.5e&#39;</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_write</span><span class="p">(</span><span class="s1">&#39;BEGIN_BLOCK_DATAGRID_3D</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;name&#39;</span><span class="p">,</span> <span class="s1">&#39;sisl_grid_</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">args</span><span class="p">)))</span>
+        <span class="c1"># Transfer all spaces to underscores (no spaces allowed)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_write</span><span class="p">(</span><span class="s1">&#39; &#39;</span> <span class="o">+</span> <span class="n">name</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">,</span> <span class="s1">&#39;_&#39;</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="n">_v3</span> <span class="o">=</span> <span class="p">((</span><span class="s1">&#39;{:&#39;</span> <span class="o">+</span> <span class="n">fmt</span> <span class="o">+</span> <span class="s1">&#39;} &#39;</span><span class="p">)</span> <span class="o">*</span> <span class="mi">3</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="o">+</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span>
+
+        <span class="k">def</span> <span class="nf">write_cell</span><span class="p">(</span><span class="n">grid</span><span class="p">):</span>
+            <span class="c1"># Now write the grid</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_write</span><span class="p">(</span><span class="s1">&#39;  </span><span class="si">{}</span><span class="s1"> </span><span class="si">{}</span><span class="s1"> </span><span class="si">{}</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="o">*</span><span class="n">grid</span><span class="o">.</span><span class="n">shape</span><span class="p">))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_write</span><span class="p">(</span><span class="s1">&#39;  &#39;</span> <span class="o">+</span> <span class="n">_v3</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="o">*</span><span class="n">grid</span><span class="o">.</span><span class="n">origo</span><span class="p">))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_write</span><span class="p">(</span><span class="s1">&#39;  &#39;</span> <span class="o">+</span> <span class="n">_v3</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="o">*</span><span class="n">grid</span><span class="o">.</span><span class="n">cell</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="p">:]))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_write</span><span class="p">(</span><span class="s1">&#39;  &#39;</span> <span class="o">+</span> <span class="n">_v3</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="o">*</span><span class="n">grid</span><span class="o">.</span><span class="n">cell</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="p">:]))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_write</span><span class="p">(</span><span class="s1">&#39;  &#39;</span> <span class="o">+</span> <span class="n">_v3</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="o">*</span><span class="n">grid</span><span class="o">.</span><span class="n">cell</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="p">:]))</span>
+
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">grid</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">args</span><span class="p">):</span>
+            <span class="n">is_complex</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">iscomplexobj</span><span class="p">(</span><span class="n">grid</span><span class="o">.</span><span class="n">grid</span><span class="p">)</span>
+
+            <span class="n">name</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;grid&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">),</span> <span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">))</span>
+            <span class="k">if</span> <span class="n">is_complex</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_write</span><span class="p">(</span><span class="s1">&#39; BEGIN_DATAGRID_3D_real_</span><span class="si">{}</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">name</span><span class="p">))</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_write</span><span class="p">(</span><span class="s1">&#39; BEGIN_DATAGRID_3D_</span><span class="si">{}</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">name</span><span class="p">))</span>
+
+            <span class="n">write_cell</span><span class="p">(</span><span class="n">grid</span><span class="p">)</span>
+
+            <span class="c1"># for z</span>
+            <span class="c1">#   for y</span>
+            <span class="c1">#     for x</span>
+            <span class="c1">#       write...</span>
+            <span class="n">_fmt</span> <span class="o">=</span> <span class="s1">&#39;{:&#39;</span> <span class="o">+</span> <span class="n">fmt</span> <span class="o">+</span> <span class="s1">&#39;}</span><span class="se">\n</span><span class="s1">&#39;</span>
+            <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">np</span><span class="o">.</span><span class="n">nditer</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">grid</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">real</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="s1">&#39;C&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">),</span> <span class="n">flags</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;external_loop&#39;</span><span class="p">,</span> <span class="s1">&#39;buffered&#39;</span><span class="p">],</span>
+                               <span class="n">op_flags</span><span class="o">=</span><span class="p">[[</span><span class="s1">&#39;readonly&#39;</span><span class="p">]],</span> <span class="n">order</span><span class="o">=</span><span class="s1">&#39;C&#39;</span><span class="p">,</span> <span class="n">buffersize</span><span class="o">=</span><span class="n">buffersize</span><span class="p">):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_write</span><span class="p">((</span><span class="n">_fmt</span> <span class="o">*</span> <span class="n">x</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="o">*</span><span class="n">x</span><span class="o">.</span><span class="n">tolist</span><span class="p">()))</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">_write</span><span class="p">(</span><span class="s1">&#39; END_DATAGRID_3D</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+
+            <span class="c1"># Skip if not complex</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">is_complex</span><span class="p">:</span>
+                <span class="k">continue</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_write</span><span class="p">(</span><span class="s1">&#39; BEGIN_DATAGRID_3D_imag_</span><span class="si">{}</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">name</span><span class="p">))</span>
+            <span class="n">write_cell</span><span class="p">(</span><span class="n">grid</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">np</span><span class="o">.</span><span class="n">nditer</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">grid</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">imag</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="s1">&#39;C&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">),</span> <span class="n">flags</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;external_loop&#39;</span><span class="p">,</span> <span class="s1">&#39;buffered&#39;</span><span class="p">],</span>
+                               <span class="n">op_flags</span><span class="o">=</span><span class="p">[[</span><span class="s1">&#39;readonly&#39;</span><span class="p">]],</span> <span class="n">order</span><span class="o">=</span><span class="s1">&#39;C&#39;</span><span class="p">,</span> <span class="n">buffersize</span><span class="o">=</span><span class="n">buffersize</span><span class="p">):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_write</span><span class="p">((</span><span class="n">_fmt</span> <span class="o">*</span> <span class="n">x</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="o">*</span><span class="n">x</span><span class="o">.</span><span class="n">tolist</span><span class="p">()))</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">_write</span><span class="p">(</span><span class="s1">&#39; END_DATAGRID_3D</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_write</span><span class="p">(</span><span class="s1">&#39;END_BLOCK_DATAGRID_3D</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+
     <span class="k">def</span> <span class="nf">ArgumentParser</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">p</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Returns the arguments that is available for this Sile &quot;&quot;&quot;</span>
         <span class="n">newkw</span> <span class="o">=</span> <span class="n">Geometry</span><span class="o">.</span><span class="n">_ArgumentParser_args_single</span><span class="p">()</span>
@@ -404,7 +467,7 @@
         <span class="c1"># currently adding an argument that is already there does not remove the</span>
         <span class="c1"># old one...</span>
         <span class="n">p</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--out&#39;</span><span class="p">,</span> <span class="s1">&#39;-o&#39;</span><span class="p">,</span> <span class="n">nargs</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="n">Out</span><span class="p">,</span>
-                       <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Store the geometry (plus any vector fields) the out file.&#39;</span><span class="p">)</span></div>
+                       <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Store the geometry/grid (plus any vector fields) the out file.&#39;</span><span class="p">)</span></div>
 
 
 <span class="n">add_sile</span><span class="p">(</span><span class="s1">&#39;xsf&#39;</span><span class="p">,</span> <span class="n">XSFSile</span><span class="p">,</span> <span class="n">case</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">gzip</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
@@ -444,7 +507,7 @@
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'../../../',
-            VERSION:'0.9.2-53',
+            VERSION:'0.9.2-100',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true,
