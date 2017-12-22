@@ -65,7 +65,7 @@
             
             
               <div class="version">
-                0.9.2-100
+                0.9.2-122
               </div>
             
           
@@ -224,7 +224,18 @@
 
     <span class="nd">@Sile_fh_open</span>
     <span class="k">def</span> <span class="nf">write_grid</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">grid</span><span class="p">,</span> <span class="n">fmt</span><span class="o">=</span><span class="s1">&#39;.5e&#39;</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot; Writes the geometry to the contained file &quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot; Writes the geometry to the contained file</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        grid : Grid</span>
+<span class="sd">           the grid to be written in the CUBE file</span>
+<span class="sd">        fmt : str, optional</span>
+<span class="sd">           format used for precision output</span>
+<span class="sd">        imag : bool, optional</span>
+<span class="sd">           write the imaginary part of the grid, default to only writing the</span>
+<span class="sd">           real part</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># Check that we can write to the file</span>
         <span class="n">sile_raise_write</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
 
@@ -233,15 +244,22 @@
 
         <span class="n">buffersize</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;buffersize&#39;</span><span class="p">,</span> <span class="nb">min</span><span class="p">(</span><span class="mi">6144</span><span class="p">,</span> <span class="n">grid</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">size</span><span class="p">))</span>
 
+        <span class="n">imag</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;imag&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+
         <span class="c1"># A CUBE file contains grid-points aligned like this:</span>
         <span class="c1"># for x</span>
         <span class="c1">#   for y</span>
         <span class="c1">#     for z</span>
         <span class="c1">#       write...</span>
         <span class="n">_fmt</span> <span class="o">=</span> <span class="s1">&#39;{:&#39;</span> <span class="o">+</span> <span class="n">fmt</span> <span class="o">+</span> <span class="s1">&#39;}</span><span class="se">\n</span><span class="s1">&#39;</span>
-        <span class="k">for</span> <span class="n">z</span> <span class="ow">in</span> <span class="n">np</span><span class="o">.</span><span class="n">nditer</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">grid</span><span class="o">.</span><span class="n">grid</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="s1">&#39;C&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">),</span> <span class="n">flags</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;external_loop&#39;</span><span class="p">,</span> <span class="s1">&#39;buffered&#39;</span><span class="p">],</span>
-                           <span class="n">op_flags</span><span class="o">=</span><span class="p">[[</span><span class="s1">&#39;readonly&#39;</span><span class="p">]],</span> <span class="n">order</span><span class="o">=</span><span class="s1">&#39;C&#39;</span><span class="p">,</span> <span class="n">buffersize</span><span class="o">=</span><span class="n">buffersize</span><span class="p">):</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_write</span><span class="p">((</span><span class="n">_fmt</span> <span class="o">*</span> <span class="n">z</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="o">*</span><span class="n">z</span><span class="o">.</span><span class="n">tolist</span><span class="p">()))</span>
+        <span class="k">if</span> <span class="n">imag</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">z</span> <span class="ow">in</span> <span class="n">np</span><span class="o">.</span><span class="n">nditer</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">grid</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">imag</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="s1">&#39;C&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">),</span> <span class="n">flags</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;external_loop&#39;</span><span class="p">,</span> <span class="s1">&#39;buffered&#39;</span><span class="p">],</span>
+                               <span class="n">op_flags</span><span class="o">=</span><span class="p">[[</span><span class="s1">&#39;readonly&#39;</span><span class="p">]],</span> <span class="n">order</span><span class="o">=</span><span class="s1">&#39;C&#39;</span><span class="p">,</span> <span class="n">buffersize</span><span class="o">=</span><span class="n">buffersize</span><span class="p">):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_write</span><span class="p">((</span><span class="n">_fmt</span> <span class="o">*</span> <span class="n">z</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="o">*</span><span class="n">z</span><span class="o">.</span><span class="n">tolist</span><span class="p">()))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">z</span> <span class="ow">in</span> <span class="n">np</span><span class="o">.</span><span class="n">nditer</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">grid</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">real</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="s1">&#39;C&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">),</span> <span class="n">flags</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;external_loop&#39;</span><span class="p">,</span> <span class="s1">&#39;buffered&#39;</span><span class="p">],</span>
+                               <span class="n">op_flags</span><span class="o">=</span><span class="p">[[</span><span class="s1">&#39;readonly&#39;</span><span class="p">]],</span> <span class="n">order</span><span class="o">=</span><span class="s1">&#39;C&#39;</span><span class="p">,</span> <span class="n">buffersize</span><span class="o">=</span><span class="n">buffersize</span><span class="p">):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_write</span><span class="p">((</span><span class="n">_fmt</span> <span class="o">*</span> <span class="n">z</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="o">*</span><span class="n">z</span><span class="o">.</span><span class="n">tolist</span><span class="p">()))</span>
 
         <span class="c1"># Add a finishing line to ensure empty ending</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_write</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
@@ -252,7 +270,6 @@
 
 <span class="sd">        If ``na=True`` it will return a tuple (na,SuperCell)</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-
         <span class="bp">self</span><span class="o">.</span><span class="n">readline</span><span class="p">()</span>  <span class="c1"># header 1</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">readline</span><span class="p">()</span>  <span class="c1"># header 2</span>
         <span class="n">origo</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">readline</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">()</span> <span class="c1"># origo</span>
@@ -366,7 +383,7 @@
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'../../../',
-            VERSION:'0.9.2-100',
+            VERSION:'0.9.2-122',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true,

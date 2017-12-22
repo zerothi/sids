@@ -65,7 +65,7 @@
             
             
               <div class="version">
-                0.9.2-100
+                0.9.2-122
               </div>
             
           
@@ -174,9 +174,12 @@
 <span class="c1"># To check for integers</span>
 <span class="kn">from</span> <span class="nn">numbers</span> <span class="k">import</span> <span class="n">Integral</span>
 <span class="kn">from</span> <span class="nn">math</span> <span class="k">import</span> <span class="n">pi</span>
+<span class="kn">from</span> <span class="nn">math</span> <span class="k">import</span> <span class="n">sqrt</span> <span class="k">as</span> <span class="n">msqrt</span>
+<span class="kn">from</span> <span class="nn">math</span> <span class="k">import</span> <span class="n">factorial</span> <span class="k">as</span> <span class="n">fact</span>
 
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-<span class="kn">from</span> <span class="nn">scipy.misc</span> <span class="k">import</span> <span class="n">factorial</span>
+<span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">cos</span><span class="p">,</span> <span class="n">sin</span><span class="p">,</span> <span class="n">arctan2</span><span class="p">,</span> <span class="n">arccos</span>
+<span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">take</span><span class="p">,</span> <span class="n">sqrt</span><span class="p">,</span> <span class="n">square</span>
 <span class="kn">from</span> <span class="nn">scipy.special</span> <span class="k">import</span> <span class="n">lpmv</span><span class="p">,</span> <span class="n">sph_harm</span>
 <span class="kn">from</span> <span class="nn">scipy.interpolate</span> <span class="k">import</span> <span class="n">interp1d</span>
 
@@ -185,33 +188,89 @@
 
 
 <span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;Orbital&#39;</span><span class="p">,</span> <span class="s1">&#39;SphericalOrbital&#39;</span><span class="p">,</span> <span class="s1">&#39;AtomicOrbital&#39;</span><span class="p">]</span>
+<span class="n">__all__</span> <span class="o">+=</span> <span class="p">[</span><span class="s1">&#39;cart2spher&#39;</span><span class="p">,</span> <span class="s1">&#39;spher2cart&#39;</span><span class="p">]</span>
 
 
-<span class="k">def</span> <span class="nf">xyz2spher</span><span class="p">(</span><span class="n">r</span><span class="p">):</span>
-    <span class="sa">r</span><span class="sd">&quot;&quot;&quot; Transfer a vector to spherical coordinates</span>
+<span class="k">def</span> <span class="nf">spher2cart</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">theta</span><span class="p">,</span> <span class="n">phi</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Convert spherical coordinates to cartesian coordinates</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    r : array_like</span>
+<span class="sd">       radius</span>
+<span class="sd">    theta : array_like</span>
+<span class="sd">       azimuthal angle in the :math:`x-y` plane</span>
+<span class="sd">    phi : array_like</span>
+<span class="sd">       polar angle from the :math:`z` axis</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">rx</span> <span class="o">=</span> <span class="n">r</span> <span class="o">*</span> <span class="n">cos</span><span class="p">(</span><span class="n">theta</span><span class="p">)</span> <span class="o">*</span> <span class="n">sin</span><span class="p">(</span><span class="n">phi</span><span class="p">)</span>
+    <span class="n">R</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">emptyd</span><span class="p">(</span><span class="n">rx</span><span class="o">.</span><span class="n">shape</span> <span class="o">+</span> <span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="p">))</span>
+    <span class="n">R</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">rx</span>
+    <span class="k">del</span> <span class="n">rx</span>
+    <span class="n">R</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">r</span> <span class="o">*</span> <span class="n">sin</span><span class="p">(</span><span class="n">theta</span><span class="p">)</span> <span class="o">*</span> <span class="n">sin</span><span class="p">(</span><span class="n">phi</span><span class="p">)</span>
+    <span class="n">R</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">r</span> <span class="o">*</span> <span class="n">cos</span><span class="p">(</span><span class="n">phi</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">R</span>
+
+
+<span class="k">def</span> <span class="nf">cart2spher</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">theta</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">cos_phi</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">maxR</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sa">r</span><span class="sd">&quot;&quot;&quot; Transfer a vector to spherical coordinates with some possible differences</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
 <span class="sd">    r : array_like</span>
 <span class="sd">       the cartesian vectors</span>
+<span class="sd">    theta : bool, optional</span>
+<span class="sd">       if ``True`` also calculate the theta angle and return it</span>
+<span class="sd">    cos_phi : bool, optional</span>
+<span class="sd">       if ``True`` return :math:`\cos(\phi)` rather than :math:`\phi` which may</span>
+<span class="sd">       be useful in some subsequent mathematical calculations</span>
+<span class="sd">    maxR : float, optional</span>
+<span class="sd">       cutoff of the spherical coordinate calculations. If ``None``, calculate</span>
+<span class="sd">       and return for all.</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
+<span class="sd">    n : int</span>
+<span class="sd">       number of total points, only for `maxR` different from ``None``</span>
+<span class="sd">    idx : numpy.ndarray</span>
+<span class="sd">       indices of points with ``r &lt;= maxR``</span>
 <span class="sd">    r : numpy.ndarray</span>
-<span class="sd">       the radius in spherical coordinates</span>
+<span class="sd">       radius in spherical coordinates, only for `maxR` different from ``None``</span>
 <span class="sd">    theta : numpy.ndarray</span>
 <span class="sd">       angle in the :math:`x-y` plane from :math:`x` (azimuthal)</span>
+<span class="sd">       Only returned if input `theta` is ``True``</span>
 <span class="sd">    phi : numpy.ndarray</span>
-<span class="sd">       angle from :math:`z` axis (polar)</span>
+<span class="sd">       If `cos_phi` is ``True`` this is :math:`\cos(\phi)`, otherwise</span>
+<span class="sd">       :math:`\phi` is returned (the polar angle from the :math:`z` axis)</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">r</span> <span class="o">=</span> <span class="n">ensure_array</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">r</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">!=</span> <span class="mi">3</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Vector does not end with shape 3.&quot;</span><span class="p">)</span>
     <span class="n">r</span><span class="o">.</span><span class="n">shape</span> <span class="o">=</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
-    <span class="n">rr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">((</span><span class="n">r</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span>
-    <span class="n">theta</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arctan2</span><span class="p">(</span><span class="n">r</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">r</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">])</span>
-    <span class="n">phi</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">zerosd</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">rr</span><span class="p">))</span>
-    <span class="n">idx</span> <span class="o">=</span> <span class="n">rr</span> <span class="o">&gt;</span> <span class="mi">0</span>
-    <span class="n">phi</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arccos</span><span class="p">(</span><span class="n">r</span><span class="p">[</span><span class="n">idx</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">/</span> <span class="n">rr</span><span class="p">[</span><span class="n">idx</span><span class="p">])</span>
-    <span class="k">return</span> <span class="n">rr</span><span class="p">,</span> <span class="n">theta</span><span class="p">,</span> <span class="n">phi</span>
+    <span class="n">n</span> <span class="o">=</span> <span class="n">r</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">maxR</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">rr</span> <span class="o">=</span> <span class="n">sqrt</span><span class="p">(</span><span class="n">square</span><span class="p">(</span><span class="n">r</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span>
+        <span class="n">theta</span> <span class="o">=</span> <span class="n">arctan2</span><span class="p">(</span><span class="n">r</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">r</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">])</span>
+        <span class="n">phi</span> <span class="o">=</span> <span class="n">arccos</span><span class="p">(</span><span class="n">r</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">/</span> <span class="n">rr</span><span class="p">)</span>
+        <span class="n">phi</span><span class="p">[</span><span class="n">rr</span> <span class="o">==</span> <span class="mf">0.</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.</span>
+        <span class="k">return</span> <span class="n">rr</span><span class="p">,</span> <span class="n">theta</span><span class="p">,</span> <span class="n">phi</span>
+
+    <span class="n">rr</span> <span class="o">=</span> <span class="n">square</span><span class="p">(</span><span class="n">r</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">idx</span> <span class="o">=</span> <span class="p">(</span><span class="n">rr</span> <span class="o">&lt;=</span> <span class="n">maxR</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">nonzero</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">r</span> <span class="o">=</span> <span class="n">take</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">idx</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="n">rr</span> <span class="o">=</span> <span class="n">sqrt</span><span class="p">(</span><span class="n">take</span><span class="p">(</span><span class="n">rr</span><span class="p">,</span> <span class="n">idx</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">theta</span><span class="p">:</span>
+        <span class="n">theta</span> <span class="o">=</span> <span class="n">arctan2</span><span class="p">(</span><span class="n">r</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">r</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">])</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">theta</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">if</span> <span class="n">cos_phi</span><span class="p">:</span>
+        <span class="n">phi</span> <span class="o">=</span> <span class="n">r</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">/</span> <span class="n">rr</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">phi</span> <span class="o">=</span> <span class="n">arccos</span><span class="p">(</span><span class="n">r</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">/</span> <span class="n">rr</span><span class="p">)</span>
+    <span class="c1"># Typically there will be few rr==0. values, so no need to</span>
+    <span class="c1"># create indices</span>
+    <span class="n">phi</span><span class="p">[</span><span class="n">rr</span> <span class="o">==</span> <span class="mf">0.</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.</span>
+    <span class="k">return</span> <span class="n">n</span><span class="p">,</span> <span class="n">idx</span><span class="p">,</span> <span class="n">rr</span><span class="p">,</span> <span class="n">theta</span><span class="p">,</span> <span class="n">phi</span>
 
 
 <span class="k">def</span> <span class="nf">spherical_harm</span><span class="p">(</span><span class="n">m</span><span class="p">,</span> <span class="n">l</span><span class="p">,</span> <span class="n">theta</span><span class="p">,</span> <span class="n">phi</span><span class="p">):</span>
@@ -240,14 +299,20 @@
     <span class="k">return</span> <span class="n">sph_harm</span><span class="p">(</span><span class="n">m</span><span class="p">,</span> <span class="n">l</span><span class="p">,</span> <span class="n">theta</span><span class="p">,</span> <span class="n">phi</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">**</span> <span class="n">m</span>
 
 
-<span class="k">def</span> <span class="nf">rspherical_harm</span><span class="p">(</span><span class="n">m</span><span class="p">,</span> <span class="n">l</span><span class="p">,</span> <span class="n">theta</span><span class="p">,</span> <span class="n">phi</span><span class="p">):</span>
+<span class="n">_pi4</span> <span class="o">=</span> <span class="mi">4</span> <span class="o">*</span> <span class="n">pi</span>
+
+
+<span class="k">def</span> <span class="nf">rspherical_harm</span><span class="p">(</span><span class="n">m</span><span class="p">,</span> <span class="n">l</span><span class="p">,</span> <span class="n">theta</span><span class="p">,</span> <span class="n">cos_phi</span><span class="p">):</span>
     <span class="sa">r</span><span class="sd">&quot;&quot;&quot; Calculates the real spherical harmonics using :math:`Y_l^m(\theta, \varphi)` with :math:`\mathbf R\to \{r, \theta, \varphi\}`.</span>
 
-<span class="sd">    .. math::</span>
-<span class="sd">        Y^m_l(\theta,\varphi) = (-1)^m\sqrt{\frac{2l+1}{4\pi} \frac{(l-|m|)!}{(l+|m|)!}}</span>
-<span class="sd">             \Re e^{i m \theta} P^{|m|}_l\cos \theta (\cos(\varphi))</span>
+<span class="sd">    These real spherical harmonics are via these equations:</span>
 
-<span class="sd">    which is the spherical harmonics with the Condon-Shortley phase.</span>
+<span class="sd">    .. math::</span>
+<span class="sd">        Y^m_l(\theta,\varphi) &amp;= -(-1)^m\sqrt{2\frac{2l+1}{4\pi} \frac{(l-m)!}{(l+m)!}}</span>
+<span class="sd">           P^{m}_l (\cos(\varphi)) \sin(m \theta) &amp; m &lt; 0\\</span>
+<span class="sd">        Y^m_l(\theta,\varphi) &amp;= \sqrt{\frac{2l+1}{4\pi}} P^{m}_l (\cos(\varphi)) &amp; m = 0\\</span>
+<span class="sd">        Y^m_l(\theta,\varphi) &amp;= \sqrt{2\frac{2l+1}{4\pi} \frac{(l-m)!}{(l+m)!}}</span>
+<span class="sd">           P^{m}_l (\cos(\varphi)) \cos(m \theta) &amp; m &gt; 0</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -257,18 +322,20 @@
 <span class="sd">       degree of the spherical harmonics</span>
 <span class="sd">    theta : array_like</span>
 <span class="sd">       angle in :math:`x-y` plane (azimuthal)</span>
-<span class="sd">    phi : array_like</span>
-<span class="sd">       angle from :math:`z` axis (polar)</span>
+<span class="sd">    cos_phi : array_like</span>
+<span class="sd">       cos(phi) to angle from :math:`z` axis (polar)</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="c1"># Calculate the associated Legendre polynomial</span>
     <span class="c1"># Since the real spherical harmonics has slight differences</span>
     <span class="c1"># for positive and negative m, we have to implement them individually.</span>
-    <span class="n">P</span> <span class="o">=</span> <span class="n">lpmv</span><span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">m</span><span class="p">),</span> <span class="n">l</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">phi</span><span class="p">))</span> <span class="o">*</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">**</span> <span class="n">m</span>
+    <span class="c1"># Currently this is a re-write of what Inelastica does and a combination of</span>
+    <span class="c1"># learned lessons from Denchar.</span>
+    <span class="c1"># As such the choice of these real spherical harmonics is that of Siesta.</span>
     <span class="k">if</span> <span class="n">m</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-        <span class="k">return</span> <span class="p">((</span><span class="mi">2</span><span class="o">*</span><span class="n">l</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="mi">4</span> <span class="o">*</span> <span class="n">pi</span><span class="p">))</span> <span class="o">**</span> <span class="o">.</span><span class="mi">5</span> <span class="o">*</span> <span class="n">P</span>
+        <span class="k">return</span> <span class="n">msqrt</span><span class="p">((</span><span class="mi">2</span><span class="o">*</span><span class="n">l</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span><span class="o">/</span><span class="n">_pi4</span><span class="p">)</span> <span class="o">*</span> <span class="n">lpmv</span><span class="p">(</span><span class="n">m</span><span class="p">,</span> <span class="n">l</span><span class="p">,</span> <span class="n">cos_phi</span><span class="p">)</span>
     <span class="k">elif</span> <span class="n">m</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
-        <span class="k">return</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="n">l</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="mi">4</span> <span class="o">*</span> <span class="n">pi</span><span class="p">)</span> <span class="o">*</span> <span class="n">factorial</span><span class="p">(</span><span class="n">l</span><span class="o">+</span><span class="n">m</span><span class="p">)</span> <span class="o">/</span> <span class="n">factorial</span><span class="p">(</span><span class="n">l</span><span class="o">-</span><span class="n">m</span><span class="p">))</span> <span class="o">**</span> <span class="o">.</span><span class="mi">5</span> <span class="o">*</span> <span class="n">P</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="o">-</span><span class="n">m</span><span class="o">*</span><span class="n">theta</span><span class="p">)</span>
-    <span class="k">return</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="n">l</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="mi">4</span> <span class="o">*</span> <span class="n">pi</span><span class="p">)</span> <span class="o">*</span> <span class="n">factorial</span><span class="p">(</span><span class="n">l</span><span class="o">-</span><span class="n">m</span><span class="p">)</span> <span class="o">/</span> <span class="n">factorial</span><span class="p">(</span><span class="n">l</span><span class="o">+</span><span class="n">m</span><span class="p">))</span> <span class="o">**</span> <span class="o">.</span><span class="mi">5</span> <span class="o">*</span> <span class="n">P</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">m</span><span class="o">*</span><span class="n">theta</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">(</span><span class="o">-</span><span class="n">msqrt</span><span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="n">l</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span><span class="o">/</span><span class="n">_pi4</span> <span class="o">*</span> <span class="n">fact</span><span class="p">(</span><span class="n">l</span><span class="o">-</span><span class="n">m</span><span class="p">)</span><span class="o">/</span><span class="n">fact</span><span class="p">(</span><span class="n">l</span><span class="o">+</span><span class="n">m</span><span class="p">))</span> <span class="o">*</span> <span class="n">sin</span><span class="p">(</span><span class="n">m</span><span class="o">*</span><span class="n">theta</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">**</span> <span class="n">m</span><span class="p">)</span><span class="o">*</span> <span class="n">lpmv</span><span class="p">(</span><span class="n">m</span><span class="p">,</span> <span class="n">l</span><span class="p">,</span> <span class="n">cos_phi</span><span class="p">)</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">msqrt</span><span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="n">l</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span><span class="o">/</span><span class="n">_pi4</span> <span class="o">*</span> <span class="n">fact</span><span class="p">(</span><span class="n">l</span><span class="o">-</span><span class="n">m</span><span class="p">)</span><span class="o">/</span><span class="n">fact</span><span class="p">(</span><span class="n">l</span><span class="o">+</span><span class="n">m</span><span class="p">))</span> <span class="o">*</span> <span class="n">cos</span><span class="p">(</span><span class="n">m</span><span class="o">*</span><span class="n">theta</span><span class="p">))</span><span class="o">*</span> <span class="n">lpmv</span><span class="p">(</span><span class="n">m</span><span class="p">,</span> <span class="n">l</span><span class="p">,</span> <span class="n">cos_phi</span><span class="p">)</span>
 
 
 <div class="viewcode-block" id="Orbital"><a class="viewcode-back" href="../../api-generated/sisl.Orbital.html#sisl.Orbital">[docs]</a><span class="k">class</span> <span class="nc">Orbital</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
@@ -354,7 +421,10 @@
 <div class="viewcode-block" id="Orbital.psi"><a class="viewcode-back" href="../../api-generated/sisl.Orbital.html#sisl.Orbital.psi">[docs]</a>    <span class="k">def</span> <span class="nf">psi</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">r</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="k">raise</span> <span class="ne">NotImplementedError</span></div>
 
-<div class="viewcode-block" id="Orbital.toGrid"><a class="viewcode-back" href="../../api-generated/sisl.Orbital.html#sisl.Orbital.toGrid">[docs]</a>    <span class="k">def</span> <span class="nf">toGrid</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">c</span><span class="o">=</span><span class="mf">1.</span><span class="p">,</span> <span class="n">precision</span><span class="o">=</span><span class="mf">0.05</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">):</span>
+<div class="viewcode-block" id="Orbital.psi_spher"><a class="viewcode-back" href="../../api-generated/sisl.Orbital.html#sisl.Orbital.psi_spher">[docs]</a>    <span class="k">def</span> <span class="nf">psi_spher</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">r</span><span class="p">,</span> <span class="n">theta</span><span class="p">,</span> <span class="n">phi</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span></div>
+
+<div class="viewcode-block" id="Orbital.toGrid"><a class="viewcode-back" href="../../api-generated/sisl.Orbital.html#sisl.Orbital.toGrid">[docs]</a>    <span class="k">def</span> <span class="nf">toGrid</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">c</span><span class="o">=</span><span class="mf">1.</span><span class="p">,</span> <span class="n">precision</span><span class="o">=</span><span class="mf">0.05</span><span class="p">,</span> <span class="n">R</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Create a Grid with *only* this orbital wavefunction on it</span>
 
 <span class="sd">        Parameters</span>
@@ -363,10 +433,13 @@
 <span class="sd">           coefficient for the orbital</span>
 <span class="sd">        precision : float, optional</span>
 <span class="sd">           used separation in the `Grid` between voxels (in Ang)</span>
+<span class="sd">        R : float, optional</span>
+<span class="sd">            box size of the grid (default to the orbital range)</span>
 <span class="sd">        dtype : numpy.dtype, optional</span>
 <span class="sd">            the used separation in the `Grid` between voxels</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">R</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">R</span>
+        <span class="k">if</span> <span class="n">R</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">R</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">R</span>
         <span class="k">if</span> <span class="n">R</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s2">&quot; was unable to create &quot;</span>
                              <span class="s2">&quot;the orbital grid for plotting, the orbital range is negative.&quot;</span><span class="p">)</span>
@@ -380,7 +453,7 @@
         <span class="n">g</span> <span class="o">=</span> <span class="n">Geometry</span><span class="p">([</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="mi">3</span><span class="p">,</span> <span class="n">Atom</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="p">),</span> <span class="n">sc</span><span class="o">=</span><span class="n">sc</span><span class="p">)</span>
         <span class="n">n</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">rint</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">R</span> <span class="o">/</span> <span class="n">precision</span><span class="p">))</span>
         <span class="n">G</span> <span class="o">=</span> <span class="n">Grid</span><span class="p">([</span><span class="n">n</span><span class="p">]</span> <span class="o">*</span> <span class="mi">3</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">,</span> <span class="n">geom</span><span class="o">=</span><span class="n">g</span><span class="p">)</span>
-        <span class="n">G</span><span class="o">.</span><span class="n">psi</span><span class="p">(</span><span class="n">c</span><span class="p">)</span>
+        <span class="n">G</span><span class="o">.</span><span class="n">psi</span><span class="p">([</span><span class="n">c</span><span class="p">])</span>
         <span class="k">return</span> <span class="n">G</span></div>
 
     <span class="k">def</span> <span class="nf">__getstate__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -509,7 +582,7 @@
             <span class="c1"># 50 Ang (is this not fine? ;))</span>
             <span class="c1"># Precision of 0.05 A</span>
             <span class="n">r</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mf">0.05</span><span class="p">,</span> <span class="mi">50</span><span class="p">,</span> <span class="mi">1000</span><span class="p">)</span>
-            <span class="n">f</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">f</span><span class="p">(</span><span class="n">r</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span>
+            <span class="n">f</span> <span class="o">=</span> <span class="n">square</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">f</span><span class="p">(</span><span class="n">r</span><span class="p">))</span>
             <span class="c1"># Find maximum R and focus around this point</span>
             <span class="n">idx</span> <span class="o">=</span> <span class="p">(</span><span class="n">f</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">nonzero</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
             <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">idx</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
@@ -518,7 +591,7 @@
                 <span class="bp">self</span><span class="o">.</span><span class="n">R</span> <span class="o">=</span> <span class="n">r</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span>
                 <span class="c1"># This should give us a precision of 0.0001 A</span>
                 <span class="n">r</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">r</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span><span class="o">-</span><span class="mf">0.025</span><span class="o">+</span><span class="mf">0.0001</span><span class="p">,</span> <span class="n">r</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span><span class="o">+</span><span class="mf">0.025</span><span class="p">,</span> <span class="mi">500</span><span class="p">)</span>
-                <span class="n">f</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">f</span><span class="p">(</span><span class="n">r</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span>
+                <span class="n">f</span> <span class="o">=</span> <span class="n">square</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">f</span><span class="p">(</span><span class="n">r</span><span class="p">))</span>
                 <span class="c1"># Find minimum R and focus around this point</span>
                 <span class="n">idx</span> <span class="o">=</span> <span class="p">(</span><span class="n">f</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">nonzero</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
                 <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">idx</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
@@ -575,14 +648,14 @@
         <span class="k">if</span> <span class="n">is_radius</span><span class="p">:</span>
             <span class="n">s</span> <span class="o">=</span> <span class="n">r</span><span class="o">.</span><span class="n">shape</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="n">r</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">((</span><span class="n">r</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">))</span>
+            <span class="n">r</span> <span class="o">=</span> <span class="n">sqrt</span><span class="p">(</span><span class="n">square</span><span class="p">(</span><span class="n">r</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">))</span>
             <span class="n">s</span> <span class="o">=</span> <span class="n">r</span><span class="o">.</span><span class="n">shape</span>
         <span class="n">r</span><span class="o">.</span><span class="n">shape</span> <span class="o">=</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,)</span>
         <span class="n">n</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">r</span><span class="p">)</span>
         <span class="c1"># Only calculate where it makes sense, all other points are removed and set to zero</span>
         <span class="n">idx</span> <span class="o">=</span> <span class="p">(</span><span class="n">r</span> <span class="o">&lt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">R</span><span class="p">)</span><span class="o">.</span><span class="n">nonzero</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
         <span class="c1"># Reduce memory immediately</span>
-        <span class="n">r</span> <span class="o">=</span> <span class="n">r</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span>
+        <span class="n">r</span> <span class="o">=</span> <span class="n">take</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">idx</span><span class="p">)</span>
         <span class="n">p</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">zerosd</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">idx</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
             <span class="n">p</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">f</span><span class="p">(</span><span class="n">r</span><span class="p">)</span>
@@ -608,21 +681,41 @@
         <span class="n">r</span> <span class="o">=</span> <span class="n">ensure_array</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
         <span class="n">s</span> <span class="o">=</span> <span class="n">r</span><span class="o">.</span><span class="n">shape</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
         <span class="c1"># Convert to spherical coordinates</span>
-        <span class="n">r</span><span class="p">,</span> <span class="n">theta</span><span class="p">,</span> <span class="n">phi</span> <span class="o">=</span> <span class="n">xyz2spher</span><span class="p">(</span><span class="n">r</span><span class="p">)</span>
-        <span class="n">n</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">r</span><span class="p">)</span>
-        <span class="c1"># Only calculate where it makes sense, all other points are removed and set to zero</span>
-        <span class="n">idx</span> <span class="o">=</span> <span class="p">(</span><span class="n">r</span> <span class="o">&lt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">R</span><span class="p">)</span><span class="o">.</span><span class="n">nonzero</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
-        <span class="c1"># Reduce memory immediately</span>
-        <span class="n">r</span> <span class="o">=</span> <span class="n">r</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span>
-        <span class="n">theta</span> <span class="o">=</span> <span class="n">theta</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span>
-        <span class="n">phi</span> <span class="o">=</span> <span class="n">phi</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span>
+        <span class="n">n</span><span class="p">,</span> <span class="n">idx</span><span class="p">,</span> <span class="n">r</span><span class="p">,</span> <span class="n">theta</span><span class="p">,</span> <span class="n">phi</span> <span class="o">=</span> <span class="n">cart2spher</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">theta</span><span class="o">=</span><span class="n">m</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">cos_phi</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">maxR</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">R</span><span class="p">)</span>
         <span class="n">p</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">zerosd</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">idx</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="n">p</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">f</span><span class="p">(</span><span class="n">r</span><span class="p">)</span> <span class="o">*</span> <span class="n">rspherical_harm</span><span class="p">(</span><span class="n">m</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">l</span><span class="p">,</span> <span class="n">theta</span><span class="p">,</span> <span class="n">phi</span><span class="p">)</span>
+            <span class="n">p</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">psi_spher</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">theta</span><span class="p">,</span> <span class="n">phi</span><span class="p">,</span> <span class="n">m</span><span class="p">,</span> <span class="n">cos_phi</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
             <span class="c1"># Reduce memory immediately</span>
-            <span class="k">del</span> <span class="n">r</span><span class="p">,</span> <span class="n">theta</span><span class="p">,</span> <span class="n">phi</span>
+            <span class="k">del</span> <span class="n">idx</span><span class="p">,</span> <span class="n">r</span><span class="p">,</span> <span class="n">theta</span><span class="p">,</span> <span class="n">phi</span>
         <span class="n">p</span><span class="o">.</span><span class="n">shape</span> <span class="o">=</span> <span class="n">s</span>
         <span class="k">return</span> <span class="n">p</span></div>
+
+<div class="viewcode-block" id="SphericalOrbital.psi_spher"><a class="viewcode-back" href="../../api-generated/sisl.SphericalOrbital.html#sisl.SphericalOrbital.psi_spher">[docs]</a>    <span class="k">def</span> <span class="nf">psi_spher</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">r</span><span class="p">,</span> <span class="n">theta</span><span class="p">,</span> <span class="n">phi</span><span class="p">,</span> <span class="n">m</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">cos_phi</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot; Calculate :math:`\phi(|\mathbf R|, \theta, \phi)` at a given point (in spherical coordinates)</span>
+
+<span class="sd">        This is equivalent to `psi` however, the input is given in spherical coordinates.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        -----------</span>
+<span class="sd">        r : array_like</span>
+<span class="sd">           the radius from the orbital origin</span>
+<span class="sd">        theta : array_like</span>
+<span class="sd">           azimuthal angle in the :math:`x-y` plane (from :math:`x`)</span>
+<span class="sd">        phi : array_like</span>
+<span class="sd">           polar angle from :math:`z` axis</span>
+<span class="sd">        m : int, optional</span>
+<span class="sd">           magnetic quantum number, must be in range ``-self.l &lt;= m &lt;= self.l``</span>
+<span class="sd">        cos_phi : bool, optional</span>
+<span class="sd">           whether `phi` is actually :math:`cos(\phi)` which will be faster because</span>
+<span class="sd">           `cos` is not necessary to call.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        psi : the orbital value at point `r`</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">cos_phi</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">f</span><span class="p">(</span><span class="n">r</span><span class="p">)</span> <span class="o">*</span> <span class="n">rspherical_harm</span><span class="p">(</span><span class="n">m</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">l</span><span class="p">,</span> <span class="n">theta</span><span class="p">,</span> <span class="n">phi</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">f</span><span class="p">(</span><span class="n">r</span><span class="p">)</span> <span class="o">*</span> <span class="n">rspherical_harm</span><span class="p">(</span><span class="n">m</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">l</span><span class="p">,</span> <span class="n">theta</span><span class="p">,</span> <span class="n">cos</span><span class="p">(</span><span class="n">phi</span><span class="p">))</span></div>
 
 <div class="viewcode-block" id="SphericalOrbital.toAtomicOrbital"><a class="viewcode-back" href="../../api-generated/sisl.SphericalOrbital.html#sisl.SphericalOrbital.toAtomicOrbital">[docs]</a>    <span class="k">def</span> <span class="nf">toAtomicOrbital</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">m</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">Z</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">P</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Create a list of `AtomicOrbital` objects </span>
@@ -924,6 +1017,29 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">orb</span><span class="o">.</span><span class="n">psi</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">m</span><span class="p">)</span></div>
 
+<div class="viewcode-block" id="AtomicOrbital.psi_spher"><a class="viewcode-back" href="../../api-generated/sisl.AtomicOrbital.html#sisl.AtomicOrbital.psi_spher">[docs]</a>    <span class="k">def</span> <span class="nf">psi_spher</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">r</span><span class="p">,</span> <span class="n">theta</span><span class="p">,</span> <span class="n">phi</span><span class="p">,</span> <span class="n">cos_phi</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot; Calculate :math:`\phi(|\mathbf R|, \theta, \phi)` at a given point (in spherical coordinates)</span>
+
+<span class="sd">        This is equivalent to `psi` however, the input is given in spherical coordinates.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        -----------</span>
+<span class="sd">        r : array_like</span>
+<span class="sd">           the radius from the orbital origin</span>
+<span class="sd">        theta : array_like</span>
+<span class="sd">           azimuthal angle in the :math:`x-y` plane (from :math:`x`)</span>
+<span class="sd">        phi : array_like</span>
+<span class="sd">           polar angle from :math:`z` axis</span>
+<span class="sd">        cos_phi : bool, optional</span>
+<span class="sd">           whether `phi` is actually :math:`cos(\phi)` which will be faster because</span>
+<span class="sd">           `cos` is not necessary to call.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        psi : the orbital value at point `r`</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">orb</span><span class="o">.</span><span class="n">psi_spher</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">theta</span><span class="p">,</span> <span class="n">phi</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">m</span><span class="p">,</span> <span class="n">cos_phi</span><span class="p">)</span></div>
+
     <span class="k">def</span> <span class="nf">__getstate__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Return the state of this object &quot;&quot;&quot;</span>
         <span class="c1"># A function is not necessarily pickable, so we store interpolated</span>
@@ -971,7 +1087,7 @@
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'../../',
-            VERSION:'0.9.2-100',
+            VERSION:'0.9.2-122',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true,
