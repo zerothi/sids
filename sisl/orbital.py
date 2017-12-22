@@ -3,9 +3,12 @@ from __future__ import print_function, division
 # To check for integers
 from numbers import Integral
 from math import pi
+from math import sqrt as msqrt
+from math import factorial as fact
 
 import numpy as np
-from scipy.misc import factorial
+from numpy import cos, sin, arctan2, arccos
+from numpy import take, sqrt, square
 from scipy.special import lpmv, sph_harm
 from scipy.interpolate import interp1d
 
@@ -14,33 +17,89 @@ import sisl._array as _a
 
 
 __all__ = ['Orbital', 'SphericalOrbital', 'AtomicOrbital']
+__all__ += ['cart2spher', 'spher2cart']
 
 
-def xyz2spher(r):
-    r""" Transfer a vector to spherical coordinates
+def spher2cart(r, theta, phi):
+    """ Convert spherical coordinates to cartesian coordinates
+
+    Parameters
+    ----------
+    r : array_like
+       radius
+    theta : array_like
+       azimuthal angle in the :math:`x-y` plane
+    phi : array_like
+       polar angle from the :math:`z` axis
+    """
+    rx = r * cos(theta) * sin(phi)
+    R = _a.emptyd(rx.shape + (3, ))
+    R[..., 0] = rx
+    del rx
+    R[..., 1] = r * sin(theta) * sin(phi)
+    R[..., 2] = r * cos(phi)
+    return R
+
+
+def cart2spher(r, theta=True, cos_phi=False, maxR=None):
+    r""" Transfer a vector to spherical coordinates with some possible differences
 
     Parameters
     ----------
     r : array_like
        the cartesian vectors
+    theta : bool, optional
+       if ``True`` also calculate the theta angle and return it
+    cos_phi : bool, optional
+       if ``True`` return :math:`\cos(\phi)` rather than :math:`\phi` which may
+       be useful in some subsequent mathematical calculations
+    maxR : float, optional
+       cutoff of the spherical coordinate calculations. If ``None``, calculate
+       and return for all.
 
     Returns
     -------
+    n : int
+       number of total points, only for `maxR` different from ``None``
+    idx : numpy.ndarray
+       indices of points with ``r <= maxR``
     r : numpy.ndarray
-       the radius in spherical coordinates
+       radius in spherical coordinates, only for `maxR` different from ``None``
     theta : numpy.ndarray
        angle in the :math:`x-y` plane from :math:`x` (azimuthal)
+       Only returned if input `theta` is ``True``
     phi : numpy.ndarray
-       angle from :math:`z` axis (polar)
+       If `cos_phi` is ``True`` this is :math:`\cos(\phi)`, otherwise
+       :math:`\phi` is returned (the polar angle from the :math:`z` axis)
     """
     r = ensure_array(r, np.float64)
+    if r.shape[-1] != 3:
+        raise ValueError("Vector does not end with shape 3.")
     r.shape = (-1, 3)
-    rr = np.sqrt((r ** 2).sum(1))
-    theta = np.arctan2(r[:, 1], r[:, 0])
-    phi = _a.zerosd(len(rr))
-    idx = rr > 0
-    phi[idx] = np.arccos(r[idx, 2] / rr[idx])
-    return rr, theta, phi
+    n = r.shape[0]
+    if maxR is None:
+        rr = sqrt(square(r).sum(1))
+        theta = arctan2(r[:, 1], r[:, 0])
+        phi = arccos(r[:, 2] / rr)
+        phi[rr == 0.] = 0.
+        return rr, theta, phi
+
+    rr = square(r).sum(1)
+    idx = (rr <= maxR ** 2).nonzero()[0]
+    r = take(r, idx, 0)
+    rr = sqrt(take(rr, idx))
+    if theta:
+        theta = arctan2(r[:, 1], r[:, 0])
+    else:
+        theta = None
+    if cos_phi:
+        phi = r[:, 2] / rr
+    else:
+        phi = arccos(r[:, 2] / rr)
+    # Typically there will be few rr==0. values, so no need to
+    # create indices
+    phi[rr == 0.] = 0.
+    return n, idx, rr, theta, phi
 
 
 def spherical_harm(m, l, theta, phi):
@@ -69,14 +128,20 @@ def spherical_harm(m, l, theta, phi):
     return sph_harm(m, l, theta, phi) * (-1) ** m
 
 
-def rspherical_harm(m, l, theta, phi):
+_pi4 = 4 * pi
+
+
+def rspherical_harm(m, l, theta, cos_phi):
     r""" Calculates the real spherical harmonics using :math:`Y_l^m(\theta, \varphi)` with :math:`\mathbf R\to \{r, \theta, \varphi\}`.
 
-    .. math::
-        Y^m_l(\theta,\varphi) = (-1)^m\sqrt{\frac{2l+1}{4\pi} \frac{(l-|m|)!}{(l+|m|)!}}
-             \Re e^{i m \theta} P^{|m|}_l\cos \theta (\cos(\varphi))
+    These real spherical harmonics are via these equations:
 
-    which is the spherical harmonics with the Condon-Shortley phase.
+    .. math::
+        Y^m_l(\theta,\varphi) &= -(-1)^m\sqrt{2\frac{2l+1}{4\pi} \frac{(l-m)!}{(l+m)!}}
+           P^{m}_l (\cos(\varphi)) \sin(m \theta) & m < 0\\
+        Y^m_l(\theta,\varphi) &= \sqrt{\frac{2l+1}{4\pi}} P^{m}_l (\cos(\varphi)) & m = 0\\
+        Y^m_l(\theta,\varphi) &= \sqrt{2\frac{2l+1}{4\pi} \frac{(l-m)!}{(l+m)!}}
+           P^{m}_l (\cos(\varphi)) \cos(m \theta) & m > 0
 
     Parameters
     ----------
@@ -86,18 +151,20 @@ def rspherical_harm(m, l, theta, phi):
        degree of the spherical harmonics
     theta : array_like
        angle in :math:`x-y` plane (azimuthal)
-    phi : array_like
-       angle from :math:`z` axis (polar)
+    cos_phi : array_like
+       cos(phi) to angle from :math:`z` axis (polar)
     """
     # Calculate the associated Legendre polynomial
     # Since the real spherical harmonics has slight differences
     # for positive and negative m, we have to implement them individually.
-    P = lpmv(abs(m), l, np.cos(phi)) * (-1) ** m
+    # Currently this is a re-write of what Inelastica does and a combination of
+    # learned lessons from Denchar.
+    # As such the choice of these real spherical harmonics is that of Siesta.
     if m == 0:
-        return ((2*l + 1) / (4 * pi)) ** .5 * P
+        return msqrt((2*l + 1)/_pi4) * lpmv(m, l, cos_phi)
     elif m < 0:
-        return (2 * (2*l + 1) / (4 * pi) * factorial(l+m) / factorial(l-m)) ** .5 * P * np.sin(-m*theta)
-    return (2 * (2*l + 1) / (4 * pi) * factorial(l-m) / factorial(l+m)) ** .5 * P * np.cos(m*theta)
+        return (-msqrt(2*(2*l + 1)/_pi4 * fact(l-m)/fact(l+m)) * sin(m*theta) * (-1) ** m)* lpmv(m, l, cos_phi)
+    return (msqrt(2*(2*l + 1)/_pi4 * fact(l-m)/fact(l+m)) * cos(m*theta))* lpmv(m, l, cos_phi)
 
 
 class Orbital(object):
@@ -183,7 +250,10 @@ class Orbital(object):
     def psi(self, r, *args, **kwargs):
         raise NotImplementedError
 
-    def toGrid(self, c=1., precision=0.05, dtype=np.float64):
+    def psi_spher(self, r, theta, phi, *args, **kwargs):
+        raise NotImplementedError
+
+    def toGrid(self, c=1., precision=0.05, R=None, dtype=np.float64):
         """ Create a Grid with *only* this orbital wavefunction on it
 
         Parameters
@@ -192,10 +262,13 @@ class Orbital(object):
            coefficient for the orbital
         precision : float, optional
            used separation in the `Grid` between voxels (in Ang)
+        R : float, optional
+            box size of the grid (default to the orbital range)
         dtype : numpy.dtype, optional
             the used separation in the `Grid` between voxels
         """
-        R = self.R
+        if R is None:
+            R = self.R
         if R < 0:
             raise ValueError(self.__class__.__name__ + " was unable to create "
                              "the orbital grid for plotting, the orbital range is negative.")
@@ -209,7 +282,7 @@ class Orbital(object):
         g = Geometry([0] * 3, Atom(1, self), sc=sc)
         n = int(np.rint(2 * R / precision))
         G = Grid([n] * 3, dtype=dtype, geom=g)
-        G.psi(c)
+        G.psi([c])
         return G
 
     def __getstate__(self):
@@ -338,7 +411,7 @@ class SphericalOrbital(Orbital):
             # 50 Ang (is this not fine? ;))
             # Precision of 0.05 A
             r = np.linspace(0.05, 50, 1000)
-            f = self.f(r) ** 2
+            f = square(self.f(r))
             # Find maximum R and focus around this point
             idx = (f > 0).nonzero()[0]
             if len(idx) > 0:
@@ -347,7 +420,7 @@ class SphericalOrbital(Orbital):
                 self.R = r[idx]
                 # This should give us a precision of 0.0001 A
                 r = np.linspace(r[idx]-0.025+0.0001, r[idx]+0.025, 500)
-                f = self.f(r) ** 2
+                f = square(self.f(r))
                 # Find minimum R and focus around this point
                 idx = (f > 0).nonzero()[0]
                 if len(idx) > 0:
@@ -404,14 +477,14 @@ class SphericalOrbital(Orbital):
         if is_radius:
             s = r.shape
         else:
-            r = np.sqrt((r ** 2).sum(-1))
+            r = sqrt(square(r).sum(-1))
             s = r.shape
         r.shape = (-1,)
         n = len(r)
         # Only calculate where it makes sense, all other points are removed and set to zero
         idx = (r <= self.R).nonzero()[0]
         # Reduce memory immediately
-        r = r[idx]
+        r = take(r, idx)
         p = _a.zerosd(n)
         if len(idx) > 0:
             p[idx] = self.f(r)
@@ -437,21 +510,41 @@ class SphericalOrbital(Orbital):
         r = ensure_array(r, np.float64)
         s = r.shape[:-1]
         # Convert to spherical coordinates
-        r, theta, phi = xyz2spher(r)
-        n = len(r)
-        # Only calculate where it makes sense, all other points are removed and set to zero
-        idx = (r <= self.R).nonzero()[0]
-        # Reduce memory immediately
-        r = r[idx]
-        theta = theta[idx]
-        phi = phi[idx]
+        n, idx, r, theta, phi = cart2spher(r, theta=m != 0, cos_phi=True, maxR=self.R)
         p = _a.zerosd(n)
         if len(idx) > 0:
-            p[idx] = self.f(r) * rspherical_harm(m, self.l, theta, phi)
+            p[idx] = self.psi_spher(r, theta, phi, m, cos_phi=True)
             # Reduce memory immediately
-            del r, theta, phi
+            del idx, r, theta, phi
         p.shape = s
         return p
+
+    def psi_spher(self, r, theta, phi, m=0, cos_phi=False):
+        r""" Calculate :math:`\phi(|\mathbf R|, \theta, \phi)` at a given point (in spherical coordinates)
+
+        This is equivalent to `psi` however, the input is given in spherical coordinates.
+
+        Parameters
+        -----------
+        r : array_like
+           the radius from the orbital origin
+        theta : array_like
+           azimuthal angle in the :math:`x-y` plane (from :math:`x`)
+        phi : array_like
+           polar angle from :math:`z` axis
+        m : int, optional
+           magnetic quantum number, must be in range ``-self.l <= m <= self.l``
+        cos_phi : bool, optional
+           whether `phi` is actually :math:`cos(\phi)` which will be faster because
+           `cos` is not necessary to call.
+
+        Returns
+        -------
+        psi : the orbital value at point `r`
+        """
+        if cos_phi:
+            return self.f(r) * rspherical_harm(m, self.l, theta, phi)
+        return self.f(r) * rspherical_harm(m, self.l, theta, cos(phi))
 
     def toAtomicOrbital(self, m=None, n=None, Z=1, P=False):
         """ Create a list of `AtomicOrbital` objects 
@@ -752,6 +845,29 @@ class AtomicOrbital(Orbital):
         psi : the orbital value at point `r`
         """
         return self.orb.psi(r, self.m)
+
+    def psi_spher(self, r, theta, phi, cos_phi=False):
+        r""" Calculate :math:`\phi(|\mathbf R|, \theta, \phi)` at a given point (in spherical coordinates)
+
+        This is equivalent to `psi` however, the input is given in spherical coordinates.
+
+        Parameters
+        -----------
+        r : array_like
+           the radius from the orbital origin
+        theta : array_like
+           azimuthal angle in the :math:`x-y` plane (from :math:`x`)
+        phi : array_like
+           polar angle from :math:`z` axis
+        cos_phi : bool, optional
+           whether `phi` is actually :math:`cos(\phi)` which will be faster because
+           `cos` is not necessary to call.
+
+        Returns
+        -------
+        psi : the orbital value at point `r`
+        """
+        return self.orb.psi_spher(r, theta, phi, self.m, cos_phi)
 
     def __getstate__(self):
         """ Return the state of this object """

@@ -196,14 +196,22 @@ class SuperCell(object):
         for i, sc in enumerate(self.sc_off):
             yield i, sc
 
-    def copy(self, cell=None):
+    def copy(self, cell=None, origo=None):
+        """ Returns a copy of the object with possibly some quantities overwritten
+
+        Parameters
+        ----------
+        cell : array_like
+           the new cell parameters
+        origo : array_like
+           the new origo
         """
-        Returns a copy of the object.
-        """
+        if origo is None:
+            origo = self.origo.copy()
         if cell is None:
-            copy = self.__class__(np.copy(self.cell), nsc=np.copy(self.nsc), origo=np.copy(self.origo))
+            copy = self.__class__(np.copy(self.cell), nsc=np.copy(self.nsc), origo=origo)
         else:
-            copy = self.__class__(np.copy(cell), nsc=np.copy(self.nsc), origo=np.copy(self.origo))
+            copy = self.__class__(np.copy(cell), nsc=np.copy(self.nsc), origo=origo)
         # Ensure that the correct super-cell information gets carried through
         if not np.all(copy.sc_off == self.sc_off):
             copy.sc_off = self.sc_off
@@ -360,9 +368,9 @@ class SuperCell(object):
             n *= -1
 
         if origo:
-            return n, np.copy(self.origo)
+            return n, _a.zerosd([3])
         # We have to reverse the normal vector
-        return -n, up + self.origo
+        return -n, up
 
     @property
     def rcell(self):
@@ -435,7 +443,7 @@ class SuperCell(object):
         """ Returns the supercell offset of the supercell index """
         if isc is None:
             return _a.arrayd([0, 0, 0])
-        return np.dot(isc, self.cell) + self.origo
+        return np.dot(isc, self.cell)
 
     def add(self, other):
         """ Add two supercell lattice vectors to each other
@@ -599,8 +607,8 @@ class SuperCell(object):
     def center(self, axis=None):
         """ Returns center of the `SuperCell`, possibly with respect to an axis """
         if axis is None:
-            return np.sum(self.cell, axis=0) / 2 + self.origo
-        return self.cell[axis, :] / 2 + self.origo
+            return np.sum(self.cell, axis=0) / 2
+        return self.cell[axis, :] / 2
 
     @classmethod
     def tocell(cls, *args):

@@ -8,6 +8,7 @@ from math import acos
 from itertools import product
 
 import numpy as np
+from numpy import square, sqrt
 
 import sisl._plot as plt
 import sisl._array as _a
@@ -291,7 +292,7 @@ class Geometry(SuperCellChild):
         if len(R.shape) == 1:
             return (R[0] ** 2. + R[1] ** 2 + R[2] ** 2) ** .5
 
-        return np.sqrt(np.sum(R ** 2, axis=1))
+        return sqrt(square(R).sum(1))
 
     def Rij(self, ia, ja):
         r""" Vector between atom `ia` and `ja`, atoms can be in super-cell indices
@@ -412,12 +413,12 @@ class Geometry(SuperCellChild):
         This iterator is the same as:
 
         >>> for ia in range(len(self)): # doctest: +SKIP
-        ...    <do something> # doctest: +SKIP
+        ...    <do something>
 
         or equivalently
 
         >>> for ia in self: # doctest: +SKIP
-        ...    <do something> # doctest: +SKIP
+        ...    <do something>
 
         See Also
         --------
@@ -433,9 +434,9 @@ class Geometry(SuperCellChild):
         """ Iterator over all atoms (or a subset) and species as a tuple in this geometry
 
         >>> for ia, a, idx_specie in self.iter_species(): # doctest: +SKIP
-        ...     isinstance(ia, int) == True # doctest: +SKIP
-        ...     isinstance(a, Atom) == True # doctest: +SKIP
-        ...     isinstance(idx_specie, int) == True # doctest: +SKIP
+        ...     isinstance(ia, int) == True
+        ...     isinstance(a, Atom) == True
+        ...     isinstance(idx_specie, int) == True
 
         with ``ia`` being the atomic index, ``a`` the `Atom` object, ``idx_specie``
         is the index of the specie
@@ -704,8 +705,8 @@ class Geometry(SuperCellChild):
         I.e. the loop would look like this:
 
         >>> for ias, idxs in self.iter_block(): # doctest: +SKIP
-        ...    for ia in ias: # doctest: +SKIP
-        ...        idx_a = self.close(ia, R = R, idx = idxs) # doctest: +SKIP
+        ...    for ia in ias:
+        ...        idx_a = self.close(ia, R = R, idx = idxs)
 
         This iterator is intended for systems with more than 1000 atoms.
 
@@ -972,10 +973,10 @@ class Geometry(SuperCellChild):
         algorithm:
 
         >>> ja = 0 # doctest: +SKIP
-        >>> for ia in range(self.na): # doctest: +SKIP
-        ...     for id,r in args: # doctest: +SKIP
-        ...        for i in range(r): # doctest: +SKIP
-        ...           ja = ia + cell[id,:] * i # doctest: +SKIP
+        >>> for ia in range(self.na):
+        ...     for id,r in args:
+        ...        for i in range(r):
+        ...           ja = ia + cell[id,:] * i
 
         This method allows to utilise Bloch's theorem when creating
         Hamiltonian parameter sets for TBtrans.
@@ -1166,7 +1167,7 @@ class Geometry(SuperCellChild):
             xi -= self.axyz(ref)[None, :]
         else:
             xi -= ensure_array(ref, np.float64)[None, :]
-        nx = (xi ** 2).sum(axis=1) ** .5
+        nx = sqrt(square(xi).sum(1))
         ang = np.where(nx > 1e-6, np.arccos((xi * dir).sum(axis=1) / nx), 0.)
         if rad:
             return ang
@@ -1405,8 +1406,8 @@ class Geometry(SuperCellChild):
         The basic algorithm is this:
 
         >>> oxa = other.xyz + self.cell[axis,:][None,:] # doctest: +SKIP
-        >>> self.xyz = np.append(self.xyz,oxa) # doctest: +SKIP
-        >>> self.cell[axis,:] += other.cell[axis,:] # doctest: +SKIP
+        >>> self.xyz = np.append(self.xyz,oxa)
+        >>> self.cell[axis,:] += other.cell[axis,:]
 
         NOTE: The cell appended is only in the axis that
         is appended, which means that the other cell directions
@@ -1450,8 +1451,8 @@ class Geometry(SuperCellChild):
         The basic algorithm is this:
 
         >>> oxa = other.xyz # doctest: +SKIP
-        >>> self.xyz = np.append(oxa, self.xyz + other.cell[axis,:][None,:]) # doctest: +SKIP
-        >>> self.cell[axis,:] += other.cell[axis,:] # doctest: +SKIP
+        >>> self.xyz = np.append(oxa, self.xyz + other.cell[axis,:][None,:])
+        >>> self.cell[axis,:] += other.cell[axis,:]
 
         NOTE: The cell prepended is only in the axis that
         is prependend, which means that the other cell directions
@@ -1553,9 +1554,9 @@ class Geometry(SuperCellChild):
         --------
 
         >>> A + B == A.add(B) # doctest: +SKIP
-        >>> A + (B, 1) == A.append(B, 1) # doctest: +SKIP
-        >>> A + (B, 2) == A.append(B, 2) # doctest: +SKIP
-        >>> (A, 1) + B == A.prepend(B, 1) # doctest: +SKIP
+        >>> A + (B, 1) == A.append(B, 1)
+        >>> A + (B, 2) == A.append(B, 2)
+        >>> (A, 1) + B == A.prepend(B, 1)
 
         See Also
         --------
@@ -1841,7 +1842,7 @@ class Geometry(SuperCellChild):
 
         # Calculate distance
         if ret_rij:
-            d = np.sum((xa - off[None, :]) ** 2, axis=1) ** .5
+            d = sqrt(square(xa - off[None, :]).sum(1))
 
         # Create the initial lists that we will build up
         # Then finally, we will return the reversed lists
@@ -1997,7 +1998,7 @@ class Geometry(SuperCellChild):
                     idx = idx[ix]
                     dxa = dxa[ix, :]
         else:
-            ix = log_and.reduce(fabs(dxa[:, :]) <= max_R, axis=1)
+            ix = log_and.reduce(fabs(dxa) <= max_R, axis=1)
 
             if idx is None:
                 # This is because of the pre-check of the
@@ -2043,11 +2044,11 @@ class Geometry(SuperCellChild):
         # After having reduced the dxa array, we may then
         # take the sqrt
         max_R = max_R * max_R
-        xaR = dxa[:, 0]**2 + dxa[:, 1]**2 + dxa[:, 2]**2
+        xaR = square(dxa).sum(1)
         ix = (xaR <= max_R).nonzero()[0]
 
         # Reduce search space and correct distances
-        d = xaR[ix] ** .5
+        d = sqrt(xaR[ix])
         if ret_xyz:
             xa = dxa[ix, :] + off[None, :]
         del xaR, dxa  # just because these arrays could be very big...
@@ -2716,7 +2717,7 @@ class Geometry(SuperCellChild):
                     o = self.cell[0, :] * ii + \
                         self.cell[1, :] * jj + \
                         self.cell[2, :] * kk
-                    maxR = max(maxR, np.sum((off + o) ** 2) ** 0.5)
+                    maxR = max(maxR, square(off + o).sum() ** 0.5)
 
             if R > maxR:
                 R = maxR
@@ -3103,7 +3104,7 @@ class Geometry(SuperCellChild):
                 if hasattr(ns, '_vector'):
                     v = getattr(ns, '_vector')
                     if getattr(ns, '_vector_scale', True):
-                        v /= np.max((v[:, 0]**2 + v[:, 1]**2 + v[:, 2]**2) ** .5)
+                        v /= np.max(sqrt(square(v).sum(1)))
                     kwargs['data'] = v
                 ns._geometry.write(value[0], **kwargs)
                 # Issue to the namespace that the geometry has been written, at least once.

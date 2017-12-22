@@ -6,12 +6,28 @@ import math as m
 import numpy as np
 from scipy.interpolate import interp1d
 
+from sisl.orbital import cart2spher, spher2cart
 from sisl.orbital import Orbital, SphericalOrbital, AtomicOrbital
 
 
 def r_f(n):
     r = np.arange(n)
     return r, r
+
+
+@pytest.mark.orbital
+def test_spherical():
+    rad2 = np.pi / 45
+    r, theta, phi = np.ogrid[0.1:10:0.2, -np.pi:np.pi:rad2, 0:np.pi:rad2]
+    xyz = spher2cart(r, theta, phi)
+    s = xyz.shape[:-1]
+    r1, theta1, phi1 = cart2spher(xyz)
+    r1.shape = s
+    theta1.shape = s
+    phi1.shape = s
+    assert np.allclose(r, r1)
+    assert np.allclose(theta, theta1[1:2, :, 1:2])
+    assert np.allclose(phi, phi1[0:1, 0:1, :])
 
 
 @pytest.mark.orbital
@@ -189,6 +205,12 @@ class Test_sphericalorbital(object):
     def test_togrid1(self):
         o = SphericalOrbital(1, r_f(6))
         o.toGrid()
+        o.toGrid(R=10)
+
+    @pytest.mark.xfail(raises=ValueError)
+    def test_togrid2(self):
+        o = SphericalOrbital(1, r_f(6))
+        o.toGrid(R=-1)
 
 
 @pytest.mark.orbital
@@ -223,6 +245,27 @@ class Test_atomicorbital(object):
             a.name()
             a.name(True)
             repr(a)
+
+    def test_radial1(self):
+        rf = r_f(6)
+        r = np.linspace(0, 6, 100)
+        for l in range(5):
+            so = SphericalOrbital(l, rf)
+            sor = so.radial(r)
+            for m in range(-l, l+1):
+                o = AtomicOrbital(l=l, m=m, spherical=rf)
+                assert np.allclose(sor, o.radial(r))
+                o.set_radial(rf[0], rf[1])
+                assert np.allclose(sor, o.radial(r))
+
+    def test_phi1(self):
+        rf = r_f(6)
+        r = np.linspace(0, 6, 999).reshape(-1, 3)
+        for l in range(5):
+            so = SphericalOrbital(l, rf)
+            for m in range(-l, l+1):
+                o = AtomicOrbital(l=l, m=m, spherical=rf)
+                assert np.allclose(so.psi(r, m), o.psi(r))
 
     @pytest.mark.xfail(raises=ValueError)
     def test_init4(self):

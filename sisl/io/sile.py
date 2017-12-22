@@ -26,6 +26,7 @@ __all__ += [
 
 # Decorators or sile-specific functions
 __all__ += [
+    'isfile',
     'Sile_fh_open',
     'sile_raise_write',
     'sile_raise_read']
@@ -411,7 +412,7 @@ class BaseSile(object):
     def __getattr__(self, name):
         """ Override to check the handle """
         if name == 'fh':
-            raise AttributeError("The filehandle has not been opened yet...")
+            raise AttributeError("The filehandle for {} has not been opened yet...".format(self.file))
         return getattr(self.fh, name)
 
     @classmethod
