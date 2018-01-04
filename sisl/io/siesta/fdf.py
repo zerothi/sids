@@ -13,6 +13,7 @@ from sisl.io._help import *
 from .binaries import TSHSSileSiesta
 from .siesta import ncSileSiesta
 from .basis import ionxmlSileSiesta, ionncSileSiesta
+from .orb_indx import OrbIndxSileSiesta
 from sisl import Geometry, Atom, SuperCell
 
 from sisl.utils.cmd import default_ArgumentParser, default_namespace
@@ -494,23 +495,37 @@ class fdfSileSiesta(SileSiesta):
         1. <systemlabel>.nc
         2. <>.ion.nc
         3. <>.ion.xml
+        4. <>.ORB_INDX
         """
-        # First we will try and read from the systemlabel .nc file
+        basis = self._read_basis_nc()
+        if basis is not None:
+            return basis
+        basis = self._read_basis_ion()
+        if basis is not None:
+            return basis
+        basis = self._read_basis_orb_indx()
+        if basis is not None:
+            return basis
+        return []
+
+    def _read_basis_nc(self):
+        # Read basis from <>.nc file
         f = self.get('SystemLabel', default='siesta')
         try:
-            basis = ncSileSiesta(f + '.nc').read_basis()
-            return basis
+            return ncSileSiesta(f + '.nc').read_basis()
         except:
             pass
+        return None
 
-        # We couldn't find the siesta.nc file, try ion.nc files
+    def _read_basis_ion(self):
+        # Read basis from <>.ion.nc file or <>.ion.xml
         f, spcs = self._read_block('ChemicalSpeciesLabel')
         if not f:
             f, spcs = self._read_block('Chemical_Species_Label')
         if not f:
             # We haven't found the chemical and species label,
             # so return nothing
-            return []
+            return None
 
         # Now spcs contains the block of the chemicalspecieslabel
         atom = [None] * len(spcs)
@@ -530,6 +545,26 @@ class fdfSileSiesta(SileSiesta):
                 atom[idx] = Atom(Z=Z, tag=lbl)
         return atom
 
+    def _read_basis_orb_indx(self):
+        f = self.get('SystemLabel', default='siesta')
+        return OrbIndxSileSiesta(f + '.ORB_INDX').read_basis()
+
+    def read_density_matrix(self, *args, **kwargs):
+        """ Try and read the density matrix by reading the <>.nc """
+        sys = self.get('SystemLabel', default='siesta')
+
+        if isfile(sys + '.nc'):
+            return ncSileSiesta(sys + '.nc').read_density_matrix()
+        raise ValueError("Could not find the density matrix from the *.nc.")
+
+    def read_energy_density_matrix(self, *args, **kwargs):
+        """ Try and read the energy density matrix by reading the <>.nc """
+        sys = self.get('SystemLabel', default='siesta')
+
+        if isfile(sys + '.nc'):
+            return ncSileSiesta(sys + '.nc').read_energy_density_matrix()
+        raise ValueError("Could not find the energy density matrix from the *.nc.")
+
     def read_hamiltonian(self, *args, **kwargs):
         """ Try and read the Hamiltonian by reading the <>.nc, <>.TSHS files (in that order) """
         sys = self.get('SystemLabel', default='siesta')
@@ -543,8 +578,9 @@ class fdfSileSiesta(SileSiesta):
                 if len(s) == 0:
                     continue
                 # Only replace if the number of orbitals is correct
-                if a.no == H.geom.atom[s[0]].no:
-                    H.geom.atom.replace(H.geom.atom[s[0]], a)
+                i = s[0]
+                if a.no == H.geom.atom[i].no:
+                    H.geom.atom.replace(H.geom.atom[i], a)
             return H
         raise ValueError("Could not find the Hamiltonian from the *.nc, nor the *.TSHS file.")
 

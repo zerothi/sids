@@ -25,14 +25,15 @@ class Grid(SuperCellChild):
     """ Object to retain grid information
 
     This grid object handles cell vectors and divisions of said grid.
-
-    A grid can be periodic and non-periodic.
     """
 
-    # Constant (should never be changed)
+    #: Constant for defining a periodic boundary condition
     PERIODIC = 1
+    #: Constant for defining a Neumann boundary condition
     NEUMANN = 2
+    #: Constant for defining a Dirichlet boundary condition
     DIRICHLET = 3
+    #: Constant for defining an open boundary condition
     OPEN = 4
 
     def __init__(self, shape, bc=None, sc=None, dtype=None, geom=None):
@@ -108,7 +109,7 @@ class Grid(SuperCellChild):
         val : numpy.dtype
            all grid-points will have this value after execution
         """
-        self.grid[...] = val
+        self.grid.fill(val)
 
     def interp(self, shape, method='linear', **kwargs):
         """ Returns an interpolated version of the grid
@@ -169,6 +170,11 @@ class Grid(SuperCellChild):
         """ Returns the data-type of the grid """
         return self.grid.dtype
 
+    @property
+    def dkind(self):
+        """ The data-type of the grid (in str) """
+        return np.dtype(self.grid.dtype).kind
+
     def set_grid(self, shape, dtype=None):
         """ Create the internal grid of certain size.
         """
@@ -213,7 +219,7 @@ class Grid(SuperCellChild):
         grid = self.__class__(np.copy(self.shape), bc=np.copy(self.bc),
                               dtype=self.dtype,
                               geom=self.geom.copy())
-        grid.grid[:, :, :] = self.grid[:, :, :]
+        grid.grid = self.grid.copy()
         return grid
 
     def swapaxes(self, a, b):
@@ -286,7 +292,7 @@ class Grid(SuperCellChild):
         grid.set_sc(cell)
 
         # Calculate sum (retain dimensions)
-        grid.grid[:, :, :] = np.sum(self.grid, axis=axis, keepdims=True)
+        np.sum(self.grid, axis=axis, keepdims=True, out=grid.grid)
         return grid
 
     def average(self, axis):
@@ -730,7 +736,7 @@ class Grid(SuperCellChild):
 
     def __repr__(self):
         """ Representation of object """
-        return self.__class__.__name__ + '{{[{} {} {}]}}'.format(*self.shape)
+        return self.__class__.__name__ + '{{kind={kind}, [{} {} {}]}}'.format(*self.shape, kind=self.dkind)
 
     def _check_compatibility(self, other, msg):
         """ Internal check for asserting two grids are commensurable """
@@ -786,10 +792,10 @@ class Grid(SuperCellChild):
         Returns same shape with same cell as the first"""
         if isinstance(other, Grid):
             grid = self._compatible_copy(other, 'they cannot be subtracted')
-            grid.grid = self.grid - other.grid
+            np.subtract(self.grid, other.grid, out=grid.grid)
         else:
             grid = self.copy()
-            grid.grid = self.grid - other
+            np.subtract(self.grid, other, out=grid.grid)
         return grid
 
     def __isub__(self, other):
@@ -812,10 +818,10 @@ class Grid(SuperCellChild):
     def __truediv__(self, other):
         if isinstance(other, Grid):
             grid = self._compatible_copy(other, 'they cannot be divided')
-            grid.grid = self.grid / other.grid
+            np.divide(self.grid, other.grid, out=grid.grid)
         else:
             grid = self.copy()
-            grid.grid = self.grid / other
+            np.divide(self.grid, other, out=grid.grid)
         return grid
 
     def __itruediv__(self, other):
@@ -829,10 +835,10 @@ class Grid(SuperCellChild):
     def __mul__(self, other):
         if isinstance(other, Grid):
             grid = self._compatible_copy(other, 'they cannot be multiplied')
-            grid.grid = self.grid * other.grid
+            np.multiply(self.grid, other.grid, out=grid.grid)
         else:
             grid = self.copy()
-            grid.grid = self.grid * other
+            np.multiply(self.grid, other, out=grid.grid)
         return grid
 
     def __imul__(self, other):
