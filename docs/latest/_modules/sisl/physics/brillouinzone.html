@@ -65,7 +65,7 @@
             
             
               <div class="version">
-                0.9.2-122
+                0.9.2-138
               </div>
             
           
@@ -178,6 +178,7 @@
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="nb">sum</span><span class="p">,</span> <span class="n">dot</span>
 
+<span class="kn">import</span> <span class="nn">sisl._array</span> <span class="k">as</span> <span class="nn">_a</span>
 <span class="kn">from</span> <span class="nn">sisl.supercell</span> <span class="k">import</span> <span class="n">SuperCell</span>
 
 
@@ -614,7 +615,7 @@
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
-<span class="sd">        ticks : bool</span>
+<span class="sd">        ticks : bool, optional</span>
 <span class="sd">           if `True` the ticks for the points are also returned</span>
 
 <span class="sd">           xticks, label_ticks, lk = PathBZ.lineark(True)</span>
@@ -622,37 +623,26 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># Calculate points</span>
         <span class="n">k</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">tocartesian</span><span class="p">(</span><span class="n">pnt</span><span class="p">)</span> <span class="k">for</span> <span class="n">pnt</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">point</span><span class="p">]</span>
+        <span class="c1"># Get difference between points</span>
         <span class="n">dk</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="c1"># Calculate the cumultative distance between points</span>
+        <span class="n">k_len</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="n">_a</span><span class="o">.</span><span class="n">cumsumd</span><span class="p">((</span><span class="n">dk</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="o">**</span> <span class="o">.</span><span class="mi">5</span><span class="p">),</span> <span class="mi">0</span><span class="p">,</span> <span class="mf">0.</span><span class="p">)</span>
         <span class="n">xtick</span> <span class="o">=</span> <span class="p">[</span><span class="kc">None</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">k</span><span class="p">)</span>
         <span class="c1"># Prepare output array</span>
-        <span class="n">dK</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+        <span class="n">dK</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">emptyd</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span>
 
-        <span class="n">ii</span><span class="p">,</span> <span class="n">add</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="mf">0.</span>
+        <span class="c1"># short-hand</span>
+        <span class="n">ls</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span>
+
+        <span class="n">xtick</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="n">_a</span><span class="o">.</span><span class="n">cumsumi</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">division</span><span class="p">),</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
         <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">dk</span><span class="p">)):</span>
-            <span class="n">xtick</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">ii</span>
             <span class="n">n</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">division</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+            <span class="n">end</span> <span class="o">=</span> <span class="n">i</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">dk</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span>
 
-            <span class="c1"># Calculate the delta along this segment</span>
-            <span class="n">delta</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">dk</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="p">:]</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span> <span class="o">**</span> <span class="o">.</span><span class="mi">5</span>
+            <span class="n">dK</span><span class="p">[</span><span class="n">xtick</span><span class="p">[</span><span class="n">i</span><span class="p">]:</span><span class="n">xtick</span><span class="p">[</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">]]</span> <span class="o">=</span> <span class="n">ls</span><span class="p">(</span><span class="n">k_len</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">k_len</span><span class="p">[</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">],</span> <span class="n">n</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">,</span> <span class="n">endpoint</span><span class="o">=</span><span class="n">end</span><span class="p">)</span>
+        <span class="n">xtick</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">-=</span> <span class="mi">1</span>
 
-            <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">dk</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span>
-                <span class="c1"># to get end-point correctly</span>
-                <span class="n">delta</span> <span class="o">/=</span> <span class="n">n</span> <span class="o">-</span> <span class="mi">1</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="n">delta</span> <span class="o">/=</span> <span class="n">n</span>
-            <span class="n">dK</span><span class="p">[</span><span class="n">ii</span><span class="p">:</span><span class="n">ii</span><span class="o">+</span><span class="n">n</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">add</span><span class="p">,</span> <span class="n">add</span> <span class="o">+</span> <span class="n">delta</span> <span class="o">*</span> <span class="n">n</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
-            <span class="n">ii</span> <span class="o">+=</span> <span class="n">n</span>
-
-            <span class="c1"># Calculate the next separation</span>
-            <span class="c1"># The addition is the latest delta point plus the</span>
-            <span class="c1"># missing delta to reach the starting point for the</span>
-            <span class="c1"># next point in the BZ</span>
-            <span class="n">add</span> <span class="o">=</span> <span class="n">dK</span><span class="p">[</span><span class="n">ii</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">delta</span>
-
-        <span class="c1"># Final tick-mark</span>
-        <span class="n">xtick</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">dk</span><span class="p">)]</span> <span class="o">=</span> <span class="n">ii</span> <span class="o">-</span> <span class="mi">1</span>
-
-        <span class="c1"># Get label tick</span>
+        <span class="c1"># Get label tick, in case self.name is a single string &#39;ABCD&#39;</span>
         <span class="n">label_tick</span> <span class="o">=</span> <span class="p">[</span><span class="n">a</span> <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">]</span>
         <span class="k">if</span> <span class="n">ticks</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">dK</span><span class="p">[</span><span class="n">xtick</span><span class="p">],</span> <span class="n">label_tick</span><span class="p">,</span> <span class="n">dK</span>
@@ -696,7 +686,7 @@
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'../../../',
-            VERSION:'0.9.2-122',
+            VERSION:'0.9.2-138',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true,

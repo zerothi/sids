@@ -65,7 +65,7 @@
             
             
               <div class="version">
-                0.9.2-122
+                0.9.2-138
               </div>
             
           
@@ -177,6 +177,7 @@
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 
 <span class="kn">from</span> <span class="nn">sisl.utils.misc</span> <span class="k">import</span> <span class="n">str_spec</span>
+<span class="kn">from</span> <span class="nn">sisl._help</span> <span class="k">import</span> <span class="n">_str</span>
 <span class="kn">from</span> <span class="nn">._help</span> <span class="k">import</span> <span class="o">*</span>
 
 
@@ -215,7 +216,88 @@
 <span class="n">__siles</span> <span class="o">=</span> <span class="p">[]</span>
 
 
-<div class="viewcode-block" id="add_sile"><a class="viewcode-back" href="../../../api-generated/sisl.io.add_sile.html#sisl.io.add_sile">[docs]</a><span class="k">def</span> <span class="nf">add_sile</span><span class="p">(</span><span class="n">ending</span><span class="p">,</span> <span class="bp">cls</span><span class="p">,</span> <span class="n">case</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">gzip</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">_parent_cls</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="k">class</span> <span class="nc">_sile_rule</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Internal data-structure to check whether a file is the same as this sile &quot;&quot;&quot;</span>
+
+    <span class="vm">__slots__</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;cls&#39;</span><span class="p">,</span> <span class="s1">&#39;case&#39;</span><span class="p">,</span> <span class="s1">&#39;suffix&#39;</span><span class="p">,</span> <span class="s1">&#39;gzip&#39;</span><span class="p">,</span> <span class="s1">&#39;bases&#39;</span><span class="p">,</span> <span class="s1">&#39;base_names&#39;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="bp">cls</span><span class="p">,</span> <span class="n">suffix</span><span class="p">,</span> <span class="n">case</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">gzip</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cls</span> <span class="o">=</span> <span class="bp">cls</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">case</span> <span class="o">=</span> <span class="n">case</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">case</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">suffix</span> <span class="o">=</span> <span class="n">suffix</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">suffix</span> <span class="o">=</span> <span class="n">suffix</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">gzip</span> <span class="o">=</span> <span class="n">gzip</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">bases</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">build_bases</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">base_names</span> <span class="o">=</span> <span class="p">[</span><span class="n">c</span><span class="o">.</span><span class="vm">__name__</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">bases</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">build_bases</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Return a list of all classes that this file is inheriting from (except Sile, SileBin or SileCDF) &quot;&quot;&quot;</span>
+        <span class="n">children</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cls</span><span class="o">.</span><span class="vm">__bases__</span><span class="p">)</span> <span class="o">+</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">cls</span><span class="p">]</span>
+        <span class="n">nl</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+        <span class="k">while</span> <span class="nb">len</span><span class="p">(</span><span class="n">children</span><span class="p">)</span> <span class="o">!=</span> <span class="n">nl</span><span class="p">:</span>
+            <span class="n">nl</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">children</span><span class="p">)</span>
+            <span class="c1"># Remove baseclasses everybody have</span>
+            <span class="k">for</span> <span class="n">obj</span> <span class="ow">in</span> <span class="p">[</span><span class="nb">object</span><span class="p">,</span> <span class="n">BaseSile</span><span class="p">,</span> <span class="n">Sile</span><span class="p">,</span> <span class="n">SileBin</span><span class="p">,</span> <span class="n">SileCDF</span><span class="p">]:</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">i</span> <span class="o">=</span> <span class="n">children</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">obj</span><span class="p">)</span>
+                    <span class="n">children</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+                <span class="k">except</span><span class="p">:</span>
+                    <span class="k">pass</span>
+            <span class="k">for</span> <span class="n">child</span> <span class="ow">in</span> <span class="nb">list</span><span class="p">(</span><span class="n">children</span><span class="p">):</span> <span class="c1"># ensure we have a copy for infinite loops</span>
+                <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">child</span><span class="o">.</span><span class="vm">__bases__</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">c</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">children</span><span class="p">:</span>
+                        <span class="n">children</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">c</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">children</span>
+
+    <span class="k">def</span> <span class="nf">in_bases</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">base</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Whether any of the inherited bases starts with `base` in their class-name (non-case sensitive) &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">base</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">True</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">base</span><span class="p">,</span> <span class="nb">object</span><span class="p">):</span>
+            <span class="n">base</span> <span class="o">=</span> <span class="n">base</span><span class="o">.</span><span class="vm">__name__</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">b</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">base_names</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">b</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="n">base</span><span class="p">)</span> <span class="ow">or</span> <span class="n">base</span> <span class="ow">in</span> <span class="n">b</span><span class="p">:</span>
+                <span class="k">return</span> <span class="kc">True</span>
+        <span class="k">return</span> <span class="kc">False</span>
+
+    <span class="k">def</span> <span class="nf">get_base</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">base</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Whether any of the inherited bases starts with `base` in their class-name (non-case sensitive) &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">base</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span>
+        <span class="k">for</span> <span class="n">bn</span><span class="p">,</span> <span class="n">b</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">base_names</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">bases</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">bn</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="n">base</span><span class="p">)</span> <span class="ow">or</span> <span class="n">base</span> <span class="ow">in</span> <span class="n">bn</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">b</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+    <span class="k">def</span> <span class="nf">in_class</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">base</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Whether any of the inherited bases starts with `base` in their class-name (non-case sensitive) &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">base</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">False</span>
+        <span class="n">n</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cls</span><span class="o">.</span><span class="vm">__name__</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+        <span class="k">return</span> <span class="p">(</span><span class="n">n</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="n">base</span><span class="p">)</span> <span class="ow">or</span> <span class="n">base</span> <span class="ow">in</span> <span class="n">n</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">is_suffix</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">suffix</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">case</span><span class="p">:</span>
+            <span class="n">suffix</span> <span class="o">=</span> <span class="n">suffix</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+        <span class="c1"># Now check names and (possibly gzip)</span>
+        <span class="n">my_suffix</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">suffix</span>
+        <span class="k">if</span> <span class="n">suffix</span> <span class="o">==</span> <span class="n">my_suffix</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">True</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">gzip</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">False</span>
+        <span class="k">return</span> <span class="n">suffix</span> <span class="o">==</span> <span class="p">(</span><span class="n">my_suffix</span> <span class="o">+</span> <span class="s2">&quot;.gz&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">is_class</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="bp">cls</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">cls</span> <span class="o">==</span> <span class="bp">cls</span>
+
+    <span class="k">def</span> <span class="nf">is_subclass</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="bp">cls</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">issubclass</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cls</span><span class="p">,</span> <span class="bp">cls</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="add_sile"><a class="viewcode-back" href="../../../api-generated/sisl.io.add_sile.html#sisl.io.add_sile">[docs]</a><span class="k">def</span> <span class="nf">add_sile</span><span class="p">(</span><span class="n">suffix</span><span class="p">,</span> <span class="bp">cls</span><span class="p">,</span> <span class="n">case</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">gzip</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot; Add files to the global lookup table</span>
 
 <span class="sd">    Public for attaching lookup tables for allowing</span>
@@ -223,116 +305,39 @@
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    ending : str</span>
-<span class="sd">         The file-name ending, it can be several file endings (.TBT.nc)</span>
+<span class="sd">    suffix : str</span>
+<span class="sd">         The file-name suffix, it can be several file endings (.TBT.nc)</span>
 <span class="sd">    cls : child of BaseSile</span>
 <span class="sd">         An object that is associated with the respective file.</span>
 <span class="sd">         It must be inherited from `BaseSile`.</span>
 <span class="sd">    case : bool, optional</span>
-<span class="sd">         Whether case sensitivity is applicable for determining</span>
-<span class="sd">         file.</span>
+<span class="sd">         Whether case sensitivity is applicable for determining file.</span>
 <span class="sd">    gzip : bool, optional</span>
 <span class="sd">         Whether files with ``.gz`` endings can be read.</span>
 <span class="sd">         This option should only be given to files with ASCII text</span>
 <span class="sd">         output.</span>
-<span class="sd">         It will automatically call:</span>
-
-<span class="sd">             add_sile(ending+&#39;.gz&#39;,...,gzip=False)</span>
-
-<span class="sd">         to add the gzipped file to the list of possible files.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">global</span> <span class="n">__sile_rules</span><span class="p">,</span> <span class="n">__siles</span>
 
     <span class="c1"># Only add pure suffixes...</span>
-    <span class="k">if</span> <span class="n">ending</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;.&#39;</span><span class="p">:</span>
-        <span class="n">add_sile</span><span class="p">(</span><span class="n">ending</span><span class="p">[</span><span class="mi">1</span><span class="p">:],</span> <span class="bp">cls</span><span class="p">,</span> <span class="n">case</span><span class="o">=</span><span class="n">case</span><span class="p">,</span> <span class="n">gzip</span><span class="o">=</span><span class="n">gzip</span><span class="p">,</span> <span class="n">_parent_cls</span><span class="o">=</span><span class="n">_parent_cls</span><span class="p">)</span>
-        <span class="k">return</span>
-
-    <span class="c1"># The parent_obj is the actual class used to construct</span>
-    <span class="c1"># the output file</span>
-    <span class="k">if</span> <span class="n">_parent_cls</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="n">_parent_cls</span> <span class="o">=</span> <span class="bp">cls</span>
+    <span class="k">if</span> <span class="n">suffix</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;.&#39;</span><span class="p">):</span>
+        <span class="n">suffix</span> <span class="o">=</span> <span class="n">suffix</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
 
     <span class="c1"># If it isn&#39;t already in the list of</span>
     <span class="c1"># Siles, add it.</span>
     <span class="k">if</span> <span class="bp">cls</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">__siles</span><span class="p">:</span>
         <span class="n">__siles</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">cls</span><span class="p">)</span>
 
-    <span class="c1"># These classes will never be added to the</span>
-    <span class="c1"># children. It makes no sense to</span>
-    <span class="c1"># have bases which are common for all files.</span>
-    <span class="c1"># Or does it?</span>
-    <span class="c1"># What if a file-extension may both represent a</span>
-    <span class="c1"># formatted, or a binary file?</span>
-    <span class="c1"># In that case should:</span>
-    <span class="c1">#  def_cls = [object, BaseSile]</span>
-    <span class="n">def_cls</span> <span class="o">=</span> <span class="p">[</span><span class="nb">object</span><span class="p">,</span> <span class="n">BaseSile</span><span class="p">,</span> <span class="n">Sile</span><span class="p">,</span> <span class="n">SileBin</span><span class="p">,</span> <span class="n">SileCDF</span><span class="p">]</span>
-
-    <span class="c1"># First we find the base-class</span>
-    <span class="c1"># This base class must not be</span>
-    <span class="c1">#  BaseSile</span>
-    <span class="c1">#  Sile</span>
-    <span class="c1">#  SileBin</span>
-    <span class="c1">#  SileCDF</span>
-    <span class="k">def</span> <span class="nf">get_children</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
-        <span class="c1"># List all childern</span>
-        <span class="n">children</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="bp">cls</span><span class="o">.</span><span class="vm">__bases__</span><span class="p">)</span>
-        <span class="k">for</span> <span class="n">child</span> <span class="ow">in</span> <span class="n">children</span><span class="p">:</span>
-            <span class="n">cchildren</span> <span class="o">=</span> <span class="n">get_children</span><span class="p">(</span><span class="n">child</span><span class="p">)</span>
-            <span class="k">for</span> <span class="n">cchild</span> <span class="ow">in</span> <span class="n">cchildren</span><span class="p">:</span>
-                <span class="k">if</span> <span class="n">cchild</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">children</span><span class="p">:</span>
-                    <span class="n">children</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">cchild</span><span class="p">)</span>
-        <span class="n">remove_cls</span><span class="p">(</span><span class="n">children</span><span class="p">,</span> <span class="n">def_cls</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">children</span>
-
-    <span class="k">def</span> <span class="nf">remove_cls</span><span class="p">(</span><span class="n">l</span><span class="p">,</span> <span class="n">clss</span><span class="p">):</span>
-        <span class="k">for</span> <span class="n">ccls</span> <span class="ow">in</span> <span class="n">clss</span><span class="p">:</span>
-            <span class="k">if</span> <span class="n">ccls</span> <span class="ow">in</span> <span class="n">l</span><span class="p">:</span>
-                <span class="n">l</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">ccls</span><span class="p">)</span>
-
-    <span class="c1"># Finally we append the child objects</span>
-    <span class="n">inherited</span> <span class="o">=</span> <span class="n">get_children</span><span class="p">(</span><span class="bp">cls</span><span class="p">)</span>
-
-    <span class="c1"># Now we should remove all objects which are descendants from</span>
-    <span class="c1"># another object in the list</span>
-    <span class="c1"># We also default this base-class to be removed</span>
-    <span class="n">rem</span> <span class="o">=</span> <span class="p">[</span><span class="nb">object</span><span class="p">,</span> <span class="bp">cls</span><span class="p">]</span>
-    <span class="k">for</span> <span class="n">ccls</span> <span class="ow">in</span> <span class="n">inherited</span><span class="p">:</span>
-        <span class="n">inh</span> <span class="o">=</span> <span class="n">get_children</span><span class="p">(</span><span class="n">ccls</span><span class="p">)</span>
-        <span class="k">for</span> <span class="n">cccls</span> <span class="ow">in</span> <span class="n">inh</span><span class="p">:</span>
-            <span class="k">if</span> <span class="n">cccls</span> <span class="ow">in</span> <span class="n">inherited</span><span class="p">:</span>
-                <span class="n">rem</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">cccls</span><span class="p">)</span>
-    <span class="n">remove_cls</span><span class="p">(</span><span class="n">inherited</span><span class="p">,</span> <span class="n">rem</span><span class="p">)</span>
-
-    <span class="c1"># Now, we finally have a list of classes which</span>
-    <span class="c1"># are a single sub-class of the actual class.</span>
-    <span class="k">for</span> <span class="n">ccls</span> <span class="ow">in</span> <span class="n">inherited</span><span class="p">:</span>
-        <span class="n">add_sile</span><span class="p">(</span><span class="n">ending</span><span class="p">,</span> <span class="n">ccls</span><span class="p">,</span> <span class="n">case</span><span class="o">=</span><span class="n">case</span><span class="p">,</span> <span class="n">gzip</span><span class="o">=</span><span class="n">gzip</span><span class="p">,</span> <span class="n">_parent_cls</span><span class="o">=</span><span class="n">_parent_cls</span><span class="p">)</span>
-
-    <span class="c1"># If the gzip is none, we decide whether we can</span>
-    <span class="c1"># read gzipped files</span>
-    <span class="c1"># In particular, if the cls is a `Sile`, we allow</span>
-    <span class="c1"># such reading</span>
-    <span class="k">if</span> <span class="ow">not</span> <span class="n">case</span><span class="p">:</span>
-        <span class="n">add_sile</span><span class="p">(</span><span class="n">ending</span><span class="o">.</span><span class="n">lower</span><span class="p">(),</span> <span class="bp">cls</span><span class="p">,</span> <span class="n">gzip</span><span class="o">=</span><span class="n">gzip</span><span class="p">,</span> <span class="n">_parent_cls</span><span class="o">=</span><span class="n">_parent_cls</span><span class="p">)</span>
-        <span class="n">add_sile</span><span class="p">(</span><span class="n">ending</span><span class="o">.</span><span class="n">upper</span><span class="p">(),</span> <span class="bp">cls</span><span class="p">,</span> <span class="n">gzip</span><span class="o">=</span><span class="n">gzip</span><span class="p">,</span> <span class="n">_parent_cls</span><span class="o">=</span><span class="n">_parent_cls</span><span class="p">)</span>
-
-    <span class="k">else</span><span class="p">:</span>
-        <span class="c1"># Add the rule of the sile to the list of rules.</span>
-
-        <span class="c1"># First loop and check that the sile does not exist</span>
-        <span class="n">__sile_rules</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">ending</span><span class="p">,</span> <span class="bp">cls</span><span class="p">,</span> <span class="n">_parent_cls</span><span class="p">))</span>
-
-        <span class="k">if</span> <span class="n">gzip</span><span class="p">:</span>
-            <span class="n">add_sile</span><span class="p">(</span><span class="n">ending</span> <span class="o">+</span> <span class="s1">&#39;.gz&#39;</span><span class="p">,</span> <span class="bp">cls</span><span class="p">,</span> <span class="n">case</span><span class="o">=</span><span class="n">case</span><span class="p">,</span> <span class="n">_parent_cls</span><span class="o">=</span><span class="n">_parent_cls</span><span class="p">)</span></div>
+    <span class="c1"># Add the rule of the sile to the list of rules.</span>
+    <span class="n">__sile_rules</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">_sile_rule</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">suffix</span><span class="p">,</span> <span class="n">case</span><span class="o">=</span><span class="n">case</span><span class="p">,</span> <span class="n">gzip</span><span class="o">=</span><span class="n">gzip</span><span class="p">))</span></div>
 
 
-<div class="viewcode-block" id="get_sile_class"><a class="viewcode-back" href="../../../api-generated/sisl.io.get_sile_class.html#sisl.io.get_sile_class">[docs]</a><span class="k">def</span> <span class="nf">get_sile_class</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<div class="viewcode-block" id="get_sile_class"><a class="viewcode-back" href="../../../api-generated/sisl.io.get_sile_class.html#sisl.io.get_sile_class">[docs]</a><span class="k">def</span> <span class="nf">get_sile_class</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot; Retrieve a class from the global lookup table via filename and the extension</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    file : str</span>
+<span class="sd">    filename : str</span>
 <span class="sd">       the file to be quried for a correct file object.</span>
 <span class="sd">       This file name may contain {&lt;class-name&gt;} which sets</span>
 <span class="sd">       `cls` in case `cls` is not set.</span>
@@ -341,7 +346,7 @@
 <span class="sd">          water.xyz</span>
 
 <span class="sd">       will return an `XYZSile`.</span>
-<span class="sd">    cls : class</span>
+<span class="sd">    cls : class, optional</span>
 <span class="sd">       In case there are several files with similar file-suffixes</span>
 <span class="sd">       you may query the exact base-class that should be chosen.</span>
 <span class="sd">       If there are several files with similar file-endings this</span>
@@ -354,24 +359,26 @@
 
     <span class="c1"># Split filename into proper file name and</span>
     <span class="c1"># the specification of the type</span>
-    <span class="n">tmp_file</span><span class="p">,</span> <span class="n">fcls</span> <span class="o">=</span> <span class="n">str_spec</span><span class="p">(</span><span class="n">file</span><span class="p">)</span>
+    <span class="n">tmp_file</span><span class="p">,</span> <span class="n">fcls</span> <span class="o">=</span> <span class="n">str_spec</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
 
     <span class="k">if</span> <span class="bp">cls</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">fcls</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
         <span class="c1"># cls has not been set, and fcls is found</span>
         <span class="c1"># Figure out if fcls is a valid sile, if not</span>
         <span class="c1"># do nothing (it may be part of the file name)</span>
         <span class="c1"># Which is REALLY obscure... but....)</span>
-        <span class="k">for</span> <span class="n">sile</span> <span class="ow">in</span> <span class="n">__siles</span><span class="p">:</span>
-            <span class="k">if</span> <span class="n">sile</span><span class="o">.</span><span class="vm">__name__</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="n">fcls</span><span class="o">.</span><span class="n">lower</span><span class="p">()):</span>
-                <span class="bp">cls</span> <span class="o">=</span> <span class="n">sile</span>
-                <span class="c1"># Make sure that {class-name} is</span>
-                <span class="c1"># removed from the file name</span>
-                <span class="n">file</span> <span class="o">=</span> <span class="n">tmp_file</span>
+        <span class="n">fclsl</span> <span class="o">=</span> <span class="n">fcls</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">sr</span> <span class="ow">in</span> <span class="n">__sile_rules</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">sr</span><span class="o">.</span><span class="n">in_class</span><span class="p">(</span><span class="n">fclsl</span><span class="p">):</span>
+                <span class="bp">cls</span> <span class="o">=</span> <span class="n">sr</span><span class="o">.</span><span class="n">cls</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">cls</span> <span class="o">=</span> <span class="n">sr</span><span class="o">.</span><span class="n">get_base</span><span class="p">(</span><span class="n">fclsl</span><span class="p">)</span>
+            <span class="k">if</span> <span class="bp">cls</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">filename</span> <span class="o">=</span> <span class="n">tmp_file</span>
                 <span class="k">break</span>
 
     <span class="k">try</span><span class="p">:</span>
         <span class="c1"># Create list of endings on this file</span>
-        <span class="n">f</span> <span class="o">=</span> <span class="n">file</span>
+        <span class="n">f</span> <span class="o">=</span> <span class="n">filename</span>
         <span class="n">end_list</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="n">end</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
 
@@ -393,31 +400,32 @@
         <span class="n">end_list</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">reversed</span><span class="p">(</span><span class="n">end_list</span><span class="p">))</span>
 
         <span class="c1"># First we check for class AND file ending</span>
+        <span class="n">clss</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="k">for</span> <span class="n">end</span> <span class="ow">in</span> <span class="n">end_list</span><span class="p">:</span>
-            <span class="k">for</span> <span class="n">suf</span><span class="p">,</span> <span class="n">base</span><span class="p">,</span> <span class="n">fobj</span> <span class="ow">in</span> <span class="n">__sile_rules</span><span class="p">:</span>
-                <span class="k">if</span> <span class="n">end</span> <span class="o">!=</span> <span class="n">suf</span><span class="p">:</span>
-                    <span class="k">continue</span>
-                <span class="k">if</span> <span class="bp">cls</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-                    <span class="k">return</span> <span class="n">fobj</span>
-                <span class="k">elif</span> <span class="bp">cls</span> <span class="o">==</span> <span class="n">base</span><span class="p">:</span>
-                    <span class="k">return</span> <span class="n">fobj</span>
+            <span class="k">for</span> <span class="n">sr</span> <span class="ow">in</span> <span class="n">__sile_rules</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">sr</span><span class="o">.</span><span class="n">is_class</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
+                    <span class="c1"># class-specification has precedence</span>
+                    <span class="c1"># This should only occur when the</span>
+                    <span class="c1"># class-specification is exact (i.e. XYZSile)</span>
+                    <span class="k">return</span> <span class="n">sr</span><span class="o">.</span><span class="n">cls</span>
+                <span class="k">elif</span> <span class="n">sr</span><span class="o">.</span><span class="n">is_suffix</span><span class="p">(</span><span class="n">end</span><span class="p">):</span>
+                    <span class="k">if</span> <span class="bp">cls</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                        <span class="k">return</span> <span class="n">sr</span><span class="o">.</span><span class="n">cls</span>
+                    <span class="k">elif</span> <span class="n">sr</span><span class="o">.</span><span class="n">is_subclass</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
+                        <span class="k">return</span> <span class="n">sr</span><span class="o">.</span><span class="n">cls</span>
+                    <span class="n">clss</span> <span class="o">=</span> <span class="n">sr</span><span class="o">.</span><span class="n">cls</span>
+            <span class="k">if</span> <span class="n">clss</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">clss</span>
 
-        <span class="c1"># Now we skip the limitation of the suffix,</span>
-        <span class="c1"># now only the base-class is necessary.</span>
-        <span class="k">for</span> <span class="n">suf</span><span class="p">,</span> <span class="n">base</span><span class="p">,</span> <span class="n">fobj</span> <span class="ow">in</span> <span class="n">__sile_rules</span><span class="p">:</span>
-            <span class="k">if</span> <span class="bp">cls</span> <span class="o">==</span> <span class="n">base</span><span class="p">:</span>
-                <span class="k">return</span> <span class="n">fobj</span>
+        <span class="k">if</span> <span class="n">clss</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;Sile for file &#39;</span><span class="si">{}</span><span class="s2">&#39; could not be found, &quot;</span>
+                                      <span class="s2">&quot;possibly the file has not been implemented.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">filename</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">clss</span>
 
-        <span class="k">del</span> <span class="n">end_list</span>
-
-        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s1">&#39;sile not implemented: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">file</span><span class="p">))</span>
-    <span class="k">except</span> <span class="ne">NotImplementedError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-        <span class="k">pass</span>
     <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
         <span class="kn">import</span> <span class="nn">traceback</span> <span class="k">as</span> <span class="nn">t</span>
         <span class="n">t</span><span class="o">.</span><span class="n">print_exc</span><span class="p">()</span>
-        <span class="k">raise</span> <span class="n">e</span>
-    <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;Sile for file &#39;&quot;</span><span class="o">+</span> <span class="n">file</span> <span class="o">+</span> <span class="s2">&quot;&#39; could not be found, possibly the file has not been implemented.&quot;</span><span class="p">)</span></div>
+        <span class="k">raise</span> <span class="n">e</span></div>
 
 
 <div class="viewcode-block" id="get_sile"><a class="viewcode-back" href="../../../api-generated/sisl.io.get_sile.html#sisl.io.get_sile">[docs]</a><span class="k">def</span> <span class="nf">get_sile</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
@@ -1192,7 +1200,7 @@
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'../../../',
-            VERSION:'0.9.2-122',
+            VERSION:'0.9.2-138',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true,
