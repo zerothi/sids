@@ -65,7 +65,7 @@
             
             
               <div class="version">
-                0.9.2-138
+                0.9.2-166
               </div>
             
           
@@ -202,28 +202,35 @@
 <span class="sd">    details).</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obj</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Initialize a `BrillouinZone` object from a given `SuperCell`</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
-<span class="sd">        obj : object or array_like</span>
-<span class="sd">           An object with associated `obj.cell` and `obj.rcell` or</span>
+<span class="sd">        parent : object or array_like</span>
+<span class="sd">           An object with associated ``parent.cell`` and ``parent.rcell`` or</span>
 <span class="sd">           an array of floats which may be turned into a `SuperCell`</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">try</span><span class="p">:</span>
-            <span class="n">obj</span><span class="o">.</span><span class="n">cell</span>
-            <span class="n">obj</span><span class="o">.</span><span class="n">rcell</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">obj</span> <span class="o">=</span> <span class="n">obj</span>
+            <span class="c1"># It probably has the supercell attached</span>
+            <span class="n">parent</span><span class="o">.</span><span class="n">cell</span>
+            <span class="n">parent</span><span class="o">.</span><span class="n">rcell</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">parent</span> <span class="o">=</span> <span class="n">parent</span>
         <span class="k">except</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">obj</span> <span class="o">=</span> <span class="n">SuperCell</span><span class="p">(</span><span class="n">obj</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">parent</span> <span class="o">=</span> <span class="n">SuperCell</span><span class="p">(</span><span class="n">parent</span><span class="p">)</span>
 
         <span class="c1"># Gamma point</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_k</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_w</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_k</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">zerosd</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_w</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">onesd</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
 
         <span class="c1"># Instantiate the array call</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">array</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">asarray</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; String representation of the BrillouinZone &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span> <span class="n">SuperCell</span><span class="p">):</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39;{{nk: </span><span class="si">{}</span><span class="s1">,</span><span class="se">\n</span><span class="s1"> </span><span class="si">{}</span><span class="se">\n</span><span class="s1">}}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">),</span> <span class="nb">repr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">,</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1"> &#39;</span><span class="p">))</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39;{{nk: </span><span class="si">{}</span><span class="s1">,</span><span class="se">\n</span><span class="s1"> </span><span class="si">{}</span><span class="se">\n</span><span class="s1">}}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">),</span> <span class="nb">repr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">sc</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">,</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1"> &#39;</span><span class="p">))</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">k</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -237,11 +244,11 @@
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">cell</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">obj</span><span class="o">.</span><span class="n">cell</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">cell</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">rcell</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">obj</span><span class="o">.</span><span class="n">rcell</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">rcell</span>
 
 <div class="viewcode-block" id="BrillouinZone.tocartesian"><a class="viewcode-back" href="../../../api-generated/sisl.physics.BrillouinZone.html#sisl.physics.BrillouinZone.tocartesian">[docs]</a>    <span class="k">def</span> <span class="nf">tocartesian</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">k</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Transfer a k-point in reduced coordinates to the Cartesian coordinates</span>
@@ -267,15 +274,15 @@
 
     <span class="k">def</span> <span class="nf">__getattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">attr</span><span class="p">):</span>
         <span class="k">try</span><span class="p">:</span>
-            <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">obj</span><span class="p">,</span> <span class="n">attr</span><span class="p">)</span>
+            <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span> <span class="n">attr</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">__attr</span> <span class="o">=</span> <span class="n">attr</span>
             <span class="k">return</span> <span class="bp">self</span>
         <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">AttributeError</span><span class="p">(</span><span class="s2">&quot;&#39;</span><span class="si">{}</span><span class="s2">&#39; does not exist in class &#39;</span><span class="si">{}</span><span class="s2">&#39;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
-                <span class="n">attr</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">obj</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="p">))</span>
+                <span class="n">attr</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="p">))</span>
 
     <span class="c1"># Implement wrapper calls</span>
-<div class="viewcode-block" id="BrillouinZone.array"><a class="viewcode-back" href="../../../api-generated/sisl.physics.BrillouinZone.html#sisl.physics.BrillouinZone.array">[docs]</a>    <span class="k">def</span> <span class="nf">array</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">):</span>
+<div class="viewcode-block" id="BrillouinZone.asarray"><a class="viewcode-back" href="../../../api-generated/sisl.physics.BrillouinZone.html#sisl.physics.BrillouinZone.asarray">[docs]</a>    <span class="k">def</span> <span class="nf">asarray</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Return `self` with `numpy.ndarray` returned quantities</span>
 
 <span class="sd">        This forces the `__call__` routine to return a single array.</span>
@@ -288,19 +295,19 @@
 <span class="sd">        Examples</span>
 <span class="sd">        --------</span>
 <span class="sd">        &gt;&gt;&gt; obj = BrillouinZone(...) # doctest: +SKIP</span>
-<span class="sd">        &gt;&gt;&gt; obj.array().eigh() # doctest: +SKIP</span>
+<span class="sd">        &gt;&gt;&gt; obj.asarray().eigh() # doctest: +SKIP</span>
 
 <span class="sd">        See Also</span>
 <span class="sd">        --------</span>
-<span class="sd">        yields : all output returned through an iterator</span>
-<span class="sd">        average : take the average (with k-weights) of the Brillouin zone</span>
+<span class="sd">        asyield : all output returned through an iterator</span>
+<span class="sd">        asaverage : take the average (with k-weights) of the Brillouin zone</span>
 <span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="k">def</span> <span class="nf">_call</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-            <span class="n">func</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">obj</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__attr</span><span class="p">)</span>
+            <span class="n">func</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__attr</span><span class="p">)</span>
             <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
                 <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-                    <span class="n">v</span> <span class="o">=</span> <span class="n">func</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+                    <span class="n">v</span> <span class="o">=</span> <span class="n">func</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="n">k</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
                     <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
                         <span class="k">return</span> <span class="n">v</span>
                     <span class="n">shp</span> <span class="o">=</span> <span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">)]</span>
@@ -309,13 +316,13 @@
                     <span class="n">a</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">v</span><span class="p">[:]</span>
                     <span class="k">del</span> <span class="n">v</span>
                 <span class="k">else</span><span class="p">:</span>
-                    <span class="n">a</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">func</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+                    <span class="n">a</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">func</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="n">k</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
             <span class="k">return</span> <span class="n">a</span>
         <span class="c1"># Set instance __call__</span>
-        <span class="bp">self</span><span class="o">.</span><span class="fm">__call__</span> <span class="o">=</span> <span class="n">types</span><span class="o">.</span><span class="n">MethodType</span><span class="p">(</span><span class="n">_call</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span>
+        <span class="nb">setattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;__call__&#39;</span><span class="p">,</span> <span class="n">types</span><span class="o">.</span><span class="n">MethodType</span><span class="p">(</span><span class="n">_call</span><span class="p">,</span> <span class="bp">self</span><span class="p">))</span>
         <span class="k">return</span> <span class="bp">self</span></div>
 
-<div class="viewcode-block" id="BrillouinZone.yields"><a class="viewcode-back" href="../../../api-generated/sisl.physics.BrillouinZone.html#sisl.physics.BrillouinZone.yields">[docs]</a>    <span class="k">def</span> <span class="nf">yields</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">):</span>
+<div class="viewcode-block" id="BrillouinZone.asyield"><a class="viewcode-back" href="../../../api-generated/sisl.physics.BrillouinZone.html#sisl.physics.BrillouinZone.asyield">[docs]</a>    <span class="k">def</span> <span class="nf">asyield</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Return `self` with yielded quantities</span>
 
 <span class="sd">        This forces the `__call__` routine to return a an iterator which may</span>
@@ -329,23 +336,23 @@
 <span class="sd">        Examples</span>
 <span class="sd">        --------</span>
 <span class="sd">        &gt;&gt;&gt; obj = BrillouinZone(Hamiltonian) # doctest: +SKIP</span>
-<span class="sd">        &gt;&gt;&gt; obj.yields().eigh() # doctest: +SKIP</span>
+<span class="sd">        &gt;&gt;&gt; obj.asyield().eigh() # doctest: +SKIP</span>
 
 <span class="sd">        See Also</span>
 <span class="sd">        --------</span>
-<span class="sd">        array : all output as a single array</span>
-<span class="sd">        average : take the average (with k-weights) of the Brillouin zone</span>
+<span class="sd">        asarray : all output as a single array</span>
+<span class="sd">        asaverage : take the average (with k-weights) of the Brillouin zone</span>
 <span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="k">def</span> <span class="nf">_call</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-            <span class="n">func</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">obj</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__attr</span><span class="p">)</span>
+            <span class="n">func</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__attr</span><span class="p">)</span>
             <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="bp">self</span><span class="p">:</span>
-                <span class="k">yield</span> <span class="n">func</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">dtype</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+                <span class="k">yield</span> <span class="n">func</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="n">k</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">dtype</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
         <span class="c1"># Set instance __call__</span>
-        <span class="bp">self</span><span class="o">.</span><span class="fm">__call__</span> <span class="o">=</span> <span class="n">types</span><span class="o">.</span><span class="n">MethodType</span><span class="p">(</span><span class="n">_call</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span>
+        <span class="nb">setattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;__call__&#39;</span><span class="p">,</span> <span class="n">types</span><span class="o">.</span><span class="n">MethodType</span><span class="p">(</span><span class="n">_call</span><span class="p">,</span> <span class="bp">self</span><span class="p">))</span>
         <span class="k">return</span> <span class="bp">self</span></div>
 
-<div class="viewcode-block" id="BrillouinZone.average"><a class="viewcode-back" href="../../../api-generated/sisl.physics.BrillouinZone.html#sisl.physics.BrillouinZone.average">[docs]</a>    <span class="k">def</span> <span class="nf">average</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">):</span>
+<div class="viewcode-block" id="BrillouinZone.asaverage"><a class="viewcode-back" href="../../../api-generated/sisl.physics.BrillouinZone.html#sisl.physics.BrillouinZone.asaverage">[docs]</a>    <span class="k">def</span> <span class="nf">asaverage</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Return `self` with yielded quantities</span>
 
 <span class="sd">        This forces the `__call__` routine to return a an iterator which may</span>
@@ -359,43 +366,43 @@
 <span class="sd">        Examples</span>
 <span class="sd">        --------</span>
 <span class="sd">        &gt;&gt;&gt; obj = BrillouinZone(Hamiltonian) # doctest: +SKIP</span>
-<span class="sd">        &gt;&gt;&gt; obj.average().eigh() # doctest: +SKIP</span>
+<span class="sd">        &gt;&gt;&gt; obj.asaverage().DOS(np.linspace(-2, 2, 100)) # doctest: +SKIP</span>
 
 <span class="sd">        &gt;&gt;&gt; obj = BrillouinZone(Hamiltonian) # doctest: +SKIP</span>
-<span class="sd">        &gt;&gt;&gt; obj.average() # doctest: +SKIP</span>
-<span class="sd">        &gt;&gt;&gt; obj.eigh() # doctest: +SKIP</span>
-<span class="sd">        &gt;&gt;&gt; obj.eighs() # doctest: +SKIP</span>
+<span class="sd">        &gt;&gt;&gt; obj.asaverage() # doctest: +SKIP</span>
+<span class="sd">        &gt;&gt;&gt; obj.DOS(np.linspace(-2, 2, 100)) # doctest: +SKIP</span>
+<span class="sd">        &gt;&gt;&gt; obj.PDOS(np.linspace(-2, 2, 100)) # doctest: +SKIP</span>
 
 <span class="sd">        See Also</span>
 <span class="sd">        --------</span>
-<span class="sd">        array : all output as a single array</span>
-<span class="sd">        yields : all output returned through an iterator</span>
+<span class="sd">        asarray : all output as a single array</span>
+<span class="sd">        asyield : all output returned through an iterator</span>
 <span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="k">def</span> <span class="nf">_call</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-            <span class="n">func</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">obj</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__attr</span><span class="p">)</span>
+            <span class="n">func</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__attr</span><span class="p">)</span>
             <span class="n">w</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">weight</span><span class="p">[:]</span>
             <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
                 <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-                    <span class="n">v</span> <span class="o">=</span> <span class="n">func</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">*</span> <span class="n">w</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+                    <span class="n">v</span> <span class="o">=</span> <span class="n">func</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="n">k</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">*</span> <span class="n">w</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
                 <span class="k">else</span><span class="p">:</span>
-                    <span class="n">v</span> <span class="o">+=</span> <span class="n">func</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">*</span> <span class="n">w</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+                    <span class="n">v</span> <span class="o">+=</span> <span class="n">func</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="n">k</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">*</span> <span class="n">w</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
             <span class="k">return</span> <span class="n">v</span>
         <span class="c1"># Set instance __call__</span>
-        <span class="bp">self</span><span class="o">.</span><span class="fm">__call__</span> <span class="o">=</span> <span class="n">types</span><span class="o">.</span><span class="n">MethodType</span><span class="p">(</span><span class="n">_call</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span>
+        <span class="nb">setattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;__call__&#39;</span><span class="p">,</span> <span class="n">types</span><span class="o">.</span><span class="n">MethodType</span><span class="p">(</span><span class="n">_call</span><span class="p">,</span> <span class="bp">self</span><span class="p">))</span>
         <span class="k">return</span> <span class="bp">self</span></div>
 
-    <span class="n">mean</span> <span class="o">=</span> <span class="n">average</span>
+    <span class="n">asmean</span> <span class="o">=</span> <span class="n">asaverage</span>
 
     <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Calls the given attribute of the internal object and returns the quantity</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
-<span class="sd">        *args :</span>
-<span class="sd">            arguments passed to the attribute call, note that the first argument</span>
-<span class="sd">            will *always* be `k`</span>
-<span class="sd">        **kwargs :</span>
+<span class="sd">        *args : optional</span>
+<span class="sd">            arguments passed to the attribute call, note that an argument `k=k` will be</span>
+<span class="sd">            added by this routine as a way to loop the k-points.</span>
+<span class="sd">        **kwargs : optional</span>
 <span class="sd">            keyword arguments passed to the attribute call, note that the first argument</span>
 <span class="sd">            will *always* be `k`</span>
 
@@ -405,7 +412,7 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="n">call</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;__call__&#39;</span><span class="p">)</span>
-        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;Could not call the object it self&quot;</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">call</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 
@@ -470,6 +477,9 @@
 
         <span class="c1"># Retrieve the diagonal number of values</span>
         <span class="n">Dn</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">nkpt</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">Dn</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39; *must* be initialized with &#39;</span>
+                             <span class="s1">&#39;diagonal elements different from 0.&#39;</span><span class="p">)</span>
 
         <span class="c1"># Correct for 1&#39;s where it does not</span>
         <span class="c1"># make sense to reduce the BZ</span>
@@ -490,17 +500,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_k</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_k</span> <span class="o">&gt;</span> <span class="o">.</span><span class="mi">5</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_k</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_k</span><span class="p">)</span>
         <span class="n">N</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_k</span><span class="p">)</span>
         <span class="c1"># We have to correct for the size of the Brillouin zone</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_w</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">([</span><span class="n">N</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span><span class="n">size</span><span class="p">)</span> <span class="o">/</span> <span class="n">N</span>
-
-    <span class="k">def</span> <span class="nf">__iter__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot; Iterate through the Monkhorst pack-grid</span>
-
-<span class="sd">        Yields</span>
-<span class="sd">        ------</span>
-<span class="sd">        k, w : k-point and associated weight</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">)):</span>
-            <span class="k">yield</span> <span class="bp">self</span><span class="o">.</span><span class="n">_k</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">_w</span><span class="p">[</span><span class="n">i</span><span class="p">]</span></div>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_w</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">([</span><span class="n">N</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span><span class="n">size</span><span class="p">)</span> <span class="o">/</span> <span class="n">N</span></div>
 
 
 <div class="viewcode-block" id="PathBZ"><a class="viewcode-back" href="../../../api-generated/sisl.physics.PathBZ.html#sisl.physics.PathBZ">[docs]</a><span class="k">class</span> <span class="nc">PathBZ</span><span class="p">(</span><span class="n">BrillouinZone</span><span class="p">):</span>
@@ -532,12 +532,12 @@
 
         <span class="c1"># If the array has fewer points we try and determine</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">point</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mi">3</span><span class="p">:</span>
-            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">point</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">!=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">obj</span><span class="o">.</span><span class="n">nsc</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">):</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">point</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">!=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">nsc</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">):</span>
                 <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Could not determine the non-periodic direction&#39;</span><span class="p">)</span>
 
             <span class="c1"># fix the points where there are no periodicity</span>
             <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">]:</span>
-                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">obj</span><span class="o">.</span><span class="n">nsc</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">nsc</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">point</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">point</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
 
         <span class="c1"># Ensure the shape is correct</span>
@@ -597,8 +597,17 @@
                 <span class="k">yield</span> <span class="bp">self</span><span class="o">.</span><span class="n">point</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">+</span> <span class="n">j</span> <span class="o">*</span> <span class="n">delta</span>
 
 <div class="viewcode-block" id="PathBZ.lineartick"><a class="viewcode-back" href="../../../api-generated/sisl.physics.PathBZ.html#sisl.physics.PathBZ.lineartick">[docs]</a>    <span class="k">def</span> <span class="nf">lineartick</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot; The tick-marks corresponding to the linear-k values &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">lineark</span><span class="p">(</span><span class="kc">True</span><span class="p">)[</span><span class="mi">0</span><span class="p">:</span><span class="mi">2</span><span class="p">]</span></div>
+        <span class="sd">&quot;&quot;&quot; The tick-marks corresponding to the linear-k values</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        linear_k : The positions in reciprocal space determined by the distance between points</span>
+
+<span class="sd">        See Also</span>
+<span class="sd">        --------</span>
+<span class="sd">        lineark : Routine used to calculate the tick-marks.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">lineark</span><span class="p">(</span><span class="kc">True</span><span class="p">)[</span><span class="mi">1</span><span class="p">:</span><span class="mi">3</span><span class="p">]</span></div>
 
 <div class="viewcode-block" id="PathBZ.lineark"><a class="viewcode-back" href="../../../api-generated/sisl.physics.PathBZ.html#sisl.physics.PathBZ.lineark">[docs]</a>    <span class="k">def</span> <span class="nf">lineark</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ticks</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; A 1D array which corresponds to the delta-k values of the path</span>
@@ -611,15 +620,27 @@
 <span class="sd">        &gt;&gt;&gt; p = PathBZ(...) # doctest: +SKIP</span>
 <span class="sd">        &gt;&gt;&gt; eigs = Hamiltonian.eigh(p) # doctest: +SKIP</span>
 <span class="sd">        &gt;&gt;&gt; for i in range(len(Hamiltonian)): # doctest: +SKIP</span>
-<span class="sd">        &gt;&gt;&gt;     pyplot.plot(p.lineark(), eigs[:, i]) # doctest: +SKIP</span>
+<span class="sd">        ...     plt.plot(p.lineark(), eigs[:, i]) # doctest: +SKIP</span>
+
+<span class="sd">        &gt;&gt;&gt; p = PathBZ(...) # doctest: +SKIP</span>
+<span class="sd">        &gt;&gt;&gt; eigs = Hamiltonian.eigh(p) # doctest: +SKIP</span>
+<span class="sd">        &gt;&gt;&gt; lk, kt, kl = p.lineark(True)</span>
+<span class="sd">        &gt;&gt;&gt; plt.xticks(kt, kl)</span>
+<span class="sd">        &gt;&gt;&gt; for i in range(len(Hamiltonian)): # doctest: +SKIP</span>
+<span class="sd">        ...     plt.plot(lk, eigs[:, i]) # doctest: +SKIP</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
 <span class="sd">        ticks : bool, optional</span>
 <span class="sd">           if `True` the ticks for the points are also returned</span>
 
-<span class="sd">           xticks, label_ticks, lk = PathBZ.lineark(True)</span>
+<span class="sd">           lk, xticks, label_ticks, lk = PathBZ.lineark(True)</span>
 
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        linear_k : The positions in reciprocal space determined by the distance between points</span>
+<span class="sd">        k_tick : Linear k-positions of the points, only returned if `ticks` is ``True``</span>
+<span class="sd">        k_label : Labels at `k_tick`, only returned if `ticks` is ``True``</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># Calculate points</span>
         <span class="n">k</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">tocartesian</span><span class="p">(</span><span class="n">pnt</span><span class="p">)</span> <span class="k">for</span> <span class="n">pnt</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">point</span><span class="p">]</span>
@@ -645,7 +666,7 @@
         <span class="c1"># Get label tick, in case self.name is a single string &#39;ABCD&#39;</span>
         <span class="n">label_tick</span> <span class="o">=</span> <span class="p">[</span><span class="n">a</span> <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">]</span>
         <span class="k">if</span> <span class="n">ticks</span><span class="p">:</span>
-            <span class="k">return</span> <span class="n">dK</span><span class="p">[</span><span class="n">xtick</span><span class="p">],</span> <span class="n">label_tick</span><span class="p">,</span> <span class="n">dK</span>
+            <span class="k">return</span> <span class="n">dK</span><span class="p">,</span> <span class="n">dK</span><span class="p">[</span><span class="n">xtick</span><span class="p">],</span> <span class="n">label_tick</span>
         <span class="k">return</span> <span class="n">dK</span></div>
 
     <span class="k">def</span> <span class="nf">__len__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -664,7 +685,7 @@
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2015-2017, Nick R. Papior.
+        &copy; Copyright 2015-2018, Nick R. Papior.
 
     </p>
   </div>
@@ -686,7 +707,7 @@
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'../../../',
-            VERSION:'0.9.2-138',
+            VERSION:'0.9.2-166',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true,

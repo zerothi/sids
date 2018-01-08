@@ -65,7 +65,7 @@
             
             
               <div class="version">
-                0.9.2-138
+                0.9.2-166
               </div>
             
           
@@ -424,15 +424,15 @@
 <div class="viewcode-block" id="Orbital.psi_spher"><a class="viewcode-back" href="../../api-generated/sisl.Orbital.html#sisl.Orbital.psi_spher">[docs]</a>    <span class="k">def</span> <span class="nf">psi_spher</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">r</span><span class="p">,</span> <span class="n">theta</span><span class="p">,</span> <span class="n">phi</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="k">raise</span> <span class="ne">NotImplementedError</span></div>
 
-<div class="viewcode-block" id="Orbital.toGrid"><a class="viewcode-back" href="../../api-generated/sisl.Orbital.html#sisl.Orbital.toGrid">[docs]</a>    <span class="k">def</span> <span class="nf">toGrid</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">c</span><span class="o">=</span><span class="mf">1.</span><span class="p">,</span> <span class="n">precision</span><span class="o">=</span><span class="mf">0.05</span><span class="p">,</span> <span class="n">R</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">):</span>
+<div class="viewcode-block" id="Orbital.toGrid"><a class="viewcode-back" href="../../api-generated/sisl.Orbital.html#sisl.Orbital.toGrid">[docs]</a>    <span class="k">def</span> <span class="nf">toGrid</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">precision</span><span class="o">=</span><span class="mf">0.05</span><span class="p">,</span> <span class="n">c</span><span class="o">=</span><span class="mf">1.</span><span class="p">,</span> <span class="n">R</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Create a Grid with *only* this orbital wavefunction on it</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
-<span class="sd">        c : float or complex, optional</span>
-<span class="sd">           coefficient for the orbital</span>
 <span class="sd">        precision : float, optional</span>
 <span class="sd">           used separation in the `Grid` between voxels (in Ang)</span>
+<span class="sd">        c : float or complex, optional</span>
+<span class="sd">           coefficient for the orbital</span>
 <span class="sd">        R : float, optional</span>
 <span class="sd">            box size of the grid (default to the orbital range)</span>
 <span class="sd">        dtype : numpy.dtype, optional</span>
@@ -449,11 +449,13 @@
         <span class="kn">from</span> <span class="nn">.geometry</span> <span class="k">import</span> <span class="n">Geometry</span>
         <span class="kn">from</span> <span class="nn">.grid</span> <span class="k">import</span> <span class="n">Grid</span>
         <span class="kn">from</span> <span class="nn">.atom</span> <span class="k">import</span> <span class="n">Atom</span>
+        <span class="kn">from</span> <span class="nn">.physics.hamiltonian</span> <span class="k">import</span> <span class="n">EigenState</span>
         <span class="n">sc</span> <span class="o">=</span> <span class="n">SuperCell</span><span class="p">(</span><span class="n">R</span><span class="o">*</span><span class="mi">2</span><span class="p">,</span> <span class="n">origo</span><span class="o">=</span><span class="p">[</span><span class="o">-</span><span class="n">R</span><span class="p">]</span> <span class="o">*</span> <span class="mi">3</span><span class="p">)</span>
         <span class="n">g</span> <span class="o">=</span> <span class="n">Geometry</span><span class="p">([</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="mi">3</span><span class="p">,</span> <span class="n">Atom</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="p">),</span> <span class="n">sc</span><span class="o">=</span><span class="n">sc</span><span class="p">)</span>
         <span class="n">n</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">rint</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">R</span> <span class="o">/</span> <span class="n">precision</span><span class="p">))</span>
         <span class="n">G</span> <span class="o">=</span> <span class="n">Grid</span><span class="p">([</span><span class="n">n</span><span class="p">]</span> <span class="o">*</span> <span class="mi">3</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">,</span> <span class="n">geom</span><span class="o">=</span><span class="n">g</span><span class="p">)</span>
-        <span class="n">G</span><span class="o">.</span><span class="n">psi</span><span class="p">([</span><span class="n">c</span><span class="p">])</span>
+        <span class="n">es</span> <span class="o">=</span> <span class="n">EigenState</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="p">[</span><span class="n">c</span><span class="p">],</span> <span class="n">g</span><span class="p">)</span>
+        <span class="n">es</span><span class="o">.</span><span class="n">psi</span><span class="p">(</span><span class="n">G</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">G</span></div>
 
     <span class="k">def</span> <span class="nf">__getstate__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -1066,7 +1068,7 @@
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2015-2017, Nick R. Papior.
+        &copy; Copyright 2015-2018, Nick R. Papior.
 
     </p>
   </div>
@@ -1088,7 +1090,7 @@
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'../../',
-            VERSION:'0.9.2-138',
+            VERSION:'0.9.2-166',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true,
