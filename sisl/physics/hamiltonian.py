@@ -1,9 +1,23 @@
 from __future__ import print_function, division
 
-from sisl._help import _range as range
+import warnings
+
+import numpy as np
+from numpy import int32, float64, pi
+from numpy import take, ogrid, add
+from numpy import cos, sin, arctan2, divide, conj
+from numpy import dot, sqrt, square, floor, ceil
+
+from sisl._help import _range as range, _str as str
+from sisl._help import ensure_array
+import sisl._array as _a
+from sisl import Geometry
+from sisl.eigensystem import EigenSystem
+from .spin import Spin
 from .sparse import SparseOrbitalBZSpin
 
 __all__ = ['Hamiltonian', 'TightBinding']
+__all__ += ['EigenState']
 
 
 class Hamiltonian(SparseOrbitalBZSpin):
@@ -113,6 +127,41 @@ class Hamiltonian(SparseOrbitalBZSpin):
                 for j in range(min(self.spin.spins, 2)):
                     self[i, i, j] = self[i, i, j] + E
 
+    def eigenstate(self, k=(0, 0, 0), gauge='R', **kwargs):
+        """ Calculate the eigenstates at `k` and return an `EigenState` object containing all eigenstates
+
+        Parameters
+        ----------
+        k : array_like*3, optional
+            the k-point at which to evaluate the eigenstates at
+        gauge : str, optional
+            the gauge used for calculating the eigenstates
+        sparse : bool, optional
+            if ``True``, `eigsh` will be called, else `eigh` will be
+            called (default).
+        **kwargs : dict, optional
+            passed arguments to the `eigh` routine
+
+        See Also
+        --------
+        eigh : the used eigenvalue routine
+        eigsh : the used eigenvalue routine
+
+        Returns
+        -------
+        EigenState
+        """
+        if kwargs.pop('sparse', False):
+            e, v = self.eigsh(k, gauge=gauge, eigvals_only=False, **kwargs)
+        else:
+            e, v = self.eigh(k, gauge, eigvals_only=False, **kwargs)
+        info = {'k': k,
+                'gauge': gauge}
+        if 'spin' in kwargs:
+            info['spin'] = kwargs['spin']
+        # Since eigh returns the eigenvectors [:, i] we have to transpose
+        return EigenState(e, v.T, self, **info)
+
     @staticmethod
     def read(sile, *args, **kwargs):
         """ Reads Hamiltonian from `Sile` using `read_hamiltonian`.
@@ -135,7 +184,7 @@ class Hamiltonian(SparseOrbitalBZSpin):
                 return fh.read_hamiltonian(*args, **kwargs)
 
     def write(self, sile, *args, **kwargs):
-        """ Writes a tight-binding model to the `Sile` as implemented in the :code:`Sile.write_hamiltonian` method """
+        """ Writes a Hamiltonian to the `Sile` as implemented in the :code:`Sile.write_hamiltonian` method """
         # This only works because, they *must*
         # have been imported previously
         from sisl.io import get_sile, BaseSile
@@ -144,6 +193,570 @@ class Hamiltonian(SparseOrbitalBZSpin):
         else:
             with get_sile(sile, 'w') as fh:
                 fh.write_hamiltonian(self, *args, **kwargs)
+
+    def DOS(self, E, k=(0, 0, 0), distribution=None, **kwargs):
+        r""" Calculate the DOS at the given energies for a specific `k` point
+
+        Parameters
+        ----------
+        E : array_like
+            energies to calculate the DOS at
+        k : array_like, optional
+            k-point at which the DOS is calculated
+        distribution : func, optional
+            a function that accepts :math:`E-\epsilon` as argument and calculates the
+            distribution function.
+            If ``None`` ``EigenState.distribution('gaussian')`` will be used.
+        **kwargs: optional
+            additional parameters passed to the `eigenstate` routine
+
+        See Also
+        --------
+        distribution : setup a distribution function, see details regarding the `distribution` argument
+        eigenstate : method used to calculate the eigenstates
+        PDOS : Calculate projected DOS
+        EigenState.DOS : Underlying method used to calculate the DOS
+        EigenState.PDOS : Underlying method used to calculate the projected DOS
+        """
+        # Calculate the eigenvalues to create the EigenState without the
+        # eigenvectors
+        e = self.eigh(k, **kwargs)
+        return EigenState(e, e, self, k=k, **kwargs).DOS(E, distribution)
+
+    def PDOS(self, E, k=(0, 0, 0), distribution=None, **kwargs):
+        r""" Calculate the projected DOS at the given energies for a specific `k` point
+
+        Parameters
+        ----------
+        E : array_like
+            energies to calculate the projected DOS at
+        k : array_like, optional
+            k-point at which the projected DOS is calculated
+        distribution : func, optional
+            a function that accepts :math:`E-\epsilon` as argument and calculates the
+            distribution function.
+            If ``None`` ``EigenState.distribution('gaussian')`` will be used.
+        **kwargs: optional
+            additional parameters passed to the `eigenstate` routine
+
+        See Also
+        --------
+        distribution : setup a distribution function, see details regarding the `distribution` argument
+        eigenstate : method used to calculate the eigenstates
+        DOS : Calculate total DOS
+        EigenState.DOS : Underlying method used to calculate the DOS
+        EigenState.PDOS : Underlying method used to calculate the projected DOS
+        """
+        return self.eigenstate(k, **kwargs).PDOS(E, distribution)
+
+
+class EigenState(EigenSystem):
+    """ Eigenstates associated by a Hamiltonian object
+
+    This object can be generated from a Hamiltonian via `Hamiltonian.eigenstate`.
+    Subsequent DOS calculations and/or wavefunction calculations (`Grid.psi`) may be
+    performed using this object.
+    """
+
+    @classmethod
+    def distribution(cls, method, smearing=0.1):
+        r""" Create a distribution function for input in e.g. `DOS`. Gaussian, Lorentzian etc.
+
+        In the following :math:`\epsilon` are the eigenvalues contained in this `EigenState`.
+
+        The Gaussian distribution is calculated as:
+
+        .. math::
+            G(E) = \sum_i \frac{1}{\sqrt{2\pi\sigma^2}}\exp\big[- (E - \epsilon_i)^2 / (2\sigma^2)\big]
+
+        where :math:`\sigma` is the `smearing` parameter.
+
+        The Lorentzian distribution is calculated as:
+
+        .. math::
+            L(E) = \sum_i \frac{1}{\pi}\frac{\gamma}{(E - \epsilon_i)^2 + \gamma^2}
+
+        where :math:`\gamma` is the `smearing` parameter, note that here :math:`\gamma` is the
+        half-width at half-maximum (:math:`2\gamma` would be the full-width at half-maximum).
+
+        Parameters
+        ----------
+        method : {'gaussian', 'lorentzian'}
+            the distribution function
+        smearing : float, optional
+            the smearing parameter for the method (:math:`\sigma` for Gaussian, etc.)
+
+        Returns
+        -------
+        func : a function which accepts one argument
+        """
+        if method.lower() in ['gauss', 'gaussian']:
+            exp = np.exp
+            sigma2 = 2 * smearing ** 2
+            pisigma = (pi * sigma2) ** .5
+            def func(E):
+                return exp(-E ** 2 / sigma2) / pisigma
+        elif method.lower() in ['lorentz', 'lorentzian']:
+            def func(E):
+                return (smearing / pi) / (E ** 2 + smearing ** 2)
+        else:
+            raise ValueError(cls.__name__ + ".distribution currently only implements 'gaussian' or "
+                             "'lorentzian' distribution functions")
+        return func
+
+    def norm(self, idx=None):
+        r""" Return the individual orbital norms for each eigenstate, possibly only for a subset of eigenstates
+
+        The norm is calculated as:
+
+        .. math::
+            |\psi|_\nu = \psi^*_\nu [\mathbf S | \psi\rangle]_\nu
+
+        while the sum :math:`\sum_\nu|\psi|_\nu\equiv1`.
+
+        Parameters
+        ----------
+        idx : int or array_like
+           only return for the selected indices
+        """
+        if idx is None:
+            idx = range(len(self))
+        idx = ensure_array(idx)
+
+        # Now create the correct normalization for each
+        opt = {'k': self.info.get('k', (0, 0, 0))}
+        if 'gauge' in self.info:
+            opt['gauge'] = self.info['gauge']
+
+        if isinstance(self.parent, Hamiltonian):
+            # Calculate the overlap matrix
+            Sk = self.parent.Sk(**opt)
+            if self.parent.spin > Spin('p'):
+                raise ValueError('Currently the PDOS for non-colinear and spin-orbit has not been checked')
+        else:
+            # Assume orthogonal basis set and Gamma-point
+            # TODO raise warning, should we do this here?
+            class _K(object):
+                def dot(self, v):
+                    return v
+            Sk = _K()
+
+        # A true normalization should only be real, hence we force this.
+        # TODO, perhaps check that it is correct...
+        return (conj(self.v[idx, :].T) * Sk.dot(self.v[idx, :].T)).real.T
+
+    def DOS(self, E, distribution=None):
+        r""" Calculate the DOS for the provided energies (`E`), using the supplied distribution function
+
+        The Density Of States at a specific energy is calculated via the broadening function:
+
+        .. math::
+            \mathrm{DOS}(E) = \sum_i D(E-\epsilon_i) \approx\delta(E-\epsilon_i)
+
+        where :math:`D(\Delta E)` is the distribution function used. Note that the distribution function
+        used may be a user-defined function. Alternatively a distribution function may
+        be aquired from `EigenState.distribution`.
+
+        Parameters
+        ----------
+        E : array_like
+            energies to calculate the DOS from
+        distribution : func, optional
+            a function that accepts :math:`E-\epsilon` as argument and calculates the
+            distribution function.
+            If ``None`` ``EigenState.distribution('gaussian')`` will be used.
+
+        See Also
+        --------
+        distribution : a selected set of implemented distribution functions
+        PDOS : the projected DOS
+
+        Returns
+        -------
+        numpy.ndarray : DOS calculated at energies, has same length as `E`
+        """
+        if distribution is None:
+            distribution = self.distribution('gaussian')
+        elif isinstance(distribution, str):
+            distribution = self.distribution(distribution)
+        DOS = distribution(E - self.e[0])
+        for i in range(1, len(self)):
+            DOS += distribution(E - self.e[i])
+        return DOS
+
+    def PDOS(self, E, distribution=None):
+        r""" Calculate the projected-DOS for the provided energies (`E`), using the supplied distribution function
+
+        The projected DOS is calculated as:
+
+        .. math::
+             \mathrm{PDOS}_\nu(E) = \sum_i \psi^*_{i,\nu} [\mathbf S | \psi_{i}\rangle]_\nu D(E-\epsilon_i)
+
+        where :math:`D(\Delta E)` is the distribution function used. Note that the distribution function
+        used may be a user-defined function. Alternatively a distribution function may
+        be aquired from `EigenState.distribution`.
+
+        In case of an orthogonal basis set :math:`\mathbf S` is equal to the identity matrix.
+        Note that `DOS` is the sum of the orbital projected DOS:
+
+        .. math::
+            \mathrm{DOS}(E) = \sum_\nu\mathrm{PDOS}_\nu(E)
+
+        Parameters
+        ----------
+        E : array_like
+            energies to calculate the projected-DOS from
+        distribution : func, optional
+            a function that accepts :math:`E-\epsilon` as argument and calculates the
+            distribution function.
+            If ``None`` ``EigenState.distribution('gaussian')`` will be used.
+
+        See Also
+        --------
+        distribution : a selected set of implemented distribution functions
+        DOS : the total DOS
+
+        Returns
+        -------
+        numpy.ndarray : projected DOS calculated at energies, has dimension ``(self.size, len(E))``.
+        """
+        if distribution is None:
+            distribution = self.distribution('gaussian')
+        elif isinstance(distribution, str):
+            distribution = self.distribution(distribution)
+
+        # Retrieve options for the Sk calculation
+        opt = {'k': self.info.get('k', (0, 0, 0))}
+        if 'gauge' in self.info:
+            opt['gauge'] = self.info['gauge']
+
+        is_nc = False
+        if isinstance(self.parent, Hamiltonian):
+            # Calculate the overlap matrix
+            Sk = self.parent.Sk(**opt)
+            is_nc = self.parent.spin > Spin('p')
+            if is_nc:
+                # Downscale because Sk is only diagonal
+                Sk = Sk[::2, ::2]
+                raise ValueError('Currently the PDOS for non-colinear and spin-orbit has not been checked')
+        else:
+            # Assume orthogonal basis set and Gamma-point
+            # TODO raise warning, should we do this here?
+            class _K(object):
+                def dot(self, v):
+                    return v
+            Sk = _K()
+
+        if is_nc:
+            # We must transform the vectors to be able to use dot
+            self.v.shape = (len(self), -1, 2)
+
+            def DM2q(D11, D22, D12):
+                """ Convert spin-box DM to total charge, and spin-vector """
+                D = np.empty([D11.size, 1, 4], D11.dtype)
+                D[:, 0, 0] = D11 + D22
+                dz = D11 - D22
+                dxy = 2 * np.absolute(D12)
+                S = (dz ** 2 + dxy ** 2) ** .5
+                costh = dz / S
+                Ssinth = S * (1 - costh ** 2) ** .5 * 2
+                D[:, 0, 1] = Ssinth * D12.real / dxy
+                D[:, 0, 2] = - Ssinth * D12.imag / dxy
+                D[:, 0, 3] = S * costh
+                return D
+
+            w = distribution(E - self.e[0]).reshape(1, -1, 1)
+            D11 = (conj(self.v[0, :, 0]) * Sk.dot(self.v[0, :, 0])).real
+            D22 = (conj(self.v[0, :, 1]) * Sk.dot(self.v[0, :, 1])).real
+            D12 = conj(self.v[0, :, 1]) * Sk.dot(self.v[0, :, 0])
+            PDOS = np.empty([w.size, tmp1.size, 4], dtype=tmp.dtype)
+            np.multiply(DM2q(D11, D22, D12), w, out=PDOS)
+            for i in range(1, len(self)):
+                w = distribution(E - self.e[i]).reshape(1, -1, 1)
+                D11 = (conj(self.v[0, :, 0]) * Sk.dot(self.v[0, :, 0])).real
+                D22 = (conj(self.v[0, :, 1]) * Sk.dot(self.v[0, :, 1])).real
+                D12 = conj(self.v[0, :, 1]) * Sk.dot(self.v[0, :, 0])
+                add(PDOS, DM2q(D11, D22, D12) * w, out=PDOS)
+
+            # Clean-up
+            del w, D11, D22, D12
+
+            self.v.shape = (len(self), -1)
+        else:
+
+            w = distribution(E - self.e[0]).reshape(1, -1)
+            PDOS = (conj(self.v[0, :]) * Sk.dot(self.v[0, :])).real.reshape(-1, 1) * w
+            for i in range(1, len(self)):
+                w = distribution(E - self.e[i]).reshape(1, -1)
+                add(PDOS, (conj(self.v[i]) * Sk.dot(self.v[i])).real.reshape(-1, 1) * w, out=PDOS)
+
+        return PDOS
+
+    def psi(self, grid, k=None):
+        r""" Add the wave-function (`Orbital.psi`) component of each orbital to the grid
+
+        This routine calculates the real-space wave-function components in the
+        specified grid. 
+
+        This is an *in-place* operation that *adds* to the current values in the grid.
+
+        It may be instructive to check that an eigenstate is normalized:
+
+        >>> grid = Grid(...) # doctest: +SKIP
+        >>> es = EigenState(...) # doctest: +SKIP
+        >>> es.sub(0).psi(grid)
+        >>> (np.abs(grid.grid) ** 2).sum() * grid.dvolume == 1.
+
+        Note: To calculate :math:`\psi(\mathbf r)` in a unit-cell different from the
+        originating geometry, simply pass a grid with a unit-cell smaller than the originating
+        supercell.
+
+        The wavefunctions are calculated in real-space via:
+
+        .. math::
+            \psi(\mathbf r) = \sum_i\phi_i(\mathbf r) |\psi\rangle_i \exp(-i\mathbf k \mathbf R)
+
+        Parameters
+        ----------
+        gridv : Grid
+           the coefficients for all orbitals in the geometry (real or complex).
+           If an `EigenState` a sum over all eigenstates in the object will be used.
+        k : array_like, optional
+           k-point associated with the coefficients, by default the inherent k-point used
+           to calculate the eigenstate will be used.
+        """
+        geom = None
+        if isinstance(self.parent, Geometry):
+            geom = self.parent
+        else:
+            try:
+                if isinstance(self.parent.geom, Geometry):
+                    geom = self.parent.geom
+            except:
+                pass
+        if geom is None:
+            geom = grid.geometry
+
+        # Do the sum over all eigenstates
+        v = self.v.sum(0)
+        if len(v) != geom.no:
+            raise ValueError(self.__class__.__name__ + ".psi "
+                             "requires the coefficient to have length as the number of orbitals.")
+
+        # Check for k-points
+        if k is None:
+            k = self.info.get('k', (0, 0, 0))
+        k = ensure_array(k, float64)
+        kl = (k ** 2).sum() ** 0.5
+        has_k = kl > 0.000001
+
+        # Check that input/grid makes sense.
+        # If the coefficients are complex valued, then the grid *has* to be
+        # complex valued.
+        # Likewise if a k-point has been passed.
+        is_complex = np.iscomplexobj(v) or has_k
+        if is_complex and not np.iscomplexobj(grid.grid):
+            raise ValueError(self.__class__.__name__ + ".psi "
+                             "has input coefficients as complex values but the grid is real.")
+
+        if is_complex:
+            psi_init = _a.zerosz
+        else:
+            psi_init = _a.zerosd
+
+        # Extract sub variables used throughout the loop
+        shape = ensure_array(grid.shape)
+        dcell = grid.dcell
+        rc = grid.sc.rcell / (2. * pi) * shape.reshape(1, -1)
+
+        # In the following we don't care about division
+        # So 1) save error state, 2) turn off divide by 0, 3) calculate, 4) turn on old error state
+        old_err = np.seterr(divide='ignore', invalid='ignore')
+
+        addouter = add.outer
+        def idx2spherical(ix, iy, iz, offset, dc, R):
+            """ Calculate the spherical coordinates from indices """
+            rx = addouter(addouter(ix * dc[0, 0], iy * dc[1, 0]), iz * dc[2, 0] - offset[0]).ravel()
+            ry = addouter(addouter(ix * dc[0, 1], iy * dc[1, 1]), iz * dc[2, 1] - offset[1]).ravel()
+            rz = addouter(addouter(ix * dc[0, 2], iy * dc[1, 2]), iz * dc[2, 2] - offset[2]).ravel()
+            # Total size of the indices
+            n = rx.size
+            # Calculate radius ** 2
+            rr = square(rx)
+            add(rr, square(ry), out=rr)
+            add(rr, square(rz), out=rr)
+            # Reduce our arrays to where the radius is "fine"
+            idx = (rr <= R ** 2).nonzero()[0]
+            rx = take(rx, idx)
+            ry = take(ry, idx)
+            arctan2(ry, rx, out=rx) # theta == rx
+            rz = take(rz, idx)
+            sqrt(take(rr, idx), out=ry) # rr == ry
+            divide(rz, ry, out=rz) # cos_phi == rz
+            rz[ry == 0.] = 0
+            return n, idx, ry, rx, rz
+
+        # Figure out the max-min indices with a spacing of 1 radians
+        rad1 = pi / 180
+        theta, phi = ogrid[-pi:pi:rad1, 0:pi:rad1]
+        ctheta, stheta = cos(theta), sin(theta)
+        cphi, sphi = cos(phi), sin(phi)
+        nrxyz = (theta.size, phi.size, 3)
+        del theta, phi, rad1
+
+        # First we calculate the min/max indices for all atoms
+        idx_mm = _a.emptyi([geom.na, 2, 3])
+        rxyz = _a.emptyd(nrxyz)
+        origo = grid.sc.origo.reshape(1, -1)
+        for atom, ia in geom.atom.iter(True):
+            if len(ia) == 0:
+                continue
+            R = atom.maxR()
+
+            # Reshape
+            rxyz.shape = nrxyz
+            rxyz[..., 0] = R * ctheta * sphi
+            rxyz[..., 1] = R * stheta * sphi
+            rxyz[..., 2] = R * cphi
+            rxyz.shape = (-1, 3)
+
+            idx = dot(rc, rxyz.T)
+            idx_m = idx.min(1)
+            idx_M = idx.max(1)
+
+            # Now do it for all the atoms to get indices of the middle of
+            # the atoms
+            # The coordinates are relative to origo, so we need to shift (when writing a grid
+            # it is with respect to origo)
+            xyz = geom.xyz[ia, :] - origo
+            idx = dot(rc, xyz.T).T
+
+            # Get min-max for all atoms, note we should first do the floor here
+            idx_mm[ia, 0, :] = floor(idx_m.reshape(1, -3) + idx).astype(int32)
+            idx_mm[ia, 1, :] = ceil(idx_M.reshape(1, -3) + idx).astype(int32)
+
+        # Now we have min-max for all atoms
+        # When we run the below loop all indices can be retrieved by looking
+        # up in the above table.
+
+        # Before continuing, we can easily clean up the temporary arrays
+        del ctheta, stheta, cphi, sphi, nrxyz, rxyz, origo, idx
+
+        aranged = _a.aranged
+
+        # Loop over all atoms in the full supercell structure
+        for IA in range(geom.na_s):
+
+            # Get atomic coordinate
+            xyz = geom.axyz(IA) - grid.origo
+            # Reduce to unit-cell atom
+            ia = geom.sc2uc(IA)
+            # Get current atom
+            atom = geom.atom[ia]
+
+            if ia == 0:
+                # start over for every new supercell
+                io = -1
+                isc = geom.a2isc(IA)
+                if has_k:
+                    phase = np.exp(-1j * dot(dot(dot(geom.rcell, k), geom.cell), isc))
+                else:
+                    # do not force complex values for Gamma only (user is responsible)
+                    phase = 1
+
+            # Extract maximum R
+            R = atom.maxR()
+            if R <= 0.:
+                warnings.warn("Atom '{}' does not have a wave-function, skipping atom.".format(atom))
+                # Skip this atom
+                io += atom.no
+                continue
+
+            # Get indices in the supercell grid
+            idxm = idx_mm[ia, 0, :] + shape * isc
+            idxM = idx_mm[ia, 1, :] + shape * isc
+
+            # Fast check whether we can skip this point
+            if idxm[0] >= shape[0] or \
+               idxm[1] >= shape[1] or \
+               idxm[2] >= shape[2] or \
+               idxM[0] < 0 or \
+               idxM[1] < 0 or \
+               idxM[2] < 0:
+                io += atom.no
+                continue
+
+            if idxm[0] < 0:
+                idxm[0] = 0
+            if idxM[0] >= shape[0]:
+                idxM[0] = shape[0] - 1
+            if idxm[1] < 0:
+                idxm[1] = 0
+            if idxM[1] >= shape[1]:
+                idxM[1] = shape[1] - 1
+            if idxm[2] < 0:
+                idxm[2] = 0
+            if idxM[2] >= shape[2]:
+                idxM[2] = shape[2] - 1
+
+            # Now idxm/M contains min/max indices used
+            # Convert to xyz-coordinate
+            sx = slice(idxm[0], idxM[0]+1)
+            sy = slice(idxm[1], idxM[1]+1)
+            sz = slice(idxm[2], idxM[2]+1)
+
+            # Convert to spherical coordinates
+            n, idx, r, theta, phi = idx2spherical(aranged(idxm[0], idxM[0] + 0.5),
+                                                  aranged(idxm[1], idxM[1] + 0.5),
+                                                  aranged(idxm[2], idxM[2] + 0.5), xyz, dcell, R)
+
+            # Allocate a temporary array where we add the psi elements
+            psi = psi_init(n)
+
+            # Loop on orbitals on this atom, grouped by radius
+            for os in atom.iter(True):
+
+                # Get the radius of orbitals (os)
+                oR = os[0].R
+
+                if oR <= 0.:
+                    warnings.warn("Orbital(s) '{}' does not have a wave-function, skipping orbital.".format(os))
+                    # Skip these orbitals
+                    io += len(os)
+                    continue
+
+                # Downsize to the correct indices
+                if np.allclose(oR, R):
+                    idx1 = idx.view()
+                    r1 = r.view()
+                    theta1 = theta.view()
+                    phi1 = phi.view()
+                else:
+                    idx1 = (r <= oR).nonzero()[0]
+                    # Reduce arrays
+                    r1 = take(r, idx1)
+                    theta1 = take(theta, idx1)
+                    phi1 = take(phi, idx1)
+                    idx1 = take(idx, idx1)
+
+                # Loop orbitals with the same radius
+                for o in os:
+                    io += 1
+
+                    # Evaluate psi component of the wavefunction
+                    # and add it for this atom
+                    psi[idx1] += o.psi_spher(r1, theta1, phi1, cos_phi=True) * (v[io] * phase)
+
+            # Clean-up
+            del idx1, r1, theta1, phi1, idx, r, theta, phi
+
+            # Convert to correct shape and add the current atom contribution to the wavefunction
+            psi.shape = idxM - idxm + 1
+            grid.grid[sx, sy, sz] += psi
+
+        # Reset the error code for division
+        np.seterr(**old_err)
+
 
 # For backwards compatibility we also use TightBinding
 # NOTE: that this is not sub-classed...

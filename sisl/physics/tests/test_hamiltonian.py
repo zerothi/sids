@@ -7,6 +7,10 @@ import math as m
 import numpy as np
 
 from sisl import Geometry, Atom, SuperCell, Hamiltonian, Spin, PathBZ
+from sisl import Grid
+from sisl import SphericalOrbital, EigenState
+
+pytestmark = pytest.mark.hamiltonian
 
 
 @pytest.fixture
@@ -523,19 +527,116 @@ class TestHamiltonian(object):
         HS = setup.HS.copy()
         HS.construct([(0.1, 1.5), ((1., 1.), (0.1, 0.1))])
         eig1 = HS.eigh()
-        for i in range(2):
+        for i in range(3): # to ensure all different algorithms has been used
             assert np.allclose(eig1, HS.eigh())
         setup.HS.empty()
 
     def test_eig3(self, setup):
         setup.HS.construct([(0.1, 1.5), ((1., 1.), (0.1, 0.1))])
         BS = PathBZ(setup.HS, [[0, 0, 0], [0.5, 0.5, 0]], 10)
-        eigs = BS.array().eigh()
+        eigs = BS.asarray().eigh()
         assert len(BS) == eigs.shape[0]
         assert len(setup.HS) == eigs.shape[1]
-        eig2 = np.array([eig for eig in BS.yields().eigh()])
+        eig2 = np.array([eig for eig in BS.asyield().eigh()])
         assert np.allclose(eigs, eig2)
         setup.HS.empty()
+
+    def test_eig4(self, setup):
+        # Test of eigenvalues vs eigenstate class
+        HS = setup.HS.copy()
+        HS.construct([(0.1, 1.5), ((1., 1.), (0.1, 0.1))])
+        for k in ([0] *3, [0.2] * 3):
+            e, v = HS.eigh(k, eigvals_only=False)
+            es = HS.eigenstate(k)
+            assert np.allclose(e, es.e)
+            assert np.allclose(v, es.v.T)
+            assert np.allclose(es.norm().sum(0), 1)
+
+    def test_dos1(self, setup):
+        HS = setup.HS.copy()
+        HS.construct([(0.1, 1.5), ((1., 1.), (0.1, 0.1))])
+        E = np.linspace(-4, 4, 1000)
+        for k in ([0] *3, [0.2] * 3):
+            es = HS.eigenstate(k)
+            DOS = es.DOS(E)
+            assert DOS.dtype.kind == 'f'
+            assert np.allclose(DOS, HS.DOS(E, k))
+            assert np.allclose(es.norm().sum(0), 1)
+            repr(es)
+
+    def test_dos2(self, setup):
+        ES = EigenState(0, [0])
+        E = np.linspace(-6, 6, 10)
+        DOS = ES.DOS(E, 'gaussian')
+        assert DOS.dtype.kind == 'f'
+        DOS = ES.DOS(E, 'lorentzian')
+        assert DOS.dtype.kind == 'f'
+
+    @pytest.mark.xfail(raises=ValueError)
+    def test_dos3(self, setup):
+        EigenState.distribution('unknown-function')
+
+    def test_pdos1(self, setup):
+        HS = setup.HS.copy()
+        HS.construct([(0.1, 1.5), ((0., 1.), (1., 0.1))])
+        E = np.linspace(-4, 4, 1000)
+        for k in ([0] *3, [0.2] * 3):
+            es = HS.eigenstate(k)
+            DOS = es.DOS(E, 'lorentzian')
+            PDOS = es.PDOS(E, 'lorentzian')
+            assert np.allclose(es.norm().sum(0), 1)
+            assert PDOS.dtype.kind == 'f'
+            assert PDOS.shape[0] == len(HS)
+            assert PDOS.shape[1] == len(E)
+            assert np.allclose(PDOS.sum(0), DOS)
+            assert np.allclose(PDOS, HS.PDOS(E, k, 'lorentzian'))
+
+    def test_pdos2(self, setup):
+        H = setup.H.copy()
+        H.construct([(0.1, 1.5), (0., 0.1)])
+        E = np.linspace(-4, 4, 1000)
+        for k in ([0] *3, [0.2] * 3):
+            es = H.eigenstate(k)
+            assert np.allclose(es.norm().sum(0), 1)
+            DOS = es.DOS(E)
+            PDOS = es.PDOS(E)
+            assert PDOS.dtype.kind == 'f'
+            assert np.allclose(PDOS.sum(0), DOS)
+            assert np.allclose(PDOS, H.PDOS(E, k))
+
+    def test_pdos3(self, setup):
+        # check whether the default S(Gamma) works
+        # In this case we will assume an orthogonal
+        # basis, however, the basis is not orthogonal.
+        HS = setup.HS.copy()
+        HS.construct([(0.1, 1.5), ((0., 1.), (1., 0.1))])
+        E = np.linspace(-4, 4, 1000)
+        es = HS.eigenstate()
+        es.parent = None
+        DOS = es.DOS(E)
+        PDOS = es.PDOS(E)
+        assert not np.allclose(PDOS.sum(0), DOS)
+
+    def test_pdos4(self, setup):
+        # check whether the default S(Gamma) works
+        # In this case we will assume an orthogonal
+        # basis. If the basis *is* orthogonal, then
+        # regardless of k, the PDOS will be correct.
+        H = setup.H.copy()
+        H.construct([(0.1, 1.5), (0., 0.1)])
+        E = np.linspace(-4, 4, 1000)
+        es = H.eigenstate()
+        es.parent = None
+        DOS = es.DOS(E)
+        PDOS = es.PDOS(E)
+        assert PDOS.dtype.kind == 'f'
+        assert np.allclose(PDOS.sum(0), DOS)
+        es = H.eigenstate([0.25] * 3)
+        DOS = es.DOS(E)
+        es.parent = None
+        PDOS = es.PDOS(E)
+        assert PDOS.dtype.kind == 'f'
+        assert np.allclose(PDOS.sum(0), DOS)
 
     def test_spin1(self, setup):
         g = Geometry([[i, 0, 0] for i in range(10)], Atom(6, R=1.01), sc=[100])
@@ -948,3 +1049,41 @@ class TestHamiltonian(object):
         edge = H2.edges(orbital=[0, 2], exclude=[0, 1, 2, 3])
         assert len(edge) == 8
         assert len(H2.geom.o2a(edge, uniq=True)) == 4
+
+
+def test_psi1():
+    N = 50
+    o1 = SphericalOrbital(0, (np.linspace(0, 2, N), np.exp(-np.linspace(0, 100, N))))
+    G = Geometry([[1] * 3, [2] * 3], Atom(6, o1), sc=[4, 4, 4])
+    H = Hamiltonian(G)
+    R, param = [0.1, 1.5], [1., 0.1]
+    H.construct([R, param])
+    ES = H.eigenstate(dtype=np.float64)
+    # Plot in the full thing
+    grid = Grid(0.1, geom=H.geom)
+    grid.fill(0.)
+    ES.sub(0).psi(grid)
+
+
+def test_psi2():
+    N = 50
+    o1 = SphericalOrbital(0, (np.linspace(0, 2, N), np.exp(-np.linspace(0, 100, N))))
+    G = Geometry([[1] * 3, [2] * 3], Atom(6, o1), sc=[4, 4, 4])
+    H = Hamiltonian(G)
+    R, param = [0.1, 1.5], [1., 0.1]
+    H.construct([R, param])
+    ES = H.eigenstate(dtype=np.float64)
+    # Plot in the full thing
+    grid = Grid(0.1, sc=SuperCell([2, 2, 2], origo=[2] * 3))
+    grid.fill(0.)
+    ES.sub(0).psi(grid)
+
+
+@pytest.mark.eigen
+def test_distribution1():
+    E = np.linspace(-2, 2, 10000)
+    dE = E[1] - E[0]
+    d = EigenState.distribution('gaussian', smearing=0.025)
+    assert d(E).sum() * dE == pytest.approx(1, abs=1e-6)
+    d = EigenState.distribution('lorentzian', smearing=1e-3)
+    assert d(E).sum() * dE == pytest.approx(1, abs=1e-3)

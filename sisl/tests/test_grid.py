@@ -5,7 +5,9 @@ import pytest
 import math as m
 import numpy as np
 
-from sisl import Grid, SuperCell
+from sisl import SuperCell, SphericalOrbital, Atom, Geometry
+from sisl import EigenState
+from sisl import Grid
 
 
 @pytest.fixture

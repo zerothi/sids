@@ -253,15 +253,15 @@ class Orbital(object):
     def psi_spher(self, r, theta, phi, *args, **kwargs):
         raise NotImplementedError
 
-    def toGrid(self, c=1., precision=0.05, R=None, dtype=np.float64):
+    def toGrid(self, precision=0.05, c=1., R=None, dtype=np.float64):
         """ Create a Grid with *only* this orbital wavefunction on it
 
         Parameters
         ----------
-        c : float or complex, optional
-           coefficient for the orbital
         precision : float, optional
            used separation in the `Grid` between voxels (in Ang)
+        c : float or complex, optional
+           coefficient for the orbital
         R : float, optional
             box size of the grid (default to the orbital range)
         dtype : numpy.dtype, optional
@@ -278,11 +278,13 @@ class Orbital(object):
         from .geometry import Geometry
         from .grid import Grid
         from .atom import Atom
+        from .physics.hamiltonian import EigenState
         sc = SuperCell(R*2, origo=[-R] * 3)
         g = Geometry([0] * 3, Atom(1, self), sc=sc)
         n = int(np.rint(2 * R / precision))
         G = Grid([n] * 3, dtype=dtype, geom=g)
-        G.psi([c])
+        es = EigenState(0, [c], g)
+        es.psi(G)
         return G
 
     def __getstate__(self):

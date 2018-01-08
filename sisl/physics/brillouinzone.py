@@ -31,28 +31,35 @@ class BrillouinZone(object):
     details).
     """
 
-    def __init__(self, obj):
+    def __init__(self, parent):
         """ Initialize a `BrillouinZone` object from a given `SuperCell`
 
         Parameters
         ----------
-        obj : object or array_like
-           An object with associated `obj.cell` and `obj.rcell` or
+        parent : object or array_like
+           An object with associated ``parent.cell`` and ``parent.rcell`` or
            an array of floats which may be turned into a `SuperCell`
         """
         try:
-            obj.cell
-            obj.rcell
-            self.obj = obj
+            # It probably has the supercell attached
+            parent.cell
+            parent.rcell
+            self.parent = parent
         except:
-            self.obj = SuperCell(obj)
+            self.parent = SuperCell(parent)
 
         # Gamma point
-        self._k = np.zeros([1, 3], np.float64)
-        self._w = np.ones(1, np.float64)
+        self._k = _a.zerosd([1, 3])
+        self._w = _a.onesd(1)
 
         # Instantiate the array call
-        self.array()
+        self.asarray()
+
+    def __repr__(self):
+        """ String representation of the BrillouinZone """
+        if isinstance(self.parent, SuperCell):
+            return self.__class__.__name__ + '{{nk: {},\n {}\n}}'.format(len(self), repr(self.parent).replace('\n', '\n '))
+        return self.__class__.__name__ + '{{nk: {},\n {}\n}}'.format(len(self), repr(self.parent.sc).replace('\n', '\n '))
 
     @property
     def k(self):
@@ -66,11 +73,11 @@ class BrillouinZone(object):
 
     @property
     def cell(self):
-        return self.obj.cell
+        return self.parent.cell
 
     @property
     def rcell(self):
-        return self.obj.rcell
+        return self.parent.rcell
 
     def tocartesian(self, k):
         """ Transfer a k-point in reduced coordinates to the Cartesian coordinates
@@ -96,15 +103,15 @@ class BrillouinZone(object):
 
     def __getattr__(self, attr):
         try:
-            getattr(self.obj, attr)
+            getattr(self.parent, attr)
             self.__attr = attr
             return self
         except AttributeError:
             raise AttributeError("'{}' does not exist in class '{}'".format(
-                attr, self.obj.__class__.__name__))
+                attr, self.parent.__class__.__name__))
 
     # Implement wrapper calls
-    def array(self, dtype=np.float64):
+    def asarray(self, dtype=np.float64):
         """ Return `self` with `numpy.ndarray` returned quantities
 
         This forces the `__call__` routine to return a single array.
@@ -117,19 +124,19 @@ class BrillouinZone(object):
         Examples
         --------
         >>> obj = BrillouinZone(...) # doctest: +SKIP
-        >>> obj.array().eigh() # doctest: +SKIP
+        >>> obj.asarray().eigh() # doctest: +SKIP
 
         See Also
         --------
-        yields : all output returned through an iterator
-        average : take the average (with k-weights) of the Brillouin zone
+        asyield : all output returned through an iterator
+        asaverage : take the average (with k-weights) of the Brillouin zone
         """
 
         def _call(self, *args, **kwargs):
-            func = getattr(self.obj, self.__attr)
+            func = getattr(self.parent, self.__attr)
             for i, k in enumerate(self):
                 if i == 0:
-                    v = func(k, *args, **kwargs)
+                    v = func(*args, k=k, **kwargs)
                     if len(self) == 1:
                         return v
                     shp = [len(self)]
@@ -138,13 +145,13 @@ class BrillouinZone(object):
                     a[i, :] = v[:]
                     del v
                 else:
-                    a[i, :] = func(k, *args, **kwargs)
+                    a[i, :] = func(*args, k=k, **kwargs)
             return a
         # Set instance __call__
-        self.__call__ = types.MethodType(_call, self)
+        setattr(self, '__call__', types.MethodType(_call, self))
         return self
 
-    def yields(self, dtype=np.float64):
+    def asyield(self, dtype=np.float64):
         """ Return `self` with yielded quantities
 
         This forces the `__call__` routine to return a an iterator which may
@@ -158,23 +165,23 @@ class BrillouinZone(object):
         Examples
         --------
         >>> obj = BrillouinZone(Hamiltonian) # doctest: +SKIP
-        >>> obj.yields().eigh() # doctest: +SKIP
+        >>> obj.asyield().eigh() # doctest: +SKIP
 
         See Also
         --------
-        array : all output as a single array
-        average : take the average (with k-weights) of the Brillouin zone
+        asarray : all output as a single array
+        asaverage : take the average (with k-weights) of the Brillouin zone
         """
 
         def _call(self, *args, **kwargs):
-            func = getattr(self.obj, self.__attr)
+            func = getattr(self.parent, self.__attr)
             for k in self:
-                yield func(k, *args, **kwargs).astype(dtype, copy=False)
+                yield func(*args, k=k, **kwargs).astype(dtype, copy=False)
         # Set instance __call__
-        self.__call__ = types.MethodType(_call, self)
+        setattr(self, '__call__', types.MethodType(_call, self))
         return self
 
-    def average(self, dtype=np.float64):
+    def asaverage(self, dtype=np.float64):
         """ Return `self` with yielded quantities
 
         This forces the `__call__` routine to return a an iterator which may
@@ -188,43 +195,43 @@ class BrillouinZone(object):
         Examples
         --------
         >>> obj = BrillouinZone(Hamiltonian) # doctest: +SKIP
-        >>> obj.average().eigh() # doctest: +SKIP
+        >>> obj.asaverage().DOS(np.linspace(-2, 2, 100)) # doctest: +SKIP
 
         >>> obj = BrillouinZone(Hamiltonian) # doctest: +SKIP
-        >>> obj.average() # doctest: +SKIP
-        >>> obj.eigh() # doctest: +SKIP
-        >>> obj.eighs() # doctest: +SKIP
+        >>> obj.asaverage() # doctest: +SKIP
+        >>> obj.DOS(np.linspace(-2, 2, 100)) # doctest: +SKIP
+        >>> obj.PDOS(np.linspace(-2, 2, 100)) # doctest: +SKIP
 
         See Also
         --------
-        array : all output as a single array
-        yields : all output returned through an iterator
+        asarray : all output as a single array
+        asyield : all output returned through an iterator
         """
 
         def _call(self, *args, **kwargs):
-            func = getattr(self.obj, self.__attr)
+            func = getattr(self.parent, self.__attr)
             w = self.weight[:]
             for i, k in enumerate(self):
                 if i == 0:
-                    v = func(k, *args, **kwargs) * w[i]
+                    v = func(*args, k=k, **kwargs) * w[i]
                 else:
-                    v += func(k, *args, **kwargs) * w[i]
+                    v += func(*args, k=k, **kwargs) * w[i]
             return v
         # Set instance __call__
-        self.__call__ = types.MethodType(_call, self)
+        setattr(self, '__call__', types.MethodType(_call, self))
         return self
 
-    mean = average
+    asmean = asaverage
 
     def __call__(self, *args, **kwargs):
         """ Calls the given attribute of the internal object and returns the quantity
 
         Parameters
         ----------
-        *args :
-            arguments passed to the attribute call, note that the first argument
-            will *always* be `k`
-        **kwargs :
+        *args : optional
+            arguments passed to the attribute call, note that an argument `k=k` will be
+            added by this routine as a way to loop the k-points.
+        **kwargs : optional
             keyword arguments passed to the attribute call, note that the first argument
             will *always* be `k`
 
@@ -234,7 +241,7 @@ class BrillouinZone(object):
         """
         try:
             call = getattr(self, '__call__')
-        except Exception as e:
+        except Exception:
             raise NotImplementedError("Could not call the object it self")
         return call(*args, **kwargs)
 
@@ -299,6 +306,9 @@ class MonkhorstPackBZ(BrillouinZone):
 
         # Retrieve the diagonal number of values
         Dn = np.diag(nkpt)
+        if np.any(Dn) == 0:
+            raise ValueError(self.__class__.__name__ + ' *must* be initialized with '
+                             'diagonal elements different from 0.')
 
         # Correct for 1's where it does not
         # make sense to reduce the BZ
@@ -320,16 +330,6 @@ class MonkhorstPackBZ(BrillouinZone):
         N = len(self._k)
         # We have to correct for the size of the Brillouin zone
         self._w = np.ones([N], np.float64) * np.prod(size) / N
-
-    def __iter__(self):
-        """ Iterate through the Monkhorst pack-grid
-
-        Yields
-        ------
-        k, w : k-point and associated weight
-        """
-        for i in range(len(self)):
-            yield self._k[i], self._w[i]
 
 
 class PathBZ(BrillouinZone):
@@ -361,12 +361,12 @@ class PathBZ(BrillouinZone):
 
         # If the array has fewer points we try and determine
         if self.point.shape[1] < 3:
-            if self.point.shape[1] != np.sum(self.obj.nsc > 1):
+            if self.point.shape[1] != np.sum(self.parent.nsc > 1):
                 raise ValueError('Could not determine the non-periodic direction')
 
             # fix the points where there are no periodicity
             for i in [0, 1, 2]:
-                if self.obj.nsc[i] == 1:
+                if self.parent.nsc[i] == 1:
                     self.point = np.insert(self.point, i, 0., axis=1)
 
         # Ensure the shape is correct
@@ -426,8 +426,17 @@ class PathBZ(BrillouinZone):
                 yield self.point[i] + j * delta
 
     def lineartick(self):
-        """ The tick-marks corresponding to the linear-k values """
-        return self.lineark(True)[0:2]
+        """ The tick-marks corresponding to the linear-k values
+
+        Returns
+        -------
+        linear_k : The positions in reciprocal space determined by the distance between points
+
+        See Also
+        --------
+        lineark : Routine used to calculate the tick-marks.
+        """
+        return self.lineark(True)[1:3]
 
     def lineark(self, ticks=False):
         """ A 1D array which corresponds to the delta-k values of the path
@@ -440,15 +449,27 @@ class PathBZ(BrillouinZone):
         >>> p = PathBZ(...) # doctest: +SKIP
         >>> eigs = Hamiltonian.eigh(p) # doctest: +SKIP
         >>> for i in range(len(Hamiltonian)): # doctest: +SKIP
-        >>>     pyplot.plot(p.lineark(), eigs[:, i]) # doctest: +SKIP
+        ...     plt.plot(p.lineark(), eigs[:, i]) # doctest: +SKIP
+
+        >>> p = PathBZ(...) # doctest: +SKIP
+        >>> eigs = Hamiltonian.eigh(p) # doctest: +SKIP
+        >>> lk, kt, kl = p.lineark(True)
+        >>> plt.xticks(kt, kl)
+        >>> for i in range(len(Hamiltonian)): # doctest: +SKIP
+        ...     plt.plot(lk, eigs[:, i]) # doctest: +SKIP
 
         Parameters
         ----------
         ticks : bool, optional
            if `True` the ticks for the points are also returned
 
-           xticks, label_ticks, lk = PathBZ.lineark(True)
+           lk, xticks, label_ticks, lk = PathBZ.lineark(True)
 
+        Returns
+        -------
+        linear_k : The positions in reciprocal space determined by the distance between points
+        k_tick : Linear k-positions of the points, only returned if `ticks` is ``True``
+        k_label : Labels at `k_tick`, only returned if `ticks` is ``True``
         """
         # Calculate points
         k = [self.tocartesian(pnt) for pnt in self.point]
@@ -474,7 +495,7 @@ class PathBZ(BrillouinZone):
         # Get label tick, in case self.name is a single string 'ABCD'
         label_tick = [a for a in self.name]
         if ticks:
-            return dK[xtick], label_tick, dK
+            return dK, dK[xtick], label_tick
         return dK
 
     def __len__(self):

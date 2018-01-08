@@ -1,4 +1,4 @@
-subroutine read_hsx_header(fname,Gamma,nspin,no_u,no_s,maxnh)
+subroutine read_hsx_sizes(fname,Gamma,nspin,no_u,no_s,maxnh)
   
   implicit none
 
@@ -26,10 +26,10 @@ subroutine read_hsx_header(fname,Gamma,nspin,no_u,no_s,maxnh)
 
   close(iu)
   
-end subroutine read_hsx_header
+end subroutine read_hsx_sizes
 
 subroutine read_hsx( fname, Gamma, no_u, no_s, nspin, maxnh, &
-     numh, listhptr, listh, H, S, xij)
+     numh, listh, H, S, xij)
   
   implicit none
 
@@ -43,18 +43,19 @@ subroutine read_hsx( fname, Gamma, no_u, no_s, nspin, maxnh, &
   character(len=*), intent(in) :: fname
   logical, intent(in) :: Gamma
   integer, intent(in) :: no_u, no_s, nspin, maxnh
-  integer, intent(out) :: listh(maxnh), numh(no_u), listhptr(no_u)
+  integer, intent(out) :: numh(no_u), listh(maxnh)
   real(sp), intent(out) :: H(maxnh,nspin), S(maxnh), xij(3,maxnh)
   
 ! Define f2py intents
 !f2py intent(in) :: fname
 !f2py intent(in) :: Gamma, no_u, no_s, nspin, maxnh
-!f2py intent(out) :: numh, listhptr, listh
+!f2py intent(out) :: numh, listh
 !f2py intent(out) :: H, S, xij
 
 ! Internal variables and arrays
   integer :: iu
   integer :: is, ih, im
+  integer :: listhptr(maxnh)
 
   ! Local readables
   logical :: lGamma
@@ -116,7 +117,9 @@ subroutine read_hsx( fname, Gamma, no_u, no_s, nspin, maxnh, &
 
   read(iu) !Qtot,temp
 
-  if ( .not. Gamma ) then
+  if ( Gamma ) then
+     xij = 0._sp
+  else
      do ih = 1 , no_u
         im = numh(ih)
         read(iu) buf(1:im*3)
