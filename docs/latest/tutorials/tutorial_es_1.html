@@ -67,7 +67,7 @@
             
             
               <div class="version">
-                0.9.2-167
+                0.9.2-176
               </div>
             
           
@@ -102,7 +102,7 @@
 <li class="toctree-l1 current"><a class="reference internal" href="../tutorials.html">Tutorials</a><ul class="current">
 <li class="toctree-l2 current"><a class="current reference internal" href="#">Electronic structure calculation – a walk-through</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#Creating-the-geometry-to-investigate">Creating the geometry to investigate</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#Setting-up-the-electronic-structure">Setting up the electronic structure</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#Creating-the-electronic-structure">Creating the electronic structure</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#Hamiltonian-eigenstates">Hamiltonian eigenstates</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#Brillouin-zone-calculations">Brillouin-zone calculations</a><ul>
 <li class="toctree-l4"><a class="reference internal" href="#Bandstructure">Bandstructure</a></li>
@@ -389,7 +389,9 @@ div.nboutput div.output_area.stderr {
     margin-right: 4px;  /* make room for the exclamation icon */
 }
 </style>
-<p>Download IPython notebook <a class="reference external" href="https://raw.githubusercontent.com/zerothi/sisl/master/docs/tutorials/tutorial_es_1.ipynb">here</a>.</p>
+<p>&lt;div align=”right”&gt;
+Download IPython notebook <a class="reference external" href="https://raw.githubusercontent.com/zerothi/sisl/master/docs/tutorials/tutorial_es_1.ipynb">here</a>.
+&lt;/div&gt;</p>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [1]:
@@ -411,7 +413,10 @@ of the <code class="docutils literal"><span class="pre">sisl</span></code> funct
 <div class="section" id="Creating-the-geometry-to-investigate">
 <h2>Creating the geometry to investigate<a class="headerlink" href="#Creating-the-geometry-to-investigate" title="Permalink to this headline">¶</a></h2>
 <div class="line-block">
-<div class="line">Our system of interest will be the graphene system.</div>
+<div class="line">Our system of interest will be the graphene system. Instead of simply
+creating a graphene flake, or the primary unit-cell of graphene we
+will try and create a geometry with a defect, i.e. one less Carbon
+atom.</div>
 <div class="line">We will start by creating a graphene flake</div>
 </div>
 <div class="nbinput nblast docutils container">
@@ -432,6 +437,8 @@ bond-length of <span class="math">\(1.42\,\mathrm{Å}\)</span>.</li>
 <li>create the pristine graphene unit cell, by default this will
 create a supercell with a size <code class="docutils literal"><span class="pre">3x3</span></code>, i.e. a nearest neighbour
 unit-cell.</li>
+<li>assign a Carbon atom with a default of one orbital per atom as the
+basis</li>
 </ul>
 </li>
 <li><code class="docutils literal"><span class="pre">Geometry.tile</span></code> tiles the geometry <code class="docutils literal"><span class="pre">(reps,</span> <span class="pre">axis)</span></code> by <code class="docutils literal"><span class="pre">reps</span></code>
@@ -498,7 +505,8 @@ account.</p>
 </div>
 <p>Removing an atom can be done easily with <code class="docutils literal"><span class="pre">Geometry.remove</span></code>. This
 routine takes an index, or a list of indices of the atoms to be removed.
-For instance removing the first atom with result in</p>
+For instance removing the first atom with result in the following
+geometry (red atom is the removed atom)</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [5]:
@@ -521,17 +529,18 @@ For instance removing the first atom with result in</p>
 </div>
 </div>
 <p>However, while it doesn’t matter which atom we remove, we will prefer to
-remove an atom in the middle for visualization.</p>
-<p>To remove the (closests) middle atom we can either compare positions and
-figure out which index of the atom to remove. Another and easier method
-is to find all atoms near a given position, then remove one of them. As
-we wish to find the middle of the atomic coordinates we want the
-<em>center</em> of the atomic coordinates, here <code class="docutils literal"><span class="pre">Geometry.center</span></code> is useful.
-Secondly, <code class="docutils literal"><span class="pre">Geometry.close</span></code> is able to return all atomic indices close
-to a given position, note that by default the <code class="docutils literal"><span class="pre">Geometry.close</span></code>
-function determines all atoms with a radius equal to the maximum orbital
-radius. Here we explicitly set the <em>search radius</em> to
-<span class="math">\(1.5\,\mathrm{Å}\)</span>.</p>
+remove an atom in the middle for visualization purposes.</p>
+<p>To remove the (closests) middle atom we can compare positions and figure
+out which index of the atom to remove. Another and easier method is to
+find all atoms near a given position, then remove one of them. The
+middle of the atomic coordinates is also the <em>center</em> of atomic
+coordinates, here <code class="docutils literal"><span class="pre">Geometry.center</span></code> is useful. Secondly,
+<code class="docutils literal"><span class="pre">Geometry.close</span></code> may be used to find all atomic indices close to a
+given position or atom. By default the <code class="docutils literal"><span class="pre">Geometry.close</span></code> function
+determines all atoms with a radius equal to the maximum orbital radius.
+Here we explicitly set the <em>search radius</em> to <span class="math">\(1.5\,\mathrm{Å}\)</span>,
+it is however not needed as the default radius will be radius of the
+orbital on the Carbon atom.</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [6]:
@@ -560,11 +569,12 @@ radius. Here we explicitly set the <em>search radius</em> to
 </div>
 </div>
 </div>
-<div class="section" id="Setting-up-the-electronic-structure">
-<h2>Setting up the electronic structure<a class="headerlink" href="#Setting-up-the-electronic-structure" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="Creating-the-electronic-structure">
+<h2>Creating the electronic structure<a class="headerlink" href="#Creating-the-electronic-structure" title="Permalink to this headline">¶</a></h2>
 <p>To calculate eigenstates, DOS and other physical quantities from the
-Hamiltonian we first require to setup the Hamiltonian for this geometry.</p>
-<p>First create a <code class="docutils literal"><span class="pre">Hamiltonian</span></code></p>
+Hamiltonian we first require to setup the Hamiltonian for this geometry.
+Accomblishing this is done by passing a <code class="docutils literal"><span class="pre">Geometry</span></code> to a
+<code class="docutils literal"><span class="pre">Hamiltonian</span></code> class</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [7]:
@@ -599,21 +609,26 @@ Hamiltonian{non-zero: 0, orthogonal: True,
 that it is an orthogonal basis (sisl also allows non-orthogonal
 basis’). The spin-configuration is an unpolarized configuration (see
 <code class="docutils literal"><span class="pre">Spin</span></code> for details).</div>
-<div class="line">Currently <code class="docutils literal"><span class="pre">non-zero</span> <span class="pre">=</span> <span class="pre">0</span></code> which specifies that there are <em>no</em>
-associated Hamiltonian elements stored in this Hamiltonian object.</div>
+<div class="line">Currently <code class="docutils literal"><span class="pre">non-zero</span> <span class="pre">=</span> <span class="pre">0</span></code> specifies that there are <em>no</em> associated
+Hamiltonian elements stored in this Hamiltonian object.</div>
 </div>
 <div class="line-block">
 <div class="line">Our next concern is to specify the Hamiltonian elements. We will jump
-directly to the easy method of specifying everything via a simple
+directly to the easy method by specifying everything via a simple
 routine call <code class="docutils literal"><span class="pre">Hamiltonian.construct</span></code>. However, know that one may
-interact with the Hamiltonian as though it was a matrix,
+interact with the Hamiltonian as though it was a matrix;
 <code class="docutils literal"><span class="pre">Hamiltonian[0,</span> <span class="pre">1]</span> <span class="pre">=</span> <span class="pre">a</span></code> will set the hopping element from the 0th
 orbital to the 1st orbital to <code class="docutils literal"><span class="pre">a</span></code>.</div>
-<div class="line">We will specify all on-site elements to <span class="math">\(0.\)</span>, and all nearest
-neighbour interactions with <span class="math">\(-2.7\,\mathrm{eV}\)</span>, this is the
-most common form of the graphene tight-binding model.</div>
-<div class="line">The argument requires a list of radii and a list of energies that make
-up the elements.</div>
+<div class="line">We will specify all on-site elements to <span class="math">\(0.\,\mathrm{eV}\)</span>, and
+all nearest neighbour interactions with <span class="math">\(-2.7\,\mathrm{eV}\)</span>,
+this is the most common used graphene tight-binding model.</div>
+<div class="line">The arguments for the <code class="docutils literal"><span class="pre">construct</span></code> method is a list of radii and an
+accompanying list of energies. Here <code class="docutils literal"><span class="pre">r</span></code> tells <code class="docutils literal"><span class="pre">sisl</span></code> to find all
+atoms within a sphere of <span class="math">\(0.1\,\mathrm{Å}\)</span> from each atom and
+set the corresponding element to <span class="math">\(0\)</span>, secondly all atoms within
+a spherical radius of <span class="math">\(0.1\,\mathrm{Å}\)</span> to
+<span class="math">\(1.44\,\mathrm{Å}\)</span> are given the matrix element
+<span class="math">\(-2.7\,\mathrm{eV}\)</span></div>
 </div>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none"><div class="highlight"><pre>
@@ -621,7 +636,9 @@ up the elements.</div>
 </pre></div>
 </div>
 <div class="input_area highlight-ipython2"><div class="highlight"><pre>
-<span></span><span class="n">H</span><span class="o">.</span><span class="n">construct</span><span class="p">([(</span><span class="mf">0.1</span><span class="p">,</span> <span class="mf">1.44</span><span class="p">),</span> <span class="p">(</span><span class="mf">0.</span><span class="p">,</span> <span class="o">-</span><span class="mf">2.7</span><span class="p">)])</span>
+<span></span><span class="n">r</span> <span class="o">=</span> <span class="p">(</span><span class="mf">0.1</span><span class="p">,</span>  <span class="mf">1.44</span><span class="p">)</span>
+<span class="n">t</span> <span class="o">=</span> <span class="p">(</span><span class="mf">0.</span> <span class="p">,</span> <span class="o">-</span><span class="mf">2.7</span> <span class="p">)</span>
+<span class="n">H</span><span class="o">.</span><span class="n">construct</span><span class="p">([</span><span class="n">r</span><span class="p">,</span> <span class="n">t</span><span class="p">])</span>
 <span class="k">print</span><span class="p">(</span><span class="n">H</span><span class="p">)</span>
 </pre></div>
 </div>
@@ -656,10 +673,10 @@ with nearest neighbour interactions describing the electronic
 structure.</div>
 <div class="line">This completes what is needed to calculate a great deal of physical
 quantities, e.g. eigenstates, density of states, projected density of
-states, bandstructures.</div>
+states and bandstructures.</div>
 </div>
-<p>To begin with we will calculate the <span class="math">\(\Gamma\)</span>-point eigenstates and
-plot a subset of the eigenstates’ norm on the geometry.</p>
+<p>To begin with we calculate the <span class="math">\(\Gamma\)</span>-point eigenstates and plot
+a subset of the eigenstates’ norm on the geometry.</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [9]:
@@ -699,8 +716,8 @@ smearing is not wanted.</li>
 <li><code class="docutils literal"><span class="pre">EigenState.psi</span></code>: add <em>all</em> contained eigenstates to a passed
 real-space grid.</li>
 </ul>
-<p>Lets first try and calculate the full DOS for a given set of energies in
-the range <span class="math">\(-4\,\mathrm{eV}\)</span> - <span class="math">\(\mathrm{4}\,\mathrm{eV}\)</span></p>
+<p>Lets first try and calculate the DOS for a given set of energies in the
+range <span class="math">\(-4\,\mathrm{eV}\)</span> - <span class="math">\(\mathrm{4}\,\mathrm{eV}\)</span></p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [10]:
@@ -760,7 +777,7 @@ zone.</p>
 <div class="line-block">
 <div class="line">An easy and useful analysis is the <em>band structure</em>. In <code class="docutils literal"><span class="pre">sisl</span></code>
 calculating the band-structure is as easy as anything else.</div>
-<div class="line">One has to begin with defining the path in the Brillouin zone.</div>
+<div class="line">Begin by defining the path in the Brillouin zone.</div>
 </div>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none"><div class="highlight"><pre>
@@ -1035,10 +1052,10 @@ Geometry{na: 71, no: 71,
 </pre></div></div>
 </div>
 <p>Note the difference between the two <code class="docutils literal"><span class="pre">print(system)</span></code> statements, before
-the replacement an intrinsic <code class="docutils literal"><span class="pre">Orbital</span></code> object describes the orbital,
-in effect no knowledge other than the radius. After the spherical
-orbital with azimuthal angular moment <span class="math">\(l=1\)</span> is replaced. Now we
-can plot the real-space grid for an eigenstate.</p>
+the replacement, an intrinsic <code class="docutils literal"><span class="pre">Orbital</span></code> object describes the orbital,
+in effect no knowledge other than the radius. After replacement, the
+spherical orbital with azimuthal angular moment <span class="math">\(l=1\)</span> is replaced.
+Now we can plot the real-space grid for an eigenstate.</p>
 <p>Lets plot one of the <span class="math">\(\Gamma\)</span>-point eigenstates close to the
 Fermi-level.</p>
 <div class="nbinput docutils container">
@@ -1137,7 +1154,7 @@ alternating atoms.</p>
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'../',
-            VERSION:'0.9.2-167',
+            VERSION:'0.9.2-176',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true,
