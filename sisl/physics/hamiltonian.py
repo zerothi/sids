@@ -4,8 +4,9 @@ import warnings
 
 import numpy as np
 from numpy import int32, float64, pi
-from numpy import take, ogrid, add
-from numpy import cos, sin, arctan2, divide, conj
+from numpy import take, ogrid
+from numpy import add, subtract, multiply, divide
+from numpy import cos, sin, arctan2, conj
 from numpy import dot, sqrt, square, floor, ceil
 
 from sisl._help import _range as range, _str as str
@@ -13,6 +14,7 @@ from sisl._help import ensure_array
 import sisl._array as _a
 from sisl import Geometry
 from sisl.eigensystem import EigenSystem
+from .distribution_function import distribution as dist_func
 from .spin import Spin
 from .sparse import SparseOrbitalBZSpin
 
@@ -206,13 +208,13 @@ class Hamiltonian(SparseOrbitalBZSpin):
         distribution : func, optional
             a function that accepts :math:`E-\epsilon` as argument and calculates the
             distribution function.
-            If ``None`` ``EigenState.distribution('gaussian')`` will be used.
+            If ``None`` ``sisl.physics.distribution('gaussian')`` will be used.
         **kwargs: optional
             additional parameters passed to the `eigenstate` routine
 
         See Also
         --------
-        distribution : setup a distribution function, see details regarding the `distribution` argument
+        sisl.physics.distribution : setup a distribution function, see details regarding the `distribution` argument
         eigenstate : method used to calculate the eigenstates
         PDOS : Calculate projected DOS
         EigenState.DOS : Underlying method used to calculate the DOS
@@ -235,13 +237,13 @@ class Hamiltonian(SparseOrbitalBZSpin):
         distribution : func, optional
             a function that accepts :math:`E-\epsilon` as argument and calculates the
             distribution function.
-            If ``None`` ``EigenState.distribution('gaussian')`` will be used.
+            If ``None`` ``sisl.physics.distribution('gaussian')`` will be used.
         **kwargs: optional
             additional parameters passed to the `eigenstate` routine
 
         See Also
         --------
-        distribution : setup a distribution function, see details regarding the `distribution` argument
+        sisl.physics.distribution : setup a distribution function, see details regarding the `distribution` argument
         eigenstate : method used to calculate the eigenstates
         DOS : Calculate total DOS
         EigenState.DOS : Underlying method used to calculate the DOS
@@ -257,52 +259,6 @@ class EigenState(EigenSystem):
     Subsequent DOS calculations and/or wavefunction calculations (`Grid.psi`) may be
     performed using this object.
     """
-
-    @classmethod
-    def distribution(cls, method, smearing=0.1):
-        r""" Create a distribution function for input in e.g. `DOS`. Gaussian, Lorentzian etc.
-
-        In the following :math:`\epsilon` are the eigenvalues contained in this `EigenState`.
-
-        The Gaussian distribution is calculated as:
-
-        .. math::
-            G(E) = \sum_i \frac{1}{\sqrt{2\pi\sigma^2}}\exp\big[- (E - \epsilon_i)^2 / (2\sigma^2)\big]
-
-        where :math:`\sigma` is the `smearing` parameter.
-
-        The Lorentzian distribution is calculated as:
-
-        .. math::
-            L(E) = \sum_i \frac{1}{\pi}\frac{\gamma}{(E - \epsilon_i)^2 + \gamma^2}
-
-        where :math:`\gamma` is the `smearing` parameter, note that here :math:`\gamma` is the
-        half-width at half-maximum (:math:`2\gamma` would be the full-width at half-maximum).
-
-        Parameters
-        ----------
-        method : {'gaussian', 'lorentzian'}
-            the distribution function
-        smearing : float, optional
-            the smearing parameter for the method (:math:`\sigma` for Gaussian, etc.)
-
-        Returns
-        -------
-        func : a function which accepts one argument
-        """
-        if method.lower() in ['gauss', 'gaussian']:
-            exp = np.exp
-            sigma2 = 2 * smearing ** 2
-            pisigma = (pi * sigma2) ** .5
-            def func(E):
-                return exp(-E ** 2 / sigma2) / pisigma
-        elif method.lower() in ['lorentz', 'lorentzian']:
-            def func(E):
-                return (smearing / pi) / (E ** 2 + smearing ** 2)
-        else:
-            raise ValueError(cls.__name__ + ".distribution currently only implements 'gaussian' or "
-                             "'lorentzian' distribution functions")
-        return func
 
     def norm(self, idx=None):
         r""" Return the individual orbital norms for each eigenstate, possibly only for a subset of eigenstates
@@ -355,7 +311,7 @@ class EigenState(EigenSystem):
 
         where :math:`D(\Delta E)` is the distribution function used. Note that the distribution function
         used may be a user-defined function. Alternatively a distribution function may
-        be aquired from `EigenState.distribution`.
+        be aquired from `sisl.physics.distribution`.
 
         Parameters
         ----------
@@ -364,11 +320,11 @@ class EigenState(EigenSystem):
         distribution : func, optional
             a function that accepts :math:`E-\epsilon` as argument and calculates the
             distribution function.
-            If ``None`` ``EigenState.distribution('gaussian')`` will be used.
+            If ``None`` ``sisl.physics.distribution('gaussian')`` will be used.
 
         See Also
         --------
-        distribution : a selected set of implemented distribution functions
+        sisl.physics.distribution : a selected set of implemented distribution functions
         PDOS : the projected DOS
 
         Returns
@@ -376,9 +332,9 @@ class EigenState(EigenSystem):
         numpy.ndarray : DOS calculated at energies, has same length as `E`
         """
         if distribution is None:
-            distribution = self.distribution('gaussian')
+            distribution = dist_func('gaussian')
         elif isinstance(distribution, str):
-            distribution = self.distribution(distribution)
+            distribution = dist_func(distribution)
         DOS = distribution(E - self.e[0])
         for i in range(1, len(self)):
             DOS += distribution(E - self.e[i])
@@ -394,7 +350,7 @@ class EigenState(EigenSystem):
 
         where :math:`D(\Delta E)` is the distribution function used. Note that the distribution function
         used may be a user-defined function. Alternatively a distribution function may
-        be aquired from `EigenState.distribution`.
+        be aquired from `sisl.physics.distribution`.
 
         In case of an orthogonal basis set :math:`\mathbf S` is equal to the identity matrix.
         Note that `DOS` is the sum of the orbital projected DOS:
@@ -409,11 +365,11 @@ class EigenState(EigenSystem):
         distribution : func, optional
             a function that accepts :math:`E-\epsilon` as argument and calculates the
             distribution function.
-            If ``None`` ``EigenState.distribution('gaussian')`` will be used.
+            If ``None`` ``sisl.physics.distribution('gaussian')`` will be used.
 
         See Also
         --------
-        distribution : a selected set of implemented distribution functions
+        sisl.physics.distribution : a selected set of implemented distribution functions
         DOS : the total DOS
 
         Returns
@@ -421,9 +377,9 @@ class EigenState(EigenSystem):
         numpy.ndarray : projected DOS calculated at energies, has dimension ``(self.size, len(E))``.
         """
         if distribution is None:
-            distribution = self.distribution('gaussian')
+            distribution = dist_func('gaussian')
         elif isinstance(distribution, str):
-            distribution = self.distribution(distribution)
+            distribution = dist_func(distribution)
 
         # Retrieve options for the Sk calculation
         opt = {'k': self.info.get('k', (0, 0, 0))}
@@ -436,9 +392,7 @@ class EigenState(EigenSystem):
             Sk = self.parent.Sk(**opt)
             is_nc = self.parent.spin > Spin('p')
             if is_nc:
-                # Downscale because Sk is only diagonal
                 Sk = Sk[::2, ::2]
-                raise ValueError('Currently the PDOS for non-colinear and spin-orbit has not been checked')
         else:
             # Assume orthogonal basis set and Gamma-point
             # TODO raise warning, should we do this here?
@@ -448,47 +402,38 @@ class EigenState(EigenSystem):
             Sk = _K()
 
         if is_nc:
-            # We must transform the vectors to be able to use dot
-            self.v.shape = (len(self), -1, 2)
+            def W2M(WD, W12):
+                """ Convert spin-box wave-function product to total Q and S(x), S(y), S(z) """
+                W = np.empty([W12.size, 1, 4], WD.dtype)
+                WD.shape = (-1, 2)
+                add(WD[:, 0], WD[:, 1], out=W[:, 0, 0])
+                multiply(W12.real, 2, out=W[:, 0, 1])
+                multiply(W12.imag, 2, out=W[:, 0, 2])
+                subtract(WD[:, 0], WD[:, 1], out=W[:, 0, 3])
+                return W
 
-            def DM2q(D11, D22, D12):
-                """ Convert spin-box DM to total charge, and spin-vector """
-                D = np.empty([D11.size, 1, 4], D11.dtype)
-                D[:, 0, 0] = D11 + D22
-                dz = D11 - D22
-                dxy = 2 * np.absolute(D12)
-                S = (dz ** 2 + dxy ** 2) ** .5
-                costh = dz / S
-                Ssinth = S * (1 - costh ** 2) ** .5 * 2
-                D[:, 0, 1] = Ssinth * D12.real / dxy
-                D[:, 0, 2] = - Ssinth * D12.imag / dxy
-                D[:, 0, 3] = S * costh
-                return D
+            # Make short-hand
+            V = self.v
 
-            w = distribution(E - self.e[0]).reshape(1, -1, 1)
-            D11 = (conj(self.v[0, :, 0]) * Sk.dot(self.v[0, :, 0])).real
-            D22 = (conj(self.v[0, :, 1]) * Sk.dot(self.v[0, :, 1])).real
-            D12 = conj(self.v[0, :, 1]) * Sk.dot(self.v[0, :, 0])
-            PDOS = np.empty([w.size, tmp1.size, 4], dtype=tmp.dtype)
-            np.multiply(DM2q(D11, D22, D12), w, out=PDOS)
+            v = Sk.dot(V[0].reshape(-1, 2))
+            PDOS = W2M((conj(V[0]) * v.ravel()).real, conj(V[0, 1::2]) * v[:, 0]) \
+                   * distribution(E - self.e[0]).reshape(1, -1, 1)
             for i in range(1, len(self)):
-                w = distribution(E - self.e[i]).reshape(1, -1, 1)
-                D11 = (conj(self.v[0, :, 0]) * Sk.dot(self.v[0, :, 0])).real
-                D22 = (conj(self.v[0, :, 1]) * Sk.dot(self.v[0, :, 1])).real
-                D12 = conj(self.v[0, :, 1]) * Sk.dot(self.v[0, :, 0])
-                add(PDOS, DM2q(D11, D22, D12) * w, out=PDOS)
+                v = Sk.dot(V[i].reshape(-1, 2))
+                add(PDOS, W2M((conj(V[i]) * v.ravel()).real, conj(V[i, 1::2]) * v[:, 0])
+                    * distribution(E - self.e[i]).reshape(1, -1, 1),
+                    out=PDOS)
 
             # Clean-up
-            del w, D11, D22, D12
+            del v, V
 
-            self.v.shape = (len(self), -1)
         else:
 
-            w = distribution(E - self.e[0]).reshape(1, -1)
-            PDOS = (conj(self.v[0, :]) * Sk.dot(self.v[0, :])).real.reshape(-1, 1) * w
+            PDOS = (conj(self.v[0, :]) * Sk.dot(self.v[0, :])).real.reshape(-1, 1) \
+                   * distribution(E - self.e[0]).reshape(1, -1)
             for i in range(1, len(self)):
-                w = distribution(E - self.e[i]).reshape(1, -1)
-                add(PDOS, (conj(self.v[i]) * Sk.dot(self.v[i])).real.reshape(-1, 1) * w, out=PDOS)
+                add(PDOS, (conj(self.v[i]) * Sk.dot(self.v[i])).real.reshape(-1, 1)
+                    *distribution(E - self.e[i]).reshape(1, -1), out=PDOS)
 
         return PDOS
 
