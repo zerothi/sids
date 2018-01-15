@@ -266,7 +266,7 @@ class EigenState(EigenSystem):
         The norm is calculated as:
 
         .. math::
-            |\psi|_\nu = \psi^*_\nu [\mathbf S | \psi\rangle]_\nu
+            |\psi|_\nu = \psi^*_\nu [\mathbf S | \psi]_\nu
 
         while the sum :math:`\sum_\nu|\psi|_\nu\equiv1`.
 
@@ -284,11 +284,11 @@ class EigenState(EigenSystem):
         if 'gauge' in self.info:
             opt['gauge'] = self.info['gauge']
 
+        is_nc = False
         if isinstance(self.parent, Hamiltonian):
             # Calculate the overlap matrix
             Sk = self.parent.Sk(**opt)
-            if self.parent.spin > Spin('p'):
-                raise ValueError('Currently the PDOS for non-colinear and spin-orbit has not been checked')
+            is_nc = self.parent.spin > Spin('p')
         else:
             # Assume orthogonal basis set and Gamma-point
             # TODO raise warning, should we do this here?
@@ -299,6 +299,8 @@ class EigenState(EigenSystem):
 
         # A true normalization should only be real, hence we force this.
         # TODO, perhaps check that it is correct...
+        if is_nc:
+            return (conj(self.v[idx, :].T) * Sk.dot(self.v[idx, :].T)).real.T.reshape(len(idx), -1, 2).sum(-1)
         return (conj(self.v[idx, :].T) * Sk.dot(self.v[idx, :].T)).real.T
 
     def DOS(self, E, distribution=None):
@@ -471,8 +473,12 @@ class EigenState(EigenSystem):
            to calculate the eigenstate will be used.
         """
         geom = None
+        is_nc = False
         if isinstance(self.parent, Geometry):
             geom = self.parent
+        elif isinstance(self.parent, Hamiltonian):
+            geom = self.parent.geom
+            is_nc = self.parent.spin > Spin('p')
         else:
             try:
                 if isinstance(self.parent.geom, Geometry):
@@ -484,6 +490,8 @@ class EigenState(EigenSystem):
 
         # Do the sum over all eigenstates
         v = self.v.sum(0)
+        if is_nc:
+            v = v.reshape(-1, 2).sum(1)
         if len(v) != geom.no:
             raise ValueError(self.__class__.__name__ + ".psi "
                              "requires the coefficient to have length as the number of orbitals.")
