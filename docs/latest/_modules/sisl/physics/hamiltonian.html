@@ -65,7 +65,7 @@
             
             
               <div class="version">
-                0.9.2-176
+                0.9.2-183
               </div>
             
           
@@ -437,7 +437,7 @@
 <span class="sd">        The norm is calculated as:</span>
 
 <span class="sd">        .. math::</span>
-<span class="sd">            |\psi|_\nu = \psi^*_\nu [\mathbf S | \psi\rangle]_\nu</span>
+<span class="sd">            |\psi|_\nu = \psi^*_\nu [\mathbf S | \psi]_\nu</span>
 
 <span class="sd">        while the sum :math:`\sum_\nu|\psi|_\nu\equiv1`.</span>
 
@@ -455,11 +455,11 @@
         <span class="k">if</span> <span class="s1">&#39;gauge&#39;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">info</span><span class="p">:</span>
             <span class="n">opt</span><span class="p">[</span><span class="s1">&#39;gauge&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">info</span><span class="p">[</span><span class="s1">&#39;gauge&#39;</span><span class="p">]</span>
 
+        <span class="n">is_nc</span> <span class="o">=</span> <span class="kc">False</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span> <span class="n">Hamiltonian</span><span class="p">):</span>
             <span class="c1"># Calculate the overlap matrix</span>
             <span class="n">Sk</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">Sk</span><span class="p">(</span><span class="o">**</span><span class="n">opt</span><span class="p">)</span>
-            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">spin</span> <span class="o">&gt;</span> <span class="n">Spin</span><span class="p">(</span><span class="s1">&#39;p&#39;</span><span class="p">):</span>
-                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Currently the PDOS for non-colinear and spin-orbit has not been checked&#39;</span><span class="p">)</span>
+            <span class="n">is_nc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">spin</span> <span class="o">&gt;</span> <span class="n">Spin</span><span class="p">(</span><span class="s1">&#39;p&#39;</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="c1"># Assume orthogonal basis set and Gamma-point</span>
             <span class="c1"># TODO raise warning, should we do this here?</span>
@@ -470,6 +470,8 @@
 
         <span class="c1"># A true normalization should only be real, hence we force this.</span>
         <span class="c1"># TODO, perhaps check that it is correct...</span>
+        <span class="k">if</span> <span class="n">is_nc</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">(</span><span class="n">conj</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">v</span><span class="p">[</span><span class="n">idx</span><span class="p">,</span> <span class="p">:]</span><span class="o">.</span><span class="n">T</span><span class="p">)</span> <span class="o">*</span> <span class="n">Sk</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">v</span><span class="p">[</span><span class="n">idx</span><span class="p">,</span> <span class="p">:]</span><span class="o">.</span><span class="n">T</span><span class="p">))</span><span class="o">.</span><span class="n">real</span><span class="o">.</span><span class="n">T</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">idx</span><span class="p">),</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
         <span class="k">return</span> <span class="p">(</span><span class="n">conj</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">v</span><span class="p">[</span><span class="n">idx</span><span class="p">,</span> <span class="p">:]</span><span class="o">.</span><span class="n">T</span><span class="p">)</span> <span class="o">*</span> <span class="n">Sk</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">v</span><span class="p">[</span><span class="n">idx</span><span class="p">,</span> <span class="p">:]</span><span class="o">.</span><span class="n">T</span><span class="p">))</span><span class="o">.</span><span class="n">real</span><span class="o">.</span><span class="n">T</span></div>
 
 <div class="viewcode-block" id="EigenState.DOS"><a class="viewcode-back" href="../../../api-generated/sisl.physics.EigenState.html#sisl.physics.EigenState.DOS">[docs]</a>    <span class="k">def</span> <span class="nf">DOS</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">E</span><span class="p">,</span> <span class="n">distribution</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
@@ -642,8 +644,12 @@
 <span class="sd">           to calculate the eigenstate will be used.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">geom</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="n">is_nc</span> <span class="o">=</span> <span class="kc">False</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span> <span class="n">Geometry</span><span class="p">):</span>
             <span class="n">geom</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span> <span class="n">Hamiltonian</span><span class="p">):</span>
+            <span class="n">geom</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">geom</span>
+            <span class="n">is_nc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">spin</span> <span class="o">&gt;</span> <span class="n">Spin</span><span class="p">(</span><span class="s1">&#39;p&#39;</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="k">try</span><span class="p">:</span>
                 <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">geom</span><span class="p">,</span> <span class="n">Geometry</span><span class="p">):</span>
@@ -655,6 +661,8 @@
 
         <span class="c1"># Do the sum over all eigenstates</span>
         <span class="n">v</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">v</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">is_nc</span><span class="p">:</span>
+            <span class="n">v</span> <span class="o">=</span> <span class="n">v</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="o">!=</span> <span class="n">geom</span><span class="o">.</span><span class="n">no</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s2">&quot;.psi &quot;</span>
                              <span class="s2">&quot;requires the coefficient to have length as the number of orbitals.&quot;</span><span class="p">)</span>
@@ -913,7 +921,7 @@
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'../../../',
-            VERSION:'0.9.2-176',
+            VERSION:'0.9.2-183',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true,

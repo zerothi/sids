@@ -65,7 +65,7 @@
             
             
               <div class="version">
-                0.9.2-176
+                0.9.2-183
               </div>
             
           
@@ -175,7 +175,7 @@
 
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="n">pi</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span>
-<span class="n">pi_sqrt</span> <span class="o">=</span> <span class="n">pi</span> <span class="o">**</span> <span class="mf">0.5</span>
+<span class="n">sqrt_2pi</span> <span class="o">=</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">pi</span><span class="p">)</span> <span class="o">**</span> <span class="mf">0.5</span>
 
 <span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;distribution&#39;</span><span class="p">,</span> <span class="s1">&#39;gaussian&#39;</span><span class="p">,</span> <span class="s1">&#39;lorentzian&#39;</span><span class="p">]</span>
 
@@ -183,19 +183,17 @@
 <div class="viewcode-block" id="distribution"><a class="viewcode-back" href="../../../api-generated/sisl.physics.distribution.html#sisl.physics.distribution">[docs]</a><span class="k">def</span> <span class="nf">distribution</span><span class="p">(</span><span class="n">method</span><span class="p">,</span> <span class="n">smearing</span><span class="o">=</span><span class="mf">0.1</span><span class="p">):</span>
     <span class="sa">r</span><span class="sd">&quot;&quot;&quot; Create a distribution function for input in e.g. `DOS`. Gaussian, Lorentzian etc.</span>
 
-<span class="sd">    In the following :math:`\epsilon` are the eigenvalues contained in this `EigenState`.</span>
-
 <span class="sd">    The Gaussian distribution is calculated as:</span>
 
 <span class="sd">    .. math::</span>
-<span class="sd">        G(E) = \sum_i \frac{1}{\sqrt{2\pi\sigma^2}}\exp\big[- (E - \epsilon_i)^2 / (2\sigma^2)\big]</span>
+<span class="sd">        G(x) = \frac{1}{\sqrt{2\pi\sigma^2}}\exp\big[- x^2 / (2\sigma^2)\big]</span>
 
 <span class="sd">    where :math:`\sigma` is the `smearing` parameter.</span>
 
 <span class="sd">    The Lorentzian distribution is calculated as:</span>
 
 <span class="sd">    .. math::</span>
-<span class="sd">        L(E) = \sum_i \frac{1}{\pi}\frac{\gamma}{(E - \epsilon_i)^2 + \gamma^2}</span>
+<span class="sd">        L(x) = \frac{1}{\pi}\frac{\gamma}{x^2 + \gamma^2}</span>
 
 <span class="sd">    where :math:`\gamma` is the `smearing` parameter, note that here :math:`\gamma` is the</span>
 <span class="sd">    half-width at half-maximum (:math:`2\gamma` would be the full-width at half-maximum).</span>
@@ -215,10 +213,8 @@
         <span class="k">return</span> <span class="n">partial</span><span class="p">(</span><span class="n">gaussian</span><span class="p">,</span> <span class="n">sigma</span><span class="o">=</span><span class="n">smearing</span><span class="p">)</span>
     <span class="k">elif</span> <span class="n">method</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;lorentz&#39;</span><span class="p">,</span> <span class="s1">&#39;lorentzian&#39;</span><span class="p">]:</span>
         <span class="k">return</span> <span class="n">partial</span><span class="p">(</span><span class="n">lorentzian</span><span class="p">,</span> <span class="n">gamma</span><span class="o">=</span><span class="n">smearing</span><span class="p">)</span>
-    <span class="k">else</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;distribution currently only implements &#39;gaussian&#39; or &quot;</span>
-                         <span class="s2">&quot;&#39;lorentzian&#39; distribution functions&quot;</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">func</span></div>
+    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;distribution currently only implements &#39;gaussian&#39; or &quot;</span>
+                     <span class="s2">&quot;&#39;lorentzian&#39; distribution functions&quot;</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="gaussian"><a class="viewcode-back" href="../../../api-generated/sisl.physics.gaussian.html#sisl.physics.gaussian">[docs]</a><span class="k">def</span> <span class="nf">gaussian</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">sigma</span><span class="o">=</span><span class="mf">0.1</span><span class="p">):</span>
@@ -241,7 +237,7 @@
 <span class="sd">    y : array_like</span>
 <span class="sd">        the Gaussian distribution, same length as `x`</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">x</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">sigma</span> <span class="o">**</span> <span class="mi">2</span><span class="p">))</span> <span class="o">/</span> <span class="p">((</span><span class="mi">2</span> <span class="o">*</span> <span class="n">pi</span><span class="p">)</span> <span class="o">**</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">sigma</span><span class="p">)</span></div>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">x</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">sigma</span> <span class="o">**</span> <span class="mi">2</span><span class="p">))</span> <span class="o">/</span> <span class="p">(</span><span class="n">sqrt_2pi</span> <span class="o">*</span> <span class="n">sigma</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="lorentzian"><a class="viewcode-back" href="../../../api-generated/sisl.physics.lorentzian.html#sisl.physics.lorentzian">[docs]</a><span class="k">def</span> <span class="nf">lorentzian</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">gamma</span><span class="o">=</span><span class="mf">0.1</span><span class="p">):</span>
@@ -301,7 +297,7 @@
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'../../../',
-            VERSION:'0.9.2-176',
+            VERSION:'0.9.2-183',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true,
