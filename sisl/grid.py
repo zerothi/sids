@@ -20,9 +20,25 @@ __all__ = ['Grid', 'sgrid']
 
 
 class Grid(SuperCellChild):
-    """ Object to retain grid information
+    """ Real-space grid information with associated geometry.
 
     This grid object handles cell vectors and divisions of said grid.
+
+    Parameters
+    ----------
+    shape : float or (3,) of int
+        the shape of the grid. A ``float`` specifies the grid spacing in Angstrom, while
+        a list of integers specifies the exact grid size.
+    bc : list of int (3, 2) or (3, ), optional
+        the boundary conditions for each of the cell's planes. Default to periodic BC.
+    sc : SuperCell, optional
+        the supercell that this grid represents. `sc` has precedence if both `geom` and `sc`
+        has been specified. Default to ``[1, 1, 1]``.
+    dtype : numpy.dtype, optional
+        the data-type of the grid, default to `numpy.float64`.
+    geom : Geometry, optional
+        associated geometry with the grid. If `sc` has not been passed the supercell will
+        be taken from this geometry.
     """
 
     #: Constant for defining a periodic boundary condition
@@ -221,12 +237,9 @@ class Grid(SuperCellChild):
     set_boundary_condition = set_bc
 
     def copy(self):
-        """
-        Returns a copy of the object.
-        """
+        """ Returns a copy of the object. """
         grid = self.__class__(np.copy(self.shape), bc=np.copy(self.bc),
-                              dtype=self.dtype,
-                              geom=self.geom.copy())
+                              dtype=self.dtype, geom=self.geom.copy())
         grid.grid = self.grid.copy()
         return grid
 
@@ -421,34 +434,44 @@ class Grid(SuperCellChild):
 
         Parameters
         ----------
-        coord : array_like or float
+        coord : (*, 3) or float
             the coordinate of the axis. If a float is passed `axis` is
             also required in which case it corresponds to the length along the
             lattice vector corresponding to `axis`
         axis : int
             the axis direction of the index
         """
-        coord = ensure_array(coord, float64)
         rcell = self.rcell / (2 * np.pi)
 
-        # if the axis is none, we do this for all axes
-        if axis is None:
-            if len(coord) != 3:
+        coord = ensure_array(coord, float64)
+        if coord.size == 1: # float
+            if axis is None:
                 raise ValueError(self.__class__.__name__ + '.index requires the '
-                                 'coordinate to be 3 values.')
-            # dot(rcell / 2pi, coord) is the fraction in the
-            # cell. So * l / (l / self.shape) will
-            # give the float of dcell lattice vectors (where l is the length of
-            # each lattice vector)
-            return floor(dot(rcell, coord) * self.shape).astype(int32)
+                                 'coordinate to be 3 values when an axis has not '
+                                 'been specified.')
 
-        if len(coord) == 1:
             c = (self.dcell[axis, :] ** 2).sum() ** 0.5
             return int(floor(coord[0] / c))
 
-        # Calculate how many indices are required to fulfil
-        # the correct line cut
-        return int(floor((rcell[axis, :] * coord).sum() * self.shape[axis]))
+        # Ensure we return values in the same dimensionality
+        ndim = coord.ndim
+        coord.shape = (-1, 3)
+
+        shape = np.array(self.shape).reshape(3, -1)
+
+        # dot(rcell / 2pi, coord) is the fraction in the
+        # cell. So * l / (l / self.shape) will
+        # give the float of dcell lattice vectors (where l is the length of
+        # each lattice vector)
+        if axis is None:
+            if ndim == 1:
+                return floor(dot(rcell, coord.T) * shape).astype(int32).reshape(3)
+            else:
+                return floor(dot(rcell, coord.T) * shape).T.astype(int32)
+        if ndim == 1:
+            return floor(dot(rcell[axis, :], coord.T) * shape[axis]).astype(int32)[0]
+        else:
+            return floor(dot(rcell[axis, :], coord.T) * shape[axis]).T.astype(int32)
 
     def append(self, other, axis):
         """ Appends other `Grid` to this grid along axis
@@ -527,10 +550,22 @@ class Grid(SuperCellChild):
         """ Returns whether two grids have the same shape """
         return not (self == other)
 
+    def __abs__(self):
+        r""" Return the absolute value :math:`|grid|` """
+        dtype = self.dtype
+        if dtype == np.complex128:
+            dtype = np.float64
+        elif dtype == np.complex64:
+            dtype = np.float32
+        a = self.copy()
+        a.grid = np.absolute(self.grid).astype(dtype, copy=False)
+        return a
+
     def __add__(self, other):
         """ Returns a new grid with the addition of two grids
 
-        Returns same shape with same cell as the first"""
+        Returns same shape with same cell as the first
+        """
         if isinstance(other, Grid):
             grid = self._compatible_copy(other, 'they cannot be added')
             grid.grid = self.grid + other.grid
@@ -542,7 +577,8 @@ class Grid(SuperCellChild):
     def __iadd__(self, other):
         """ Returns a new grid with the addition of two grids
 
-        Returns same shape with same cell as the first"""
+        Returns same shape with same cell as the first
+        """
         if isinstance(other, Grid):
             self._check_compatibility(other, 'they cannot be added')
             self.grid += other.grid
@@ -553,7 +589,8 @@ class Grid(SuperCellChild):
     def __sub__(self, other):
         """ Returns a new grid with the difference of two grids
 
-        Returns same shape with same cell as the first"""
+        Returns same shape with same cell as the first
+        """
         if isinstance(other, Grid):
             grid = self._compatible_copy(other, 'they cannot be subtracted')
             np.subtract(self.grid, other.grid, out=grid.grid)
@@ -565,7 +602,8 @@ class Grid(SuperCellChild):
     def __isub__(self, other):
         """ Returns a same grid with the difference of two grids
 
-        Returns same shape with same cell as the first"""
+        Returns same shape with same cell as the first
+        """
         if isinstance(other, Grid):
             self._check_compatibility(other, 'they cannot be subtracted')
             self.grid -= other.grid
@@ -663,7 +701,7 @@ class Grid(SuperCellChild):
         return (cp * index).sum(1)
 
     def pyamg_source(self, b, pyamg_indices, value):
-        """ Fix the source term to `value`.
+        r""" Fix the source term to `value`.
 
         Parameters
         ----------
@@ -676,7 +714,7 @@ class Grid(SuperCellChild):
         b[ensure_array(pyamg_indices)] = value
 
     def pyamg_fix(self, A, b, pyamg_indices, value):
-        """ Fix values for the stencil to `value`.
+        r""" Fix values for the stencil to `value`.
 
         Parameters
         ----------
@@ -703,7 +741,7 @@ class Grid(SuperCellChild):
         A.prune() # try and clean-up unneccessary memory
 
     def pyamg_boundary_condition(self, A, b, bc=None):
-        """ Attach boundary conditions to the `pyamg` grid-matrix `A` with default boundary conditions as specified for this `Grid`
+        r""" Attach boundary conditions to the `pyamg` grid-matrix `A` with default boundary conditions as specified for this `Grid`
 
         Parameters
         ----------
