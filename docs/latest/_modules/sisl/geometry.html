@@ -65,7 +65,7 @@
             
             
               <div class="version">
-                0.9.2-198
+                0.9.2-205
               </div>
             
           
@@ -771,13 +771,12 @@
         <span class="c1"># We implement yields as we can then do nested iterators</span>
         <span class="c1"># create a boolean array</span>
         <span class="n">na</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
-        <span class="n">not_passed</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="n">na</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s1">&#39;b&#39;</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">atom</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">not_passed</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">na</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">)</span>
             <span class="c1"># Reverse the values</span>
-            <span class="n">not_passed</span><span class="p">[:]</span> <span class="o">=</span> <span class="kc">False</span>
             <span class="n">not_passed</span><span class="p">[</span><span class="n">atom</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="n">not_passed</span><span class="p">[:]</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="n">not_passed</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">na</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">)</span>
 
         <span class="c1"># Figure out how many we need to loop on</span>
         <span class="n">not_passed_N</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">not_passed</span><span class="p">)</span>
@@ -788,9 +787,12 @@
             <span class="n">dS</span> <span class="o">=</span> <span class="p">(</span><span class="n">Cube</span><span class="p">(</span><span class="n">R</span> <span class="o">*</span> <span class="p">(</span><span class="n">iR</span> <span class="o">-</span> <span class="mf">1.975</span><span class="p">)),</span>
                   <span class="n">Cube</span><span class="p">(</span><span class="n">R</span> <span class="o">*</span> <span class="p">(</span><span class="n">iR</span> <span class="o">+</span> <span class="mf">0.025</span><span class="p">)))</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="n">dS</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">shape</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">shape</span><span class="p">,</span> <span class="n">Shape</span><span class="p">):</span>
+                <span class="n">dS</span> <span class="o">=</span> <span class="p">(</span><span class="n">shape</span><span class="p">,)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">dS</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">shape</span><span class="p">)</span>
             <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">dS</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
-                <span class="n">dS</span> <span class="o">+=</span> <span class="n">dS</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">expand</span><span class="p">(</span><span class="n">R</span><span class="p">)</span>
+                <span class="n">dS</span> <span class="o">+=</span> <span class="p">(</span><span class="n">dS</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">expand</span><span class="p">(</span><span class="n">R</span> <span class="o">+</span> <span class="mf">0.01</span><span class="p">),</span> <span class="p">)</span>
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">dS</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Number of Shapes *must* be one or two&#39;</span><span class="p">)</span>
 
@@ -801,12 +803,22 @@
         <span class="n">xyz_M</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">amax</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">xyz</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
         <span class="n">dxyz</span> <span class="o">=</span> <span class="n">xyz_M</span> <span class="o">-</span> <span class="n">xyz_m</span>
 
+        <span class="c1"># Currently iterating different shapes only works for</span>
+        <span class="c1"># Sphere and Cube</span>
+        <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">dS</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="p">(</span><span class="n">Cube</span><span class="p">,</span> <span class="n">Sphere</span><span class="p">)):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39;.iter_block_shape currently only works for &#39;</span>
+                                 <span class="s1">&#39;Cube or Sphere objects. Please change sources.&#39;</span><span class="p">)</span>
+
         <span class="c1"># Retrieve the internal diameter</span>
-        <span class="n">ir</span> <span class="o">=</span> <span class="n">dS</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">displacement</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">dS</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">Cube</span><span class="p">):</span>
+            <span class="n">ir</span> <span class="o">=</span> <span class="n">dS</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">edge_length</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">dS</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">Sphere</span><span class="p">):</span>
+            <span class="n">ir</span> <span class="o">=</span> <span class="n">dS</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">radius</span> <span class="o">*</span> <span class="mf">0.5</span> <span class="o">**</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="mi">2</span>
 
         <span class="c1"># Figure out number of segments in each iteration</span>
         <span class="c1"># (minimum 1)</span>
-        <span class="n">ixyz</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="n">dxyz</span> <span class="o">/</span> <span class="n">ir</span> <span class="o">+</span> <span class="mf">0.0001</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
+        <span class="n">ixyz</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">arrayi</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="n">dxyz</span> <span class="o">/</span> <span class="n">ir</span> <span class="o">+</span> <span class="mf">0.0001</span><span class="p">))</span>
 
         <span class="c1"># Calculate the steps required for each iteration</span>
         <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">]:</span>
@@ -827,9 +839,7 @@
         <span class="n">append</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">append</span>
 
         <span class="c1"># Now we loop in each direction</span>
-        <span class="k">for</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">z</span> <span class="ow">in</span> <span class="n">product</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">ixyz</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span>
-                               <span class="nb">range</span><span class="p">(</span><span class="n">ixyz</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span>
-                               <span class="nb">range</span><span class="p">(</span><span class="n">ixyz</span><span class="p">[</span><span class="mi">2</span><span class="p">])):</span>
+        <span class="k">for</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">z</span> <span class="ow">in</span> <span class="n">product</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">ixyz</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span> <span class="nb">range</span><span class="p">(</span><span class="n">ixyz</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span> <span class="nb">range</span><span class="p">(</span><span class="n">ixyz</span><span class="p">[</span><span class="mi">2</span><span class="p">])):</span>
 
             <span class="c1"># Create the new center</span>
             <span class="n">center</span> <span class="o">=</span> <span class="n">xyz_m</span> <span class="o">+</span> <span class="p">[</span><span class="n">x</span> <span class="o">*</span> <span class="n">dxyz</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">y</span> <span class="o">*</span> <span class="n">dxyz</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">z</span> <span class="o">*</span> <span class="n">dxyz</span><span class="p">[</span><span class="mi">2</span><span class="p">]]</span>
@@ -1978,7 +1988,7 @@
         <span class="c1"># Get indices and coordinates of the largest shape</span>
         <span class="c1"># The largest part of the calculation are to calculate</span>
         <span class="c1"># the content in the largest shape.</span>
-        <span class="n">ix</span> <span class="o">=</span> <span class="n">shapes</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">iwithin</span><span class="p">(</span><span class="n">xa</span><span class="p">)</span>
+        <span class="n">ix</span> <span class="o">=</span> <span class="n">shapes</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">within_index</span><span class="p">(</span><span class="n">xa</span><span class="p">)</span>
         <span class="c1"># Reduce search space</span>
         <span class="n">xa</span> <span class="o">=</span> <span class="n">xa</span><span class="p">[</span><span class="n">ix</span><span class="p">,</span> <span class="p">:]</span>
 
@@ -2036,7 +2046,7 @@
         <span class="n">ixS</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="n">cum</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([],</span> <span class="n">idx</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
         <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">s</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">shapes</span><span class="p">):</span>
-            <span class="n">x</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">iwithin</span><span class="p">(</span><span class="n">xa</span><span class="p">)</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">within_index</span><span class="p">(</span><span class="n">xa</span><span class="p">)</span>
             <span class="k">if</span> <span class="n">i</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
                 <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">setdiff1d</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">cum</span><span class="p">,</span> <span class="n">assume_unique</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
             <span class="c1"># Update elements to remove in next loop</span>
@@ -3448,7 +3458,7 @@
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'../../',
-            VERSION:'0.9.2-198',
+            VERSION:'0.9.2-205',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true,

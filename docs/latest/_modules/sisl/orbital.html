@@ -65,7 +65,7 @@
             
             
               <div class="version">
-                0.9.2-198
+                0.9.2-205
               </div>
             
           
@@ -185,118 +185,10 @@
 
 <span class="kn">from</span> <span class="nn">._help</span> <span class="k">import</span> <span class="n">ensure_array</span><span class="p">,</span> <span class="n">_str</span>
 <span class="kn">import</span> <span class="nn">sisl._array</span> <span class="k">as</span> <span class="nn">_a</span>
+<span class="kn">from</span> <span class="nn">sisl.utils.mathematics</span> <span class="k">import</span> <span class="n">cart2spher</span>
 
 
 <span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;Orbital&#39;</span><span class="p">,</span> <span class="s1">&#39;SphericalOrbital&#39;</span><span class="p">,</span> <span class="s1">&#39;AtomicOrbital&#39;</span><span class="p">]</span>
-<span class="n">__all__</span> <span class="o">+=</span> <span class="p">[</span><span class="s1">&#39;cart2spher&#39;</span><span class="p">,</span> <span class="s1">&#39;spher2cart&#39;</span><span class="p">]</span>
-
-
-<span class="k">def</span> <span class="nf">spher2cart</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">theta</span><span class="p">,</span> <span class="n">phi</span><span class="p">):</span>
-    <span class="sa">r</span><span class="sd">&quot;&quot;&quot; Convert spherical coordinates to cartesian coordinates</span>
-
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    r : array_like</span>
-<span class="sd">       radius</span>
-<span class="sd">    theta : array_like</span>
-<span class="sd">       azimuthal angle in the :math:`x-y` plane</span>
-<span class="sd">    phi : array_like</span>
-<span class="sd">       polar angle from the :math:`z` axis</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">rx</span> <span class="o">=</span> <span class="n">r</span> <span class="o">*</span> <span class="n">cos</span><span class="p">(</span><span class="n">theta</span><span class="p">)</span> <span class="o">*</span> <span class="n">sin</span><span class="p">(</span><span class="n">phi</span><span class="p">)</span>
-    <span class="n">R</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">emptyd</span><span class="p">(</span><span class="n">rx</span><span class="o">.</span><span class="n">shape</span> <span class="o">+</span> <span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="p">))</span>
-    <span class="n">R</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">rx</span>
-    <span class="k">del</span> <span class="n">rx</span>
-    <span class="n">R</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">r</span> <span class="o">*</span> <span class="n">sin</span><span class="p">(</span><span class="n">theta</span><span class="p">)</span> <span class="o">*</span> <span class="n">sin</span><span class="p">(</span><span class="n">phi</span><span class="p">)</span>
-    <span class="n">R</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">r</span> <span class="o">*</span> <span class="n">cos</span><span class="p">(</span><span class="n">phi</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">R</span>
-
-
-<span class="k">def</span> <span class="nf">cart2spher</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">theta</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">cos_phi</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">maxR</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-    <span class="sa">r</span><span class="sd">&quot;&quot;&quot; Transfer a vector to spherical coordinates with some possible differences</span>
-
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    r : array_like</span>
-<span class="sd">       the cartesian vectors</span>
-<span class="sd">    theta : bool, optional</span>
-<span class="sd">       if ``True`` also calculate the theta angle and return it</span>
-<span class="sd">    cos_phi : bool, optional</span>
-<span class="sd">       if ``True`` return :math:`\cos(\phi)` rather than :math:`\phi` which may</span>
-<span class="sd">       be useful in some subsequent mathematical calculations</span>
-<span class="sd">    maxR : float, optional</span>
-<span class="sd">       cutoff of the spherical coordinate calculations. If ``None``, calculate</span>
-<span class="sd">       and return for all.</span>
-
-<span class="sd">    Returns</span>
-<span class="sd">    -------</span>
-<span class="sd">    n : int</span>
-<span class="sd">       number of total points, only for `maxR` different from ``None``</span>
-<span class="sd">    idx : numpy.ndarray</span>
-<span class="sd">       indices of points with ``r &lt;= maxR``</span>
-<span class="sd">    r : numpy.ndarray</span>
-<span class="sd">       radius in spherical coordinates, only for `maxR` different from ``None``</span>
-<span class="sd">    theta : numpy.ndarray</span>
-<span class="sd">       angle in the :math:`x-y` plane from :math:`x` (azimuthal)</span>
-<span class="sd">       Only returned if input `theta` is ``True``</span>
-<span class="sd">    phi : numpy.ndarray</span>
-<span class="sd">       If `cos_phi` is ``True`` this is :math:`\cos(\phi)`, otherwise</span>
-<span class="sd">       :math:`\phi` is returned (the polar angle from the :math:`z` axis)</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">r</span> <span class="o">=</span> <span class="n">ensure_array</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
-    <span class="k">if</span> <span class="n">r</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">!=</span> <span class="mi">3</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Vector does not end with shape 3.&quot;</span><span class="p">)</span>
-    <span class="n">r</span><span class="o">.</span><span class="n">shape</span> <span class="o">=</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
-    <span class="n">n</span> <span class="o">=</span> <span class="n">r</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-    <span class="k">if</span> <span class="n">maxR</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="n">rr</span> <span class="o">=</span> <span class="n">sqrt</span><span class="p">(</span><span class="n">square</span><span class="p">(</span><span class="n">r</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span>
-        <span class="n">theta</span> <span class="o">=</span> <span class="n">arctan2</span><span class="p">(</span><span class="n">r</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">r</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">])</span>
-        <span class="n">phi</span> <span class="o">=</span> <span class="n">arccos</span><span class="p">(</span><span class="n">r</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">/</span> <span class="n">rr</span><span class="p">)</span>
-        <span class="n">phi</span><span class="p">[</span><span class="n">rr</span> <span class="o">==</span> <span class="mf">0.</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.</span>
-        <span class="k">return</span> <span class="n">rr</span><span class="p">,</span> <span class="n">theta</span><span class="p">,</span> <span class="n">phi</span>
-
-    <span class="n">rr</span> <span class="o">=</span> <span class="n">square</span><span class="p">(</span><span class="n">r</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
-    <span class="n">idx</span> <span class="o">=</span> <span class="p">(</span><span class="n">rr</span> <span class="o">&lt;=</span> <span class="n">maxR</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">nonzero</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
-    <span class="n">r</span> <span class="o">=</span> <span class="n">take</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">idx</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
-    <span class="n">rr</span> <span class="o">=</span> <span class="n">sqrt</span><span class="p">(</span><span class="n">take</span><span class="p">(</span><span class="n">rr</span><span class="p">,</span> <span class="n">idx</span><span class="p">))</span>
-    <span class="k">if</span> <span class="n">theta</span><span class="p">:</span>
-        <span class="n">theta</span> <span class="o">=</span> <span class="n">arctan2</span><span class="p">(</span><span class="n">r</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">r</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">])</span>
-    <span class="k">else</span><span class="p">:</span>
-        <span class="n">theta</span> <span class="o">=</span> <span class="kc">None</span>
-    <span class="k">if</span> <span class="n">cos_phi</span><span class="p">:</span>
-        <span class="n">phi</span> <span class="o">=</span> <span class="n">r</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">/</span> <span class="n">rr</span>
-    <span class="k">else</span><span class="p">:</span>
-        <span class="n">phi</span> <span class="o">=</span> <span class="n">arccos</span><span class="p">(</span><span class="n">r</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">/</span> <span class="n">rr</span><span class="p">)</span>
-    <span class="c1"># Typically there will be few rr==0. values, so no need to</span>
-    <span class="c1"># create indices</span>
-    <span class="n">phi</span><span class="p">[</span><span class="n">rr</span> <span class="o">==</span> <span class="mf">0.</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.</span>
-    <span class="k">return</span> <span class="n">n</span><span class="p">,</span> <span class="n">idx</span><span class="p">,</span> <span class="n">rr</span><span class="p">,</span> <span class="n">theta</span><span class="p">,</span> <span class="n">phi</span>
-
-
-<span class="k">def</span> <span class="nf">spherical_harm</span><span class="p">(</span><span class="n">m</span><span class="p">,</span> <span class="n">l</span><span class="p">,</span> <span class="n">theta</span><span class="p">,</span> <span class="n">phi</span><span class="p">):</span>
-    <span class="sa">r</span><span class="sd">&quot;&quot;&quot; Calculate the spherical harmonics using :math:`Y_l^m(\theta, \varphi)` with :math:`\mathbf R\to \{r, \theta, \varphi\}`.</span>
-
-<span class="sd">    .. math::</span>
-<span class="sd">        Y^m_l(\theta,\varphi) = (-1)^m\sqrt{\frac{2l+1}{4\pi} \frac{(l-m)!}{(l+m)!}}</span>
-<span class="sd">             e^{i m \theta} P^m_l(\cos(\varphi))</span>
-
-<span class="sd">    which is the spherical harmonics with the Condon-Shortley phase.</span>
-
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    m : int</span>
-<span class="sd">       order of the spherical harmonics</span>
-<span class="sd">    l : int</span>
-<span class="sd">       degree of the spherical harmonics</span>
-<span class="sd">    theta : array_like</span>
-<span class="sd">       angle in :math:`x-y` plane (azimuthal)</span>
-<span class="sd">    phi : array_like</span>
-<span class="sd">       angle from :math:`z` axis (polar)</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="c1"># Probably same as:</span>
-    <span class="c1">#return (-1) ** m * ( (2*l+1)/(4*pi) * factorial(l-m) / factorial(l+m) ) ** 0.5 \</span>
-    <span class="c1">#    * lpmv(m, l, np.cos(theta)) * np.exp(1j * m * phi)</span>
-    <span class="k">return</span> <span class="n">sph_harm</span><span class="p">(</span><span class="n">m</span><span class="p">,</span> <span class="n">l</span><span class="p">,</span> <span class="n">theta</span><span class="p">,</span> <span class="n">phi</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">**</span> <span class="n">m</span>
 
 
 <span class="n">_pi4</span> <span class="o">=</span> <span class="mi">4</span> <span class="o">*</span> <span class="n">pi</span>
@@ -1111,7 +1003,7 @@
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'../../',
-            VERSION:'0.9.2-198',
+            VERSION:'0.9.2-205',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true,

@@ -65,7 +65,7 @@
             
             
               <div class="version">
-                0.9.2-198
+                0.9.2-205
               </div>
             
           
@@ -169,50 +169,58 @@
            <div itemprop="articleBody">
             
   <h1>Source code for sisl.shape.base</h1><div class="highlight"><pre>
-<span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span></span><span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">print_function</span><span class="p">,</span> <span class="n">division</span>
 
-<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;Shape&#39;</span><span class="p">]</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">union1d</span><span class="p">,</span> <span class="n">intersect1d</span><span class="p">,</span> <span class="n">setdiff1d</span><span class="p">,</span> <span class="n">setxor1d</span>
+<span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">logical_and</span> <span class="k">as</span> <span class="n">log_and</span>
+<span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">logical_or</span> <span class="k">as</span> <span class="n">log_or</span>
+<span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">logical_xor</span> <span class="k">as</span> <span class="n">log_xor</span>
+<span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">logical_not</span> <span class="k">as</span> <span class="n">log_not</span>
+
+<span class="kn">from</span> <span class="nn">sisl._help</span> <span class="k">import</span> <span class="n">ensure_array</span>
+
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;Shape&#39;</span><span class="p">,</span> <span class="s1">&#39;PureShape&#39;</span><span class="p">]</span>
 
 
 <div class="viewcode-block" id="Shape"><a class="viewcode-back" href="../../../api-generated/sisl.shape.Shape.html#sisl.shape.Shape">[docs]</a><span class="k">class</span> <span class="nc">Shape</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot; Baseclass for shapes</span>
+    <span class="sd">&quot;&quot;&quot; Baseclass for all shapes. Logical operations are implemented on this class.</span>
 
-<span class="sd">    This class should always be sub-classed.</span>
+<span class="sd">    **This class *must* be sub classed.**</span>
 
-<span class="sd">    There are a few routines that are *always* necessary</span>
-<span class="sd">    to implement in a inherited class:</span>
+<span class="sd">    Also all the required methods are predefined although they issue an error if they are</span>
+<span class="sd">    not implemented in the sub-classed class.</span>
+
+<span class="sd">    There are a few routines that are necessary when implementing</span>
+<span class="sd">    an inherited class:</span>
 
 <span class="sd">    `center`</span>
-<span class="sd">      return the geometric center of the shape</span>
+<span class="sd">      return the geometric center of the shape.</span>
 
-<span class="sd">    origo</span>
-<span class="sd">      return the lowest left point in the shape</span>
+<span class="sd">    `within`</span>
+<span class="sd">      Returns a boolean array which defines whether a coordinate is within</span>
+<span class="sd">      or outside the shape.</span>
 
-<span class="sd">    volume</span>
-<span class="sd">      return the volume of the shape.</span>
+<span class="sd">    `within_index`</span>
+<span class="sd">      Equivalent to `within`, however only the indices of those within are returned.</span>
 
-<span class="sd">    displacement</span>
-<span class="sd">      return a vector that is the largest displacement vector such that</span>
-<span class="sd">      a grid of the Shape will fully contian all space</span>
+<span class="sd">    `copy`</span>
+<span class="sd">      Create a new identical shape.</span>
 
-<span class="sd">    within</span>
-<span class="sd">      Enables to check if coordinates, or other things</span>
-<span class="sd">      are contained in this shape</span>
+<span class="sd">    The minimal requirement a shape can have are the above attributes.</span>
 
-<span class="sd">    iwithin</span>
-<span class="sd">      Returns only the indices of elements that are within</span>
+<span class="sd">    Subclassed shapes may have additional methods by which they are defined.</span>
 
-<span class="sd">    enlarge</span>
-<span class="sd">      Creates a new shape with a only the indices of elements that are within</span>
+<span class="sd">    Any `BaseShape` may be used to construct other shapes by applying set operations.</span>
+<span class="sd">    Currently implemented binary operators are:</span>
 
-<span class="sd">    A `Shape` allows interaction with outside elements to check if geometric</span>
-<span class="sd">    points are within the shapes.</span>
-<span class="sd">    For instance to assert that a given point `x`, `y`, `z` is within a sphere</span>
-<span class="sd">    of radius `r` with center `cx`, `cy`, `cz` on may do:</span>
-
-<span class="sd">    This makes it very efficient to enable arbitrary shapes to be passed</span>
-<span class="sd">    and used as determinations of regions of space.</span>
+<span class="sd">    `__or__`/`__add__` : set union</span>
+<span class="sd">    `__and__` : set intersection</span>
+<span class="sd">    `__sub__` : set complement</span>
+<span class="sd">    `__xor__` : set disjunctive union</span>
 <span class="sd">    &quot;&quot;&quot;</span>
+    <span class="vm">__slots__</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;_center&#39;</span><span class="p">,</span> <span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">center</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Initialize the Shape with a center &quot;&quot;&quot;</span>
@@ -221,54 +229,147 @@
         <span class="k">else</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_center</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">center</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot; Re-initialize the Shape &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
-
-    <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">origo</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot; The geometric origo of the shape</span>
-
-<span class="sd">        An origo should *always* be the lowest left coordinate of the shape.</span>
-
-<span class="sd">        Notes</span>
-<span class="sd">        -----</span>
-<span class="sd">        Not all shapes have an origo. For instance a sphere only have a center,</span>
-<span class="sd">        but an origo cannot be defined.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="kc">None</span>
-
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">center</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; The geometric center of the shape &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_center</span>
 
-    <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">displacement</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot; Return a displacement vector for full containment &quot;&quot;&quot;</span>
-        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s1">&#39;displacement has not been implemented in: &#39;</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="p">)</span>
-
-    <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">volume</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s1">&#39;volume has not been implemented in: &#39;</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="p">)</span>
-
-<div class="viewcode-block" id="Shape.enlarge"><a class="viewcode-back" href="../../../api-generated/sisl.shape.Shape.html#sisl.shape.Shape.enlarge">[docs]</a>    <span class="k">def</span> <span class="nf">enlarge</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">length</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot; Return a new Shape with an increased size length &quot;&quot;&quot;</span>
-        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s1">&#39;enlarge has not been implemented in: &#39;</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="p">)</span></div>
+<div class="viewcode-block" id="Shape.scale"><a class="viewcode-back" href="../../../api-generated/sisl.shape.Shape.html#sisl.shape.Shape.scale">[docs]</a>    <span class="k">def</span> <span class="nf">scale</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">scale</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Return a new Shape with a scaled size &quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s1">&#39;scale has not been implemented in: &#39;</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="Shape.within"><a class="viewcode-back" href="../../../api-generated/sisl.shape.Shape.html#sisl.shape.Shape.within">[docs]</a>    <span class="k">def</span> <span class="nf">within</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot; Returns `True` if `other` is fully within `self` &quot;&quot;&quot;</span>
-        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s1">&#39;__contains__ has not been implemented in: &#39;</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="p">)</span></div>
+        <span class="sd">&quot;&quot;&quot; Return ``True`` if `other` is fully within `self`</span>
 
-<div class="viewcode-block" id="Shape.iwithin"><a class="viewcode-back" href="../../../api-generated/sisl.shape.Shape.html#sisl.shape.Shape.iwithin">[docs]</a>    <span class="k">def</span> <span class="nf">iwithin</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot; Returns indices of the elements of `other` that are within the shape &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">within</span><span class="p">(</span><span class="n">other</span><span class="p">)</span><span class="o">.</span><span class="n">nonzero</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span></div>
+<span class="sd">        If `other` is an array, an array will be returned for each of these.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        other : array_like</span>
+<span class="sd">           the array/object that is checked for containment</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">other</span> <span class="o">=</span> <span class="n">ensure_array</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+        <span class="n">ndim</span> <span class="o">=</span> <span class="n">other</span><span class="o">.</span><span class="n">ndim</span>
+        <span class="n">other</span><span class="o">.</span><span class="n">shape</span> <span class="o">=</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+
+        <span class="n">idx</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">within_index</span><span class="p">(</span><span class="n">other</span><span class="p">)</span>
+        <span class="c1"># Initialize a boolean array with all false</span>
+        <span class="n">within</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">other</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">)</span>
+        <span class="n">within</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">if</span> <span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="n">other</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">within</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">within</span></div>
+
+<div class="viewcode-block" id="Shape.within_index"><a class="viewcode-back" href="../../../api-generated/sisl.shape.Shape.html#sisl.shape.Shape.within_index">[docs]</a>    <span class="k">def</span> <span class="nf">within_index</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Return indices of the elements of `other` that are within the shape &quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s1">&#39;within_index has not been implemented in: &#39;</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="p">)</span></div>
 
     <span class="k">def</span> <span class="nf">__contains__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">within</span><span class="p">(</span><span class="n">other</span><span class="p">)</span>
+        <span class="sd">&quot;&quot;&quot; Checks whether all of `other` is within the shape &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">within</span><span class="p">(</span><span class="n">other</span><span class="p">))</span>
 
     <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39; c(</span><span class="si">{}</span><span class="s1"> </span><span class="si">{}</span><span class="s1"> </span><span class="si">{}</span><span class="s1">)&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">center</span><span class="p">)</span></div>
+        <span class="k">return</span> <span class="s2">&quot;{{&quot;</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39; c(</span><span class="si">{}</span><span class="s1"> </span><span class="si">{}</span><span class="s1"> </span><span class="si">{}</span><span class="s1">)&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">center</span><span class="p">)</span>
+
+    <span class="c1"># Implement logical operators to enable composition of sets</span>
+    <span class="k">def</span> <span class="nf">__and__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">CompositeShape</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">,</span> <span class="n">CompositeShape</span><span class="o">.</span><span class="n">_AND</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__or__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">CompositeShape</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">,</span> <span class="n">CompositeShape</span><span class="o">.</span><span class="n">_OR</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__add__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">CompositeShape</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">,</span> <span class="n">CompositeShape</span><span class="o">.</span><span class="n">_OR</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__sub__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">CompositeShape</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">,</span> <span class="n">CompositeShape</span><span class="o">.</span><span class="n">_SUB</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__xor__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">CompositeShape</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">,</span> <span class="n">CompositeShape</span><span class="o">.</span><span class="n">_XOR</span><span class="p">)</span></div>
+
+
+<span class="k">class</span> <span class="nc">CompositeShape</span><span class="p">(</span><span class="n">Shape</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; A composite shape consisting of two shapes</span>
+
+<span class="sd">    This should take 2 shapes as arguments and a binary operator to define</span>
+<span class="sd">    how the shapes are related.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    A : BaseShape</span>
+<span class="sd">       the left hand side of the set operation</span>
+<span class="sd">    B : BaseShape</span>
+<span class="sd">       the right hand side of the set operation</span>
+<span class="sd">    op : {_OR, _AND, _SUB, _XOR}</span>
+<span class="sd">       the operator defining the sets relation</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Internal variables to handle set-operations</span>
+    <span class="n">_OR</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">_AND</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="n">_SUB</span> <span class="o">=</span> <span class="mi">2</span>
+    <span class="n">_XOR</span> <span class="o">=</span> <span class="mi">3</span>
+
+    <span class="vm">__slots__</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;A&#39;</span><span class="p">,</span> <span class="s1">&#39;B&#39;</span><span class="p">,</span> <span class="s1">&#39;op&#39;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">A</span><span class="p">,</span> <span class="n">B</span><span class="p">,</span> <span class="n">op</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">A</span> <span class="o">=</span> <span class="n">A</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">B</span> <span class="o">=</span> <span class="n">B</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">op</span> <span class="o">=</span> <span class="n">op</span>
+
+    <span class="k">def</span> <span class="nf">center</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Average center of composite shapes &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">A</span><span class="o">.</span><span class="n">center</span><span class="p">()</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">B</span><span class="o">.</span><span class="n">center</span><span class="p">())</span> <span class="o">*</span> <span class="mf">0.5</span>
+
+    <span class="k">def</span> <span class="nf">volume</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1"># The volume for these set operators cannot easily be defined, so</span>
+        <span class="c1"># we should rather not do anything about it.</span>
+        <span class="k">return</span> <span class="o">-</span><span class="mf">1.</span>
+
+    <span class="c1"># within is defined in Shape to use within_index</span>
+    <span class="c1"># So no need to doubly implement it</span>
+
+    <span class="k">def</span> <span class="nf">within_index</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="n">A</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">A</span><span class="o">.</span><span class="n">within_index</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="n">B</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">B</span><span class="o">.</span><span class="n">within_index</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="n">op</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">op</span>
+        <span class="k">if</span> <span class="n">op</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">_OR</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">union1d</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">B</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">op</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">_AND</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">intersect1d</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">B</span><span class="p">,</span> <span class="n">assume_unique</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">op</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">_SUB</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">setdiff1d</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">B</span><span class="p">,</span> <span class="n">assume_unique</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">op</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">_XOR</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">setxor1d</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">B</span><span class="p">,</span> <span class="n">assume_unique</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">A</span> <span class="o">=</span> <span class="nb">repr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">A</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">,</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1"> &#39;</span><span class="p">)</span>
+        <span class="n">B</span> <span class="o">=</span> <span class="nb">repr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">B</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">,</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1"> &#39;</span><span class="p">)</span>
+        <span class="n">op</span> <span class="o">=</span> <span class="p">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_OR</span><span class="p">:</span> <span class="s1">&#39;OR&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_AND</span><span class="p">:</span> <span class="s1">&#39;AND&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_SUB</span><span class="p">:</span> <span class="s1">&#39;SUB&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_XOR</span><span class="p">:</span> <span class="s1">&#39;XOR&#39;</span><span class="p">}</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">op</span><span class="p">)</span>
+        <span class="k">return</span> <span class="s1">&#39;</span><span class="si">{0}</span><span class="s1">{{</span><span class="si">{1}</span><span class="s1">,</span><span class="se">\n</span><span class="s1"> </span><span class="si">{2}</span><span class="s1">,</span><span class="se">\n</span><span class="s1"> </span><span class="si">{3}</span><span class="se">\n</span><span class="s1">}}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="p">,</span> <span class="n">op</span><span class="p">,</span> <span class="n">A</span><span class="p">,</span> <span class="n">B</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">scale</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">scale</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">A</span><span class="o">.</span><span class="n">scale</span><span class="p">(</span><span class="n">scale</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">B</span><span class="o">.</span><span class="n">scale</span><span class="p">(</span><span class="n">scale</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">op</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">copy</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">A</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">B</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">op</span><span class="p">)</span>
+
+
+<span class="k">class</span> <span class="nc">PureShape</span><span class="p">(</span><span class="n">Shape</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Extension of the `Shape` class for additional well defined shapes</span>
+
+<span class="sd">    This shape should be used when subclassing shapes where the volume of the</span>
+<span class="sd">    shape is *exactly* known.</span>
+
+<span class="sd">    `volume`</span>
+<span class="sd">      return the volume of the shape.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">volume</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s1">&#39;volume has not been implemented in: &#39;</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">expand</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">c</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Expand the shape by a constant value &quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s1">&#39;expand has not been implemented in: &#39;</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="p">)</span>
 </pre></div>
 
            </div>
@@ -305,7 +406,7 @@
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'../../../',
-            VERSION:'0.9.2-198',
+            VERSION:'0.9.2-205',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true,
