@@ -65,7 +65,7 @@
             
             
               <div class="version">
-                0.9.2-205
+                0.9.2-219
               </div>
             
           
@@ -173,13 +173,16 @@
 
 <span class="kn">import</span> <span class="nn">warnings</span>
 <span class="kn">from</span> <span class="nn">numbers</span> <span class="k">import</span> <span class="n">Integral</span><span class="p">,</span> <span class="n">Real</span>
+<span class="kn">from</span> <span class="nn">math</span> <span class="k">import</span> <span class="n">pi</span>
 
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">int32</span><span class="p">,</span> <span class="n">float64</span>
-<span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">floor</span><span class="p">,</span> <span class="n">dot</span>
+<span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">floor</span><span class="p">,</span> <span class="n">dot</span><span class="p">,</span> <span class="n">add</span><span class="p">,</span> <span class="n">cos</span><span class="p">,</span> <span class="n">sin</span>
+<span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">ogrid</span><span class="p">,</span> <span class="n">stack</span><span class="p">,</span> <span class="n">take</span>
 
 <span class="kn">from</span> <span class="nn">._help</span> <span class="k">import</span> <span class="n">ensure_array</span>
 <span class="kn">import</span> <span class="nn">sisl._array</span> <span class="k">as</span> <span class="nn">_a</span>
+<span class="kn">from</span> <span class="nn">.shape</span> <span class="k">import</span> <span class="n">Shape</span>
 <span class="kn">from</span> <span class="nn">.utils</span> <span class="k">import</span> <span class="n">default_ArgumentParser</span><span class="p">,</span> <span class="n">default_namespace</span>
 <span class="kn">from</span> <span class="nn">.utils</span> <span class="k">import</span> <span class="n">cmd</span><span class="p">,</span> <span class="n">strseq</span><span class="p">,</span> <span class="n">direction</span>
 <span class="kn">from</span> <span class="nn">.utils</span> <span class="k">import</span> <span class="n">array_arange</span>
@@ -364,6 +367,7 @@
 
 <div class="viewcode-block" id="Grid.set_grid"><a class="viewcode-back" href="../../api-generated/sisl.Grid.html#sisl.Grid.set_grid">[docs]</a>    <span class="k">def</span> <span class="nf">set_grid</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">shape</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Create the internal grid of certain size. &quot;&quot;&quot;</span>
+        <span class="n">shape</span> <span class="o">=</span> <span class="n">ensure_array</span><span class="p">(</span><span class="n">shape</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
         <span class="k">if</span> <span class="n">dtype</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">dtype</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">grid</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">shape</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span></div>
@@ -381,6 +385,10 @@
 <span class="sd">           boundary condition for the second unit-cell vector direction</span>
 <span class="sd">        c: int or list of int, optional</span>
 <span class="sd">           boundary condition for the third unit-cell vector direction</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        ValueError : if specifying periodic one one boundary, so must the opposite side.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">boundary</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">boundary</span><span class="p">,</span> <span class="n">Integral</span><span class="p">):</span>
@@ -554,6 +562,10 @@
 <span class="sd">           the indices of the grid axis `axis` to be retained</span>
 <span class="sd">        axis : int</span>
 <span class="sd">           the axis segment from which we retain the indices `idx`</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        ValueError : if the length of the indices is 0</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">idx</span> <span class="o">=</span> <span class="n">ensure_array</span><span class="p">(</span><span class="n">idx</span><span class="p">)</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
 
@@ -600,18 +612,84 @@
         <span class="n">ret_idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="n">_a</span><span class="o">.</span><span class="n">arangei</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="n">axis</span><span class="p">]),</span> <span class="n">ensure_array</span><span class="p">(</span><span class="n">idx</span><span class="p">))</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="n">ret_idx</span><span class="p">,</span> <span class="n">axis</span><span class="p">)</span></div>
 
+    <span class="k">def</span> <span class="nf">_index_shape</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">shape</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Internal routine for shape-indices &quot;&quot;&quot;</span>
+        <span class="c1"># First grab the sphere, subsequent indices will be reduced</span>
+        <span class="c1"># by the actual shape</span>
+        <span class="n">sphere</span> <span class="o">=</span> <span class="n">shape</span><span class="o">.</span><span class="n">toSphere</span><span class="p">()</span>
+        <span class="n">R</span> <span class="o">=</span> <span class="n">sphere</span><span class="o">.</span><span class="n">radius</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="c1"># Figure out the max-min indices with a spacing of 1 radians</span>
+        <span class="n">rad1</span> <span class="o">=</span> <span class="n">pi</span> <span class="o">/</span> <span class="mi">180</span>
+        <span class="n">theta</span><span class="p">,</span> <span class="n">phi</span> <span class="o">=</span> <span class="n">ogrid</span><span class="p">[</span><span class="o">-</span><span class="n">pi</span><span class="p">:</span><span class="n">pi</span><span class="p">:</span><span class="n">rad1</span><span class="p">,</span> <span class="mi">0</span><span class="p">:</span><span class="n">pi</span><span class="p">:</span><span class="n">rad1</span><span class="p">]</span>
+        <span class="n">nrxyz</span> <span class="o">=</span> <span class="p">(</span><span class="n">theta</span><span class="o">.</span><span class="n">size</span><span class="p">,</span> <span class="n">phi</span><span class="o">.</span><span class="n">size</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+
+        <span class="n">rxyz</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">emptyd</span><span class="p">(</span><span class="n">nrxyz</span><span class="p">)</span>
+        <span class="n">rxyz</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">R</span> <span class="o">*</span> <span class="n">cos</span><span class="p">(</span><span class="n">phi</span><span class="p">)</span> <span class="o">+</span> <span class="n">sphere</span><span class="o">.</span><span class="n">center</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+        <span class="n">sin</span><span class="p">(</span><span class="n">phi</span><span class="p">,</span> <span class="n">out</span><span class="o">=</span><span class="n">phi</span><span class="p">)</span>
+        <span class="n">rxyz</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">R</span> <span class="o">*</span> <span class="n">cos</span><span class="p">(</span><span class="n">theta</span><span class="p">)</span> <span class="o">*</span> <span class="n">phi</span> <span class="o">+</span> <span class="n">sphere</span><span class="o">.</span><span class="n">center</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">rxyz</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">R</span> <span class="o">*</span> <span class="n">sin</span><span class="p">(</span><span class="n">theta</span><span class="p">)</span> <span class="o">*</span> <span class="n">phi</span> <span class="o">+</span> <span class="n">sphere</span><span class="o">.</span><span class="n">center</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="k">del</span> <span class="n">theta</span><span class="p">,</span> <span class="n">phi</span><span class="p">,</span> <span class="n">nrxyz</span>
+
+        <span class="c1"># Get all indices of the spherical circumference</span>
+        <span class="n">idx</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">rxyz</span><span class="p">)</span>
+        <span class="k">del</span> <span class="n">rxyz</span>
+
+        <span class="c1"># Get min/max</span>
+        <span class="n">idx_min</span> <span class="o">=</span> <span class="n">idx</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">idx_max</span> <span class="o">=</span> <span class="n">idx</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="k">del</span> <span class="n">idx</span>
+
+        <span class="n">dc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dcell</span>
+
+        <span class="c1"># Now to find the actual points inside the shape</span>
+        <span class="c1"># First create all points in the square and then retrieve all indices</span>
+        <span class="c1"># within.</span>
+        <span class="c1"># TODO, see if we can optimize this a bit.</span>
+        <span class="n">addouter</span> <span class="o">=</span> <span class="n">add</span><span class="o">.</span><span class="n">outer</span>
+        <span class="n">ix</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">aranged</span><span class="p">(</span><span class="n">idx_min</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">idx_max</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="mf">0.5</span><span class="p">)</span>
+        <span class="n">iy</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">aranged</span><span class="p">(</span><span class="n">idx_min</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">idx_max</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="mf">0.5</span><span class="p">)</span>
+        <span class="n">iz</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">aranged</span><span class="p">(</span><span class="n">idx_min</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">idx_max</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">+</span> <span class="mf">0.5</span><span class="p">)</span>
+        <span class="n">output_shape</span> <span class="o">=</span> <span class="p">(</span><span class="n">ix</span><span class="o">.</span><span class="n">size</span><span class="p">,</span> <span class="n">iy</span><span class="o">.</span><span class="n">size</span><span class="p">,</span> <span class="n">iz</span><span class="o">.</span><span class="n">size</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+        <span class="n">rx</span> <span class="o">=</span> <span class="n">addouter</span><span class="p">(</span><span class="n">addouter</span><span class="p">(</span><span class="n">ix</span> <span class="o">*</span> <span class="n">dc</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">iy</span> <span class="o">*</span> <span class="n">dc</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">]),</span> <span class="n">iz</span> <span class="o">*</span> <span class="n">dc</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">])</span>
+        <span class="n">ry</span> <span class="o">=</span> <span class="n">addouter</span><span class="p">(</span><span class="n">addouter</span><span class="p">(</span><span class="n">ix</span> <span class="o">*</span> <span class="n">dc</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">iy</span> <span class="o">*</span> <span class="n">dc</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">]),</span> <span class="n">iz</span> <span class="o">*</span> <span class="n">dc</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span>
+        <span class="n">rz</span> <span class="o">=</span> <span class="n">addouter</span><span class="p">(</span><span class="n">addouter</span><span class="p">(</span><span class="n">ix</span> <span class="o">*</span> <span class="n">dc</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">],</span> <span class="n">iy</span> <span class="o">*</span> <span class="n">dc</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">]),</span> <span class="n">iz</span> <span class="o">*</span> <span class="n">dc</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">])</span>
+        <span class="n">rxyz</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">emptyd</span><span class="p">(</span><span class="n">output_shape</span><span class="p">)</span>
+        <span class="n">rxyz</span><span class="p">[:,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">rx</span>
+        <span class="n">rxyz</span><span class="p">[:,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">ry</span>
+        <span class="n">rxyz</span><span class="p">[:,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">rz</span>
+        <span class="k">del</span> <span class="n">rx</span><span class="p">,</span> <span class="n">ry</span><span class="p">,</span> <span class="n">rz</span>
+        <span class="n">idx</span> <span class="o">=</span> <span class="n">shape</span><span class="o">.</span><span class="n">within_index</span><span class="p">(</span><span class="n">rxyz</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
+        <span class="k">del</span> <span class="n">rxyz</span>
+        <span class="n">i</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">emptyi</span><span class="p">(</span><span class="n">output_shape</span><span class="p">)</span>
+        <span class="n">i</span><span class="p">[:,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">ix</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">i</span><span class="p">[:,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">iy</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">i</span><span class="p">[:,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">iz</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">del</span> <span class="n">ix</span><span class="p">,</span> <span class="n">iy</span><span class="p">,</span> <span class="n">iz</span>
+        <span class="n">i</span><span class="o">.</span><span class="n">shape</span> <span class="o">=</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+        <span class="n">i</span> <span class="o">=</span> <span class="n">take</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">idx</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="k">del</span> <span class="n">idx</span>
+
+        <span class="k">return</span> <span class="n">i</span>
+
 <div class="viewcode-block" id="Grid.index"><a class="viewcode-back" href="../../api-generated/sisl.Grid.html#sisl.Grid.index">[docs]</a>    <span class="k">def</span> <span class="nf">index</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">coord</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Returns the index along axis `axis` where `coord` exists</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
-<span class="sd">        coord : (*, 3) or float</span>
+<span class="sd">        coord : (*, 3) or float or Shape</span>
 <span class="sd">            the coordinate of the axis. If a float is passed `axis` is</span>
 <span class="sd">            also required in which case it corresponds to the length along the</span>
-<span class="sd">            lattice vector corresponding to `axis`</span>
+<span class="sd">            lattice vector corresponding to `axis`.</span>
+<span class="sd">            If a Shape a list of coordinates that fits the voxel positions</span>
+<span class="sd">            are returned (all internal points also).</span>
 <span class="sd">        axis : int</span>
 <span class="sd">            the axis direction of the index</span>
 <span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">coord</span><span class="p">,</span> <span class="n">Shape</span><span class="p">):</span>
+            <span class="c1"># We have to do something differently</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_index_shape</span><span class="p">(</span><span class="n">coord</span><span class="p">)</span>
+
         <span class="n">rcell</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">rcell</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">)</span>
 
         <span class="n">coord</span> <span class="o">=</span> <span class="n">ensure_array</span><span class="p">(</span><span class="n">coord</span><span class="p">,</span> <span class="n">float64</span><span class="p">)</span>
@@ -645,9 +723,7 @@
             <span class="k">return</span> <span class="n">floor</span><span class="p">(</span><span class="n">dot</span><span class="p">(</span><span class="n">rcell</span><span class="p">[</span><span class="n">axis</span><span class="p">,</span> <span class="p">:],</span> <span class="n">coord</span><span class="o">.</span><span class="n">T</span><span class="p">)</span> <span class="o">*</span> <span class="n">shape</span><span class="p">[</span><span class="n">axis</span><span class="p">])</span><span class="o">.</span><span class="n">T</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">int32</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="Grid.append"><a class="viewcode-back" href="../../api-generated/sisl.Grid.html#sisl.Grid.append">[docs]</a>    <span class="k">def</span> <span class="nf">append</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">,</span> <span class="n">axis</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot; Appends other `Grid` to this grid along axis</span>
-
-<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot; Appends other `Grid` to this grid along axis &quot;&quot;&quot;</span>
         <span class="n">shape</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
         <span class="n">shape</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span> <span class="o">+=</span> <span class="n">other</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="p">(</span><span class="n">shape</span><span class="p">,</span> <span class="n">bc</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">bc</span><span class="p">),</span>
@@ -827,8 +903,8 @@
 <div class="viewcode-block" id="Grid.mgrid"><a class="viewcode-back" href="../../api-generated/sisl.Grid.html#sisl.Grid.mgrid">[docs]</a>    <span class="k">def</span> <span class="nf">mgrid</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">slices</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Return a list of indices corresponding to the slices</span>
 
-<span class="sd">        This is equivalent to the `numpy.mgrid` method which allows</span>
-<span class="sd">        creating full grids.</span>
+<span class="sd">        The returned values are equivalent to `numpy.mgrid` but they are returned</span>
+<span class="sd">        in a (*, 3) array.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
@@ -852,23 +928,32 @@
         <span class="k">return</span> <span class="n">indices</span></div>
 
 <div class="viewcode-block" id="Grid.pyamg_index"><a class="viewcode-back" href="../../api-generated/sisl.Grid.html#sisl.Grid.pyamg_index">[docs]</a>    <span class="k">def</span> <span class="nf">pyamg_index</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">index</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot; Calculate `pyamg` matrix indices from a list of grid indices</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot; Calculate `pyamg` matrix indices from a list of grid indices</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
 <span class="sd">        index : (*,3) of int</span>
-<span class="sd">            a list of indices of the grid</span>
+<span class="sd">            a list of indices of the grid along each grid axis</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
 <span class="sd">        pyamg linear indices for the matrix</span>
+
+<span class="sd">        See Also</span>
+<span class="sd">        --------</span>
+<span class="sd">        index : query indices from coordinates (directly passable to this method)</span>
+<span class="sd">        mgrid : Grid equivalent to `numpy.mgrid`. Grid.mgrid returns indices in shapes (*, 3), contrary to `numpy`</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        ValueError : if any of the passed indices are below 0 or above the number of elements per axis</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">index</span> <span class="o">=</span> <span class="n">ensure_array</span><span class="p">(</span><span class="n">index</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
-        <span class="n">grid</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[:]</span>
-        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">g</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">grid</span><span class="p">):</span>
-            <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">index</span><span class="p">[:,</span> <span class="n">i</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="n">g</span><span class="p">):</span>
-                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="n">__name</span> <span class="o">+</span> <span class="s1">&#39;.pyamg_index erroneous values for grid indices&#39;</span><span class="p">)</span>
-        <span class="n">cp</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">cumprod</span><span class="p">(</span><span class="n">grid</span><span class="p">[::</span><span class="o">-</span><span class="mi">1</span><span class="p">])[:</span><span class="o">-</span><span class="mi">1</span><span class="p">][::</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+        <span class="n">grid</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">arrayi</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[:])</span>
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">index</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span> <span class="ow">or</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">index</span> <span class="o">&gt;=</span> <span class="n">grid</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">)):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39;.pyamg_index erroneous values for grid indices&#39;</span><span class="p">)</span>
+        <span class="c1"># Skipping factor per element</span>
+        <span class="n">cp</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">arrayi</span><span class="p">([[</span><span class="n">grid</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="n">grid</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">grid</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="mi">1</span><span class="p">]])</span>
         <span class="k">return</span> <span class="p">(</span><span class="n">cp</span> <span class="o">*</span> <span class="n">index</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="Grid.pyamg_source"><a class="viewcode-back" href="../../api-generated/sisl.Grid.html#sisl.Grid.pyamg_source">[docs]</a>    <span class="k">def</span> <span class="nf">pyamg_source</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">pyamg_indices</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
@@ -1368,7 +1453,7 @@
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'../../',
-            VERSION:'0.9.2-205',
+            VERSION:'0.9.2-219',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true,

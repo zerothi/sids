@@ -65,7 +65,7 @@
             
             
               <div class="version">
-                0.9.2-205
+                0.9.2-219
               </div>
             
           
@@ -170,6 +170,7 @@
             
   <h1>Source code for sisl.shape.base</h1><div class="highlight"><pre>
 <span></span><span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">print_function</span><span class="p">,</span> <span class="n">division</span>
+<span class="kn">from</span> <span class="nn">math</span> <span class="k">import</span> <span class="n">sqrt</span> <span class="k">as</span> <span class="n">msqrt</span>
 
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">union1d</span><span class="p">,</span> <span class="n">intersect1d</span><span class="p">,</span> <span class="n">setdiff1d</span><span class="p">,</span> <span class="n">setxor1d</span>
@@ -179,6 +180,7 @@
 <span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">logical_not</span> <span class="k">as</span> <span class="n">log_not</span>
 
 <span class="kn">from</span> <span class="nn">sisl._help</span> <span class="k">import</span> <span class="n">ensure_array</span>
+<span class="kn">from</span> <span class="nn">sisl.utils.mathematics</span> <span class="k">import</span> <span class="n">fnorm</span>
 
 
 <span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;Shape&#39;</span><span class="p">,</span> <span class="s1">&#39;PureShape&#39;</span><span class="p">]</span>
@@ -212,13 +214,17 @@
 
 <span class="sd">    Subclassed shapes may have additional methods by which they are defined.</span>
 
-<span class="sd">    Any `BaseShape` may be used to construct other shapes by applying set operations.</span>
+<span class="sd">    Any `Shape` may be used to construct other shapes by applying set operations.</span>
 <span class="sd">    Currently implemented binary operators are:</span>
 
-<span class="sd">    `__or__`/`__add__` : set union</span>
-<span class="sd">    `__and__` : set intersection</span>
-<span class="sd">    `__sub__` : set complement</span>
-<span class="sd">    `__xor__` : set disjunctive union</span>
+<span class="sd">    `__or__`/`__add__` : set union, either `|` or `+` operator (not `or`)</span>
+
+<span class="sd">    `__and__` : set intersection, `&amp;` operator (not `and`)</span>
+
+<span class="sd">    `__sub__` : set complement, `-` operator</span>
+
+<span class="sd">    `__xor__` : set disjunctive union, `^` operator</span>
+
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="vm">__slots__</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;_center&#39;</span><span class="p">,</span> <span class="p">)</span>
 
@@ -237,6 +243,10 @@
 <div class="viewcode-block" id="Shape.scale"><a class="viewcode-back" href="../../../api-generated/sisl.shape.Shape.html#sisl.shape.Shape.scale">[docs]</a>    <span class="k">def</span> <span class="nf">scale</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">scale</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Return a new Shape with a scaled size &quot;&quot;&quot;</span>
         <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s1">&#39;scale has not been implemented in: &#39;</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Shape.toSphere"><a class="viewcode-back" href="../../../api-generated/sisl.shape.Shape.html#sisl.shape.Shape.toSphere">[docs]</a>    <span class="k">def</span> <span class="nf">toSphere</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Create a sphere which is surely encompassing the *full* shape &quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s1">&#39;toSphere has not been implemented in: &#39;</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="Shape.within"><a class="viewcode-back" href="../../../api-generated/sisl.shape.Shape.html#sisl.shape.Shape.within">[docs]</a>    <span class="k">def</span> <span class="nf">within</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Return ``True`` if `other` is fully within `self`</span>
@@ -296,9 +306,9 @@
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    A : BaseShape</span>
+<span class="sd">    A : Shape</span>
 <span class="sd">       the left hand side of the set operation</span>
-<span class="sd">    B : BaseShape</span>
+<span class="sd">    B : Shape</span>
 <span class="sd">       the right hand side of the set operation</span>
 <span class="sd">    op : {_OR, _AND, _SUB, _XOR}</span>
 <span class="sd">       the operator defining the sets relation</span>
@@ -316,14 +326,79 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">B</span> <span class="o">=</span> <span class="n">B</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">op</span> <span class="o">=</span> <span class="n">op</span>
 
+    <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">center</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Average center of composite shapes &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">A</span><span class="o">.</span><span class="n">center</span><span class="p">()</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">B</span><span class="o">.</span><span class="n">center</span><span class="p">())</span> <span class="o">*</span> <span class="mf">0.5</span>
+        <span class="k">return</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">A</span><span class="o">.</span><span class="n">center</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">B</span><span class="o">.</span><span class="n">center</span><span class="p">)</span> <span class="o">*</span> <span class="mf">0.5</span>
 
     <span class="k">def</span> <span class="nf">volume</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="c1"># The volume for these set operators cannot easily be defined, so</span>
         <span class="c1"># we should rather not do anything about it.</span>
         <span class="k">return</span> <span class="o">-</span><span class="mf">1.</span>
+
+    <span class="k">def</span> <span class="nf">toSphere</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Create a sphere which is surely encompassing the *full* shape &quot;&quot;&quot;</span>
+        <span class="kn">from</span> <span class="nn">.ellipsoid</span> <span class="k">import</span> <span class="n">Sphere</span>
+
+        <span class="c1"># Retrieve spheres</span>
+        <span class="n">A</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">A</span><span class="o">.</span><span class="n">toSphere</span><span class="p">()</span>
+        <span class="n">Ar</span> <span class="o">=</span> <span class="n">A</span><span class="o">.</span><span class="n">radius</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">Ac</span> <span class="o">=</span> <span class="n">A</span><span class="o">.</span><span class="n">center</span>
+        <span class="n">B</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">B</span><span class="o">.</span><span class="n">toSphere</span><span class="p">()</span>
+        <span class="n">Br</span> <span class="o">=</span> <span class="n">B</span><span class="o">.</span><span class="n">radius</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">Bc</span> <span class="o">=</span> <span class="n">B</span><span class="o">.</span><span class="n">center</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">op</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">_AND</span><span class="p">:</span>
+            <span class="c1"># If one is fully enclosed in the other, we can simply neglect the other</span>
+            <span class="c1"># Calculate the distance between the spheres</span>
+            <span class="n">dist</span> <span class="o">=</span> <span class="n">fnorm</span><span class="p">(</span><span class="n">Ac</span> <span class="o">-</span> <span class="n">Bc</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">dist</span> <span class="o">+</span> <span class="n">Ar</span> <span class="o">&lt;=</span> <span class="n">Br</span><span class="p">:</span>
+                <span class="c1"># A is fully enclosed in B (or they are the same)</span>
+                <span class="k">return</span> <span class="n">A</span>
+
+            <span class="k">elif</span> <span class="n">dist</span> <span class="o">+</span> <span class="n">Br</span> <span class="o">&lt;=</span> <span class="n">Ar</span><span class="p">:</span>
+                <span class="c1"># B is fully enclosed in A (or they are the same)</span>
+                <span class="k">return</span> <span class="n">B</span>
+
+            <span class="k">elif</span> <span class="n">dist</span> <span class="o">&lt;</span> <span class="p">(</span><span class="n">Ar</span> <span class="o">+</span> <span class="n">Br</span><span class="p">):</span>
+                <span class="c1"># We can reduce the sphere drastically because only the overlapping region is important</span>
+                <span class="c1"># i_r defines the intersection radius, search for Sphere-Sphere Intersection</span>
+                <span class="n">dx</span> <span class="o">=</span> <span class="p">(</span><span class="n">dist</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">-</span> <span class="n">Br</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="n">Ar</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">dist</span><span class="p">)</span>
+
+                <span class="k">if</span> <span class="n">dx</span> <span class="o">&gt;</span> <span class="n">dist</span><span class="p">:</span>
+                    <span class="c1"># the intersection is placed after the radius of B</span>
+                    <span class="c1"># And in this case B is smaller (otherwise dx &lt; 0)</span>
+                    <span class="k">return</span> <span class="n">B</span>
+                <span class="k">elif</span> <span class="n">dx</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="k">return</span> <span class="n">A</span>
+
+                <span class="n">i_r</span> <span class="o">=</span> <span class="n">msqrt</span><span class="p">(</span><span class="mi">4</span> <span class="o">*</span> <span class="p">(</span><span class="n">dist</span> <span class="o">*</span> <span class="n">Ar</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">-</span> <span class="p">(</span><span class="n">dist</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">-</span> <span class="n">Br</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="n">Ar</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">dist</span><span class="p">)</span>
+
+                <span class="c1"># Now we simply need to find the dx point along the vector Bc - Ac</span>
+                <span class="c1"># Then we can easily calculate the point from A</span>
+                <span class="n">center</span> <span class="o">=</span> <span class="n">Bc</span> <span class="o">-</span> <span class="n">Ac</span>
+                <span class="n">center</span> <span class="o">=</span> <span class="n">Ac</span> <span class="o">+</span> <span class="n">center</span> <span class="o">/</span> <span class="n">fnorm</span><span class="p">(</span><span class="n">center</span><span class="p">)</span> <span class="o">*</span> <span class="n">dx</span>
+                <span class="n">A</span> <span class="o">=</span> <span class="n">i_r</span>
+                <span class="n">B</span> <span class="o">=</span> <span class="n">i_r</span>
+
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># In this case there is actually no overlap. So perhaps we should</span>
+                <span class="c1"># create an infinitisemal sphere such that no point will ever be found</span>
+                <span class="c1"># Or we should return a new Shape which *always* return False for indices etc.</span>
+                <span class="n">center</span> <span class="o">=</span> <span class="p">(</span><span class="n">Ac</span> <span class="o">+</span> <span class="n">Bc</span><span class="p">)</span> <span class="o">*</span> <span class="mf">0.5</span>
+                <span class="c1"># Currently we simply use a very small sphere and put it in the middle between</span>
+                <span class="c1"># the spheres</span>
+                <span class="c1"># This should at least speed up comparisons</span>
+                <span class="n">A</span> <span class="o">=</span> <span class="mf">0.001</span>
+                <span class="n">B</span> <span class="o">=</span> <span class="mf">0.001</span>
+
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">center</span> <span class="o">=</span> <span class="p">(</span><span class="n">Ac</span> <span class="o">+</span> <span class="n">Bc</span><span class="p">)</span> <span class="o">*</span> <span class="mf">0.5</span>
+            <span class="n">A</span> <span class="o">=</span> <span class="n">Ar</span> <span class="o">+</span> <span class="n">fnorm</span><span class="p">(</span><span class="n">center</span> <span class="o">-</span> <span class="n">Ac</span><span class="p">)</span>
+            <span class="n">B</span> <span class="o">=</span> <span class="n">Br</span> <span class="o">+</span> <span class="n">fnorm</span><span class="p">(</span><span class="n">center</span> <span class="o">-</span> <span class="n">Bc</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">Sphere</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">B</span><span class="p">),</span> <span class="n">center</span><span class="p">)</span>
 
     <span class="c1"># within is defined in Shape to use within_index</span>
     <span class="c1"># So no need to doubly implement it</span>
@@ -406,7 +481,7 @@
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'../../../',
-            VERSION:'0.9.2-205',
+            VERSION:'0.9.2-219',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true,
