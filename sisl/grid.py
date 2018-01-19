@@ -2,13 +2,16 @@ from __future__ import print_function, division
 
 import warnings
 from numbers import Integral, Real
+from math import pi
 
 import numpy as np
 from numpy import int32, float64
-from numpy import floor, dot
+from numpy import floor, dot, add, cos, sin
+from numpy import ogrid, stack, take
 
 from ._help import ensure_array
 import sisl._array as _a
+from .shape import Shape
 from .utils import default_ArgumentParser, default_namespace
 from .utils import cmd, strseq, direction
 from .utils import array_arange
@@ -193,6 +196,7 @@ class Grid(SuperCellChild):
 
     def set_grid(self, shape, dtype=None):
         """ Create the internal grid of certain size. """
+        shape = ensure_array(shape).ravel()
         if dtype is None:
             dtype = np.float64
         self.grid = np.zeros(shape, dtype=dtype)
@@ -210,6 +214,10 @@ class Grid(SuperCellChild):
            boundary condition for the second unit-cell vector direction
         c: int or list of int, optional
            boundary condition for the third unit-cell vector direction
+
+        Raises
+        ------
+        ValueError : if specifying periodic one one boundary, so must the opposite side.
         """
         if not boundary is None:
             if isinstance(boundary, Integral):
@@ -383,6 +391,10 @@ class Grid(SuperCellChild):
            the indices of the grid axis `axis` to be retained
         axis : int
            the axis segment from which we retain the indices `idx`
+
+        Raises
+        ------
+        ValueError : if the length of the indices is 0
         """
         idx = ensure_array(idx).flatten()
 
@@ -429,18 +441,84 @@ class Grid(SuperCellChild):
         ret_idx = np.delete(_a.arangei(self.shape[axis]), ensure_array(idx))
         return self.sub(ret_idx, axis)
 
+    def _index_shape(self, shape):
+        """ Internal routine for shape-indices """
+        # First grab the sphere, subsequent indices will be reduced
+        # by the actual shape
+        sphere = shape.toSphere()
+        R = sphere.radius[0]
+
+        # Figure out the max-min indices with a spacing of 1 radians
+        rad1 = pi / 180
+        theta, phi = ogrid[-pi:pi:rad1, 0:pi:rad1]
+        nrxyz = (theta.size, phi.size, 3)
+
+        rxyz = _a.emptyd(nrxyz)
+        rxyz[..., 2] = R * cos(phi) + sphere.center[2]
+        sin(phi, out=phi)
+        rxyz[..., 0] = R * cos(theta) * phi + sphere.center[0]
+        rxyz[..., 1] = R * sin(theta) * phi + sphere.center[1]
+        del theta, phi, nrxyz
+
+        # Get all indices of the spherical circumference
+        idx = self.index(rxyz)
+        del rxyz
+
+        # Get min/max
+        idx_min = idx.min(0)
+        idx_max = idx.max(0)
+        del idx
+
+        dc = self.dcell
+
+        # Now to find the actual points inside the shape
+        # First create all points in the square and then retrieve all indices
+        # within.
+        # TODO, see if we can optimize this a bit.
+        addouter = add.outer
+        ix = _a.aranged(idx_min[0], idx_max[0] + 0.5)
+        iy = _a.aranged(idx_min[1], idx_max[1] + 0.5)
+        iz = _a.aranged(idx_min[2], idx_max[2] + 0.5)
+        output_shape = (ix.size, iy.size, iz.size, 3)
+        rx = addouter(addouter(ix * dc[0, 0], iy * dc[1, 0]), iz * dc[2, 0])
+        ry = addouter(addouter(ix * dc[0, 1], iy * dc[1, 1]), iz * dc[2, 1])
+        rz = addouter(addouter(ix * dc[0, 2], iy * dc[1, 2]), iz * dc[2, 2])
+        rxyz = _a.emptyd(output_shape)
+        rxyz[:, :, :, 0] = rx
+        rxyz[:, :, :, 1] = ry
+        rxyz[:, :, :, 2] = rz
+        del rx, ry, rz
+        idx = shape.within_index(rxyz.reshape(-1, 3))
+        del rxyz
+        i = _a.emptyi(output_shape)
+        i[:, :, :, 0] = ix.reshape(-1, 1, 1)
+        i[:, :, :, 1] = iy.reshape(1, -1, 1)
+        i[:, :, :, 2] = iz.reshape(1, 1, -1)
+        del ix, iy, iz
+        i.shape = (-1, 3)
+        i = take(i, idx, axis=0)
+        del idx
+
+        return i
+
     def index(self, coord, axis=None):
         """ Returns the index along axis `axis` where `coord` exists
 
         Parameters
         ----------
-        coord : (*, 3) or float
+        coord : (*, 3) or float or Shape
             the coordinate of the axis. If a float is passed `axis` is
             also required in which case it corresponds to the length along the
-            lattice vector corresponding to `axis`
+            lattice vector corresponding to `axis`.
+            If a Shape a list of coordinates that fits the voxel positions
+            are returned (all internal points also).
         axis : int
             the axis direction of the index
         """
+        if isinstance(coord, Shape):
+            # We have to do something differently
+            return self._index_shape(coord)
+
         rcell = self.rcell / (2 * np.pi)
 
         coord = ensure_array(coord, float64)
@@ -474,9 +552,7 @@ class Grid(SuperCellChild):
             return floor(dot(rcell[axis, :], coord.T) * shape[axis]).T.astype(int32)
 
     def append(self, other, axis):
-        """ Appends other `Grid` to this grid along axis
-
-        """
+        """ Appends other `Grid` to this grid along axis """
         shape = list(self.shape)
         shape[axis] += other.shape[axis]
         return self.__class__(shape, bc=np.copy(self.bc),
@@ -656,8 +732,8 @@ class Grid(SuperCellChild):
     def mgrid(self, *slices):
         """ Return a list of indices corresponding to the slices
 
-        This is equivalent to the `numpy.mgrid` method which allows
-        creating full grids.
+        The returned values are equivalent to `numpy.mgrid` but they are returned
+        in a (*, 3) array.
 
         Parameters
         ----------
@@ -681,23 +757,32 @@ class Grid(SuperCellChild):
         return indices
 
     def pyamg_index(self, index):
-        """ Calculate `pyamg` matrix indices from a list of grid indices
+        r""" Calculate `pyamg` matrix indices from a list of grid indices
 
         Parameters
         ----------
         index : (*,3) of int
-            a list of indices of the grid
+            a list of indices of the grid along each grid axis
 
         Returns
         -------
         pyamg linear indices for the matrix
+
+        See Also
+        --------
+        index : query indices from coordinates (directly passable to this method)
+        mgrid : Grid equivalent to `numpy.mgrid`. Grid.mgrid returns indices in shapes (*, 3), contrary to `numpy`
+
+        Raises
+        ------
+        ValueError : if any of the passed indices are below 0 or above the number of elements per axis
         """
         index = ensure_array(index).reshape(-1, 3)
-        grid = self.shape[:]
-        for i, g in enumerate(grid):
-            if np.any(index[:, i] >= g):
-                raise ValueError(self.__class__.__name + '.pyamg_index erroneous values for grid indices')
-        cp = np.append(np.cumprod(grid[::-1])[:-1][::-1], 1).reshape(-1, 3)
+        grid = _a.arrayi(self.shape[:])
+        if np.any(index < 0) or np.any(index >= grid.reshape(1, 3)):
+            raise ValueError(self.__class__.__name__ + '.pyamg_index erroneous values for grid indices')
+        # Skipping factor per element
+        cp = _a.arrayi([[grid[1] * grid[2], grid[2], 1]])
         return (cp * index).sum(1)
 
     def pyamg_source(self, b, pyamg_indices, value):
