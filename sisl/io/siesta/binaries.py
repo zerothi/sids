@@ -1,5 +1,6 @@
 from __future__ import print_function
 
+from numbers import Integral
 import numpy as np
 
 try:
@@ -16,7 +17,7 @@ from .sile import SileBinSiesta
 import sisl._array as _a
 from sisl import Geometry, Atom, SuperCell, Grid
 from sisl.unit.siesta import unit_convert
-from sisl.physics import Hamiltonian
+from sisl.physics import Hamiltonian, DensityMatrix
 
 Ang2Bohr = unit_convert('Ang', 'Bohr')
 eV2Ry = unit_convert('eV', 'Ry')
@@ -24,8 +25,8 @@ Bohr2Ang = unit_convert('Bohr', 'Ang')
 Ry2eV = unit_convert('Ry', 'eV')
 
 __all__ = ['TSHSSileSiesta']
-__all__ += ['HSXSileSiesta']
-__all__ += ['GridSileSiesta', 'EnergyGridSileSiesta']
+__all__ += ['HSXSileSiesta', 'DMSileSiesta']
+__all__ += ['GridSileSiesta']
 __all__ += ['_GFSileSiesta', 'TSGFSileSiesta']
 
 
@@ -158,6 +159,46 @@ class TSHSSileSiesta(SileBinSiesta):
                               nspin=len(H.spin), na_u=H.geom.na, no_u=H.geom.no, nnz=H.nnz)
 
 
+class DMSileSiesta(SileBinSiesta):
+    """ Siesta DM file object """
+
+    def read_density_matrix(self, **kwargs):
+        """ Returns the density matrix from the siesta.DM file """
+
+        # Now read the sizes used...
+        spin, no, nnz = _siesta.read_dm_sizes(self.file)
+        ncol, col, dDM = _siesta.read_dm(self.file, spin, no, nnz)
+
+        # Try and immediately attach a geometry
+        geom = kwargs.get('geom', kwargs.get('geometry', None))
+        if geom is None:
+            # We truly, have no clue,
+            # Just generate a boxed system
+            xyz = [[x, 0, 0] for x in range(no)]
+            geom = Geometry(xyz, Atom(1), sc=[no, 1, 1])
+
+        if geom.no != no:
+            raise ValueError("Reading DM files requires the input geometry to have the "
+                             "correct number of orbitals.")
+
+        # Create the Hamiltonian container
+        DM = DensityMatrix(geom, spin, nnzpr=1, dtype=np.float32, orthogonal=False)
+
+        # Create the new sparse matrix
+        DM._csr.ncol = ncol.astype(np.int32, copy=False)
+        DM._csr.ptr = np.insert(np.cumsum(ncol, dtype=np.int32), 0, 0)
+        # Correct fortran indices
+        DM._csr.col = col.astype(np.int32, copy=False) - 1
+        DM._csr._nnz = len(col)
+
+        DM._csr._D = np.empty([nnz, spin+1], np.float32)
+        DM._csr._D[:, :spin] = dDM[:, :]
+        # DM file does not contain overlap matrix... so neglect it for now.
+        DM._csr._D[:, spin] = 0.
+
+        return DM
+
+
 class HSXSileSiesta(SileBinSiesta):
     """ Siesta HSX file object """
 
@@ -209,9 +250,6 @@ class HSXSileSiesta(SileBinSiesta):
 class GridSileSiesta(SileBinSiesta):
     """ Grid file object from a binary Siesta output file """
 
-    def _setup(self, *args, **kwargs):
-        self.grid_unit = 1.
-
     def read_supercell(self, *args, **kwargs):
 
         cell = _siesta.read_grid_cell(self.file)
@@ -225,16 +263,28 @@ class GridSileSiesta(SileBinSiesta):
 
         Parameters
         ----------
-        spin : int, optional
-           the returned spin
+        spin : int or array_like, optional
+           the spin-index for retrieving one of the components. If a vector
+           is passed it refers to the fraction per indexed component. I.e.
+           ``[0.5, 0.5]`` will return sum of half the first two components.
+           Default to the first component.
         """
         # Read the sizes
         nspin, mesh = _siesta.read_grid_sizes(self.file)
         # Read the cell and grid
-        cell, grid = _siesta.read_grid(self.file, nspin, mesh[0], mesh[1], mesh[2])
+        cell = _siesta.read_grid_cell(self.file)
+        grid = _siesta.read_grid(self.file, nspin, mesh[0], mesh[1], mesh[2])
 
-        if grid.ndim == 4:
-            grid = grid[spin, :, :, :]
+        if isinstance(spin, Integral):
+            grid = grid[:, :, :, spin]
+        else:
+            if len(spin) > grid.shape[0]:
+                raise ValueError(self.__class__.__name__ + '.read_grid requires spin to be an integer or '
+                                 'an array of length equal to the number of spin components.')
+            g = grid[:, :, :, 0] * spin[0]
+            for i, scale in enumerate(spin[1:]):
+                g += grid[:, :, :, 1+i] * scale
+            grid = g
 
         cell = np.array(cell.T, np.float64)
         cell.shape = (3, 3)
@@ -242,13 +292,6 @@ class GridSileSiesta(SileBinSiesta):
         g = Grid(mesh, sc=SuperCell(cell), dtype=np.float32)
         g.grid = np.array(grid.swapaxes(0, 2), np.float32) * self.grid_unit
         return g
-
-
-class EnergyGridSileSiesta(GridSileSiesta):
-    """ Energy grid file object from a binary Siesta output file """
-
-    def _setup(self, *args, **kwargs):
-        self.grid_unit = Ry2eV
 
 
 class _GFSileSiesta(SileBinSiesta):
@@ -375,21 +418,25 @@ class _GFSileSiesta(SileBinSiesta):
         self._close_gf()
 
 
-def _type(name, obj):
-    return type(name, (obj, ), {})
+def _type(name, obj, dic=None):
+    if dic is None:
+        dic = {}
+    return type(name, (obj, ), dic)
 
 # Faster than class ... \ pass
 TSGFSileSiesta = _type("TSGFSileSiesta", _GFSileSiesta)
 
 if found_module:
     add_sile('TSHS', TSHSSileSiesta)
-    add_sile('RHO', _type("RhoSileSiesta", GridSileSiesta))
-    add_sile('RHOINIT', _type("RhoInitSileSiesta", GridSileSiesta))
-    add_sile('DRHO', _type("dRhoSileSiesta", GridSileSiesta))
-    add_sile('IOCH', _type("IoRhoSileSiesta", GridSileSiesta))
-    add_sile('TOCH', _type("TotalRhoSileSiesta", GridSileSiesta))
-    add_sile('VH', _type("HartreeSileSiesta", EnergyGridSileSiesta))
-    add_sile('VNA', _type("NeutralAtomHartreeSileSiesta", EnergyGridSileSiesta))
-    add_sile('VT', _type("TotalHartreeSileSiesta", EnergyGridSileSiesta))
-
+    add_sile('DM', DMSileSiesta)
+    # These have unit-conversions
+    BohrC2AngC = Bohr2Ang ** 3
+    add_sile('RHO', _type("RhoSileSiesta", GridSileSiesta, {'grid_unit': 1./BohrC2AngC}))
+    add_sile('RHOINIT', _type("RhoInitSileSiesta", GridSileSiesta, {'grid_unit': 1./BohrC2AngC}))
+    add_sile('DRHO', _type("dRhoSileSiesta", GridSileSiesta, {'grid_unit': 1./BohrC2AngC}))
+    add_sile('IOCH', _type("IoRhoSileSiesta", GridSileSiesta, {'grid_unit': 1./BohrC2AngC}))
+    add_sile('TOCH', _type("TotalRhoSileSiesta", GridSileSiesta, {'grid_unit': 1./BohrC2AngC}))
+    add_sile('VH', _type("HartreeSileSiesta", GridSileSiesta, {'grid_unit': Ry2eV}))
+    add_sile('VNA', _type("NeutralAtomHartreeSileSiesta", GridSileSiesta, {'grid_unit': Ry2eV}))
+    add_sile('VT', _type("TotalHartreeSileSiesta", GridSileSiesta, {'grid_unit': Ry2eV}))
     add_sile('TSGF', TSGFSileSiesta)

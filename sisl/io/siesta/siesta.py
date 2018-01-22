@@ -1,7 +1,7 @@
 from __future__ import print_function
 
+from numbers import Integral
 import numpy as np
-
 
 # Import sile objects
 from .sile import SileCDFSiesta
@@ -65,6 +65,7 @@ class ncSileSiesta(SileCDFSiesta):
             orb_n = a.variables['orbnl_n'][:] # principal quantum number
             orb_z = a.variables['orbnl_z'][:] # zeta
             orb_P = a.variables['orbnl_ispol'][:] > 0 # polarization shell, or not
+            orb_q0 = a.variables['orbnl_pop'][:] # q0 for the orbitals
             orb_delta = a.variables['delta'][:] # delta for the functions
             orb_psi = a.variables['orb'][:, :]
 
@@ -98,7 +99,7 @@ class ncSileSiesta(SileCDFSiesta):
                 psi = orb_psi[io, :] * r ** l / Bohr2Ang ** (3./2.)
 
                 # Create the sphericalorbital and then the atomicorbital
-                sorb = SphericalOrbital(l, (r * Bohr2Ang, psi))
+                sorb = SphericalOrbital(l, (r * Bohr2Ang, psi), orb_q0[io])
 
                 # This will be -l:l (this is the way siesta does it)
                 orbital.extend(sorb.toAtomicOrbital(n=n, Z=z, P=P))
@@ -203,6 +204,7 @@ class ncSileSiesta(SileCDFSiesta):
 
     def read_density_matrix(self, **kwargs):
         """ Returns a density matrix from the underlying NetCDF file """
+        # This also adds the spin matrix
         DM = self._read_class_spin(DensityMatrix, **kwargs)
         sp = self._crt_grp(self, 'SPARSE')
         for i in range(len(DM.spin)):
@@ -239,8 +241,11 @@ class ncSileSiesta(SileCDFSiesta):
         ----------
         name : str
            name of the grid variable to read
-        spin : int
-           the spin-index
+        spin : int or array_like, optional
+           the spin-index for retrieving one of the components. If a vector
+           is passed it refers to the fraction per indexed component. I.e.
+           ``[0.5, 0.5]`` will return sum of half the first two components.
+           Default to the first component.
         """
         # Swap as we swap back in the end
         geom = self.read_geometry().swapaxes(0, 2)
@@ -259,10 +264,30 @@ class ncSileSiesta(SileCDFSiesta):
         # Create the grid, Siesta uses periodic, always
         grid = Grid([nz, ny, nx], bc=Grid.PERIODIC, dtype=v.dtype)
 
+        # Unit-conversion
+        BohrC2AngC = Bohr2Ang ** 3
+
+        unit = {'Rho': 1. / BohrC2AngC,
+                'RhoInit': 1. / BohrC2AngC,
+                'RhoTot': 1. / BohrC2AngC,
+                'RhoDelta': 1. / BohrC2AngC,
+                'RhoXC': 1. / BohrC2AngC,
+                'RhoBader': 1. / BohrC2AngC,
+                'RhoBader': 1. / BohrC2AngC,
+                'Chlocal': 1. / BohrC2AngC,
+        }
+
         if len(v[:].shape) == 3:
-            grid.grid = v[:, :, :]
+            grid.grid = v[:, :, :] * unit.get(name, 1.)
+        elif isinstance(spin, Integral):
+            grid.grid = v[spin, :, :, :] * unit.get(name, 1.)
         else:
-            grid.grid = v[spin, :, :, :]
+            if len(spin) > v.shape[0]:
+                raise ValueError(self.__class__.__name__ + '.read_grid requires spin to be an integer or '
+                                 'an array of length equal to the number of spin components.')
+            grid.grid[:, :, :] = v[0, :, :, :] * spin[0]
+            for i, scale in enumerate(spin[1:]):
+                grid.grid[:, :, :] += v[1+i, :, :, :] * scale
 
         try:
             u = v.unit

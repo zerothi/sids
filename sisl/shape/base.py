@@ -18,7 +18,7 @@ __all__ = ['Shape', 'PureShape']
 class Shape(object):
     """ Baseclass for all shapes. Logical operations are implemented on this class.
 
-    **This class *must* be sub classed.**
+    **This class must be sub classed.**
 
     Also all the required methods are predefined although they issue an error if they are
     not implemented in the sub-classed class.
@@ -60,9 +60,9 @@ class Shape(object):
     def __init__(self, center):
         """ Initialize the Shape with a center """
         if center is None:
-            self._center = np.zeros(3, np.float64)
+            self._center = np.zeros(3, np.float64).ravel()
         else:
-            self._center = np.array(center, np.float64)
+            self._center = np.array(center, np.float64).ravel()
 
     @property
     def center(self):
@@ -178,10 +178,10 @@ class CompositeShape(Shape):
         Bc = B.center
 
         if self.op == self._AND:
-            # If one is fully enclosed in the other, we can simply neglect the other
             # Calculate the distance between the spheres
             dist = fnorm(Ac - Bc)
 
+            # If one is fully enclosed in the other, we can simply neglect the other
             if dist + Ar <= Br:
                 # A is fully enclosed in B (or they are the same)
                 return A
@@ -190,7 +190,7 @@ class CompositeShape(Shape):
                 # B is fully enclosed in A (or they are the same)
                 return B
 
-            elif dist < (Ar + Br):
+            elif dist <= (Ar + Br):
                 # We can reduce the sphere drastically because only the overlapping region is important
                 # i_r defines the intersection radius, search for Sphere-Sphere Intersection
                 dx = (dist ** 2 - Br ** 2 + Ar ** 2) / (2 * dist)
