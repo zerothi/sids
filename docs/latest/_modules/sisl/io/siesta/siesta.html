@@ -65,7 +65,7 @@
             
             
               <div class="version">
-                0.9.2-222
+                0.9.2-237
               </div>
             
           
@@ -171,8 +171,8 @@
   <h1>Source code for sisl.io.siesta.siesta</h1><div class="highlight"><pre>
 <span></span><span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">print_function</span>
 
+<span class="kn">from</span> <span class="nn">numbers</span> <span class="k">import</span> <span class="n">Integral</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-
 
 <span class="c1"># Import sile objects</span>
 <span class="kn">from</span> <span class="nn">.sile</span> <span class="k">import</span> <span class="n">SileCDFSiesta</span>
@@ -236,6 +236,7 @@
             <span class="n">orb_n</span> <span class="o">=</span> <span class="n">a</span><span class="o">.</span><span class="n">variables</span><span class="p">[</span><span class="s1">&#39;orbnl_n&#39;</span><span class="p">][:]</span> <span class="c1"># principal quantum number</span>
             <span class="n">orb_z</span> <span class="o">=</span> <span class="n">a</span><span class="o">.</span><span class="n">variables</span><span class="p">[</span><span class="s1">&#39;orbnl_z&#39;</span><span class="p">][:]</span> <span class="c1"># zeta</span>
             <span class="n">orb_P</span> <span class="o">=</span> <span class="n">a</span><span class="o">.</span><span class="n">variables</span><span class="p">[</span><span class="s1">&#39;orbnl_ispol&#39;</span><span class="p">][:]</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="c1"># polarization shell, or not</span>
+            <span class="n">orb_q0</span> <span class="o">=</span> <span class="n">a</span><span class="o">.</span><span class="n">variables</span><span class="p">[</span><span class="s1">&#39;orbnl_pop&#39;</span><span class="p">][:]</span> <span class="c1"># q0 for the orbitals</span>
             <span class="n">orb_delta</span> <span class="o">=</span> <span class="n">a</span><span class="o">.</span><span class="n">variables</span><span class="p">[</span><span class="s1">&#39;delta&#39;</span><span class="p">][:]</span> <span class="c1"># delta for the functions</span>
             <span class="n">orb_psi</span> <span class="o">=</span> <span class="n">a</span><span class="o">.</span><span class="n">variables</span><span class="p">[</span><span class="s1">&#39;orb&#39;</span><span class="p">][:,</span> <span class="p">:]</span>
 
@@ -269,7 +270,7 @@
                 <span class="n">psi</span> <span class="o">=</span> <span class="n">orb_psi</span><span class="p">[</span><span class="n">io</span><span class="p">,</span> <span class="p">:]</span> <span class="o">*</span> <span class="n">r</span> <span class="o">**</span> <span class="n">l</span> <span class="o">/</span> <span class="n">Bohr2Ang</span> <span class="o">**</span> <span class="p">(</span><span class="mf">3.</span><span class="o">/</span><span class="mf">2.</span><span class="p">)</span>
 
                 <span class="c1"># Create the sphericalorbital and then the atomicorbital</span>
-                <span class="n">sorb</span> <span class="o">=</span> <span class="n">SphericalOrbital</span><span class="p">(</span><span class="n">l</span><span class="p">,</span> <span class="p">(</span><span class="n">r</span> <span class="o">*</span> <span class="n">Bohr2Ang</span><span class="p">,</span> <span class="n">psi</span><span class="p">))</span>
+                <span class="n">sorb</span> <span class="o">=</span> <span class="n">SphericalOrbital</span><span class="p">(</span><span class="n">l</span><span class="p">,</span> <span class="p">(</span><span class="n">r</span> <span class="o">*</span> <span class="n">Bohr2Ang</span><span class="p">,</span> <span class="n">psi</span><span class="p">),</span> <span class="n">orb_q0</span><span class="p">[</span><span class="n">io</span><span class="p">])</span>
 
                 <span class="c1"># This will be -l:l (this is the way siesta does it)</span>
                 <span class="n">orbital</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">sorb</span><span class="o">.</span><span class="n">toAtomicOrbital</span><span class="p">(</span><span class="n">n</span><span class="o">=</span><span class="n">n</span><span class="p">,</span> <span class="n">Z</span><span class="o">=</span><span class="n">z</span><span class="p">,</span> <span class="n">P</span><span class="o">=</span><span class="n">P</span><span class="p">))</span>
@@ -374,6 +375,7 @@
 
 <div class="viewcode-block" id="ncSileSiesta.read_density_matrix"><a class="viewcode-back" href="../../../../api-generated/sisl.io.siesta.ncSileSiesta.html#sisl.io.siesta.ncSileSiesta.read_density_matrix">[docs]</a>    <span class="k">def</span> <span class="nf">read_density_matrix</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Returns a density matrix from the underlying NetCDF file &quot;&quot;&quot;</span>
+        <span class="c1"># This also adds the spin matrix</span>
         <span class="n">DM</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_read_class_spin</span><span class="p">(</span><span class="n">DensityMatrix</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
         <span class="n">sp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_crt_grp</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;SPARSE&#39;</span><span class="p">)</span>
         <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">DM</span><span class="o">.</span><span class="n">spin</span><span class="p">)):</span>
@@ -410,8 +412,11 @@
 <span class="sd">        ----------</span>
 <span class="sd">        name : str</span>
 <span class="sd">           name of the grid variable to read</span>
-<span class="sd">        spin : int</span>
-<span class="sd">           the spin-index</span>
+<span class="sd">        spin : int or array_like, optional</span>
+<span class="sd">           the spin-index for retrieving one of the components. If a vector</span>
+<span class="sd">           is passed it refers to the fraction per indexed component. I.e.</span>
+<span class="sd">           ``[0.5, 0.5]`` will return sum of half the first two components.</span>
+<span class="sd">           Default to the first component.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># Swap as we swap back in the end</span>
         <span class="n">geom</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">read_geometry</span><span class="p">()</span><span class="o">.</span><span class="n">swapaxes</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
@@ -430,10 +435,30 @@
         <span class="c1"># Create the grid, Siesta uses periodic, always</span>
         <span class="n">grid</span> <span class="o">=</span> <span class="n">Grid</span><span class="p">([</span><span class="n">nz</span><span class="p">,</span> <span class="n">ny</span><span class="p">,</span> <span class="n">nx</span><span class="p">],</span> <span class="n">bc</span><span class="o">=</span><span class="n">Grid</span><span class="o">.</span><span class="n">PERIODIC</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">v</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
 
+        <span class="c1"># Unit-conversion</span>
+        <span class="n">BohrC2AngC</span> <span class="o">=</span> <span class="n">Bohr2Ang</span> <span class="o">**</span> <span class="mi">3</span>
+
+        <span class="n">unit</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;Rho&#39;</span><span class="p">:</span> <span class="mf">1.</span> <span class="o">/</span> <span class="n">BohrC2AngC</span><span class="p">,</span>
+                <span class="s1">&#39;RhoInit&#39;</span><span class="p">:</span> <span class="mf">1.</span> <span class="o">/</span> <span class="n">BohrC2AngC</span><span class="p">,</span>
+                <span class="s1">&#39;RhoTot&#39;</span><span class="p">:</span> <span class="mf">1.</span> <span class="o">/</span> <span class="n">BohrC2AngC</span><span class="p">,</span>
+                <span class="s1">&#39;RhoDelta&#39;</span><span class="p">:</span> <span class="mf">1.</span> <span class="o">/</span> <span class="n">BohrC2AngC</span><span class="p">,</span>
+                <span class="s1">&#39;RhoXC&#39;</span><span class="p">:</span> <span class="mf">1.</span> <span class="o">/</span> <span class="n">BohrC2AngC</span><span class="p">,</span>
+                <span class="s1">&#39;RhoBader&#39;</span><span class="p">:</span> <span class="mf">1.</span> <span class="o">/</span> <span class="n">BohrC2AngC</span><span class="p">,</span>
+                <span class="s1">&#39;RhoBader&#39;</span><span class="p">:</span> <span class="mf">1.</span> <span class="o">/</span> <span class="n">BohrC2AngC</span><span class="p">,</span>
+                <span class="s1">&#39;Chlocal&#39;</span><span class="p">:</span> <span class="mf">1.</span> <span class="o">/</span> <span class="n">BohrC2AngC</span><span class="p">,</span>
+        <span class="p">}</span>
+
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">v</span><span class="p">[:]</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
-            <span class="n">grid</span><span class="o">.</span><span class="n">grid</span> <span class="o">=</span> <span class="n">v</span><span class="p">[:,</span> <span class="p">:,</span> <span class="p">:]</span>
+            <span class="n">grid</span><span class="o">.</span><span class="n">grid</span> <span class="o">=</span> <span class="n">v</span><span class="p">[:,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="mf">1.</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">spin</span><span class="p">,</span> <span class="n">Integral</span><span class="p">):</span>
+            <span class="n">grid</span><span class="o">.</span><span class="n">grid</span> <span class="o">=</span> <span class="n">v</span><span class="p">[</span><span class="n">spin</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="mf">1.</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="n">grid</span><span class="o">.</span><span class="n">grid</span> <span class="o">=</span> <span class="n">v</span><span class="p">[</span><span class="n">spin</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="p">:]</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">spin</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">v</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39;.read_grid requires spin to be an integer or &#39;</span>
+                                 <span class="s1">&#39;an array of length equal to the number of spin components.&#39;</span><span class="p">)</span>
+            <span class="n">grid</span><span class="o">.</span><span class="n">grid</span><span class="p">[:,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">v</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">*</span> <span class="n">spin</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">scale</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">spin</span><span class="p">[</span><span class="mi">1</span><span class="p">:]):</span>
+                <span class="n">grid</span><span class="o">.</span><span class="n">grid</span><span class="p">[:,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">+=</span> <span class="n">v</span><span class="p">[</span><span class="mi">1</span><span class="o">+</span><span class="n">i</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">*</span> <span class="n">scale</span>
 
         <span class="k">try</span><span class="p">:</span>
             <span class="n">u</span> <span class="o">=</span> <span class="n">v</span><span class="o">.</span><span class="n">unit</span>
@@ -748,7 +773,7 @@
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'../../../../',
-            VERSION:'0.9.2-222',
+            VERSION:'0.9.2-237',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true,
