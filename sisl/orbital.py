@@ -1,6 +1,7 @@
 from __future__ import print_function, division
 
 # To check for integers
+from functools import partial
 from numbers import Integral
 from math import pi
 from math import sqrt as msqrt
@@ -10,7 +11,8 @@ import numpy as np
 from numpy import cos, sin, arctan2, arccos
 from numpy import take, sqrt, square
 from scipy.special import lpmv, sph_harm
-from scipy.interpolate import interp1d
+from scipy.interpolate import UnivariateSpline
+
 
 from ._help import ensure_array, _str
 from .shape import Sphere
@@ -21,7 +23,24 @@ from sisl.utils.mathematics import cart2spher
 __all__ = ['Orbital', 'SphericalOrbital', 'AtomicOrbital']
 
 
-_pi4 = 4 * pi
+# Create the factor table for the real spherical harmonics
+def _rfact(l, m):
+    pi4 = 4 * pi
+    if m == 0:
+        return msqrt((2*l + 1)/pi4)
+    elif m < 0:
+        return -msqrt(2*(2*l + 1)/pi4 * fact(l-m)/fact(l+m)) * (-1) ** m
+    return msqrt(2*(2*l + 1)/pi4 * fact(l-m)/fact(l+m))
+
+# This is a list of dict
+#  [0]{0} is l==0, m==0
+#  [1]{-1} is l==1, m==-1
+#  [1]{1} is l==1, m==1
+# and so on.
+# Calculate it up to l == 5 which is the h shell
+_rspher_harm_fact = [{m: _rfact(l, m) for m in range(-l, l+1)} for l in range(6)]
+# Clean-up
+del _rfact
 
 
 def rspherical_harm(m, l, theta, cos_phi):
@@ -54,10 +73,10 @@ def rspherical_harm(m, l, theta, cos_phi):
     # learned lessons from Denchar.
     # As such the choice of these real spherical harmonics is that of Siesta.
     if m == 0:
-        return msqrt((2*l + 1)/_pi4) * lpmv(m, l, cos_phi)
+        return _rspher_harm_fact[l][m] * lpmv(m, l, cos_phi)
     elif m < 0:
-        return (-msqrt(2*(2*l + 1)/_pi4 * fact(l-m)/fact(l+m)) * sin(m*theta) * (-1) ** m)* lpmv(m, l, cos_phi)
-    return (msqrt(2*(2*l + 1)/_pi4 * fact(l-m)/fact(l+m)) * cos(m*theta))* lpmv(m, l, cos_phi)
+        return _rspher_harm_fact[l][m] * (lpmv(m, l, cos_phi) * sin(m*theta))
+    return _rspher_harm_fact[l][m] * (lpmv(m, l, cos_phi) * cos(m*theta))
 
 
 class Orbital(object):
@@ -114,6 +133,8 @@ class Orbital(object):
     def equal(self, other, psi=False, radial=False):
         """ Compare two orbitals by comparing their radius, and possibly the radial and psi functions
 
+        When comparing two orbital radius they are considered *equal* with a precision of 1e-4 Ang.
+
         Parameters
         ----------
         other : Orbital
@@ -125,7 +146,7 @@ class Orbital(object):
         """
         if not isinstance(other, Orbital):
             return False
-        same = np.isclose(self.R, other.R) and np.isclose(self.q0, other.q0)
+        same = abs(self.R - other.R) <= 1e-4 and abs(self.q0 - other.q0) < 1e-4
         if not same:
             # Quick return
             return False
@@ -153,6 +174,9 @@ class Orbital(object):
         return self.equal(other)
 
     def radial(self, r, *args, **kwargs):
+        raise NotImplementedError
+
+    def spher(self, theta, phi, *args, **kwargs):
         raise NotImplementedError
 
     def psi(self, r, *args, **kwargs):
@@ -258,9 +282,10 @@ class SphericalOrbital(Orbital):
         Examples
         --------
         >>> from scipy.interpolate import interp1d
-        >>> orb = SphericalOrbital(1, (np.arange(10), np.arange(10)))
-        >>> orb.equal(SphericalOrbital(1, interp1d(np.arange(10), np.arange(10),
-        ...       fill_value=(0., 0.), kind='cubic')))
+        >>> orb = SphericalOrbital(1, (np.arange(10.), np.arange(10.)))
+        >>> orb.equal(SphericalOrbital(1, interp1d(np.arange(10.), np.arange(10.),
+        ...       fill_value=(0., 0.), kind='cubic', bounds_error=False)))
+        True
         """
         self.l = l
 
@@ -299,14 +324,14 @@ class SphericalOrbital(Orbital):
             same &= self.l == other.l
         return same
 
-    def set_radial(self, *args):
+    def set_radial(self, *args, **kwargs):
         r""" Update the internal radial function used as a :math:`f(|\mathbf r|)`
 
         This can be called in several ways:
 
               set_radial(r, f)
-                    which uses ``scipy.interpolate.interp1d(r, f, bounds_error=False, kind='cubic')``
-                    to define the interpolation function.
+                    which uses ``scipy.interpolate.UnivariateSpline(r, f, k=5, s=0, ext=1, check_finite=False)``
+                    to define the interpolation function (see `interp` keyword).
                     Here the maximum radius of the orbital is the maximum `r` value,
                     regardless of ``f(r)`` is zero for smaller `r`.
 
@@ -314,6 +339,47 @@ class SphericalOrbital(Orbital):
                     which sets the interpolation function directly.
                     The maximum orbital range is determined automatically to a precision
                     of 0.0001 AA.
+
+        Parameters
+        ----------
+        r, f : numpy.ndarray
+            the radial positions and the radial function values at `r`.
+        func : callable
+            a function which enables evaluation of the radial function. The function should
+            accept a single array and return a single array.
+        interp : callable, optional
+            When two non-keyword arguments are passed this keyword will be used.
+            It is the interpolation function which should return the equivalent of
+            `func`. By using this one can define a custom interpolation routine.
+            It should accept two arguments, ``interp(r, f)`` and return a callable
+            that returns interpolation values.
+            See examples for different interpolation routines.
+
+        Examples
+        --------
+        >>> from scipy import interpolate as interp
+        >>> o = SphericalOrbital(1, lambda x:x)
+        >>> r = np.linspace(0, 4, 300)
+        >>> f = np.exp(-r)
+        >>> def i_univariate(r, f):
+        ...    return interp.UnivariateSpline(r, f, k=5, s=0, ext=1, check_finite=False)
+        >>> def i_interp1d(r, f):
+        ...    return interp.interp1d(r, f, kind='cubic', fill_value=(f[0], 0.), bounds_error=False)
+        >>> def i_spline(r, f):
+        ...    from functools import partial
+        ...    tck = interp.splrep(r, f, k=5, s=0)
+        ...    return partial(interp.splev, tck=tck, der=0, ext=1)
+        >>> R = np.linspace(0, 4, 400)
+        >>> o.set_radial(r, f, interp=i_univariate)
+        >>> f_univariate = o.f(R)
+        >>> o.set_radial(r, f, interp=i_interp1d)
+        >>> f_interp1d = o.f(R)
+        >>> o.set_radial(r, f, interp=i_spline)
+        >>> f_spline = o.f(R)
+        >>> np.allclose(f_univariate, f_interp1d)
+        True
+        >>> np.allclose(f_univariate, f_spline)
+        True
         """
         if len(args) == 0:
             # Return immediately
@@ -330,16 +396,22 @@ class SphericalOrbital(Orbital):
             idx = (f > 0).nonzero()[0]
             if len(idx) > 0:
                 idx = idx.max()
-                # Preset
+                # Assert that we actually hit where there are zeros
+                if idx < len(r) - 1:
+                    idx += 1
+                # Preset R
                 self.R = r[idx]
                 # This should give us a precision of 0.0001 A
-                r = np.linspace(r[idx]-0.025+0.0001, r[idx]+0.025, 500)
+                r = np.linspace(r[idx]-0.055+0.0001, r[idx]+0.055, 1100)
                 f = square(self.f(r))
                 # Find minimum R and focus around this point
                 idx = (f > 0).nonzero()[0]
                 if len(idx) > 0:
                     idx = idx.max()
+                    if idx < len(r) - 1:
+                        idx += 1
                     self.R = r[idx]
+
             else:
                 # The orbital radius
                 # Is undefined, no values are above 0 in a range
@@ -355,10 +427,16 @@ class SphericalOrbital(Orbital):
             idx = np.argsort(r)
             r = r[idx]
             f = f[idx]
-            # Also update R to the maximum R value
-            self.R = r[-1]
 
-            self.f = interp1d(r, f, kind='cubic', fill_value=(f[0], 0.), bounds_error=False, assume_sorted=True)
+            # k = 3 == cubic spline
+            # ext = 1 == return zero outside of bounds.
+            # s, smoothing factor. If 0, smooth through all points
+            # I can see that this function is *much* faster than
+            # interp1d, AND it yields same results with these arguments.
+            interp = partial(UnivariateSpline, k=5, s=0, ext=1, check_finite=False)
+            interp = kwargs.get('interp', interp)
+
+            self.set_radial(interp(r, f))
         else:
             raise ValueError('Arguments for set_radial are in-correct, please see the documentation of SphericalOrbital.set_radial')
 
@@ -430,6 +508,29 @@ class SphericalOrbital(Orbital):
         p.shape = s
         return p
 
+    def spher(self, theta, phi, m=0, cos_phi=False):
+        r""" Calculate the spherical harmonics of this orbital at a given point (in spherical coordinates)
+
+        Parameters
+        -----------
+        theta : array_like
+           azimuthal angle in the :math:`x-y` plane (from :math:`x`)
+        phi : array_like
+           polar angle from :math:`z` axis
+        m : int, optional
+           magnetic quantum number, must be in range ``-self.l <= m <= self.l``
+        cos_phi : bool, optional
+           whether `phi` is actually :math:`cos(\phi)` which will be faster because
+           `cos` is not necessary to call.
+
+        Returns
+        -------
+        spher : the spherical harmonics at angles :math:`\theta` and :math:`\phi`.
+        """
+        if cos_phi:
+            return rspherical_harm(m, self.l, theta, phi)
+        return rspherical_harm(m, self.l, theta, cos(phi))
+
     def psi_spher(self, r, theta, phi, m=0, cos_phi=False):
         r""" Calculate :math:`\phi(|\mathbf R|, \theta, \phi)` at a given point (in spherical coordinates)
 
@@ -453,9 +554,7 @@ class SphericalOrbital(Orbital):
         -------
         psi : the orbital value at point `r`
         """
-        if cos_phi:
-            return self.f(r) * rspherical_harm(m, self.l, theta, phi)
-        return self.f(r) * rspherical_harm(m, self.l, theta, cos(phi))
+        return self.f(r) * self.spher(theta, phi, m, cos_phi)
 
     def toAtomicOrbital(self, m=None, n=None, Z=1, P=False, q0=None):
         r""" Create a list of `AtomicOrbital` objects
@@ -788,6 +887,27 @@ class AtomicOrbital(Orbital):
         psi : the orbital value at point `r`
         """
         return self.orb.psi(r, self.m)
+
+    def spher(self, theta, phi, m=0, cos_phi=False):
+        r""" Calculate the spherical harmonics of this orbital at a given point (in spherical coordinates)
+
+        Parameters
+        -----------
+        theta : array_like
+           azimuthal angle in the :math:`x-y` plane (from :math:`x`)
+        phi : array_like
+           polar angle from :math:`z` axis
+        m : int, optional
+           magnetic quantum number, must be in range ``-self.l <= m <= self.l``
+        cos_phi : bool, optional
+           whether `phi` is actually :math:`cos(\phi)` which will be faster because
+           `cos` is not necessary to call.
+
+        Returns
+        -------
+        spher : the spherical harmonics at angles :math:`\theta` and :math:`\phi`.
+        """
+        return self.orb.spher(theta, phi, self.m, cos_phi)
 
     def psi_spher(self, r, theta, phi, cos_phi=False):
         r""" Calculate :math:`\phi(|\mathbf R|, \theta, \phi)` at a given point (in spherical coordinates)

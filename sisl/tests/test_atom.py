@@ -253,6 +253,30 @@ class TestAtoms(object):
         for i in range(10, 12):
             assert atom[i] == Atom('B')
 
+    def test_replace2(self):
+        # Add new atoms to the set
+        atom = Atoms(['C'] * 10 + ['B'] * 2)
+        atom.replace(range(1, 4), Atom('Au', [-1] * 2))
+        assert atom[0] == Atom('C')
+        for i in range(1, 4):
+            assert atom[i] != Atom('Au')
+            assert atom[i] == Atom('Au', [-1] * 2)
+        assert atom[4] != Atom('Au')
+        assert atom[4] != Atom('Au', [-1] * 2)
+        assert len(atom.atom) == 3
+
+        # Second replace call (equivalent to replace_atom)
+        atom.replace(atom[0], Atom('C', [-1] * 2))
+        assert atom[0] == Atom('C', [-1] * 2)
+        assert len(atom.atom) == 3
+        assert atom[0] == Atom('C', [-1] * 2)
+        for i in range(4, 10):
+            assert atom[i] == Atom('C', [-1] * 2)
+        for i in range(1, 4):
+            assert atom[i] == Atom('Au', [-1] * 2)
+        for i in range(10, 12):
+            assert atom[i] == Atom('B')
+
     def test_append1(self):
         # Add new atoms to the set
         atom1 = Atoms(['C', 'C'])
@@ -315,9 +339,16 @@ class TestAtoms(object):
     def test_reduce1(self):
         atom = Atoms(['C', 'Au'])
         atom = atom.sub(0)
-        atom = atom.reduce()
+        atom1 = atom.reduce()
         assert atom[0] == Atom[6]
-        assert atom[0] != Atom[8]
+        assert len(atom) == 1
+        assert len(atom.atom) == 2
+        assert atom1[0] == Atom[6]
+        assert atom1[0] != Atom[8]
+        assert len(atom1) == 1
+        assert len(atom1.atom) == 1
+        atom.reduce(True)
+        assert atom[0] == Atom[6]
         assert len(atom) == 1
         assert len(atom.atom) == 1
 
@@ -332,8 +363,20 @@ class TestAtoms(object):
     def test_reorder1(self):
         atom = Atoms(['C', 'Au'])
         atom = atom.sub(1)
-        atom = atom.reorder()
+        atom1 = atom.reorder()
+        # Check we haven't done anything to the original Atoms object
         assert atom[0] == Atom['Au']
+        assert atom.specie[0] == 1
+        assert len(atom) == 1
+        assert len(atom.atom) == 2
+        assert atom1[0] == Atom['Au']
+        assert atom1.specie[0] == 0
+        assert len(atom1) == 1
+        assert len(atom1.atom) == 2
+        # Do in-place
+        atom.reorder(True)
+        assert atom[0] == Atom['Au']
+        assert atom.specie[0] == 0
         assert len(atom) == 1
         assert len(atom.atom) == 2
 

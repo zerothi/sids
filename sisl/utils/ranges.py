@@ -36,7 +36,7 @@ def strmap(func, s, start=None, end=None, sep='b'):
     [(1, 2)]
     >>> strmap(int, '1-')
     [(1, None)]
-    >>> strmap(int, '1-', 4)
+    >>> strmap(int, '1-', end=4)
     [(1, 4)]
     >>> strmap(int, '1-10[2-3]')
     [((1, 10), [(2, 3)])]
@@ -123,7 +123,7 @@ def strseq(cast, s, start=None, end=None):
     >>> strseq(int, '3:2:', end=8)
     (3, 2, 8)
     >>> strseq(int, ':2:', start=2)
-    (2, 2, 8)
+    (2, 2, None)
     >>> strseq(float, '3.2:6.3')
     (3.2, 6.3)
     """
@@ -287,10 +287,9 @@ def array_arange(start, end=None, n=None, dtype=int32):
     # Tests show that the below code is faster than
     # implicit for-loops, or list-comprehensions
     # concatenate(map(..)
-    # This below is much faster and does not require _any_
-    # loops
+    # The below is much faster and does not require _any_ loops
     if n is None:
-        # We really do need n to speed things up
+        # We need n to speed things up
         n = ensure_array(end, dtype) - ensure_array(start, dtype)
     else:
         n = ensure_array(n, dtype)
@@ -305,7 +304,8 @@ def array_arange(start, end=None, n=None, dtype=int32):
     start = take(start, idx)
     n = take(n, idx)
 
-    # Create array
+    # Create array of 1's.
+    # The 1's are important when issuing the cumultative sum
     a = ones(n.sum(), dtype=dtype)
 
     # set pointers such that we can
