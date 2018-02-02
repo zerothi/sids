@@ -65,7 +65,7 @@
             
             
               <div class="version">
-                0.9.2-248
+                0.9.2-286
               </div>
             
           
@@ -206,7 +206,8 @@
 <span class="sd">        -------</span>
 <span class="sd">        geom : Geometry instance with positions, atoms and orbitals. The</span>
 <span class="sd">               orbitals of these atoms are `AtomicOrbital` instances.</span>
-<span class="sd">        E : the energies at which the PDOS has been evaluated at</span>
+<span class="sd">        E : the energies at which the PDOS has been evaluated at (if the Fermi-level is present the energies</span>
+<span class="sd">            are shifted to E - Ef = 0, this will *only* be done from Siesta 4.0.2 and later).</span>
 <span class="sd">        PDOS : an array of DOS, for non-polarized calculations it has dimension ``(atom.no, len(E))``,</span>
 <span class="sd">               else it has dimension ``(nspin, atom.no, len(E))``.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -216,7 +217,13 @@
 
         <span class="c1"># Get number of orbitals</span>
         <span class="n">nspin</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">root</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s1">&#39;nspin&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">text</span><span class="p">)</span>
-        <span class="n">E</span> <span class="o">=</span> <span class="n">arrayd</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="nb">float</span><span class="p">,</span> <span class="n">root</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s1">&#39;energy_values&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">text</span><span class="o">.</span><span class="n">split</span><span class="p">()))</span>
+        <span class="c1"># Try and find the fermi-level</span>
+        <span class="n">Ef</span> <span class="o">=</span> <span class="n">root</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s1">&#39;fermi_energy&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">Ef</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">Ef</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">Ef</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">Ef</span><span class="o">.</span><span class="n">text</span><span class="p">)</span>
+        <span class="n">E</span> <span class="o">=</span> <span class="n">arrayd</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="nb">float</span><span class="p">,</span> <span class="n">root</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s1">&#39;energy_values&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">text</span><span class="o">.</span><span class="n">split</span><span class="p">()))</span> <span class="o">-</span> <span class="n">Ef</span>
         <span class="n">ne</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">E</span><span class="p">)</span>
 
         <span class="c1"># All coordinate, atoms and species data</span>
@@ -345,7 +352,7 @@
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'../../../../',
-            VERSION:'0.9.2-248',
+            VERSION:'0.9.2-286',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true,

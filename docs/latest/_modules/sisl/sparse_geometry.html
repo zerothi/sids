@@ -65,7 +65,7 @@
             
             
               <div class="version">
-                0.9.2-248
+                0.9.2-286
               </div>
             
           
@@ -310,6 +310,38 @@
     <span class="k">def</span> <span class="nf">nnz</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Number of non-zero elements &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">nnz</span>
+
+    <span class="k">def</span> <span class="nf">_translate_cells</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">old</span><span class="p">,</span> <span class="n">new</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Translates all columns in the `old` cell indices to the `new` cell indices</span>
+
+<span class="sd">        Since the physical matrices are stored in a CSR form, with shape ``(no, no * n_s)`` each</span>
+<span class="sd">        block of ``(no, no)`` refers to supercell matrices with an offset according to the internal</span>
+<span class="sd">        supercell index.</span>
+<span class="sd">        This routine may be used to translate from one sorting of the columns to another sorting of the columns.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        old : list of int</span>
+<span class="sd">           integer list of supercell indices (all smaller than `n_s`) that the current blocks of matrices</span>
+<span class="sd">           belong to.</span>
+<span class="sd">        new : list of int</span>
+<span class="sd">           integer list of supercell indices (all smaller than `n_s`) that the current blocks of matrices</span>
+<span class="sd">           are being transferred to. Must have same length as `old`.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">old</span> <span class="o">=</span> <span class="n">ensure_array</span><span class="p">(</span><span class="n">old</span><span class="p">)</span>
+        <span class="n">new</span> <span class="o">=</span> <span class="n">ensure_array</span><span class="p">(</span><span class="n">new</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">old</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">new</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="o">+</span><span class="s2">&quot;.translate_cells requires input and output indices with &quot;</span>
+                             <span class="s2">&quot;equal length&quot;</span><span class="p">)</span>
+
+        <span class="n">no</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">no</span>
+        <span class="c1"># Number of elements per matrix</span>
+        <span class="n">n</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">emptyi</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">old</span><span class="p">))</span>
+        <span class="n">n</span><span class="o">.</span><span class="n">fill</span><span class="p">(</span><span class="n">no</span><span class="p">)</span>
+        <span class="n">old</span> <span class="o">=</span> <span class="n">array_arange</span><span class="p">(</span><span class="n">old</span> <span class="o">*</span> <span class="n">no</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="n">n</span><span class="p">)</span>
+        <span class="n">new</span> <span class="o">=</span> <span class="n">array_arange</span><span class="p">(</span><span class="n">new</span> <span class="o">*</span> <span class="n">no</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="n">n</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">translate_columns</span><span class="p">(</span><span class="n">old</span><span class="p">,</span> <span class="n">new</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">edges</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">atom</span><span class="p">,</span> <span class="n">exclude</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Retrieve edges (connections) of a given `atom` or list of `atom`&#39;s</span>
@@ -671,6 +703,13 @@
         <span class="n">t0</span> <span class="o">=</span> <span class="n">time</span><span class="p">()</span>
         <span class="n">name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span>
 
+        <span class="k">def</span> <span class="nf">wstdout</span><span class="p">(</span><span class="n">st</span><span class="p">):</span>
+            <span class="c1"># Write-out initial line to inform user of the function running</span>
+            <span class="n">stdout</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">st</span><span class="p">)</span>
+            <span class="n">stdout</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
+
+        <span class="n">wstdout</span><span class="p">(</span><span class="n">name</span> <span class="o">+</span> <span class="s2">&quot;.construct() ETA = ?????h ??m ?????s</span><span class="se">\r</span><span class="s2">&quot;</span><span class="p">)</span>
+
         <span class="c1"># Do the loop</span>
         <span class="k">for</span> <span class="n">ias</span><span class="p">,</span> <span class="n">idxs</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">geom</span><span class="o">.</span><span class="n">iter_block</span><span class="p">(</span><span class="n">iR</span><span class="o">=</span><span class="n">iR</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="n">method</span><span class="p">):</span>
 
@@ -689,15 +728,13 @@
                 <span class="c1"># calculate hours, minutes, seconds</span>
                 <span class="n">m</span><span class="p">,</span> <span class="n">s</span> <span class="o">=</span> <span class="nb">divmod</span><span class="p">((</span><span class="n">time</span><span class="p">()</span><span class="o">-</span><span class="n">t0</span><span class="p">)</span><span class="o">/</span><span class="n">na_run</span> <span class="o">*</span> <span class="n">na</span><span class="p">,</span> <span class="mi">60</span><span class="p">)</span>
                 <span class="n">h</span><span class="p">,</span> <span class="n">m</span> <span class="o">=</span> <span class="nb">divmod</span><span class="p">(</span><span class="n">m</span><span class="p">,</span> <span class="mi">60</span><span class="p">)</span>
-                <span class="n">stdout</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">name</span> <span class="o">+</span> <span class="s2">&quot;.construct() ETA = </span><span class="si">{0:5d}</span><span class="s2">h </span><span class="si">{1:2d}</span><span class="s2">m </span><span class="si">{2:5.2f}</span><span class="s2">s</span><span class="se">\r</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">h</span><span class="p">),</span> <span class="nb">int</span><span class="p">(</span><span class="n">m</span><span class="p">),</span> <span class="n">s</span><span class="p">))</span>
-                <span class="n">stdout</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
+                <span class="n">wstdout</span><span class="p">(</span><span class="n">name</span> <span class="o">+</span> <span class="s2">&quot;.construct() ETA = </span><span class="si">{0:5d}</span><span class="s2">h </span><span class="si">{1:2d}</span><span class="s2">m </span><span class="si">{2:5.2f}</span><span class="s2">s</span><span class="se">\r</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">h</span><span class="p">),</span> <span class="nb">int</span><span class="p">(</span><span class="n">m</span><span class="p">),</span> <span class="n">s</span><span class="p">))</span>
 
         <span class="k">if</span> <span class="n">eta</span><span class="p">:</span>
             <span class="c1"># calculate hours, minutes, seconds spend on the computation</span>
             <span class="n">m</span><span class="p">,</span> <span class="n">s</span> <span class="o">=</span> <span class="nb">divmod</span><span class="p">((</span><span class="n">time</span><span class="p">()</span><span class="o">-</span><span class="n">t0</span><span class="p">),</span> <span class="mi">60</span><span class="p">)</span>
             <span class="n">h</span><span class="p">,</span> <span class="n">m</span> <span class="o">=</span> <span class="nb">divmod</span><span class="p">(</span><span class="n">m</span><span class="p">,</span> <span class="mi">60</span><span class="p">)</span>
-            <span class="n">stdout</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">name</span> <span class="o">+</span> <span class="s2">&quot;.construct() finished after </span><span class="si">{0:d}</span><span class="s2">h </span><span class="si">{1:d}</span><span class="s2">m </span><span class="si">{2:.1f}</span><span class="s2">s</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">h</span><span class="p">),</span> <span class="nb">int</span><span class="p">(</span><span class="n">m</span><span class="p">),</span> <span class="n">s</span><span class="p">))</span>
-            <span class="n">stdout</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
+            <span class="n">wstdout</span><span class="p">(</span><span class="n">name</span> <span class="o">+</span> <span class="s2">&quot;.construct() finished after </span><span class="si">{0:d}</span><span class="s2">h </span><span class="si">{1:d}</span><span class="s2">m </span><span class="si">{2:.1f}</span><span class="s2">s</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">h</span><span class="p">),</span> <span class="nb">int</span><span class="p">(</span><span class="n">m</span><span class="p">),</span> <span class="n">s</span><span class="p">))</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">finalized</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -1892,7 +1929,7 @@
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'../../',
-            VERSION:'0.9.2-248',
+            VERSION:'0.9.2-286',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true,

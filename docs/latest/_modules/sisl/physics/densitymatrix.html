@@ -65,7 +65,7 @@
             
             
               <div class="version">
-                0.9.2-248
+                0.9.2-286
               </div>
             
           
@@ -171,11 +171,15 @@
   <h1>Source code for sisl.physics.densitymatrix</h1><div class="highlight"><pre>
 <span></span><span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">print_function</span><span class="p">,</span> <span class="n">division</span>
 
+<span class="kn">from</span> <span class="nn">warnings</span> <span class="k">import</span> <span class="n">warn</span>
 <span class="kn">from</span> <span class="nn">numbers</span> <span class="k">import</span> <span class="n">Integral</span>
 <span class="kn">from</span> <span class="nn">functools</span> <span class="k">import</span> <span class="n">partial</span>
 <span class="kn">from</span> <span class="nn">scipy.sparse</span> <span class="k">import</span> <span class="n">csr_matrix</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-<span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">dot</span><span class="p">,</span> <span class="n">argsort</span><span class="p">,</span> <span class="n">where</span><span class="p">,</span> <span class="n">mod</span>
+<span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">int32</span>
+<span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">dot</span><span class="p">,</span> <span class="n">argsort</span><span class="p">,</span> <span class="n">where</span><span class="p">,</span> <span class="n">mod</span><span class="p">,</span> <span class="n">floor</span>
+<span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">logical_and</span> <span class="k">as</span> <span class="n">log_and</span>
+
 
 <span class="kn">import</span> <span class="nn">sisl._array</span> <span class="k">as</span> <span class="nn">_a</span>
 <span class="kn">from</span> <span class="nn">sisl.utils.ranges</span> <span class="k">import</span> <span class="n">array_arange</span>
@@ -313,13 +317,25 @@
 <span class="sd">           For non-colinear/spin-orbit density matrices it has to be a 2x2 matrix (defaults to total density).</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">geom</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">geom</span>
+        <span class="n">cell</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">geom</span><span class="o">.</span><span class="n">cell</span>
+        <span class="n">prcell</span> <span class="o">=</span> <span class="n">geom</span><span class="o">.</span><span class="n">rcell</span>
+
+        <span class="c1"># If all cell coordinates are the same, we don&#39;t have to do anything.</span>
+        <span class="c1"># Otherwise, we have to do tricks to check coordinates within the</span>
+        <span class="c1"># grid-cell</span>
+        <span class="n">apply_reduction</span> <span class="o">=</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">allclose</span><span class="p">(</span><span class="n">geom</span><span class="o">.</span><span class="n">cell</span><span class="p">,</span> <span class="n">grid</span><span class="o">.</span><span class="n">cell</span><span class="p">,</span> <span class="n">atol</span><span class="o">=</span><span class="mf">1.e-6</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">geom</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">geom</span> <span class="o">=</span> <span class="n">grid</span><span class="o">.</span><span class="n">geometry</span>
+        <span class="k">if</span> <span class="n">apply_reduction</span><span class="p">:</span>
+            <span class="c1"># We need the fractional cell to figure out</span>
+            <span class="c1"># if coordinates are actually within the</span>
+            <span class="n">pfrcell</span> <span class="o">=</span> <span class="n">prcell</span><span class="o">.</span><span class="n">T</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">)</span>
 
         <span class="c1"># Extract sub variables used throughout the loop</span>
         <span class="n">csr</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span>
         <span class="n">o2a</span> <span class="o">=</span> <span class="n">geom</span><span class="o">.</span><span class="n">o2a</span>
         <span class="n">dcell</span> <span class="o">=</span> <span class="n">grid</span><span class="o">.</span><span class="n">dcell</span>
+        <span class="n">frcell</span> <span class="o">=</span> <span class="n">grid</span><span class="o">.</span><span class="n">rcell</span><span class="o">.</span><span class="n">T</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">)</span>
 
         <span class="c1"># In the following we don&#39;t care about division</span>
         <span class="c1"># So 1) save error state, 2) turn off divide by 0, 3) calculate, 4) turn on old error state</span>
@@ -377,7 +393,6 @@
             <span class="n">DM</span> <span class="o">=</span> <span class="n">csr</span><span class="o">.</span><span class="n">_D</span><span class="p">[</span><span class="n">idx</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span>
 
         <span class="c1"># Create the DM csr matrix.</span>
-        <span class="c1"># TODO add a tolerance value to remove all DM values below a certain value</span>
         <span class="n">csrDM</span> <span class="o">=</span> <span class="n">csr_matrix</span><span class="p">((</span><span class="n">DM</span><span class="p">,</span> <span class="n">csr</span><span class="o">.</span><span class="n">col</span><span class="p">[</span><span class="n">idx</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">cumsum</span><span class="p">(</span><span class="n">csr</span><span class="o">.</span><span class="n">ncol</span><span class="p">),</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)),</span>
                            <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[:</span><span class="mi">2</span><span class="p">]),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">DM</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
         <span class="n">csrDM</span><span class="o">.</span><span class="n">eliminate_zeros</span><span class="p">()</span>
@@ -387,33 +402,74 @@
         <span class="c1"># Clean-up</span>
         <span class="k">del</span> <span class="n">idx</span><span class="p">,</span> <span class="n">DM</span>
 
+        <span class="c1"># The shape of the grid, in a reshaped version</span>
         <span class="n">shape</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">arrayi</span><span class="p">(</span><span class="n">grid</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+        <span class="c1"># Retrieve all supercell atoms&#39; coordinates</span>
+        <span class="n">origo</span> <span class="o">=</span> <span class="n">grid</span><span class="o">.</span><span class="n">origo</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+        <span class="n">all_xyz</span> <span class="o">=</span> <span class="p">(</span><span class="n">geom</span><span class="o">.</span><span class="n">axyz</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">geom</span><span class="o">.</span><span class="n">na_s</span><span class="p">))</span> <span class="o">-</span> <span class="n">origo</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
 
-        <span class="n">all_xyz</span> <span class="o">=</span> <span class="p">(</span><span class="n">geom</span><span class="o">.</span><span class="n">axyz</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">geom</span><span class="o">.</span><span class="n">na_s</span><span class="p">))</span> <span class="o">-</span> <span class="n">grid</span><span class="o">.</span><span class="n">origo</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
-        <span class="n">c2s</span> <span class="o">=</span> <span class="n">partial</span><span class="p">(</span><span class="n">cart2spher</span><span class="p">,</span> <span class="n">cos_phi</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">def</span> <span class="nf">add_DM</span><span class="p">(</span><span class="n">ia</span><span class="p">,</span> <span class="n">atomi</span><span class="p">,</span> <span class="n">xyzi</span><span class="p">,</span> <span class="n">cscDM</span><span class="p">,</span> <span class="n">ja</span><span class="p">,</span> <span class="n">atomj</span><span class="p">,</span> <span class="n">xyzj</span><span class="p">,</span> <span class="n">s</span><span class="p">):</span>
 
-        <span class="k">def</span> <span class="nf">add_DM</span><span class="p">(</span><span class="n">ia</span><span class="p">,</span> <span class="n">atomi</span><span class="p">,</span> <span class="n">xyzi</span><span class="p">,</span> <span class="n">icscDM</span><span class="p">,</span> <span class="n">ja</span><span class="p">,</span> <span class="n">atomj</span><span class="p">,</span> <span class="n">xyzj</span><span class="p">,</span> <span class="n">s</span><span class="p">):</span>
             <span class="c1"># Find all indices for the grid (they may be outside the cell).</span>
             <span class="n">idx</span> <span class="o">=</span> <span class="n">grid</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
             <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">idx</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
                 <span class="k">return</span>
 
-            <span class="c1"># Figure out orbitals</span>
+            <span class="c1"># Figure out orbitals, instead of using all=True, we</span>
+            <span class="c1"># do it like this because it is fancy indexing which is easier</span>
+            <span class="c1"># on memory.</span>
             <span class="n">o1</span><span class="p">,</span> <span class="n">o2</span> <span class="o">=</span> <span class="n">geom</span><span class="o">.</span><span class="n">a2o</span><span class="p">([</span><span class="n">ja</span><span class="p">,</span> <span class="n">ja</span><span class="o">+</span><span class="mi">1</span><span class="p">])</span>
 
             <span class="c1"># Retrieve the matrix that connects the two atoms (i in unit-cell, j in supercell)</span>
             <span class="n">ijDM</span> <span class="o">=</span> <span class="n">cscDM</span><span class="p">[:,</span> <span class="n">o1</span><span class="p">:</span><span class="n">o2</span><span class="p">]</span>
+            <span class="n">ijptr</span> <span class="o">=</span> <span class="n">ijDM</span><span class="o">.</span><span class="n">indptr</span><span class="o">.</span><span class="n">view</span><span class="p">()</span>
+            <span class="n">ijind</span> <span class="o">=</span> <span class="n">ijDM</span><span class="o">.</span><span class="n">indices</span><span class="o">.</span><span class="n">view</span><span class="p">()</span>
+            <span class="n">ijdm</span> <span class="o">=</span> <span class="n">ijDM</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">view</span><span class="p">()</span>
 
-            <span class="c1"># Calculate the positions</span>
+            <span class="c1"># Calculate the positions of the indices in according to the grid</span>
+            <span class="c1"># voxel cells</span>
             <span class="n">rxyz</span> <span class="o">=</span> <span class="n">dot</span><span class="p">(</span><span class="n">idx</span><span class="p">,</span> <span class="n">dcell</span><span class="p">)</span>
-            <span class="c1"># Ensure the indices are within the unit-cell</span>
-            <span class="c1"># This needs to be adapted. I.e. if the grid is smaller</span>
-            <span class="c1"># than the originating geometry cell we have to do mod on rxyz</span>
+
+            <span class="c1"># If the cell is too small, then reduce</span>
+            <span class="k">if</span> <span class="n">apply_reduction</span><span class="p">:</span>
+                <span class="c1"># Ensure the indices are within the unit-cell</span>
+                <span class="c1"># This needs to be adapted. I.e. if the grid is smaller</span>
+                <span class="c1"># than the originating geometry cell we have to do mod on rxyz</span>
+
+                <span class="c1"># 1. Move coordinates to the original cell</span>
+                <span class="c1"># Get fractional coordinates to get the divisions in the current cell</span>
+                <span class="c1"># and move them into the primary unit cell</span>
+                <span class="n">idx2</span> <span class="o">=</span> <span class="n">dot</span><span class="p">(</span><span class="n">dot</span><span class="p">(</span><span class="n">rxyz</span> <span class="o">+</span> <span class="n">origo</span><span class="p">,</span> <span class="n">pfrcell</span><span class="p">)</span> <span class="o">%</span> <span class="mf">1.</span><span class="p">,</span> <span class="n">cell</span><span class="p">)</span>
+
+                <span class="c1"># Transfer the coordinates (moved into the primary</span>
+                <span class="c1"># unit cell) back into the grid index form.</span>
+                <span class="n">idx2</span> <span class="o">=</span> <span class="n">floor</span><span class="p">(</span><span class="n">dot</span><span class="p">(</span><span class="n">idx2</span><span class="p">,</span> <span class="n">frcell</span><span class="p">)</span> <span class="o">*</span> <span class="n">shape</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">int32</span><span class="p">)</span>
+
+                <span class="c1"># Take out only the indices where idx2 is within the shape bounds</span>
+                <span class="n">idx2</span> <span class="o">=</span> <span class="n">log_and</span><span class="p">(</span><span class="n">log_and</span><span class="o">.</span><span class="n">reduce</span><span class="p">(</span><span class="mi">0</span> <span class="o">&lt;=</span> <span class="n">idx2</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span>
+                               <span class="n">log_and</span><span class="o">.</span><span class="n">reduce</span><span class="p">(</span><span class="n">idx2</span> <span class="o">&lt;</span> <span class="n">shape</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">))</span><span class="o">.</span><span class="n">nonzero</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+
+                <span class="c1"># Shrink indices to the points we know are correct.</span>
+                <span class="n">idx</span> <span class="o">=</span> <span class="n">idx</span><span class="p">[</span><span class="n">idx2</span><span class="p">]</span>
+                <span class="n">rxyz</span> <span class="o">=</span> <span class="n">rxyz</span><span class="p">[</span><span class="n">idx2</span><span class="p">,</span> <span class="p">:]</span>
+
+                <span class="k">del</span> <span class="n">idx2</span>
+
+                <span class="n">warn</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39;.rho untested waters...&#39;</span><span class="p">)</span>
+
+            <span class="c1"># The grid unit-cell and the geometry unit-cell are the same</span>
+            <span class="c1"># I.e. we can move the indices much simpler...</span>
             <span class="n">mod</span><span class="p">(</span><span class="n">idx</span><span class="p">,</span> <span class="n">shape</span><span class="p">,</span> <span class="n">out</span><span class="o">=</span><span class="n">idx</span><span class="p">)</span>
 
             <span class="c1"># Get the two atoms spherical coordinates</span>
-            <span class="n">rri</span><span class="p">,</span> <span class="n">thetai</span><span class="p">,</span> <span class="n">cos_phii</span> <span class="o">=</span> <span class="n">c2s</span><span class="p">(</span><span class="n">rxyz</span> <span class="o">-</span> <span class="n">xyzi</span><span class="p">)</span>
-            <span class="n">rrj</span><span class="p">,</span> <span class="n">thetaj</span><span class="p">,</span> <span class="n">cos_phij</span> <span class="o">=</span> <span class="n">c2s</span><span class="p">(</span><span class="n">rxyz</span> <span class="o">-</span> <span class="n">xyzj</span><span class="p">)</span>
+            <span class="n">rri</span><span class="p">,</span> <span class="n">thetai</span><span class="p">,</span> <span class="n">cos_phii</span> <span class="o">=</span> <span class="n">cart2spher</span><span class="p">(</span><span class="n">rxyz</span> <span class="o">-</span> <span class="n">xyzi</span><span class="p">,</span> <span class="n">cos_phi</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">ia</span> <span class="o">==</span> <span class="n">ja</span><span class="p">:</span>
+                <span class="n">rrj</span> <span class="o">=</span> <span class="n">rri</span><span class="o">.</span><span class="n">view</span><span class="p">()</span>
+                <span class="n">thetaj</span> <span class="o">=</span> <span class="n">thetai</span><span class="o">.</span><span class="n">view</span><span class="p">()</span>
+                <span class="n">cos_phij</span> <span class="o">=</span> <span class="n">cos_phii</span><span class="o">.</span><span class="n">view</span><span class="p">()</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">rrj</span><span class="p">,</span> <span class="n">thetaj</span><span class="p">,</span> <span class="n">cos_phij</span> <span class="o">=</span> <span class="n">cart2spher</span><span class="p">(</span><span class="n">rxyz</span> <span class="o">-</span> <span class="n">xyzj</span><span class="p">,</span> <span class="n">cos_phi</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
             <span class="c1"># Clean-up to reduce memory...</span>
             <span class="k">del</span> <span class="n">rxyz</span>
 
@@ -421,8 +477,9 @@
             <span class="n">psi</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">emptyd</span><span class="p">(</span><span class="n">rri</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
             <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">ijDM</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
                 <span class="n">psi</span><span class="o">.</span><span class="n">fill</span><span class="p">(</span><span class="mf">0.</span><span class="p">)</span>
-                <span class="k">for</span> <span class="n">ind</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">ijDM</span><span class="o">.</span><span class="n">indptr</span><span class="p">[</span><span class="n">c</span><span class="p">],</span> <span class="n">ijDM</span><span class="o">.</span><span class="n">indptr</span><span class="p">[</span><span class="n">c</span><span class="o">+</span><span class="mi">1</span><span class="p">]):</span>
-                    <span class="n">psi</span> <span class="o">+=</span> <span class="n">ijDM</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">ind</span><span class="p">]</span> <span class="o">*</span> <span class="n">atomi</span><span class="o">.</span><span class="n">orbital</span><span class="p">[</span><span class="n">ijDM</span><span class="o">.</span><span class="n">indices</span><span class="p">[</span><span class="n">ind</span><span class="p">]]</span><span class="o">.</span><span class="n">psi_spher</span><span class="p">(</span><span class="n">rri</span><span class="p">,</span> <span class="n">thetai</span><span class="p">,</span> <span class="n">cos_phii</span><span class="p">,</span> <span class="n">cos_phi</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+                <span class="n">sl</span> <span class="o">=</span> <span class="nb">slice</span><span class="p">(</span><span class="n">ijptr</span><span class="p">[</span><span class="n">c</span><span class="p">],</span> <span class="n">ijptr</span><span class="p">[</span><span class="n">c</span><span class="o">+</span><span class="mi">1</span><span class="p">])</span>
+                <span class="k">for</span> <span class="n">r</span><span class="p">,</span> <span class="n">dm</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">ijind</span><span class="p">[</span><span class="n">sl</span><span class="p">],</span> <span class="n">ijdm</span><span class="p">[</span><span class="n">sl</span><span class="p">]):</span>
+                    <span class="n">psi</span> <span class="o">+=</span> <span class="n">dm</span> <span class="o">*</span> <span class="n">atomi</span><span class="o">.</span><span class="n">orbital</span><span class="p">[</span><span class="n">r</span><span class="p">]</span><span class="o">.</span><span class="n">psi_spher</span><span class="p">(</span><span class="n">rri</span><span class="p">,</span> <span class="n">thetai</span><span class="p">,</span> <span class="n">cos_phii</span><span class="p">,</span> <span class="n">cos_phi</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
                 <span class="n">grid</span><span class="o">.</span><span class="n">grid</span><span class="p">[</span><span class="n">idx</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">idx</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">idx</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">]]</span> <span class="o">+=</span> <span class="n">psi</span> <span class="o">*</span> <span class="n">atomj</span><span class="o">.</span><span class="n">orbital</span><span class="p">[</span><span class="n">c</span><span class="p">]</span><span class="o">.</span><span class="n">psi_spher</span><span class="p">(</span><span class="n">rrj</span><span class="p">,</span> <span class="n">thetaj</span><span class="p">,</span> <span class="n">cos_phij</span><span class="p">,</span> <span class="n">cos_phi</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
         <span class="k">def</span> <span class="nf">skip_atom</span><span class="p">(</span><span class="n">a</span><span class="p">):</span>
@@ -432,13 +489,14 @@
                 <span class="k">return</span> <span class="kc">True</span>
             <span class="k">return</span> <span class="kc">False</span>
 
-        <span class="k">def</span> <span class="nf">unique_atom_edge</span><span class="p">(</span><span class="n">ia</span><span class="p">):</span>
+        <span class="k">def</span> <span class="nf">unique_atom_edge</span><span class="p">(</span><span class="n">csrDM</span><span class="p">,</span> <span class="n">ia</span><span class="p">):</span>
             <span class="n">slo</span> <span class="o">=</span> <span class="nb">slice</span><span class="p">(</span><span class="n">csrDM</span><span class="o">.</span><span class="n">indptr</span><span class="p">[</span><span class="n">geom</span><span class="o">.</span><span class="n">firsto</span><span class="p">[</span><span class="n">ia</span><span class="p">]],</span>
                         <span class="n">csrDM</span><span class="o">.</span><span class="n">indptr</span><span class="p">[</span><span class="n">geom</span><span class="o">.</span><span class="n">lasto</span><span class="p">[</span><span class="n">ia</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span><span class="p">])</span>
             <span class="k">return</span> <span class="n">geom</span><span class="o">.</span><span class="n">o2a</span><span class="p">(</span><span class="n">csrDM</span><span class="o">.</span><span class="n">indices</span><span class="p">[</span><span class="n">slo</span><span class="p">],</span> <span class="n">uniq</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
         <span class="c1"># Loop over all atoms in unitcell</span>
         <span class="k">for</span> <span class="n">ia</span> <span class="ow">in</span> <span class="n">geom</span><span class="p">:</span>
+
             <span class="c1"># Get current atom</span>
             <span class="n">atomi</span> <span class="o">=</span> <span class="n">geom</span><span class="o">.</span><span class="n">atom</span><span class="p">[</span><span class="n">ia</span><span class="p">]</span>
             <span class="k">if</span> <span class="n">skip_atom</span><span class="p">(</span><span class="n">atomi</span><span class="p">):</span>
@@ -451,11 +509,12 @@
             <span class="n">si</span> <span class="o">=</span> <span class="n">atomi</span><span class="o">.</span><span class="n">toSphere</span><span class="p">()</span>
             <span class="n">si</span><span class="o">.</span><span class="n">set_center</span><span class="p">(</span><span class="n">xyzi</span><span class="p">)</span>
 
-            <span class="c1"># Extract all connections to this atom.</span>
+            <span class="c1"># Extract all connections to this atom and convert to CSC matrix</span>
+            <span class="c1"># This is just because we can then loop on the atom orbitals in add_DM</span>
             <span class="n">cscDM</span> <span class="o">=</span> <span class="n">csrDM</span><span class="p">[</span><span class="n">geom</span><span class="o">.</span><span class="n">firsto</span><span class="p">[</span><span class="n">ia</span><span class="p">]:</span><span class="n">geom</span><span class="o">.</span><span class="n">lasto</span><span class="p">[</span><span class="n">ia</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="p">:]</span><span class="o">.</span><span class="n">tocsc</span><span class="p">()</span>
 
             <span class="c1"># Figure out all connecting atoms</span>
-            <span class="k">for</span> <span class="n">ja</span> <span class="ow">in</span> <span class="n">unique_atom_edge</span><span class="p">(</span><span class="n">ia</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">ja</span> <span class="ow">in</span> <span class="n">unique_atom_edge</span><span class="p">(</span><span class="n">csrDM</span><span class="p">,</span> <span class="n">ia</span><span class="p">):</span>
                 <span class="c1"># Get connecting atom (in supercell format)</span>
                 <span class="n">atomj</span> <span class="o">=</span> <span class="n">geom</span><span class="o">.</span><span class="n">atom</span><span class="p">[</span><span class="n">ja</span> <span class="o">%</span> <span class="n">geom</span><span class="o">.</span><span class="n">na</span><span class="p">]</span>
 
@@ -537,7 +596,7 @@
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'../../../',
-            VERSION:'0.9.2-248',
+            VERSION:'0.9.2-286',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true,
