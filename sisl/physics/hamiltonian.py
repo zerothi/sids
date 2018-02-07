@@ -1,7 +1,5 @@
 from __future__ import print_function, division
 
-import warnings
-
 import numpy as np
 from numpy import int32, float64, pi
 from numpy import take, ogrid
@@ -9,6 +7,7 @@ from numpy import add, subtract, multiply, divide
 from numpy import cos, sin, arctan2, conj
 from numpy import dot, sqrt, square, floor, ceil
 
+from sisl.messages import warn
 from sisl._help import _range as range, _str as str
 from sisl._help import ensure_array
 import sisl._array as _a
@@ -618,7 +617,7 @@ class EigenState(EigenSystem):
             # Get atomic coordinate
             xyz = geom.axyz(IA) - grid.origo
             # Reduce to unit-cell atom
-            ia = geom.sc2uc(IA)
+            ia = IA % geom.na
             # Get current atom
             atom = geom.atom[ia]
 
@@ -635,7 +634,7 @@ class EigenState(EigenSystem):
             # Extract maximum R
             R = atom.maxR()
             if R <= 0.:
-                warnings.warn("Atom '{}' does not have a wave-function, skipping atom.".format(atom))
+                warn("Atom '{}' does not have a wave-function, skipping atom.".format(atom))
                 # Skip this atom
                 io += atom.no
                 continue
@@ -645,15 +644,13 @@ class EigenState(EigenSystem):
             idxM = idx_mm[ia, 1, :] + shape * isc
 
             # Fast check whether we can skip this point
-            if idxm[0] >= shape[0] or \
-               idxm[1] >= shape[1] or \
+            if idxm[0] >= shape[0] or idxm[1] >= shape[1] or \
                idxm[2] >= shape[2] or \
-               idxM[0] < 0 or \
-               idxM[1] < 0 or \
-               idxM[2] < 0:
+               idxM[0] < 0 or idxM[1] < 0 or idxM[2] < 0:
                 io += atom.no
                 continue
 
+            # Truncate values
             if idxm[0] < 0:
                 idxm[0] = 0
             if idxM[0] >= shape[0]:
@@ -688,7 +685,7 @@ class EigenState(EigenSystem):
                 oR = os[0].R
 
                 if oR <= 0.:
-                    warnings.warn("Orbital(s) '{}' does not have a wave-function, skipping orbital.".format(os))
+                    warn("Orbital(s) '{}' does not have a wave-function, skipping orbital.".format(os))
                     # Skip these orbitals
                     io += len(os)
                     continue
@@ -711,8 +708,7 @@ class EigenState(EigenSystem):
                 for o in os:
                     io += 1
 
-                    # Evaluate psi component of the wavefunction
-                    # and add it for this atom
+                    # Evaluate psi component of the wavefunction and add it for this atom
                     psi[idx1] += o.psi_spher(r1, theta1, phi1, cos_phi=True) * (v[io] * phase)
 
             # Clean-up
@@ -721,6 +717,9 @@ class EigenState(EigenSystem):
             # Convert to correct shape and add the current atom contribution to the wavefunction
             psi.shape = idxM - idxm + 1
             grid.grid[sx, sy, sz] += psi
+
+            # Clean-up
+            del psi
 
         # Reset the error code for division
         np.seterr(**old_err)

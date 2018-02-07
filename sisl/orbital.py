@@ -14,6 +14,7 @@ from scipy.special import lpmv, sph_harm
 from scipy.interpolate import UnivariateSpline
 
 
+from . import _plot as plt
 from ._help import ensure_array, _str
 from .shape import Sphere
 import sisl._array as _a
@@ -184,6 +185,56 @@ class Orbital(object):
 
     def psi_spher(self, r, theta, phi, *args, **kwargs):
         raise NotImplementedError
+
+    def __plot__(self, harmonics=False, axes=False, *args, **kwargs):
+        """ Plot the orbital radial/spherical harmonics
+
+        Parameters
+        ----------
+        harmonics : bool, optional
+           if `True` the spherical harmonics will be plotted in a 3D only plot a subset of the axis, defaults to all axis
+        axes : bool or matplotlib.Axes, optional
+           the figure axes to plot in (if ``matplotlib.Axes`` object).
+           If ``True`` it will create a new figure to plot in.
+           If ``False`` it will try and grap the current figure and the current axes.
+        """
+        d = dict()
+
+        if harmonics:
+            d['projection'] = 'polar'
+
+        if axes is False:
+            try:
+                axes = plt.mlibplt.gca()
+            except:
+                axes = plt.mlibplt.figure().add_subplot(111, **d)
+        elif axes is True:
+            axes = plt.mlibplt.figure().add_subplot(111, **d)
+
+        # Add plots
+        if harmonics:
+
+            # Calculate the spherical harmonics
+            theta, phi = np.meshgrid(np.arange(360), np.arange(180) - 90)
+            s = self.spher(np.radians(theta), np.radians(phi))
+
+            # Plot data
+            cax = axes.contourf(theta, phi, s, *args, **kwargs)
+            cab = axes.get_figure().colorbar(cax)
+            cab.set_clim(s.min(), s.max())
+            axes.set_title(r'${}$'.format(self.name(True)))
+            # I don't know how exactly to handle this...
+            #axes.set_xlabel(r'Azimuthal angle $\theta$')
+            #axes.set_ylabel(r'Polar angle $\phi$')
+
+        else:
+            # Plot the radial function and 5% above 0 value
+            r = np.linspace(0, self.R * 1.05, 1000)
+            f = self.radial(r)
+            axes.plot(r, f, *args, **kwargs)
+            axes.set_xlim(left=0)
+            axes.set_xlabel('Radius [Ang]')
+            axes.set_ylabel(r'$f(r)$ [1/Ang$^{3/2}$]')
 
     def toGrid(self, precision=0.05, c=1., R=None, dtype=np.float64):
         """ Create a Grid with *only* this orbital wavefunction on it
@@ -572,6 +623,11 @@ class SphericalOrbital(Orbital):
            whether the orbitals are polarized.
         q0 : float, optional
            the initial charge per orbital, initially :math:`q_0 / (2l+1)` with :math:`q_0` from this object
+
+        Returns
+        -------
+        AtomicOrbital : for passed `m` an atomic orbital will be returned
+        list of AtomicOrbital : for each :math:`m\in[-l;l]` an atomic orbital will be returned in the list
         """
         # Initial charge
         if q0 is None:
@@ -767,7 +823,9 @@ class AtomicOrbital(Orbital):
         if self.l > 4:
             raise ValueError(self.__class__.__name__ + ' does not implement shell h and above!')
 
+        # Retrieve user-passed spherical orbital
         s = kwargs.get('spherical', None)
+
         if s is None:
             # Expect the orbital to already be set
             pass
@@ -888,7 +946,7 @@ class AtomicOrbital(Orbital):
         """
         return self.orb.psi(r, self.m)
 
-    def spher(self, theta, phi, m=0, cos_phi=False):
+    def spher(self, theta, phi, cos_phi=False):
         r""" Calculate the spherical harmonics of this orbital at a given point (in spherical coordinates)
 
         Parameters
@@ -897,8 +955,6 @@ class AtomicOrbital(Orbital):
            azimuthal angle in the :math:`x-y` plane (from :math:`x`)
         phi : array_like
            polar angle from :math:`z` axis
-        m : int, optional
-           magnetic quantum number, must be in range ``-self.l <= m <= self.l``
         cos_phi : bool, optional
            whether `phi` is actually :math:`cos(\phi)` which will be faster because
            `cos` is not necessary to call.

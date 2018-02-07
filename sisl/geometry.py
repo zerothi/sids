@@ -1,7 +1,6 @@
 from __future__ import print_function, division
 
 # To check for integers
-import warnings
 from numbers import Integral, Real
 from six import string_types
 from math import acos
@@ -14,6 +13,7 @@ import sisl._plot as plt
 import sisl._array as _a
 import sisl.linalg as lin
 
+from .messages import warn
 from ._help import _str
 from ._help import _range as range
 from ._help import ensure_array, ensure_dtype
@@ -260,7 +260,7 @@ class Geometry(SuperCellChild):
         -----
         This is an in-place operation.
         """
-        self._atom = self._atom.reorder()
+        self._atom = self._atom.reorder(in_place=True)
 
     def reduce(self):
         """ Remove all atoms not currently used in the ``self.atom`` object
@@ -269,7 +269,7 @@ class Geometry(SuperCellChild):
         -----
         This is an in-place operation.
         """
-        self._atom = self._atom.reduce()
+        self._atom = self._atom.reduce(in_place=True)
 
     def rij(self, ia, ja):
         r""" Distance between atom `ia` and `ja`, atoms can be in super-cell indices
@@ -898,7 +898,7 @@ class Geometry(SuperCellChild):
                            rtol=rtol, atol=atol):
             st = 'The cut structure cannot be re-created by tiling'
             st += '\nThe difference between the coordinates can be altered using rtol, atol'
-            warnings.warn(st, UserWarning)
+            warn(st)
         return new
 
     def remove(self, atom):
@@ -1387,6 +1387,7 @@ class Geometry(SuperCellChild):
         By specifying `what` one can control whether it should be:
 
         * ``xyz|position``: Center of coordinates (default)
+        * ``mm(xyz)``: Center of minimum/maximum of coordinates
         * ``mass``: Center of mass
         * ``cell``: Center of cell
 
@@ -1394,19 +1395,21 @@ class Geometry(SuperCellChild):
         ----------
         atom : array_like
             list of atomic indices to find center of
-        what : {'xyz', 'mass', 'cell'}
+        what : {'xyz', 'mm(xyz)', 'mass', 'cell'}
             determine whether center should be of 'cell', mass-centered ('mass'),
-            or absolute center of the positions.
+            center of minimum/maximum position of atoms or absolute center of the positions.
         """
-        if 'cell' in what:
+        if 'cell' == what:
             return self.sc.center()
         if atom is None:
             g = self
         else:
             g = self.sub(ensure_array(atom))
-        if 'mass' in what:
+        if 'mass' == what:
             mass = self.mass
             return dot(mass, g.xyz) / np.sum(mass)
+        if 'mm(xyz)' == what:
+            return (self.xyz.min(0) + self.xyz.max(0)) / 2
         if not ('xyz' in what or 'position' in what):
             raise ValueError(
                 'Unknown what, not one of [xyz,position,mass,cell]')
@@ -2495,43 +2498,43 @@ class Geometry(SuperCellChild):
         """
         return self.sc.offset(self.o2isc(o))
 
-    def __plot__(self, fig_axes=False, axes=None, plot_sc=True, *args, **kwargs):
+    def __plot__(self, axis=None, supercell=True, axes=False, *args, **kwargs):
         """ Plot the geometry in a specified ``matplotlib.Axes`` object.
 
         Parameters
         ----------
-        fig_axes : bool or matplotlib.Axes, optional
+        axis : array_like, optional
+           only plot a subset of the axis, defaults to all axis
+        supercell : bool, optional
+           If `True` also plot the supercell structure
+        axes : bool or matplotlib.Axes, optional
            the figure axes to plot in (if ``matplotlib.Axes`` object).
            If `True` it will create a new figure to plot in.
            If `False` it will try and grap the current figure and the current axes.
-        axes : array_like, optional
-           only plot a subset of the axis, defaults to all axes"
-        plot_sc : bool, optional
-           If `True` also plot the supercell structure
-           only plot a subset of the axis, defaults to all axes"
         """
         # Default dictionary for passing to newly created figures
         d = dict()
 
-        if plot_sc:
-            self.sc.__plot__(fig_axes, axes, *args, **kwargs)
-            if fig_axes is True:
-                fig_axes = False
+        # Start by plotting the supercell
+        if supercell:
+            self.sc.__plot__(axis, axes=axes, *args, **kwargs)
+            if axes is True:
+                axes = False
 
-        if axes is None:
-            axes = [0, 1, 2]
+        if axis is None:
+            axis = [0, 1, 2]
 
         # Ensure we have a new 3D Axes3D
-        if len(axes) == 3:
+        if len(axis) == 3:
             d['projection'] = '3d'
 
-        if fig_axes is False:
+        if axes is False:
             try:
-                fig_axes = plt.mlibplt.gca()
+                axes = plt.mlibplt.gca()
             except Exception:
-                fig_axes = plt.mlibplt.figure().add_subplot(111, **d)
-        elif fig_axes is True:
-            fig_axes = plt.mlibplt.figure().add_subplot(111, **d)
+                axes = plt.mlibplt.figure().add_subplot(111, **d)
+        elif axes is True:
+            axes = plt.mlibplt.figure().add_subplot(111, **d)
 
         colors = np.linspace(0, 1, num=len(self.atom.atom), endpoint=False)
         colors = colors[self.atom.specie]
@@ -2540,17 +2543,17 @@ class Geometry(SuperCellChild):
         area[:] *= 20 * np.pi / ma
         area = area[self.atom.specie]
 
-        xyz = self.xyz.view()
+        xyz = self.xyz
 
-        if isinstance(fig_axes, plt.mlib3d.Axes3D):
+        if isinstance(axes, plt.mlib3d.Axes3D):
             # We should plot in 3D plots
-            fig_axes.scatter(xyz[:, 0], xyz[:, 1], xyz[:, 2], s=area, c=colors, alpha=0.8)
-            plt.mlibplt.zlabel('Ang')
+            axes.scatter(xyz[:, 0], xyz[:, 1], xyz[:, 2], s=area, c=colors, alpha=0.8)
+            axes.set_zlabel('Ang')
         else:
-            fig_axes.scatter(xyz[:, axes[0]], xyz[:, axes[1]], s=area, c=colors, alpha=0.8)
+            axes.scatter(xyz[:, axis[0]], xyz[:, axis[1]], s=area, c=colors, alpha=0.8)
 
-        plt.mlibplt.xlabel('Ang')
-        plt.mlibplt.ylabel('Ang')
+        axes.set_xlabel('Ang')
+        axes.set_ylabel('Ang')
 
     @classmethod
     def fromASE(cls, aseg):
@@ -2560,7 +2563,7 @@ class Geometry(SuperCellChild):
         ----------
         aseg : ASE ``Atoms`` object which contains the following routines:
             ``get_atomic_numbers``, ``get_positions``, ``get_cell``.
-            From those methods a `sisl` object will be created.
+            From those methods a `Geometry` object will be created.
         """
         Z = aseg.get_atomic_numbers()
         xyz = aseg.get_positions()
