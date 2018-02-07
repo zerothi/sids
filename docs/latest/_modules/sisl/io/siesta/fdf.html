@@ -65,7 +65,7 @@
             
             
               <div class="version">
-                0.9.2-286
+                0.9.2-308
               </div>
             
           
@@ -173,10 +173,11 @@
 
 <span class="kn">import</span> <span class="nn">os.path</span> <span class="k">as</span> <span class="nn">osp</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-<span class="kn">import</span> <span class="nn">warnings</span> <span class="k">as</span> <span class="nn">warn</span>
+<span class="kn">import</span> <span class="nn">warnings</span>
 
 <span class="c1"># Import sile objects</span>
 <span class="kn">from</span> <span class="nn">sisl._help</span> <span class="k">import</span> <span class="n">_str</span><span class="p">,</span> <span class="n">ensure_array</span>
+<span class="kn">from</span> <span class="nn">sisl.messages</span> <span class="k">import</span> <span class="n">warn</span><span class="p">,</span> <span class="n">info</span>
 <span class="kn">from</span> <span class="nn">.sile</span> <span class="k">import</span> <span class="n">SileSiesta</span>
 <span class="kn">from</span> <span class="nn">..sile</span> <span class="k">import</span> <span class="o">*</span>
 <span class="kn">from</span> <span class="nn">sisl.io._help</span> <span class="k">import</span> <span class="o">*</span>
@@ -380,14 +381,15 @@
             <span class="k">return</span> <span class="kc">None</span>
 
         <span class="c1"># Perform actual reading of line</span>
-        <span class="n">l</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">readline</span><span class="p">()</span>
+        <span class="n">l</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">readline</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;#&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">l</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
             <span class="k">return</span> <span class="kc">None</span>
         <span class="n">l</span> <span class="o">=</span> <span class="n">process_line</span><span class="p">(</span><span class="n">l</span><span class="p">)</span>
         <span class="k">while</span> <span class="n">l</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">l</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">readline</span><span class="p">()</span>
+            <span class="n">l</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">readline</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;#&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
             <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">l</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-                <span class="k">return</span> <span class="kc">None</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_popfile</span><span class="p">():</span>
+                    <span class="k">return</span> <span class="kc">None</span>
             <span class="n">l</span> <span class="o">=</span> <span class="n">process_line</span><span class="p">(</span><span class="n">l</span><span class="p">)</span>
 
         <span class="k">return</span> <span class="n">l</span>
@@ -684,8 +686,8 @@
             <span class="n">spgeom</span><span class="o">.</span><span class="n">_geom</span> <span class="o">=</span> <span class="n">geom</span>
             <span class="k">return</span> <span class="kc">True</span>
         <span class="k">elif</span> <span class="n">spgeom</span><span class="o">.</span><span class="n">na</span> <span class="o">!=</span> <span class="n">geom</span><span class="o">.</span><span class="n">na</span><span class="p">:</span>
-            <span class="n">warn</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s1">&#39;cannot replace geometry due to insufficient information regarding number of &#39;</span>
-                      <span class="s1">&#39;atoms and orbitals, ensuring correct geometry failed...&#39;</span><span class="p">)</span>
+            <span class="n">warn</span><span class="p">(</span><span class="n">SileWarning</span><span class="p">(</span><span class="s1">&#39;cannot replace geometry due to insufficient information regarding number of &#39;</span>
+                                    <span class="s1">&#39;atoms and orbitals, ensuring correct geometry failed...&#39;</span><span class="p">))</span>
 
         <span class="n">no_no</span> <span class="o">=</span> <span class="n">spgeom</span><span class="o">.</span><span class="n">no</span> <span class="o">==</span> <span class="n">geom</span><span class="o">.</span><span class="n">no</span>
         <span class="c1"># Loop and make sure the number of orbitals is consistent</span>
@@ -698,6 +700,7 @@
                 <span class="c1"># *except* the number of orbitals.</span>
                 <span class="n">a</span> <span class="o">=</span> <span class="n">Atom</span><span class="p">(</span><span class="n">a</span><span class="o">.</span><span class="n">Z</span><span class="p">,</span> <span class="n">Sa</span><span class="o">.</span><span class="n">orbital</span><span class="p">,</span> <span class="n">mass</span><span class="o">=</span><span class="n">a</span><span class="o">.</span><span class="n">mass</span><span class="p">,</span> <span class="n">tag</span><span class="o">=</span><span class="n">a</span><span class="o">.</span><span class="n">tag</span><span class="p">)</span>
             <span class="n">spgeom</span><span class="o">.</span><span class="n">geom</span><span class="o">.</span><span class="n">atom</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">idx</span><span class="p">,</span> <span class="n">a</span><span class="p">)</span>
+            <span class="n">spgeom</span><span class="o">.</span><span class="n">geom</span><span class="o">.</span><span class="n">reduce</span><span class="p">()</span>
         <span class="k">return</span> <span class="n">no_no</span>
 
 <div class="viewcode-block" id="fdfSileSiesta.read_supercell"><a class="viewcode-back" href="../../../../api-generated/sisl.io.siesta.fdfSileSiesta.html#sisl.io.siesta.fdfSileSiesta.read_supercell">[docs]</a>    <span class="k">def</span> <span class="nf">read_supercell</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">output</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
@@ -736,7 +739,7 @@
 
     <span class="k">def</span> <span class="nf">_r_supercell_fdf</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Returns `SuperCell` object from the FDF file &quot;&quot;&quot;</span>
-        <span class="n">s</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;LatticeConstant&#39;</span><span class="p">,</span> <span class="s1">&#39;Ang&#39;</span><span class="p">)</span>
+        <span class="n">s</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;LatticeConstant&#39;</span><span class="p">,</span> <span class="n">unit</span><span class="o">=</span><span class="s1">&#39;Ang&#39;</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">s</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">raise</span> <span class="n">SileError</span><span class="p">(</span><span class="s1">&#39;Could not find LatticeConstant in file&#39;</span><span class="p">)</span>
 
@@ -817,10 +820,11 @@
                 <span class="n">geom</span> <span class="o">=</span> <span class="n">XVSileSiesta</span><span class="p">(</span><span class="n">f</span><span class="p">)</span><span class="o">.</span><span class="n">read_geometry</span><span class="p">()</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="n">geom</span> <span class="o">=</span> <span class="n">XVSileSiesta</span><span class="p">(</span><span class="n">f</span><span class="p">)</span><span class="o">.</span><span class="n">read_geometry</span><span class="p">(</span><span class="n">species_Z</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-                <span class="k">with</span> <span class="n">warn</span><span class="o">.</span><span class="n">catch_warnings</span><span class="p">():</span>
-                    <span class="n">warn</span><span class="o">.</span><span class="n">simplefilter</span><span class="p">(</span><span class="s1">&#39;ignore&#39;</span><span class="p">)</span>
+                <span class="k">with</span> <span class="n">warnings</span><span class="o">.</span><span class="n">catch_warnings</span><span class="p">():</span>
+                    <span class="n">warnings</span><span class="o">.</span><span class="n">simplefilter</span><span class="p">(</span><span class="s1">&#39;ignore&#39;</span><span class="p">)</span>
                     <span class="k">for</span> <span class="n">atom</span><span class="p">,</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">geom</span><span class="o">.</span><span class="n">atom</span><span class="o">.</span><span class="n">iter</span><span class="p">(</span><span class="kc">True</span><span class="p">):</span>
                         <span class="n">geom</span><span class="o">.</span><span class="n">atom</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">atom</span><span class="p">,</span> <span class="n">basis</span><span class="p">[</span><span class="n">atom</span><span class="o">.</span><span class="n">Z</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+                    <span class="n">geom</span><span class="o">.</span><span class="n">reduce</span><span class="p">()</span>
         <span class="k">return</span> <span class="n">geom</span>
 
     <span class="k">def</span> <span class="nf">_r_geometry_nc</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -899,11 +903,11 @@
         <span class="c1"># Now we read in the species</span>
         <span class="n">ns</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;NumberOfSpecies&#39;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
 
-        <span class="c1"># Read the block (not strictly needed, if so we simply set all atoms to</span>
-        <span class="c1"># H)</span>
+        <span class="c1"># Read the block (not strictly needed, if so we simply set all atoms to H)</span>
         <span class="n">atom</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">read_basis</span><span class="p">()</span>
         <span class="k">if</span> <span class="n">atom</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">warn</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s1">&#39;The block ChemicalSpeciesLabel does not exist, cannot determine the basis.&#39;</span><span class="p">)</span>
+            <span class="n">warn</span><span class="p">(</span><span class="n">SileWarning</span><span class="p">(</span><span class="s1">&#39;Block ChemicalSpeciesLabel does not exist, cannot determine the basis.&#39;</span><span class="p">))</span>
+
             <span class="c1"># Default atom (hydrogen)</span>
             <span class="n">atom</span> <span class="o">=</span> <span class="n">Atom</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
             <span class="c1"># Force number of species to 1</span>
@@ -926,9 +930,9 @@
 <span class="sd">        ----------</span>
 <span class="sd">        order: list of str, optional</span>
 <span class="sd">            the order of which to try and read the basis information.</span>
-<span class="sd">            By default this is ``[&#39;nc&#39;, &#39;ion&#39;, &#39;ORB_INDX&#39;]``</span>
+<span class="sd">            By default this is ``[&#39;nc&#39;, &#39;ion&#39;, &#39;ORB_INDX&#39;, &#39;fdf&#39;]``</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">order</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;order&#39;</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;nc&#39;</span><span class="p">,</span> <span class="s1">&#39;ion&#39;</span><span class="p">,</span> <span class="s1">&#39;ORB_INDX&#39;</span><span class="p">])</span>
+        <span class="n">order</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;order&#39;</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;nc&#39;</span><span class="p">,</span> <span class="s1">&#39;ion&#39;</span><span class="p">,</span> <span class="s1">&#39;ORB_INDX&#39;</span><span class="p">,</span> <span class="s1">&#39;fdf&#39;</span><span class="p">])</span>
         <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">order</span><span class="p">:</span>
             <span class="n">v</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;_r_basis_</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">lower</span><span class="p">()))(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
             <span class="k">if</span> <span class="n">v</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
@@ -952,6 +956,8 @@
 
         <span class="c1"># Now spcs contains the block of the chemicalspecieslabel</span>
         <span class="n">atom</span> <span class="o">=</span> <span class="p">[</span><span class="kc">None</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">spcs</span><span class="p">)</span>
+        <span class="n">found_one</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="n">found_all</span> <span class="o">=</span> <span class="kc">True</span>
         <span class="k">for</span> <span class="n">spc</span> <span class="ow">in</span> <span class="n">spcs</span><span class="p">:</span>
             <span class="n">idx</span><span class="p">,</span> <span class="n">Z</span><span class="p">,</span> <span class="n">lbl</span> <span class="o">=</span> <span class="n">spc</span><span class="o">.</span><span class="n">split</span><span class="p">()[:</span><span class="mi">3</span><span class="p">]</span>
             <span class="n">idx</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">idx</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span> <span class="c1"># F-indexing</span>
@@ -962,18 +968,45 @@
             <span class="c1"># now try and read the basis</span>
             <span class="k">if</span> <span class="n">isfile</span><span class="p">(</span><span class="n">f</span> <span class="o">+</span> <span class="s1">&#39;.ion.nc&#39;</span><span class="p">):</span>
                 <span class="n">atom</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">ionncSileSiesta</span><span class="p">(</span><span class="n">f</span> <span class="o">+</span> <span class="s1">&#39;.ion.nc&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">read_basis</span><span class="p">()</span>
+                <span class="n">found_one</span> <span class="o">=</span> <span class="kc">True</span>
             <span class="k">elif</span> <span class="n">isfile</span><span class="p">(</span><span class="n">f</span> <span class="o">+</span> <span class="s1">&#39;.ion.xml&#39;</span><span class="p">):</span>
                 <span class="n">atom</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">ionxmlSileSiesta</span><span class="p">(</span><span class="n">f</span> <span class="o">+</span> <span class="s1">&#39;.ion.xml&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">read_basis</span><span class="p">()</span>
+                <span class="n">found_one</span> <span class="o">=</span> <span class="kc">True</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="c1"># default the atom to not have a range, and no associated orbitals</span>
                 <span class="n">atom</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">Atom</span><span class="p">(</span><span class="n">Z</span><span class="o">=</span><span class="n">Z</span><span class="p">,</span> <span class="n">tag</span><span class="o">=</span><span class="n">lbl</span><span class="p">)</span>
+                <span class="n">found_all</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="k">if</span> <span class="n">found_one</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">found_all</span><span class="p">:</span>
+            <span class="n">warn</span><span class="p">(</span><span class="n">SileWarning</span><span class="p">(</span><span class="s1">&#39;Siesta basis information could not read all ion.nc/ion.xml files. Only a subset of the basis information is accessible.&#39;</span><span class="p">))</span>
+        <span class="k">elif</span> <span class="ow">not</span> <span class="n">found_one</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span>
         <span class="k">return</span> <span class="n">atom</span>
 
     <span class="k">def</span> <span class="nf">_r_basis_orb_indx</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="n">f</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tofile</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;SystemLabel&#39;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="s1">&#39;siesta&#39;</span><span class="p">))</span> <span class="o">+</span> <span class="s1">&#39;.ORB_INDX&#39;</span>
         <span class="k">if</span> <span class="n">isfile</span><span class="p">(</span><span class="n">f</span><span class="p">):</span>
+            <span class="n">showinfo</span><span class="p">(</span><span class="n">SileInfo</span><span class="p">(</span><span class="s1">&#39;Siesta basis information is read from </span><span class="si">{}</span><span class="s1">, the radial functions are in accessible.&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">f</span><span class="p">)))</span>
             <span class="k">return</span> <span class="n">OrbIndxSileSiesta</span><span class="p">(</span><span class="n">f</span><span class="p">)</span><span class="o">.</span><span class="n">read_basis</span><span class="p">()</span>
         <span class="k">return</span> <span class="kc">None</span>
+
+    <span class="k">def</span> <span class="nf">_r_basis_fdf</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1"># Read basis from fdf file</span>
+        <span class="n">spcs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;ChemicalSpeciesLabel&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">spcs</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># We haven&#39;t found the chemical and species label</span>
+            <span class="c1"># so return nothing</span>
+            <span class="k">return</span> <span class="kc">None</span>
+
+        <span class="c1"># Now spcs contains the block of the chemicalspecieslabel</span>
+        <span class="n">atom</span> <span class="o">=</span> <span class="p">[</span><span class="kc">None</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">spcs</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">spc</span> <span class="ow">in</span> <span class="n">spcs</span><span class="p">:</span>
+            <span class="n">idx</span><span class="p">,</span> <span class="n">Z</span><span class="p">,</span> <span class="n">lbl</span> <span class="o">=</span> <span class="n">spc</span><span class="o">.</span><span class="n">split</span><span class="p">()[:</span><span class="mi">3</span><span class="p">]</span>
+            <span class="n">idx</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">idx</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span> <span class="c1"># F-indexing</span>
+            <span class="n">Z</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">Z</span><span class="p">)</span>
+            <span class="n">lbl</span> <span class="o">=</span> <span class="n">lbl</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+
+            <span class="n">atom</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">Atom</span><span class="p">(</span><span class="n">Z</span><span class="o">=</span><span class="n">Z</span><span class="p">,</span> <span class="n">tag</span><span class="o">=</span><span class="n">lbl</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">atom</span>
 
 <div class="viewcode-block" id="fdfSileSiesta.read_density_matrix"><a class="viewcode-back" href="../../../../api-generated/sisl.io.siesta.fdfSileSiesta.html#sisl.io.siesta.fdfSileSiesta.read_density_matrix">[docs]</a>    <span class="k">def</span> <span class="nf">read_density_matrix</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Try and read density matrix by reading the &lt;&gt;.nc, &lt;&gt;.TSDE files, &lt;&gt;.DM (in that order)</span>
@@ -1193,7 +1226,7 @@
         <span class="k">if</span> <span class="n">isfile</span><span class="p">(</span><span class="n">f</span><span class="p">):</span>
             <span class="n">tmp_p</span> <span class="o">=</span> <span class="n">sp</span><span class="o">.</span><span class="n">add_parser</span><span class="p">(</span><span class="s1">&#39;pdos&#39;</span><span class="p">,</span>
                                   <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Manipulate PDOS.xml file from the Siesta simulation&quot;</span><span class="p">)</span>
-            <span class="n">tmp_p</span><span class="p">,</span> <span class="n">tmp_ns</span> <span class="o">=</span> <span class="n">sis</span><span class="o">.</span><span class="n">pdosSileSiesta</span><span class="p">(</span><span class="n">f</span><span class="p">)</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">(</span><span class="n">tmp_p</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+            <span class="n">tmp_p</span><span class="p">,</span> <span class="n">tmp_ns</span> <span class="o">=</span> <span class="n">pdosSileSiesta</span><span class="p">(</span><span class="n">f</span><span class="p">)</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">(</span><span class="n">tmp_p</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
             <span class="n">namespace</span> <span class="o">=</span> <span class="n">merge_instances</span><span class="p">(</span><span class="n">namespace</span><span class="p">,</span> <span class="n">tmp_ns</span><span class="p">)</span>
 
         <span class="n">f</span> <span class="o">=</span> <span class="n">label</span> <span class="o">+</span> <span class="s1">&#39;.EIG&#39;</span>
@@ -1278,7 +1311,7 @@
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'../../../../',
-            VERSION:'0.9.2-286',
+            VERSION:'0.9.2-308',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true,

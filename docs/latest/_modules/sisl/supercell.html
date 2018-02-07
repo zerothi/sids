@@ -65,7 +65,7 @@
             
             
               <div class="version">
-                0.9.2-286
+                0.9.2-308
               </div>
             
           
@@ -236,6 +236,36 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">nsc</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">onesi</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
         <span class="c1"># Set the super-cell</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">set_nsc</span><span class="p">(</span><span class="n">nsc</span><span class="o">=</span><span class="n">nsc</span><span class="p">)</span>
+
+<div class="viewcode-block" id="SuperCell.cell_parameter"><a class="viewcode-back" href="../../api-generated/sisl.SuperCell.html#sisl.SuperCell.cell_parameter">[docs]</a>    <span class="k">def</span> <span class="nf">cell_parameter</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">rad</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Return the cell-parameters of this cell. I.e. lattice vector lengths and angles</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        rad : bool, optional</span>
+<span class="sd">           whether the angles are returned in radians</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">rad</span><span class="p">:</span>
+            <span class="n">f</span> <span class="o">=</span> <span class="mi">180</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">f</span> <span class="o">=</span> <span class="mf">1.</span>
+
+        <span class="c1"># Figure out which vectors has the largest component along Cartesian x</span>
+        <span class="n">c</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">cc</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">cell</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">fn</span> <span class="o">=</span> <span class="n">fnorm</span><span class="p">(</span><span class="n">cc</span><span class="p">)</span>
+        <span class="n">x_frac</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">cc</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">])</span> <span class="o">/</span> <span class="n">fn</span>
+        <span class="c1"># Figure out which has the largest component</span>
+        <span class="n">ix</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="o">-</span><span class="n">x_frac</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="c1"># Now we have the largest x-component.</span>
+        <span class="c1"># Rotate &#39;ix&#39; vector to be along x vector</span>
+        <span class="kn">from</span> <span class="nn">math</span> <span class="k">import</span> <span class="n">acos</span><span class="p">,</span> <span class="n">asin</span>
+        <span class="n">ax</span> <span class="o">=</span> <span class="n">acos</span><span class="p">(</span><span class="n">_dot</span><span class="p">(</span><span class="n">cc</span><span class="p">[</span><span class="n">ix</span><span class="p">,</span> <span class="p">:],</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">1.</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]))</span> <span class="o">/</span> <span class="n">fn</span><span class="p">[</span><span class="n">ix</span><span class="p">])</span>
+
+        <span class="c1"># First we need to rotate the cell etc.</span>
+        <span class="c1"># Al</span>
+        <span class="k">pass</span></div>
 
     <span class="k">def</span> <span class="nf">_update_vol</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">volume</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">dot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cell</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="p">:],</span>
@@ -938,63 +968,62 @@
         <span class="bp">self</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">d</span><span class="p">[</span><span class="s1">&#39;cell&#39;</span><span class="p">],</span> <span class="n">d</span><span class="p">[</span><span class="s1">&#39;nsc&#39;</span><span class="p">],</span> <span class="n">d</span><span class="p">[</span><span class="s1">&#39;origo&#39;</span><span class="p">])</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">sc_off</span> <span class="o">=</span> <span class="n">d</span><span class="p">[</span><span class="s1">&#39;sc_off&#39;</span><span class="p">]</span>
 
-    <span class="k">def</span> <span class="nf">__plot__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fig_axes</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">axes</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__plot__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">axes</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Plot the supercell in a specified ``matplotlib.Axes`` object.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
-<span class="sd">        fig_axes : bool or matplotlib.Axes, optional</span>
+<span class="sd">        axis : array_like, optional</span>
+<span class="sd">           only plot a subset of the axis, defaults to all axis</span>
+<span class="sd">        axes : bool or matplotlib.Axes, optional</span>
 <span class="sd">           the figure axes to plot in (if ``matplotlib.Axes`` object).</span>
 <span class="sd">           If ``True`` it will create a new figure to plot in.</span>
 <span class="sd">           If ``False`` it will try and grap the current figure and the current axes.</span>
-<span class="sd">        axes : array_like, optional</span>
-<span class="sd">           only plot a subset of the axis, defaults to all axes</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># Default dictionary for passing to newly created figures</span>
         <span class="n">d</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
 
-        <span class="k">if</span> <span class="n">axes</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">axes</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">axis</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">axis</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span>
 
         <span class="c1"># Ensure we have a new 3D Axes3D</span>
-        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">axes</span><span class="p">)</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">axis</span><span class="p">)</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
             <span class="n">d</span><span class="p">[</span><span class="s1">&#39;projection&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;3d&#39;</span>
 
-        <span class="k">if</span> <span class="n">fig_axes</span> <span class="ow">is</span> <span class="kc">False</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">axes</span> <span class="ow">is</span> <span class="kc">False</span><span class="p">:</span>
             <span class="k">try</span><span class="p">:</span>
-                <span class="n">fig_axes</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">mlib</span><span class="o">.</span><span class="n">gca</span><span class="p">()</span>
+                <span class="n">axes</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">mlibplt</span><span class="o">.</span><span class="n">gca</span><span class="p">()</span>
             <span class="k">except</span><span class="p">:</span>
-                <span class="n">fig_axes</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">mlibplt</span><span class="o">.</span><span class="n">figure</span><span class="p">()</span><span class="o">.</span><span class="n">add_subplot</span><span class="p">(</span><span class="mi">111</span><span class="p">,</span> <span class="o">**</span><span class="n">d</span><span class="p">)</span>
-        <span class="k">elif</span> <span class="n">fig_axes</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
-            <span class="n">fig_axes</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">mlibplt</span><span class="o">.</span><span class="n">figure</span><span class="p">()</span><span class="o">.</span><span class="n">add_subplot</span><span class="p">(</span><span class="mi">111</span><span class="p">,</span> <span class="o">**</span><span class="n">d</span><span class="p">)</span>
+                <span class="n">axes</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">mlibplt</span><span class="o">.</span><span class="n">figure</span><span class="p">()</span><span class="o">.</span><span class="n">add_subplot</span><span class="p">(</span><span class="mi">111</span><span class="p">,</span> <span class="o">**</span><span class="n">d</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">axes</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="n">axes</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">mlibplt</span><span class="o">.</span><span class="n">figure</span><span class="p">()</span><span class="o">.</span><span class="n">add_subplot</span><span class="p">(</span><span class="mi">111</span><span class="p">,</span> <span class="o">**</span><span class="n">d</span><span class="p">)</span>
 
         <span class="c1"># Create vector objects</span>
         <span class="n">v</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">axes</span><span class="p">:</span>
-            <span class="n">v</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">(([</span><span class="mf">0.</span><span class="p">]</span><span class="o">*</span><span class="nb">len</span><span class="p">(</span><span class="n">axes</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">cell</span><span class="p">[</span><span class="n">a</span><span class="p">,</span> <span class="n">axes</span><span class="p">])))</span>
+        <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">axis</span><span class="p">:</span>
+            <span class="n">v</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">(([</span><span class="mf">0.</span><span class="p">]</span><span class="o">*</span><span class="nb">len</span><span class="p">(</span><span class="n">axis</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">cell</span><span class="p">[</span><span class="n">a</span><span class="p">,</span> <span class="n">axis</span><span class="p">])))</span>
         <span class="n">v</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
 
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">fig_axes</span><span class="p">,</span> <span class="n">plt</span><span class="o">.</span><span class="n">mlib3d</span><span class="o">.</span><span class="n">Axes3D</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">axes</span><span class="p">,</span> <span class="n">plt</span><span class="o">.</span><span class="n">mlib3d</span><span class="o">.</span><span class="n">Axes3D</span><span class="p">):</span>
             <span class="c1"># We should plot in 3D plots</span>
             <span class="k">for</span> <span class="n">vv</span> <span class="ow">in</span> <span class="n">v</span><span class="p">:</span>
-                <span class="n">fig_axes</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">vv</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">vv</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">vv</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">],</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+                <span class="n">axes</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">vv</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">vv</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">vv</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">],</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 
             <span class="n">v0</span><span class="p">,</span> <span class="n">v1</span> <span class="o">=</span> <span class="n">v</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">v</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
-            <span class="n">fig_axes</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">v0</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">v1</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">v0</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">v1</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">v0</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">+</span> <span class="n">v1</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">],</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+            <span class="n">axes</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">v0</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">v1</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">v0</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">v1</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">v0</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">+</span> <span class="n">v1</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">],</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 
-            <span class="n">plt</span><span class="o">.</span><span class="n">mlibplt</span><span class="o">.</span><span class="n">zlabel</span><span class="p">(</span><span class="s1">&#39;Ang&#39;</span><span class="p">)</span>
-            <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s1">&#39;Not implemented for 3D plots&#39;</span><span class="p">)</span>
+            <span class="n">axes</span><span class="o">.</span><span class="n">set_zlabel</span><span class="p">(</span><span class="s1">&#39;Ang&#39;</span><span class="p">)</span>
 
         <span class="k">else</span><span class="p">:</span>
             <span class="k">for</span> <span class="n">vv</span> <span class="ow">in</span> <span class="n">v</span><span class="p">:</span>
-                <span class="n">fig_axes</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">vv</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">vv</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">],</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+                <span class="n">axes</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">vv</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">vv</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">],</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 
             <span class="n">v0</span><span class="p">,</span> <span class="n">v1</span> <span class="o">=</span> <span class="n">v</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">v</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
-            <span class="n">fig_axes</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">v0</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">v1</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">v0</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">v1</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">],</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
-            <span class="n">fig_axes</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">v1</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">v0</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">v1</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">v0</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">],</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+            <span class="n">axes</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">v0</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">v1</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">v0</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">v1</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">],</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+            <span class="n">axes</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">v1</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">v0</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">v1</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">v0</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">],</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 
-        <span class="n">plt</span><span class="o">.</span><span class="n">mlibplt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;Ang&#39;</span><span class="p">)</span>
-        <span class="n">plt</span><span class="o">.</span><span class="n">mlibplt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;Ang&#39;</span><span class="p">)</span></div>
+        <span class="n">axes</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s1">&#39;Ang&#39;</span><span class="p">)</span>
+        <span class="n">axes</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s1">&#39;Ang&#39;</span><span class="p">)</span></div>
 
 
 <span class="k">class</span> <span class="nc">SuperCellChild</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
@@ -1146,7 +1175,7 @@
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'../../',
-            VERSION:'0.9.2-286',
+            VERSION:'0.9.2-308',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true,
