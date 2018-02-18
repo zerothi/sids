@@ -67,7 +67,7 @@
             
             
               <div class="version">
-                0.9.2-308
+                0.9.2-320
               </div>
             
           
@@ -238,13 +238,30 @@
 <dl class="class">
 <dt id="sisl.io.tbtrans.deltancSileTBtrans">
 <em class="property">class </em><code class="descclassname">sisl.io.tbtrans.</code><code class="descname">deltancSileTBtrans</code><span class="sig-paren">(</span><em>filename</em>, <em>mode='r'</em>, <em>lvl=0</em>, <em>access=1</em>, <em>_open=True</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/sisl/io/tbtrans/delta.html#deltancSileTBtrans"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sisl.io.tbtrans.deltancSileTBtrans" title="Permalink to this definition">¶</a></dt>
-<dd><p>TBtrans delta file object</p>
+<dd><p>TBtrans <span class="math">\(\delta\)</span> file object</p>
 <p>The <span class="math">\(\delta\)</span> file object is an extension enabled in <a class="reference external" href="https://launchpad.net/siesta">TBtrans</a> which
-enables changing the Hamiltonian in transport problems.</p>
-<p>Its main functionality is in the change of Hamiltonian via either <span class="math">\(\delta H\)</span> or
-<span class="math">\(\delta \Sigma\)</span> terms:</p>
+allows changing the Hamiltonian in transport problems.</p>
 <div class="math">
-\[\mathbf H'(\mathbf k) = \mathbf H(\mathbf k) + \delta\mathbf H + \delta\mathbf\Sigma\]</div>
+\[\mathbf H'(\mathbf k) = \mathbf H(\mathbf k) +
+    \delta\mathbf H(E, \mathbf k) + \delta\mathbf\Sigma(E, \mathbf k)\]</div>
+<p>This file may either be used directly as the <span class="math">\(\delta\mathbf H\)</span> or the
+<span class="math">\(\delta\mathbf\Sigma\)</span>.</p>
+<p>When writing <span class="math">\(\delta\)</span> terms using <a class="reference internal" href="#sisl.io.tbtrans.deltancSileTBtrans.write_delta" title="sisl.io.tbtrans.deltancSileTBtrans.write_delta"><code class="xref py py-obj docutils literal"><span class="pre">write_delta</span></code></a> one may add <code class="docutils literal"><span class="pre">k</span></code> or <code class="docutils literal"><span class="pre">E</span></code> arguments
+to make the <span class="math">\(\delta\)</span> dependent on <code class="docutils literal"><span class="pre">k</span></code> and/or <code class="docutils literal"><span class="pre">E</span></code>.</p>
+<p>Refer to the TBtrans manual on how to use this feature.</p>
+<p class="rubric">Examples</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">H</span> <span class="o">=</span> <span class="n">Hamiltonian</span><span class="p">(</span><span class="n">geom</span><span class="o">.</span><span class="n">graphene</span><span class="p">(),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">complex128</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">H</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1j</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">dH</span> <span class="o">=</span> <span class="n">get_sile</span><span class="p">(</span><span class="s1">&#39;deltaH.dH.nc&#39;</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">dH</span><span class="o">.</span><span class="n">write_delta</span><span class="p">(</span><span class="n">H</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">H</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">dH</span><span class="o">.</span><span class="n">write_delta</span><span class="p">(</span><span class="n">H</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">])</span> <span class="c1"># Gamma only</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">H</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">+=</span> <span class="mf">1.</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">dH</span><span class="o">.</span><span class="n">write_delta</span><span class="p">(</span><span class="n">H</span><span class="p">,</span> <span class="n">E</span><span class="o">=</span><span class="mf">1.</span><span class="p">)</span> <span class="c1"># only at 1 eV</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">H</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">+=</span> <span class="mf">1.j</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">dH</span><span class="o">.</span><span class="n">write_delta</span><span class="p">(</span><span class="n">H</span><span class="p">,</span> <span class="n">E</span><span class="o">=</span><span class="mf">1.</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">])</span> <span class="c1"># only at 1 eV and Gamma-point</span>
+</pre></div>
+</div>
 <p class="rubric">Methods</p>
 <table border="1" class="longtable docutils">
 <colgroup>
@@ -280,7 +297,7 @@ enables changing the Hamiltonian in transport problems.</p>
 <td>Generic write method which should be overloaded in child-classes</td>
 </tr>
 <tr class="row-even"><td><a class="reference internal" href="#sisl.io.tbtrans.deltancSileTBtrans.write_delta" title="sisl.io.tbtrans.deltancSileTBtrans.write_delta"><code class="xref py py-obj docutils literal"><span class="pre">write_delta</span></code></a>(delta,&nbsp;**kwargs)</td>
-<td>Writes a <span class="math">\(\delta\)</span> term</td>
+<td>Writes a <span class="math">\(\delta\)</span> Hamiltonian to the file</td>
 </tr>
 <tr class="row-odd"><td><a class="reference internal" href="#sisl.io.tbtrans.deltancSileTBtrans.write_geometry" title="sisl.io.tbtrans.deltancSileTBtrans.write_geometry"><code class="xref py py-obj docutils literal"><span class="pre">write_geometry</span></code></a>(geom)</td>
 <td>Creates the NetCDF file and writes the geometry information</td>
@@ -424,7 +441,7 @@ and call it with the remaining <code class="docutils literal"><span class="pre">
 <dl class="method">
 <dt id="sisl.io.tbtrans.deltancSileTBtrans.write_delta">
 <code class="descname">write_delta</code><span class="sig-paren">(</span><em>delta</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/sisl/io/tbtrans/delta.html#deltancSileTBtrans.write_delta"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sisl.io.tbtrans.deltancSileTBtrans.write_delta" title="Permalink to this definition">¶</a></dt>
-<dd><p>Writes a <span class="math">\(\delta\)</span> term</p>
+<dd><p>Writes a <span class="math">\(\delta\)</span> Hamiltonian to the file</p>
 <p>This term may be of</p>
 <ul class="simple">
 <li>level-1: no E or k dependence</li>
@@ -447,7 +464,7 @@ the given k-point. May be combined with <em class="xref py py-obj">E</em> for a 
 </div></blockquote>
 <p><strong>E</strong> : float, optional</p>
 <blockquote class="last">
-<div><p>a specific energy-point <span class="math">\(\delta\)</span> term. I.e. only save the <span class="math">\(\delta\)</span> term for
+<div><p>an energy dependent <span class="math">\(\delta\)</span> term. I.e. only save the <span class="math">\(\delta\)</span> term for
 the given energy. May be combined with <em class="xref py py-obj">k</em> for a specific k and energy point.</p>
 </div></blockquote>
 </td>
@@ -516,7 +533,7 @@ the given energy. May be combined with <em class="xref py py-obj">k</em> for a s
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'../',
-            VERSION:'0.9.2-308',
+            VERSION:'0.9.2-320',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true,

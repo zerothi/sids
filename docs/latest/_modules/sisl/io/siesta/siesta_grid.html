@@ -65,7 +65,7 @@
             
             
               <div class="version">
-                0.9.2-308
+                0.9.2-320
               </div>
             
           
@@ -171,6 +171,7 @@
   <h1>Source code for sisl.io.siesta.siesta_grid</h1><div class="highlight"><pre>
 <span></span><span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">print_function</span>
 
+<span class="kn">import</span> <span class="nn">os.path</span> <span class="k">as</span> <span class="nn">osp</span>
 <span class="kn">from</span> <span class="nn">numbers</span> <span class="k">import</span> <span class="n">Integral</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 
@@ -179,12 +180,14 @@
 <span class="kn">from</span> <span class="nn">..sile</span> <span class="k">import</span> <span class="o">*</span>
 
 <span class="c1"># Import the geometry object</span>
+<span class="kn">from</span> <span class="nn">sisl.messages</span> <span class="k">import</span> <span class="n">info</span>
 <span class="kn">from</span> <span class="nn">sisl</span> <span class="k">import</span> <span class="n">SuperCell</span><span class="p">,</span> <span class="n">Grid</span>
 <span class="kn">from</span> <span class="nn">sisl.unit.siesta</span> <span class="k">import</span> <span class="n">unit_convert</span>
 
 <span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;gridncSileSiesta&#39;</span><span class="p">]</span>
 
 <span class="n">Bohr2Ang</span> <span class="o">=</span> <span class="n">unit_convert</span><span class="p">(</span><span class="s1">&#39;Bohr&#39;</span><span class="p">,</span> <span class="s1">&#39;Ang&#39;</span><span class="p">)</span>
+<span class="n">Ry2eV</span> <span class="o">=</span> <span class="n">unit_convert</span><span class="p">(</span><span class="s1">&#39;Ry&#39;</span><span class="p">,</span> <span class="s1">&#39;eV&#39;</span><span class="p">)</span>
 
 
 <div class="viewcode-block" id="gridncSileSiesta"><a class="viewcode-back" href="../../../../api-generated/sisl.io.siesta.gridncSileSiesta.html#sisl.io.siesta.gridncSileSiesta">[docs]</a><span class="k">class</span> <span class="nc">gridncSileSiesta</span><span class="p">(</span><span class="n">SileCDFSiesta</span><span class="p">):</span>
@@ -225,6 +228,36 @@
 <span class="sd">        name : str, optional</span>
 <span class="sd">            the name for the grid-function (do not supply for standard Siesta output)</span>
 <span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Determine the name of this file</span>
+        <span class="n">f</span> <span class="o">=</span> <span class="n">osp</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">file</span><span class="p">)</span>
+
+        <span class="c1"># File names are made up of</span>
+        <span class="c1">#  ElectrostaticPotential.grid.nc</span>
+        <span class="c1"># So the first one should be ElectrostaticPotential</span>
+        <span class="n">base</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;.&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="c1"># Unit-conversion</span>
+        <span class="n">BohrC2AngC</span> <span class="o">=</span> <span class="n">Bohr2Ang</span> <span class="o">**</span> <span class="mi">3</span>
+
+        <span class="n">unit</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;Rho&#39;</span><span class="p">:</span> <span class="mf">1.</span> <span class="o">/</span> <span class="n">BohrC2AngC</span><span class="p">,</span>
+                <span class="s1">&#39;DeltaRho&#39;</span><span class="p">:</span> <span class="mf">1.</span> <span class="o">/</span> <span class="n">BohrC2AngC</span><span class="p">,</span>
+                <span class="s1">&#39;RhoXC&#39;</span><span class="p">:</span> <span class="mf">1.</span> <span class="o">/</span> <span class="n">BohrC2AngC</span><span class="p">,</span>
+                <span class="s1">&#39;RhoInit&#39;</span><span class="p">:</span> <span class="mf">1.</span> <span class="o">/</span> <span class="n">BohrC2AngC</span><span class="p">,</span>
+                <span class="s1">&#39;Chlocal&#39;</span><span class="p">:</span> <span class="mf">1.</span> <span class="o">/</span> <span class="n">BohrC2AngC</span><span class="p">,</span>
+                <span class="s1">&#39;TotalCharge&#39;</span><span class="p">:</span> <span class="mf">1.</span> <span class="o">/</span> <span class="n">BohrC2AngC</span><span class="p">,</span>
+                <span class="s1">&#39;BaderCharge&#39;</span><span class="p">:</span> <span class="mf">1.</span> <span class="o">/</span> <span class="n">BohrC2AngC</span><span class="p">,</span>
+                <span class="s1">&#39;ElectrostaticPotential&#39;</span><span class="p">:</span> <span class="n">Ry2eV</span><span class="p">,</span>
+                <span class="s1">&#39;TotalPotential&#39;</span><span class="p">:</span> <span class="n">Ry2eV</span><span class="p">,</span>
+                <span class="s1">&#39;Vna&#39;</span><span class="p">:</span> <span class="n">Ry2eV</span><span class="p">,</span>
+        <span class="p">}</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">base</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+
+        <span class="c1"># Fall-back</span>
+        <span class="k">if</span> <span class="n">unit</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">unit</span> <span class="o">=</span> <span class="mf">1.</span>
+            <span class="n">show_info</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">show_info</span> <span class="o">=</span> <span class="kc">False</span>
+
         <span class="c1"># Swap as we swap back in the end</span>
         <span class="n">sc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">read_supercell</span><span class="p">()</span><span class="o">.</span><span class="n">swapaxes</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
 
@@ -242,16 +275,19 @@
         <span class="n">grid</span> <span class="o">=</span> <span class="n">Grid</span><span class="p">([</span><span class="n">nz</span><span class="p">,</span> <span class="n">ny</span><span class="p">,</span> <span class="n">nx</span><span class="p">],</span> <span class="n">bc</span><span class="o">=</span><span class="n">Grid</span><span class="o">.</span><span class="n">PERIODIC</span><span class="p">,</span> <span class="n">sc</span><span class="o">=</span><span class="n">sc</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">v</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="n">v</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
-            <span class="n">grid</span><span class="o">.</span><span class="n">grid</span><span class="p">[:,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">v</span><span class="p">[:,</span> <span class="p">:,</span> <span class="p">:]</span>
+            <span class="n">grid</span><span class="o">.</span><span class="n">grid</span><span class="p">[:,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">v</span><span class="p">[:,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">*</span> <span class="n">unit</span>
         <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">spin</span><span class="p">,</span> <span class="n">Integral</span><span class="p">):</span>
-            <span class="n">grid</span><span class="o">.</span><span class="n">grid</span><span class="p">[:,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">v</span><span class="p">[</span><span class="n">spin</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="p">:]</span>
+            <span class="n">grid</span><span class="o">.</span><span class="n">grid</span><span class="p">[:,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">v</span><span class="p">[</span><span class="n">spin</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">*</span> <span class="n">unit</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">spin</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">v</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
                 <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39;.read_grid requires spin to be an integer or &#39;</span>
                                  <span class="s1">&#39;an array of length equal to the number of spin components.&#39;</span><span class="p">)</span>
-            <span class="n">grid</span><span class="o">.</span><span class="n">grid</span><span class="p">[:,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">v</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">*</span> <span class="n">spin</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">grid</span><span class="o">.</span><span class="n">grid</span><span class="p">[:,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">v</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">*</span> <span class="n">spin</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">unit</span>
             <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">scale</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">spin</span><span class="p">[</span><span class="mi">1</span><span class="p">:]):</span>
-                <span class="n">grid</span><span class="o">.</span><span class="n">grid</span><span class="p">[:,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">+=</span> <span class="n">v</span><span class="p">[</span><span class="mi">1</span><span class="o">+</span><span class="n">i</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">*</span> <span class="n">scale</span>
+                <span class="n">grid</span><span class="o">.</span><span class="n">grid</span><span class="p">[:,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">+=</span> <span class="n">v</span><span class="p">[</span><span class="mi">1</span><span class="o">+</span><span class="n">i</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">*</span> <span class="n">scale</span> <span class="o">*</span> <span class="n">unit</span>
+        <span class="k">if</span> <span class="n">show_info</span><span class="p">:</span>
+            <span class="n">info</span><span class="p">(</span><span class="n">SileInfo</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39;.read_grid cannot determine the units of the grid. &#39;</span>
+                          <span class="s1">&#39;The units may not be in sisl units.&#39;</span><span class="p">))</span>
 
         <span class="c1"># Read the grid, we want the z-axis to be the fastest</span>
         <span class="c1"># looping direction, hence x,y,z == 0,1,2</span>
@@ -319,7 +355,7 @@
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'../../../../',
-            VERSION:'0.9.2-308',
+            VERSION:'0.9.2-320',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true,

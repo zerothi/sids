@@ -65,7 +65,7 @@
             
             
               <div class="version">
-                0.9.2-308
+                0.9.2-320
               </div>
             
           
@@ -178,6 +178,7 @@
 <span class="kn">from</span> <span class="nn">itertools</span> <span class="k">import</span> <span class="n">product</span>
 
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">int32</span>
 <span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">dot</span><span class="p">,</span> <span class="n">square</span><span class="p">,</span> <span class="n">sqrt</span>
 
 <span class="kn">import</span> <span class="nn">sisl._plot</span> <span class="k">as</span> <span class="nn">plt</span>
@@ -192,6 +193,7 @@
 <span class="kn">from</span> <span class="nn">.utils</span> <span class="k">import</span> <span class="n">default_ArgumentParser</span><span class="p">,</span> <span class="n">default_namespace</span><span class="p">,</span> <span class="n">cmd</span>
 <span class="kn">from</span> <span class="nn">.utils</span> <span class="k">import</span> <span class="n">angle</span><span class="p">,</span> <span class="n">direction</span>
 <span class="kn">from</span> <span class="nn">.utils</span> <span class="k">import</span> <span class="n">lstranges</span><span class="p">,</span> <span class="n">strmap</span><span class="p">,</span> <span class="n">array_arange</span>
+<span class="kn">from</span> <span class="nn">.utils.mathematics</span> <span class="k">import</span> <span class="n">fnorm</span>
 <span class="kn">from</span> <span class="nn">.quaternion</span> <span class="k">import</span> <span class="n">Quaternion</span>
 <span class="kn">from</span> <span class="nn">.supercell</span> <span class="k">import</span> <span class="n">SuperCell</span><span class="p">,</span> <span class="n">SuperCellChild</span>
 <span class="kn">from</span> <span class="nn">.atom</span> <span class="k">import</span> <span class="n">Atom</span><span class="p">,</span> <span class="n">Atoms</span>
@@ -462,7 +464,7 @@
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">R</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
             <span class="k">return</span> <span class="p">(</span><span class="n">R</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">**</span> <span class="mf">2.</span> <span class="o">+</span> <span class="n">R</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="n">R</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span> <span class="o">**</span> <span class="o">.</span><span class="mi">5</span>
 
-        <span class="k">return</span> <span class="n">sqrt</span><span class="p">(</span><span class="n">square</span><span class="p">(</span><span class="n">R</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span></div>
+        <span class="k">return</span> <span class="n">fnorm</span><span class="p">(</span><span class="n">R</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="Geometry.Rij"><a class="viewcode-back" href="../../api-generated/sisl.Geometry.html#sisl.Geometry.Rij">[docs]</a>    <span class="k">def</span> <span class="nf">Rij</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ia</span><span class="p">,</span> <span class="n">ja</span><span class="p">):</span>
         <span class="sa">r</span><span class="sd">&quot;&quot;&quot; Vector between atom `ia` and `ja`, atoms can be in super-cell indices</span>
@@ -965,28 +967,42 @@
         <span class="k">if</span> <span class="n">R</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">R</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">maxR</span><span class="p">()</span>
         <span class="k">if</span> <span class="n">R</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span>
-                              <span class="s2">&quot;.optimize_nsc could not determine the radius from the &quot;</span>
-                              <span class="s2">&quot;internal atoms. Provide a radius as an argument.&quot;</span><span class="p">))</span>
+            <span class="n">R</span> <span class="o">=</span> <span class="mf">0.00001</span>
+            <span class="n">warn</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span>
+                 <span class="s2">&quot;.optimize_nsc could not determine the radius from the &quot;</span>
+                 <span class="s2">&quot;internal atoms (defaulting to zero radius).&quot;</span><span class="p">)</span>
 
-        <span class="c1"># Now we need to find the number of supercells</span>
-        <span class="n">nsc</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nsc</span><span class="p">)</span>
-        <span class="c1"># Reset the number of supercells of the wanted optimized</span>
-        <span class="c1"># directions to 1</span>
-        <span class="n">nsc</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="n">rc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">rcell</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">)</span>
+        <span class="n">nrc</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">/</span> <span class="n">fnorm</span><span class="p">(</span><span class="n">rc</span><span class="p">)</span>
+        <span class="n">idiv</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="n">nrc</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">R</span><span class="p">),</span> <span class="mf">1.1</span><span class="p">))</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
+        <span class="n">rmcell</span> <span class="o">=</span> <span class="n">rc</span> <span class="o">*</span> <span class="n">idiv</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+
+        <span class="c1"># We know this is the maximum</span>
+        <span class="n">nsc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nsc</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="c1"># We need to subtract one to ensure we are not taking into account</span>
+        <span class="c1"># too big supercell connections.</span>
+        <span class="c1"># I don&#39;t think we need anything other than this.</span>
+        <span class="c1"># However, until I am sure that this wouldn&#39;t change, regardless of the</span>
+        <span class="c1"># cell. I will keep it.</span>
+        <span class="n">Rrmcell</span> <span class="o">=</span> <span class="n">R</span> <span class="o">*</span> <span class="n">fnorm</span><span class="p">(</span><span class="n">rmcell</span><span class="p">)[</span><span class="n">axis</span><span class="p">]</span>
+        <span class="n">nsc</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="n">Rrmcell</span><span class="p">)</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="n">Rrmcell</span> <span class="o">%</span> <span class="mf">0.5</span> <span class="o">-</span> <span class="mf">0.5</span><span class="p">))</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
+        <span class="c1"># Since for 1 it is not sure that it is a connection or not, we limit the search by</span>
+        <span class="c1"># removing it.</span>
+        <span class="n">nsc</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">nsc</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">,</span> <span class="n">nsc</span><span class="p">[</span><span class="n">axis</span><span class="p">],</span> <span class="mi">0</span><span class="p">)</span>
         <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">axis</span><span class="p">:</span>
             <span class="c1"># Initialize the isc for this direction</span>
             <span class="c1"># (note we do not take non-orthogonal directions</span>
             <span class="c1">#  into account)</span>
             <span class="n">isc</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">zerosi</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+            <span class="n">isc</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">nsc</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
             <span class="c1"># Initialize the actual number of supercell connections</span>
             <span class="c1"># along this direction.</span>
-            <span class="n">prev_isc</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="n">prev_isc</span> <span class="o">=</span> <span class="n">isc</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
             <span class="k">while</span> <span class="n">prev_isc</span> <span class="o">==</span> <span class="n">isc</span><span class="p">[</span><span class="n">i</span><span class="p">]:</span>
                 <span class="c1"># Try next supercell connection</span>
                 <span class="n">isc</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
                 <span class="k">for</span> <span class="n">ia</span> <span class="ow">in</span> <span class="bp">self</span><span class="p">:</span>
-                    <span class="n">idx</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">close_sc</span><span class="p">(</span><span class="n">ia</span><span class="p">,</span> <span class="n">isc</span><span class="o">=</span><span class="n">isc</span><span class="p">,</span> <span class="n">R</span><span class="o">=</span><span class="n">R</span><span class="p">)</span>
+                    <span class="n">idx</span><span class="p">,</span> <span class="n">r</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">close_sc</span><span class="p">(</span><span class="n">ia</span><span class="p">,</span> <span class="n">isc</span><span class="o">=</span><span class="n">isc</span><span class="p">,</span> <span class="n">R</span><span class="o">=</span><span class="n">R</span><span class="p">,</span> <span class="n">ret_rij</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
                     <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">idx</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
                         <span class="n">prev_isc</span> <span class="o">=</span> <span class="n">isc</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
                         <span class="k">break</span>
@@ -1342,7 +1358,7 @@
             <span class="nb">dir</span> <span class="o">=</span> <span class="n">ensure_array</span><span class="p">(</span><span class="nb">dir</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
         <span class="c1"># Normalize so we don&#39;t have to have this in the</span>
         <span class="c1"># below formula</span>
-        <span class="nb">dir</span> <span class="o">/=</span> <span class="p">(</span><span class="nb">dir</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">**</span> <span class="o">.</span><span class="mi">5</span>
+        <span class="nb">dir</span> <span class="o">/=</span> <span class="n">fnorm</span><span class="p">(</span><span class="nb">dir</span><span class="p">)</span>
         <span class="c1"># Broad-casting</span>
         <span class="nb">dir</span><span class="o">.</span><span class="n">shape</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
 
@@ -1434,7 +1450,7 @@
 
         <span class="c1"># Ensure the normal vector is normalized...</span>
         <span class="n">vn</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">_a</span><span class="o">.</span><span class="n">asarrayd</span><span class="p">(</span><span class="n">v</span><span class="p">))</span>
-        <span class="n">vn</span> <span class="o">/=</span> <span class="p">(</span><span class="n">vn</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">**</span> <span class="o">.</span><span class="mi">5</span>
+        <span class="n">vn</span> <span class="o">/=</span> <span class="n">fnorm</span><span class="p">(</span><span class="n">vn</span><span class="p">)</span>
 
         <span class="c1"># Prepare quaternion...</span>
         <span class="n">q</span> <span class="o">=</span> <span class="n">Quaternion</span><span class="p">(</span><span class="n">angle</span><span class="p">,</span> <span class="n">vn</span><span class="p">,</span> <span class="n">rad</span><span class="o">=</span><span class="n">rad</span><span class="p">)</span>
@@ -1466,12 +1482,12 @@
         <span class="n">cp</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">arrayd</span><span class="p">([</span><span class="n">m</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="n">v</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">-</span> <span class="n">m</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">*</span> <span class="n">v</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
                         <span class="n">m</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">*</span> <span class="n">v</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">m</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">v</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span>
                         <span class="n">m</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">v</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">m</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="n">v</span><span class="p">[</span><span class="mi">0</span><span class="p">]])</span>
-        <span class="n">cp</span> <span class="o">/=</span> <span class="p">(</span><span class="n">cp</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">**</span> <span class="o">.</span><span class="mi">5</span>
+        <span class="n">cp</span> <span class="o">/=</span> <span class="n">fnorm</span><span class="p">(</span><span class="n">cp</span><span class="p">)</span>
 
         <span class="n">lm</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">arrayd</span><span class="p">(</span><span class="n">m</span><span class="p">)</span>
-        <span class="n">lm</span> <span class="o">/=</span> <span class="p">(</span><span class="n">lm</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">**</span> <span class="o">.</span><span class="mi">5</span>
+        <span class="n">lm</span> <span class="o">/=</span> <span class="n">fnorm</span><span class="p">(</span><span class="n">lm</span><span class="p">)</span>
         <span class="n">lv</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">arrayd</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
-        <span class="n">lv</span> <span class="o">/=</span> <span class="p">(</span><span class="n">lv</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">**</span> <span class="o">.</span><span class="mi">5</span>
+        <span class="n">lv</span> <span class="o">/=</span> <span class="n">fnorm</span><span class="p">(</span><span class="n">lv</span><span class="p">)</span>
 
         <span class="c1"># Now rotate the angle between them</span>
         <span class="n">a</span> <span class="o">=</span> <span class="n">acos</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">lm</span> <span class="o">*</span> <span class="n">lv</span><span class="p">))</span>
@@ -2287,6 +2303,93 @@
             <span class="k">return</span> <span class="n">ret</span>
         <span class="k">return</span> <span class="n">ret</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span></div>
 
+    <span class="k">def</span> <span class="nf">__currently_not_used_close_rec</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">xyz_ia</span><span class="p">,</span> <span class="n">R</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">idx</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">idx_xyz</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">ret_xyz</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">ret_rij</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Indices of atoms in a given supercell within a given radius from a given coordinate</span>
+
+<span class="sd">        This returns a set of atomic indices which are within a</span>
+<span class="sd">        sphere of radius `R`.</span>
+
+<span class="sd">        If `R` is a tuple/list/array it will return the indices:</span>
+<span class="sd">        in the ranges:</span>
+
+<span class="sd">        &gt;&gt;&gt; ( x &lt;= R[0] , R[0] &lt; x &lt;= R[1], R[1] &lt; x &lt;= R[2] ) # doctest: +SKIP</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        xyz_ia : array_like of floats or int</span>
+<span class="sd">            Either a point in space or an index of an atom.</span>
+<span class="sd">            If an index is passed it is the equivalent of passing</span>
+<span class="sd">            the atomic coordinate ``close_rec(self.xyz[xyz_ia,:])``.</span>
+<span class="sd">        R : float or array_like, optional</span>
+<span class="sd">            The radii parameter to where the atomic connections are found.</span>
+<span class="sd">            If `R` is an array it will return the indices:</span>
+<span class="sd">            in the ranges ``( x &lt;= R[0] , R[0] &lt; x &lt;= R[1], R[1] &lt; x &lt;= R[2] )``.</span>
+<span class="sd">            If a single float it will return ``x &lt;= R``.</span>
+<span class="sd">        idx : array_like of int, optional</span>
+<span class="sd">            List of atoms that will be considered. This can</span>
+<span class="sd">            be used to only take out a certain atoms.</span>
+<span class="sd">        idx_xyz : array_like of float, optional</span>
+<span class="sd">            The atomic coordinates of the equivalent `idx` variable (`idx` must also be passed)</span>
+<span class="sd">        ret_xyz : bool, optional</span>
+<span class="sd">            If True this method will return the coordinates</span>
+<span class="sd">            for each of the couplings.</span>
+<span class="sd">        ret_rij : bool, optional</span>
+<span class="sd">            If True this method will return the distance</span>
+<span class="sd">            for each of the couplings.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c1"># Common numpy used functions (reduces function look-ups)</span>
+        <span class="n">log_and</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">logical_and</span>
+        <span class="n">fabs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">fabs</span>
+
+        <span class="k">if</span> <span class="n">R</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">R</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">maxR</span><span class="p">()],</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="ow">not</span> <span class="n">isndarray</span><span class="p">(</span><span class="n">R</span><span class="p">):</span>
+            <span class="n">R</span> <span class="o">=</span> <span class="n">ensure_array</span><span class="p">(</span><span class="n">R</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+
+        <span class="c1"># Maximum distance queried</span>
+        <span class="n">max_R</span> <span class="o">=</span> <span class="n">R</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+
+        <span class="c1"># This way of calculating overlapping regions is heavily inspired by</span>
+        <span class="c1"># initial work by Jose Soler from Siesta.</span>
+
+        <span class="c1"># Retrieve reciprocal lattice to divide the mesh into reciprocal divisions.</span>
+        <span class="n">rcell</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">rcell</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">)</span>
+
+        <span class="c1"># Calculate number of mesh-divisions</span>
+        <span class="n">divisions</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="mf">2.</span> <span class="o">/</span> <span class="n">fnorm</span><span class="p">(</span><span class="n">rcell</span><span class="p">)</span> <span class="o">/</span> <span class="n">max_R</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">floor</span><span class="p">()</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">int32</span><span class="p">)</span>
+        <span class="n">divisions</span><span class="o">.</span><span class="n">shape</span> <span class="o">=</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">celld</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cell</span> <span class="o">/</span> <span class="n">divisions</span>
+        <span class="n">rdcell</span> <span class="o">=</span> <span class="n">divisions</span> <span class="o">*</span> <span class="n">rcell</span>
+
+        <span class="c1"># Calculate mesh indices for atoms</span>
+        <span class="n">xyz</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">xyz</span><span class="o">.</span><span class="n">view</span><span class="p">()</span>
+        <span class="n">mesh_a</span> <span class="o">=</span> <span class="n">dot</span><span class="p">(</span><span class="n">xyz</span><span class="p">,</span> <span class="n">rmcell</span><span class="o">.</span><span class="n">T</span><span class="p">)</span> <span class="c1"># dmx</span>
+        <span class="n">mesh_i</span> <span class="o">=</span> <span class="n">mesh_a</span><span class="o">.</span><span class="n">floor</span><span class="p">()</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">int32</span><span class="p">)</span>
+        <span class="n">subtract</span><span class="p">(</span><span class="n">mesh_a</span><span class="p">,</span> <span class="n">mesh_i</span><span class="p">,</span> <span class="n">out</span><span class="o">=</span><span class="n">mesh_a</span><span class="p">)</span>
+        <span class="n">mesh_i</span> <span class="o">=</span> <span class="n">mesh_i</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">int32</span><span class="p">)</span> <span class="c1"># imx</span>
+        <span class="n">mod</span><span class="p">(</span><span class="n">mesh_i</span><span class="p">,</span> <span class="n">divisions</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">out</span><span class="o">=</span><span class="n">mesh_i</span><span class="p">)</span>
+
+        <span class="c1"># Calculate atomic positions in the mesh</span>
+        <span class="n">a_pos</span> <span class="o">=</span> <span class="n">dot</span><span class="p">(</span><span class="n">mesh_a</span><span class="p">,</span> <span class="n">celld</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">xyz_ia</span><span class="p">,</span> <span class="n">Integral</span><span class="p">):</span>
+            <span class="n">coord</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">xyz</span><span class="p">[</span><span class="n">xyz_ia</span><span class="p">,</span> <span class="p">:]</span>
+        <span class="k">elif</span> <span class="ow">not</span> <span class="n">isndarray</span><span class="p">(</span><span class="n">xyz_ia</span><span class="p">):</span>
+            <span class="n">coord</span> <span class="o">=</span> <span class="n">ensure_array</span><span class="p">(</span><span class="n">xyz_ia</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">coord</span> <span class="o">=</span> <span class="n">xyz_ia</span>
+
+        <span class="c1"># Transform into cell-mesh divisions</span>
+        <span class="n">c_a</span> <span class="o">=</span> <span class="n">dot</span><span class="p">(</span><span class="n">coord</span><span class="p">,</span> <span class="n">rmcell</span><span class="o">.</span><span class="n">T</span><span class="p">)</span> <span class="c1"># dmx</span>
+        <span class="n">c_i</span> <span class="o">=</span> <span class="n">c_a</span><span class="o">.</span><span class="n">floor</span><span class="p">()</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">int32</span><span class="p">)</span>
+        <span class="n">c_a</span> <span class="o">=</span> <span class="n">c_a</span> <span class="o">-</span> <span class="n">c_i</span>
+        <span class="n">c_i</span> <span class="o">=</span> <span class="n">c_i</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">int32</span><span class="p">)</span> <span class="c1"># imx</span>
+        <span class="n">mod</span><span class="p">(</span><span class="n">c_i</span><span class="p">,</span> <span class="n">divisions</span><span class="o">.</span><span class="n">ravel</span><span class="p">(),</span> <span class="n">out</span><span class="o">=</span><span class="n">c_i</span><span class="p">)</span>
+        <span class="n">c_pos</span> <span class="o">=</span> <span class="n">dot</span><span class="p">(</span><span class="n">c_a</span><span class="p">,</span> <span class="n">celld</span><span class="p">)</span>
+
 <div class="viewcode-block" id="Geometry.bond_correct"><a class="viewcode-back" href="../../api-generated/sisl.Geometry.html#sisl.Geometry.bond_correct">[docs]</a>    <span class="k">def</span> <span class="nf">bond_correct</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ia</span><span class="p">,</span> <span class="n">atom</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s1">&#39;calc&#39;</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Corrects the bond between `ia` and the `atom`.</span>
 
@@ -2891,7 +2994,7 @@
                                   <span class="s2">&quot;The internal `maxR()` is negative and thus not set. &quot;</span>
                                   <span class="s2">&quot;Set an explicit value for `R`.&quot;</span><span class="p">))</span>
         <span class="k">elif</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nsc</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">):</span>
-            <span class="n">maxR</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cell</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">**</span> <span class="o">.</span><span class="mi">5</span>
+            <span class="n">maxR</span> <span class="o">=</span> <span class="n">fnorm</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cell</span><span class="p">)</span><span class="o">.</span><span class="n">max</span><span class="p">()</span>
             <span class="c1"># These loops could be leveraged if we look at angles...</span>
             <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">,</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">product</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">nsc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">//</span> <span class="mi">2</span><span class="p">],</span>
                                    <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">nsc</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">//</span> <span class="mi">2</span><span class="p">],</span>
@@ -2905,7 +3008,7 @@
                     <span class="n">o</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cell</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="p">:]</span> <span class="o">*</span> <span class="n">ii</span> <span class="o">+</span> \
                         <span class="bp">self</span><span class="o">.</span><span class="n">cell</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="p">:]</span> <span class="o">*</span> <span class="n">jj</span> <span class="o">+</span> \
                         <span class="bp">self</span><span class="o">.</span><span class="n">cell</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="p">:]</span> <span class="o">*</span> <span class="n">kk</span>
-                    <span class="n">maxR</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">maxR</span><span class="p">,</span> <span class="n">square</span><span class="p">(</span><span class="n">off</span> <span class="o">+</span> <span class="n">o</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">**</span> <span class="mf">0.5</span><span class="p">)</span>
+                    <span class="n">maxR</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">maxR</span><span class="p">,</span> <span class="n">fnorm</span><span class="p">(</span><span class="n">off</span> <span class="o">+</span> <span class="n">o</span><span class="p">))</span>
 
             <span class="k">if</span> <span class="n">R</span> <span class="o">&gt;</span> <span class="n">maxR</span><span class="p">:</span>
                 <span class="n">R</span> <span class="o">=</span> <span class="n">maxR</span>
@@ -3466,7 +3569,7 @@
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'../../',
-            VERSION:'0.9.2-308',
+            VERSION:'0.9.2-320',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true,
