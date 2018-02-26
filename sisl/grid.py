@@ -14,6 +14,8 @@ from .shape import Shape
 from .utils import default_ArgumentParser, default_namespace
 from .utils import cmd, strseq, direction
 from .utils import array_arange
+from .utils.mathematics import fnorm
+
 from .supercell import SuperCellChild
 from .atom import Atom
 from .geometry import Geometry
@@ -444,28 +446,16 @@ class Grid(SuperCellChild):
         """ Internal routine for shape-indices """
         # First grab the sphere, subsequent indices will be reduced
         # by the actual shape
-        sphere = shape.toSphere()
-        R = sphere.radius[0]
-
-        # Figure out the max-min indices with a spacing of 1 radians
-        rad1 = pi / 180
-        theta, phi = ogrid[-pi:pi:rad1, 0:pi:rad1]
-        nrxyz = (theta.size, phi.size, 3)
-
-        rxyz = _a.emptyd(nrxyz)
-        rxyz[..., 2] = R * cos(phi) + sphere.center[2]
-        sin(phi, out=phi)
-        rxyz[..., 0] = R * cos(theta) * phi + sphere.center[0]
-        rxyz[..., 1] = R * sin(theta) * phi + sphere.center[1]
-        del theta, phi, nrxyz
-
-        # Get all indices of the spherical circumference
-        idx = self.index(rxyz)
-        del rxyz
+        cuboid = shape.toCuboid()
+        ellipsoid = shape.toEllipsoid()
+        if ellipsoid.volume() > cuboid.volume():
+            idx = self._index_shape_cuboid(cuboid)
+        else:
+            idx = self._index_shape_ellipsoid(ellipsoid)
 
         # Get min/max
-        idx_min = idx.min(0)
-        idx_max = idx.max(0)
+        imin = idx.min(0)
+        imax = idx.max(0)
         del idx
 
         dc = self.dcell
@@ -473,20 +463,15 @@ class Grid(SuperCellChild):
         # Now to find the actual points inside the shape
         # First create all points in the square and then retrieve all indices
         # within.
-        # TODO, see if we can optimize this a bit.
-        addouter = add.outer
-        ix = _a.aranged(idx_min[0], idx_max[0] + 0.5)
-        iy = _a.aranged(idx_min[1], idx_max[1] + 0.5)
-        iz = _a.aranged(idx_min[2], idx_max[2] + 0.5)
+        ix = _a.aranged(imin[0], imax[0] + 0.5)
+        iy = _a.aranged(imin[1], imax[1] + 0.5)
+        iz = _a.aranged(imin[2], imax[2] + 0.5)
         output_shape = (ix.size, iy.size, iz.size, 3)
-        rx = addouter(addouter(ix * dc[0, 0], iy * dc[1, 0]), iz * dc[2, 0])
-        ry = addouter(addouter(ix * dc[0, 1], iy * dc[1, 1]), iz * dc[2, 1])
-        rz = addouter(addouter(ix * dc[0, 2], iy * dc[1, 2]), iz * dc[2, 2])
         rxyz = _a.emptyd(output_shape)
-        rxyz[:, :, :, 0] = rx
-        rxyz[:, :, :, 1] = ry
-        rxyz[:, :, :, 2] = rz
-        del rx, ry, rz
+        ao = add.outer
+        ao(ao(ix * dc[0, 0], iy * dc[1, 0]), iz * dc[2, 0], out=rxyz[:, :, :, 0])
+        ao(ao(ix * dc[0, 1], iy * dc[1, 1]), iz * dc[2, 1], out=rxyz[:, :, :, 1])
+        ao(ao(ix * dc[0, 2], iy * dc[1, 2]), iz * dc[2, 2], out=rxyz[:, :, :, 2])
         idx = shape.within_index(rxyz.reshape(-1, 3))
         del rxyz
         i = _a.emptyi(output_shape)
@@ -499,6 +484,66 @@ class Grid(SuperCellChild):
         del idx
 
         return i
+
+    def _index_shape_cuboid(self, cuboid):
+        """ Internal routine for cuboid shape-indices """
+        # Construct all points on the outer rim of the cuboids
+        min_d = fnorm(self.dcell).min()
+
+        # Retrieve cuboids edge-lengths
+        v = cuboid.edge_length
+        # Create normalized cuboid vectors (because we expan via the lengths below
+        vn = cuboid._v / fnorm(cuboid._v).reshape(-1, 1)
+        LL = (cuboid.center - cuboid._v.sum(0) / 2).reshape(1, 3)
+        UR = (cuboid.center + cuboid._v.sum(0) / 2).reshape(1, 3)
+
+        # Create coordinates
+        a = vn[0, :].reshape(1, -1) * _a.aranged(0, v[0] + min_d, min_d).reshape(-1, 1)
+        b = vn[1, :].reshape(1, -1) * _a.aranged(0, v[1] + min_d, min_d).reshape(-1, 1)
+        c = vn[2, :].reshape(1, -1) * _a.aranged(0, v[2] + min_d, min_d).reshape(-1, 1)
+
+        # Now create all sides
+        sa = a.shape[0]
+        sb = b.shape[0]
+        sc = c.shape[0]
+
+        def plane(v1, v2):
+            return (v1.reshape(-1, 1, 3) + v2.reshape(1, -1, 3)).reshape(1, -1, 3)
+
+        # Allocate for the 6 faces of the cuboid
+        rxyz = _a.emptyd([2, sa * sb + sa * sc + sb * sc, 3])
+        # Define the LL and UR
+        rxyz[0, :, :] = LL
+        rxyz[1, :, :] = UR
+
+        i = 0
+        rxyz[:, i:i + sa * sb, :] += plane(a, b)
+        i += sa * sb
+        rxyz[:, i:i + sa * sc, :] += plane(a, c)
+        i += sa * sc
+        rxyz[:, i:i + sb * sc, :] += plane(b, c)
+        del a, b, c, sa, sb, sc
+        rxyz.shape = (-1, 3)
+
+        # Get all indices of the cuboid planes
+        return self.index(rxyz)
+
+    def _index_shape_ellipsoid(self, ellipsoid):
+        """ Internal routine for ellipsoid shape-indices """
+        # Figure out the points on the ellipsoid
+        rad1 = pi / 180
+        theta, phi = ogrid[-pi:pi:rad1, 0:pi:rad1]
+
+        rxyz = _a.emptyd([theta.size, phi.size, 3])
+        rxyz[..., 2] = cos(phi)
+        sin(phi, out=phi)
+        rxyz[..., 0] = cos(theta) * phi
+        rxyz[..., 1] = sin(theta) * phi
+        rxyz = dot(rxyz, ellipsoid._v) + ellipsoid.center.reshape(1, 3)
+        del theta, phi
+
+        # Get all indices of the ellipsoid circumference
+        return self.index(rxyz)
 
     def index(self, coord, axis=None):
         """ Returns the index along axis `axis` where `coord` exists
@@ -748,7 +793,7 @@ class Grid(SuperCellChild):
             g = np.mgrid[slices[0]]
         else:
             g = np.mgrid[slices]
-        indices = np.empty(g.size, np.int32).reshape(-1, 3)
+        indices = _a.emptyi(g.size).reshape(-1, 3)
         indices[:, 0] = g[0].flatten()
         indices[:, 1] = g[1].flatten()
         indices[:, 2] = g[2].flatten()
@@ -770,7 +815,7 @@ class Grid(SuperCellChild):
         See Also
         --------
         index : query indices from coordinates (directly passable to this method)
-        mgrid : Grid equivalent to `numpy.mgrid`. Grid.mgrid returns indices in shapes (*, 3), contrary to `numpy`
+        mgrid : Grid equivalent to `numpy.mgrid`. Grid.mgrid returns indices in shapes (*, 3), contrary to numpy's `numpy.mgrid`
 
         Raises
         ------
@@ -921,15 +966,38 @@ class Grid(SuperCellChild):
         A.prune()
 
     def topyamg(self):
-        """ Create a `pyamg` stencil matrix to be used in pyamg
+        r""" Create a `pyamg` stencil matrix to be used in pyamg
 
         This allows retrieving the grid matrix equivalent of the real-space grid.
         Subsequently the returned matrix may be used in pyamg for solutions etc.
+
+        The `pyamg` suite is it-self a rather complicated code with many options.
+        For details we refer to `pyamg <pyamg https://github.com/pyamg/pyamg/>`_.
 
         Returns
         -------
         A : scipy.sparse.csr_matrix which contains the grid stencil for a `pyamg` solver.
         b : numpy.ndarray containing RHS of the linear system of equations.
+
+        Examples
+        --------
+        This example proves the best method for a variety of cases in regards of the 3D Poisson problem:
+
+        >>> grid = Grid(0.01)
+        >>> A, b = grid.topyamg() # automatically setups the current boundary conditions
+        >>> # add terms etc. to A and/or b
+        >>> import pyamg
+        >>> from scipy.sparse.linalg import cg
+        >>> ml = pyamg.aggregation.smoothed_aggregation_solver(A, max_levels=1000)
+        >>> M = ml.aspreconditioner(cycle='W') # pre-conditioner
+        >>> x, info = cg(A, b, tol=1e-12, M=M)
+
+        See Also
+        --------
+        pyamg_index : convert grid indices into the sparse matrix indices for ``A``
+        pyamg_fix : fixes stencil for indices and fixes the source for the RHS matrix (uses `pyamg_source`)
+        pyamg_source : fix the RHS matrix ``b`` to a constant value
+        pyamg_boundary_condition : setup the sparse matrix ``A`` to given boundary conditions (called in this routine)
         """
         from pyamg.gallery import poisson
         # Initially create the CSR matrix
@@ -1200,6 +1268,9 @@ This may be unexpected but enables one to do advanced manipulations.
     p = argparse.ArgumentParser('Manipulates real-space grids in commonly encounterd files.',
                            formatter_class=argparse.RawDescriptionHelpFormatter,
                            description=description)
+
+    # Add default sisl version stuff
+    cmd.add_sisl_version_cite_arg(p)
 
     # First read the input "Sile"
     if grid is None:

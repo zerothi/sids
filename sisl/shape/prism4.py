@@ -6,6 +6,7 @@ from numpy import dot, cross
 from numpy import fabs, logical_and
 
 from sisl._help import ensure_array
+from sisl.linalg import inv
 from sisl.utils.mathematics import fnorm, expand
 
 from .base import PureShape
@@ -48,7 +49,7 @@ class Cuboid(PureShape):
             raise ValueError(self.__class__.__name__ + " requires initialization with 3 vectors defining the cuboid")
 
         # Create the reciprocal cell
-        self._iv = np.linalg.inv(self._v).T
+        self._iv = inv(self._v)
 
     def copy(self):
         return self.__class__(self._v, self.center)
@@ -98,11 +99,22 @@ class Cuboid(PureShape):
             raise ValueError(self.__class__.__name__ + '.expand requires the length to be either (1,) or (3,)')
         return self.__class__([v0, v1, v2], self.center)
 
+    def toEllipsoid(self):
+        """ Return an ellipsoid that encompass this cuboid """
+        from .ellipsoid import Ellipsoid
+
+        # Rescale each vector
+        return Ellipsoid(self._v / 2 * 3 ** .5, self.center.copy())
+
     def toSphere(self):
-        """ Return a sphere that encompass this cube """
-        e = self.edge_length.max()
+        """ Return a sphere that encompass this cuboid """
         from .ellipsoid import Sphere
-        return Sphere(e * 2 ** .5, self.center.copy())
+
+        return Sphere(self.edge_length.max() / 2 * 3 ** .5, self.center.copy())
+
+    def toCuboid(self):
+        """ Return a copy of itself """
+        return self.copy()
 
     def within_index(self, other):
         """ Return indices of the `other` object which are contained in the shape
@@ -117,7 +129,7 @@ class Cuboid(PureShape):
         other.shape = (-1, 3)
 
         # Offset origo
-        tmp = dot(other - self.origo[None, :], self._iv.T)
+        tmp = dot(other - self.origo[None, :], self._iv)
 
         # First reject those that are definitely not inside
         within = logical_and.reduce(tmp >= 0., axis=1).nonzero()[0]

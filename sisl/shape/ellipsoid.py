@@ -5,6 +5,7 @@ import numpy as np
 from numpy import dot
 from numpy import fabs, logical_and
 
+from sisl.messages import warn
 from sisl._help import ensure_array
 import sisl._array as _a
 from sisl.utils.mathematics import orthogonalize, fnorm, fnorm2, expand
@@ -22,7 +23,9 @@ class Ellipsoid(PureShape):
     ----------
     v : float or (3,) or (3, 3)
        radius/vectors defining the ellipsoid. For 3 values it corresponds to a Cartesian
-       oriented ellipsoid.
+       oriented ellipsoid. If the vectors are non-orthogonal they will be orthogonalized.
+       I.e. the first vector is considered a principal axis, then the second vector will
+       be orthogonalized onto the first, and this is the second principal axis. And so on.
     center : (3,), optional
        the center of the ellipsoid. Defaults to the origo.
 
@@ -38,7 +41,7 @@ class Ellipsoid(PureShape):
         super(Ellipsoid, self).__init__(center)
         v = ensure_array(v, np.float64)
         if v.size == 1:
-            self._v = np.identity(3) * v # a "Euclidean" sphere
+            self._v = np.identity(3, np.float64) * v # a "Euclidean" sphere
         elif v.size == 3:
             self._v = np.diag(v.ravel()) # a "Euclidean" ellipsoid
         elif v.size == 9:
@@ -46,14 +49,16 @@ class Ellipsoid(PureShape):
         else:
             raise ValueError(self.__class__.__name__ + " requires initialization with 3 vectors defining the ellipsoid")
 
-        # Ensure each of the vectors are orthogonal to each other
-        # When performing this operation we do not preserve length of vector.
+        # The vectors are not orthogonal, orthogonalize them
+        if np.fabs(np.dot(self._v, self._v.T) - np.identity(3)).sum() > 1e-12:
+            warn(self.__class__.__name__ + ' principal vectors are not orthogonal. '
+                 'sisl orthogonalizes the vectors (retaining 1st vector).')
         self._v[1, :] = orthogonalize(self._v[0, :], self._v[1, :])
         self._v[2, :] = orthogonalize(self._v[0, :], self._v[2, :])
         self._v[2, :] = orthogonalize(self._v[1, :], self._v[2, :])
 
         # Create the reciprocal cell
-        self._iv = np.linalg.inv(self._v).T
+        self._iv = np.linalg.inv(self._v)
 
     def copy(self):
         return self.__class__(self._v, self.center)
@@ -101,10 +106,19 @@ class Ellipsoid(PureShape):
             raise ValueError(self.__class__.__name__ + '.expand requires the radius to be either (1,) or (3,)')
         return self.__class__([v0, v1, v2], self.center)
 
+    def toEllipsoid(self):
+        """ Return an ellipsoid that encompass this shape (a copy) """
+        return self.copy()
+
     def toSphere(self):
         """ Return a sphere with a radius equal to the largest radial vector """
         r = self.radius.max()
         return Sphere(r, self.center)
+
+    def toCuboid(self):
+        """ Return a cuboid with side lengths equal to the diameter of each ellipsoid vectors """
+        from .prism4 import Cuboid
+        return Cuboid(self._v * 2, self.center)
 
     def set_center(self, center):
         """ Change the center of the object """
@@ -117,7 +131,7 @@ class Ellipsoid(PureShape):
         other.shape = (-1, 3)
 
         # First check
-        tmp = dot(other - self.center[None, :], self._iv.T)
+        tmp = dot(other - self.center[None, :], self._iv)
 
         # Get indices where we should do the more
         # expensive exact check of being inside shape

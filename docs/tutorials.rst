@@ -18,7 +18,19 @@ Below is a list of the current tutorials:
 
    tutorials/tutorial_es_1.ipynb
 
-Older, to-be deprecated tutorials once they are moved to the IPython notebook schemes:
+
+Siesta/TranSiesta support
+-------------------------
+
+sisl was initiated around the `Siesta`_/`TranSiesta`_ code. And thus it may be *very* educational to
+look at the sisl+TBtrans+TranSiesta tutorial located `here <https://github.com/zerothi/ts-tbt-sisl-tutorial/>`_.
+
+
+Deprecated tutorials
+--------------------
+
+Once everything has been moved to the IPython notebook notation, these tutorials will be
+removed. Until that happens they are located here for consistency:
 
 .. toctree::
    :maxdepth: 1
