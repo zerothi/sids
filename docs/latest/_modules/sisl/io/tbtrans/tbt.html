@@ -65,7 +65,7 @@
             
             
               <div class="version">
-                0.9.2-320
+                0.9.2-336
               </div>
             
           
@@ -843,15 +843,93 @@
             <span class="n">max_e</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">mu_from</span> <span class="o">+</span> <span class="n">kt_from</span> <span class="o">*</span> <span class="mi">3</span><span class="p">,</span> <span class="n">mu_to</span> <span class="o">+</span> <span class="n">kt_to</span> <span class="o">*</span> <span class="mi">3</span><span class="p">)</span>
             <span class="n">s</span> <span class="o">+=</span> <span class="p">(</span><span class="s2">&quot;{:&quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">m</span><span class="p">)</span><span class="o">+</span><span class="s2">&quot;s} </span><span class="si">{:9.3f}</span><span class="s2"> : </span><span class="si">{:9.3f}</span><span class="s2"> eV</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="s1">&#39;dFermi function&#39;</span><span class="p">,</span> <span class="n">min_e</span><span class="p">,</span> <span class="n">max_e</span><span class="p">)</span>
 
-            <span class="n">warn</span><span class="p">((</span><span class="n">SileWarning</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s2">&quot;.current_parameter cannot &quot;</span>
-                              <span class="s2">&quot;accurately calculate the current due to the calculated energy range. &quot;</span>
-                              <span class="s2">&quot;I.e. increase your calculated energy-range.</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">+</span> <span class="n">s</span><span class="p">)))</span>
+            <span class="n">warn</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s2">&quot;.current_parameter cannot &quot;</span>
+                 <span class="s2">&quot;accurately calculate the current due to the calculated energy range. &quot;</span>
+                 <span class="s2">&quot;I.e. increase your calculated energy-range.</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">+</span> <span class="n">s</span><span class="p">)</span>
 
         <span class="k">def</span> <span class="nf">nf</span><span class="p">(</span><span class="n">E</span><span class="p">,</span> <span class="n">mu</span><span class="p">,</span> <span class="n">kT</span><span class="p">):</span>
             <span class="k">return</span> <span class="mf">1.</span> <span class="o">/</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">((</span><span class="n">E</span> <span class="o">-</span> <span class="n">mu</span><span class="p">)</span> <span class="o">/</span> <span class="n">kT</span><span class="p">)</span> <span class="o">+</span> <span class="mf">1.</span><span class="p">)</span>
 
         <span class="n">I</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">sumd</span><span class="p">(</span><span class="n">T</span> <span class="o">*</span> <span class="n">dE</span> <span class="o">*</span> <span class="p">(</span><span class="n">nf</span><span class="p">(</span><span class="n">E</span><span class="p">,</span> <span class="n">mu_from</span><span class="p">,</span> <span class="n">kt_from</span><span class="p">)</span> <span class="o">-</span> <span class="n">nf</span><span class="p">(</span><span class="n">E</span><span class="p">,</span> <span class="n">mu_to</span><span class="p">,</span> <span class="n">kt_to</span><span class="p">)))</span>
         <span class="k">return</span> <span class="n">I</span> <span class="o">*</span> <span class="mf">1.6021766208e-19</span> <span class="o">/</span> <span class="mf">4.135667662e-15</span></div>
+
+<div class="viewcode-block" id="tbtncSileTBtrans.shot_noise"><a class="viewcode-back" href="../../../../api-generated/sisl.io.tbtrans.tbtncSileTBtrans.html#sisl.io.tbtrans.tbtncSileTBtrans.shot_noise">[docs]</a>    <span class="k">def</span> <span class="nf">shot_noise</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">elec_from</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">elec_to</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">classical</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">kavg</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot; Shot-noise term `from` to `to` using the k-weights and energy spacings in the file.</span>
+
+<span class="sd">        Calculates the shot-noise term according to `classical` (also known as the Poisson value). If `classical` is True the shot-noise calculated is:</span>
+
+<span class="sd">        .. math::</span>
+<span class="sd">           S_P(E, V) = \frac{2e^2}{h}|V|\sum_n T_n(E) = \frac{2e^3}{h}|V|T(E)</span>
+
+<span class="sd">        while for `classical` False the Fermi-Dirac statistics is taken into account:</span>
+
+<span class="sd">        .. math::</span>
+<span class="sd">           S(E, V) = \frac{2e^2}{h}|V|\sum_n T_n(E) (1 - T_n(E))</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        SislWarning: If *all* of the calculated :math:`T_n(E)` values in the file are above 0.001.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        elec_from: str, int, optional</span>
+<span class="sd">           the originating electrode</span>
+<span class="sd">        elec_to: str, int, optional</span>
+<span class="sd">           the absorbing electrode (different from `elec_from`)</span>
+<span class="sd">        classical: bool, optional</span>
+<span class="sd">           which shot-noise to calculate</span>
+<span class="sd">        kavg: bool, int or array_like, optional</span>
+<span class="sd">           whether the returned shot-noise is k-averaged, an explicit k-point</span>
+<span class="sd">           or a selection of k-points</span>
+
+<span class="sd">        See Also</span>
+<span class="sd">        --------</span>
+<span class="sd">        fano_factor : the ratio between the quantum mechanial and the classical shot noise.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">elec_from</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_elec</span><span class="p">(</span><span class="n">elec_from</span><span class="p">)</span>
+        <span class="n">elec_to</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_elec</span><span class="p">(</span><span class="n">elec_to</span><span class="p">)</span>
+        <span class="n">mu_f</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">chemical_potential</span><span class="p">(</span><span class="n">elec_from</span><span class="p">)</span>
+        <span class="n">mu_t</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">chemical_potential</span><span class="p">(</span><span class="n">elec_to</span><span class="p">)</span>
+        <span class="c1"># The applied bias between the two electrodes</span>
+        <span class="n">V</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="n">mu_f</span> <span class="o">-</span> <span class="n">mu_t</span><span class="p">)</span>
+        <span class="c1"># Pre-factor</span>
+        <span class="n">e2OVERhV</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="mf">1.6021766208e-19</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">/</span> <span class="mf">4.135667662e-15</span> <span class="o">*</span> <span class="n">V</span>
+        <span class="k">if</span> <span class="n">classical</span><span class="p">:</span>
+            <span class="c1"># Calculate the Poisson shot-noise</span>
+            <span class="k">return</span> <span class="n">e3OVERhV</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">transmission</span><span class="p">(</span><span class="n">elec_from</span><span class="p">,</span> <span class="n">elec_to</span><span class="p">,</span> <span class="n">kavg</span><span class="o">=</span><span class="n">kavg</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">T</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">transmission_eig</span><span class="p">(</span><span class="n">elec_from</span><span class="p">,</span> <span class="n">elec_to</span><span class="p">,</span> <span class="n">kavg</span><span class="o">=</span><span class="n">kavg</span><span class="p">)</span>
+            <span class="c1"># Check that at least one value is below the 0.001 limit</span>
+            <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">logical_and</span><span class="o">.</span><span class="n">reduce</span><span class="p">(</span><span class="n">T</span> <span class="o">&gt;</span> <span class="mf">0.001</span><span class="p">,</span> <span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">)):</span>
+                <span class="n">warn</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s2">&quot;.shot_noise does possibly not have all relevant transmission eigenvalues in the &quot;</span>
+                     <span class="s2">&quot;calculation. For some energy values all transmission eigenvalues are above 0.001&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">e2OVERhV</span> <span class="o">*</span> <span class="p">(</span><span class="n">T</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">T</span><span class="p">))</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="tbtncSileTBtrans.fano"><a class="viewcode-back" href="../../../../api-generated/sisl.io.tbtrans.tbtncSileTBtrans.html#sisl.io.tbtrans.tbtncSileTBtrans.fano">[docs]</a>    <span class="k">def</span> <span class="nf">fano</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">elec_from</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">elec_to</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">kavg</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot; The Fano-factor for the calculation (requires calculated transmission eigenvalues)</span>
+
+<span class="sd">        Calculate the Fano factor defined as:</span>
+
+<span class="sd">        .. math::</span>
+<span class="sd">           F(E) = \frac{\sum_n T_n(1 - T_n)}{\sum_n T_n} = S(E, V) / S_P(E, V)</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        elec_from: str, int, optional</span>
+<span class="sd">           the originating electrode</span>
+<span class="sd">        elec_to: str, int, optional</span>
+<span class="sd">           the absorbing electrode (different from `elec_from`)</span>
+<span class="sd">        kavg: bool, int or array_like, optional</span>
+<span class="sd">           whether the returned Fano factor is k-averaged, an explicit k-point</span>
+<span class="sd">           or a selection of k-points</span>
+
+<span class="sd">        See Also</span>
+<span class="sd">        --------</span>
+<span class="sd">        shot_noise : internal routine to calculate the Fano factors (:math:`S(E, V)` and :math: `S_P(E, V)` are calculated in that routine)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">elec_from</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_elec</span><span class="p">(</span><span class="n">elec_from</span><span class="p">)</span>
+        <span class="n">elec_to</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_elec</span><span class="p">(</span><span class="n">elec_to</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">shot_noise</span><span class="p">(</span><span class="n">elec_from</span><span class="p">,</span> <span class="n">elec_to</span><span class="p">,</span> <span class="n">kavg</span><span class="o">=</span><span class="n">kavg</span><span class="p">)</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">shot_noise</span><span class="p">(</span><span class="n">elec_from</span><span class="p">,</span> <span class="n">elec_to</span><span class="p">,</span> <span class="n">classical</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">kavg</span><span class="o">=</span><span class="n">kavg</span><span class="p">)</span></div>
 
     <span class="k">def</span> <span class="nf">_sparse_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">elec</span><span class="p">,</span> <span class="n">E</span><span class="p">,</span> <span class="n">kavg</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">isc</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Internal routine for retrieving sparse data (orbital current, COOP) &quot;&quot;&quot;</span>
@@ -2524,7 +2602,7 @@
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'../../../../',
-            VERSION:'0.9.2-320',
+            VERSION:'0.9.2-336',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true,

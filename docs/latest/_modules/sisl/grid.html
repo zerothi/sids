@@ -65,7 +65,7 @@
             
             
               <div class="version">
-                0.9.2-320
+                0.9.2-336
               </div>
             
           
@@ -185,6 +185,8 @@
 <span class="kn">from</span> <span class="nn">.utils</span> <span class="k">import</span> <span class="n">default_ArgumentParser</span><span class="p">,</span> <span class="n">default_namespace</span>
 <span class="kn">from</span> <span class="nn">.utils</span> <span class="k">import</span> <span class="n">cmd</span><span class="p">,</span> <span class="n">strseq</span><span class="p">,</span> <span class="n">direction</span>
 <span class="kn">from</span> <span class="nn">.utils</span> <span class="k">import</span> <span class="n">array_arange</span>
+<span class="kn">from</span> <span class="nn">.utils.mathematics</span> <span class="k">import</span> <span class="n">fnorm</span>
+
 <span class="kn">from</span> <span class="nn">.supercell</span> <span class="k">import</span> <span class="n">SuperCellChild</span>
 <span class="kn">from</span> <span class="nn">.atom</span> <span class="k">import</span> <span class="n">Atom</span>
 <span class="kn">from</span> <span class="nn">.geometry</span> <span class="k">import</span> <span class="n">Geometry</span>
@@ -615,28 +617,16 @@
         <span class="sd">&quot;&quot;&quot; Internal routine for shape-indices &quot;&quot;&quot;</span>
         <span class="c1"># First grab the sphere, subsequent indices will be reduced</span>
         <span class="c1"># by the actual shape</span>
-        <span class="n">sphere</span> <span class="o">=</span> <span class="n">shape</span><span class="o">.</span><span class="n">toSphere</span><span class="p">()</span>
-        <span class="n">R</span> <span class="o">=</span> <span class="n">sphere</span><span class="o">.</span><span class="n">radius</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-
-        <span class="c1"># Figure out the max-min indices with a spacing of 1 radians</span>
-        <span class="n">rad1</span> <span class="o">=</span> <span class="n">pi</span> <span class="o">/</span> <span class="mi">180</span>
-        <span class="n">theta</span><span class="p">,</span> <span class="n">phi</span> <span class="o">=</span> <span class="n">ogrid</span><span class="p">[</span><span class="o">-</span><span class="n">pi</span><span class="p">:</span><span class="n">pi</span><span class="p">:</span><span class="n">rad1</span><span class="p">,</span> <span class="mi">0</span><span class="p">:</span><span class="n">pi</span><span class="p">:</span><span class="n">rad1</span><span class="p">]</span>
-        <span class="n">nrxyz</span> <span class="o">=</span> <span class="p">(</span><span class="n">theta</span><span class="o">.</span><span class="n">size</span><span class="p">,</span> <span class="n">phi</span><span class="o">.</span><span class="n">size</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
-
-        <span class="n">rxyz</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">emptyd</span><span class="p">(</span><span class="n">nrxyz</span><span class="p">)</span>
-        <span class="n">rxyz</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">R</span> <span class="o">*</span> <span class="n">cos</span><span class="p">(</span><span class="n">phi</span><span class="p">)</span> <span class="o">+</span> <span class="n">sphere</span><span class="o">.</span><span class="n">center</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
-        <span class="n">sin</span><span class="p">(</span><span class="n">phi</span><span class="p">,</span> <span class="n">out</span><span class="o">=</span><span class="n">phi</span><span class="p">)</span>
-        <span class="n">rxyz</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">R</span> <span class="o">*</span> <span class="n">cos</span><span class="p">(</span><span class="n">theta</span><span class="p">)</span> <span class="o">*</span> <span class="n">phi</span> <span class="o">+</span> <span class="n">sphere</span><span class="o">.</span><span class="n">center</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-        <span class="n">rxyz</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">R</span> <span class="o">*</span> <span class="n">sin</span><span class="p">(</span><span class="n">theta</span><span class="p">)</span> <span class="o">*</span> <span class="n">phi</span> <span class="o">+</span> <span class="n">sphere</span><span class="o">.</span><span class="n">center</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
-        <span class="k">del</span> <span class="n">theta</span><span class="p">,</span> <span class="n">phi</span><span class="p">,</span> <span class="n">nrxyz</span>
-
-        <span class="c1"># Get all indices of the spherical circumference</span>
-        <span class="n">idx</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">rxyz</span><span class="p">)</span>
-        <span class="k">del</span> <span class="n">rxyz</span>
+        <span class="n">cuboid</span> <span class="o">=</span> <span class="n">shape</span><span class="o">.</span><span class="n">toCuboid</span><span class="p">()</span>
+        <span class="n">ellipsoid</span> <span class="o">=</span> <span class="n">shape</span><span class="o">.</span><span class="n">toEllipsoid</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">ellipsoid</span><span class="o">.</span><span class="n">volume</span><span class="p">()</span> <span class="o">&gt;</span> <span class="n">cuboid</span><span class="o">.</span><span class="n">volume</span><span class="p">():</span>
+            <span class="n">idx</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_index_shape_cuboid</span><span class="p">(</span><span class="n">cuboid</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">idx</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_index_shape_ellipsoid</span><span class="p">(</span><span class="n">ellipsoid</span><span class="p">)</span>
 
         <span class="c1"># Get min/max</span>
-        <span class="n">idx_min</span> <span class="o">=</span> <span class="n">idx</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
-        <span class="n">idx_max</span> <span class="o">=</span> <span class="n">idx</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">imin</span> <span class="o">=</span> <span class="n">idx</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">imax</span> <span class="o">=</span> <span class="n">idx</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
         <span class="k">del</span> <span class="n">idx</span>
 
         <span class="n">dc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dcell</span>
@@ -644,20 +634,15 @@
         <span class="c1"># Now to find the actual points inside the shape</span>
         <span class="c1"># First create all points in the square and then retrieve all indices</span>
         <span class="c1"># within.</span>
-        <span class="c1"># TODO, see if we can optimize this a bit.</span>
-        <span class="n">addouter</span> <span class="o">=</span> <span class="n">add</span><span class="o">.</span><span class="n">outer</span>
-        <span class="n">ix</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">aranged</span><span class="p">(</span><span class="n">idx_min</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">idx_max</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="mf">0.5</span><span class="p">)</span>
-        <span class="n">iy</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">aranged</span><span class="p">(</span><span class="n">idx_min</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">idx_max</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="mf">0.5</span><span class="p">)</span>
-        <span class="n">iz</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">aranged</span><span class="p">(</span><span class="n">idx_min</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">idx_max</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">+</span> <span class="mf">0.5</span><span class="p">)</span>
+        <span class="n">ix</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">aranged</span><span class="p">(</span><span class="n">imin</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">imax</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="mf">0.5</span><span class="p">)</span>
+        <span class="n">iy</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">aranged</span><span class="p">(</span><span class="n">imin</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">imax</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="mf">0.5</span><span class="p">)</span>
+        <span class="n">iz</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">aranged</span><span class="p">(</span><span class="n">imin</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">imax</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">+</span> <span class="mf">0.5</span><span class="p">)</span>
         <span class="n">output_shape</span> <span class="o">=</span> <span class="p">(</span><span class="n">ix</span><span class="o">.</span><span class="n">size</span><span class="p">,</span> <span class="n">iy</span><span class="o">.</span><span class="n">size</span><span class="p">,</span> <span class="n">iz</span><span class="o">.</span><span class="n">size</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
-        <span class="n">rx</span> <span class="o">=</span> <span class="n">addouter</span><span class="p">(</span><span class="n">addouter</span><span class="p">(</span><span class="n">ix</span> <span class="o">*</span> <span class="n">dc</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">iy</span> <span class="o">*</span> <span class="n">dc</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">]),</span> <span class="n">iz</span> <span class="o">*</span> <span class="n">dc</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">])</span>
-        <span class="n">ry</span> <span class="o">=</span> <span class="n">addouter</span><span class="p">(</span><span class="n">addouter</span><span class="p">(</span><span class="n">ix</span> <span class="o">*</span> <span class="n">dc</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">iy</span> <span class="o">*</span> <span class="n">dc</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">]),</span> <span class="n">iz</span> <span class="o">*</span> <span class="n">dc</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span>
-        <span class="n">rz</span> <span class="o">=</span> <span class="n">addouter</span><span class="p">(</span><span class="n">addouter</span><span class="p">(</span><span class="n">ix</span> <span class="o">*</span> <span class="n">dc</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">],</span> <span class="n">iy</span> <span class="o">*</span> <span class="n">dc</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">]),</span> <span class="n">iz</span> <span class="o">*</span> <span class="n">dc</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">])</span>
         <span class="n">rxyz</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">emptyd</span><span class="p">(</span><span class="n">output_shape</span><span class="p">)</span>
-        <span class="n">rxyz</span><span class="p">[:,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">rx</span>
-        <span class="n">rxyz</span><span class="p">[:,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">ry</span>
-        <span class="n">rxyz</span><span class="p">[:,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">rz</span>
-        <span class="k">del</span> <span class="n">rx</span><span class="p">,</span> <span class="n">ry</span><span class="p">,</span> <span class="n">rz</span>
+        <span class="n">ao</span> <span class="o">=</span> <span class="n">add</span><span class="o">.</span><span class="n">outer</span>
+        <span class="n">ao</span><span class="p">(</span><span class="n">ao</span><span class="p">(</span><span class="n">ix</span> <span class="o">*</span> <span class="n">dc</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">iy</span> <span class="o">*</span> <span class="n">dc</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">]),</span> <span class="n">iz</span> <span class="o">*</span> <span class="n">dc</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">out</span><span class="o">=</span><span class="n">rxyz</span><span class="p">[:,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="mi">0</span><span class="p">])</span>
+        <span class="n">ao</span><span class="p">(</span><span class="n">ao</span><span class="p">(</span><span class="n">ix</span> <span class="o">*</span> <span class="n">dc</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">iy</span> <span class="o">*</span> <span class="n">dc</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">]),</span> <span class="n">iz</span> <span class="o">*</span> <span class="n">dc</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">out</span><span class="o">=</span><span class="n">rxyz</span><span class="p">[:,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="mi">1</span><span class="p">])</span>
+        <span class="n">ao</span><span class="p">(</span><span class="n">ao</span><span class="p">(</span><span class="n">ix</span> <span class="o">*</span> <span class="n">dc</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">],</span> <span class="n">iy</span> <span class="o">*</span> <span class="n">dc</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">]),</span> <span class="n">iz</span> <span class="o">*</span> <span class="n">dc</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">],</span> <span class="n">out</span><span class="o">=</span><span class="n">rxyz</span><span class="p">[:,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="mi">2</span><span class="p">])</span>
         <span class="n">idx</span> <span class="o">=</span> <span class="n">shape</span><span class="o">.</span><span class="n">within_index</span><span class="p">(</span><span class="n">rxyz</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
         <span class="k">del</span> <span class="n">rxyz</span>
         <span class="n">i</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">emptyi</span><span class="p">(</span><span class="n">output_shape</span><span class="p">)</span>
@@ -670,6 +655,66 @@
         <span class="k">del</span> <span class="n">idx</span>
 
         <span class="k">return</span> <span class="n">i</span>
+
+    <span class="k">def</span> <span class="nf">_index_shape_cuboid</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cuboid</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Internal routine for cuboid shape-indices &quot;&quot;&quot;</span>
+        <span class="c1"># Construct all points on the outer rim of the cuboids</span>
+        <span class="n">min_d</span> <span class="o">=</span> <span class="n">fnorm</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dcell</span><span class="p">)</span><span class="o">.</span><span class="n">min</span><span class="p">()</span>
+
+        <span class="c1"># Retrieve cuboids edge-lengths</span>
+        <span class="n">v</span> <span class="o">=</span> <span class="n">cuboid</span><span class="o">.</span><span class="n">edge_length</span>
+        <span class="c1"># Create normalized cuboid vectors (because we expan via the lengths below</span>
+        <span class="n">vn</span> <span class="o">=</span> <span class="n">cuboid</span><span class="o">.</span><span class="n">_v</span> <span class="o">/</span> <span class="n">fnorm</span><span class="p">(</span><span class="n">cuboid</span><span class="o">.</span><span class="n">_v</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">LL</span> <span class="o">=</span> <span class="p">(</span><span class="n">cuboid</span><span class="o">.</span><span class="n">center</span> <span class="o">-</span> <span class="n">cuboid</span><span class="o">.</span><span class="n">_v</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+        <span class="n">UR</span> <span class="o">=</span> <span class="p">(</span><span class="n">cuboid</span><span class="o">.</span><span class="n">center</span> <span class="o">+</span> <span class="n">cuboid</span><span class="o">.</span><span class="n">_v</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+
+        <span class="c1"># Create coordinates</span>
+        <span class="n">a</span> <span class="o">=</span> <span class="n">vn</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="p">:]</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">_a</span><span class="o">.</span><span class="n">aranged</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">v</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">min_d</span><span class="p">,</span> <span class="n">min_d</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">b</span> <span class="o">=</span> <span class="n">vn</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="p">:]</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">_a</span><span class="o">.</span><span class="n">aranged</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">v</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">min_d</span><span class="p">,</span> <span class="n">min_d</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">c</span> <span class="o">=</span> <span class="n">vn</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="p">:]</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">_a</span><span class="o">.</span><span class="n">aranged</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">v</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">+</span> <span class="n">min_d</span><span class="p">,</span> <span class="n">min_d</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+
+        <span class="c1"># Now create all sides</span>
+        <span class="n">sa</span> <span class="o">=</span> <span class="n">a</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">sb</span> <span class="o">=</span> <span class="n">b</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">sc</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="k">def</span> <span class="nf">plane</span><span class="p">(</span><span class="n">v1</span><span class="p">,</span> <span class="n">v2</span><span class="p">):</span>
+            <span class="k">return</span> <span class="p">(</span><span class="n">v1</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span> <span class="o">+</span> <span class="n">v2</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+
+        <span class="c1"># Allocate for the 6 faces of the cuboid</span>
+        <span class="n">rxyz</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">emptyd</span><span class="p">([</span><span class="mi">2</span><span class="p">,</span> <span class="n">sa</span> <span class="o">*</span> <span class="n">sb</span> <span class="o">+</span> <span class="n">sa</span> <span class="o">*</span> <span class="n">sc</span> <span class="o">+</span> <span class="n">sb</span> <span class="o">*</span> <span class="n">sc</span><span class="p">,</span> <span class="mi">3</span><span class="p">])</span>
+        <span class="c1"># Define the LL and UR</span>
+        <span class="n">rxyz</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">LL</span>
+        <span class="n">rxyz</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">UR</span>
+
+        <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">rxyz</span><span class="p">[:,</span> <span class="n">i</span><span class="p">:</span><span class="n">i</span> <span class="o">+</span> <span class="n">sa</span> <span class="o">*</span> <span class="n">sb</span><span class="p">,</span> <span class="p">:]</span> <span class="o">+=</span> <span class="n">plane</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">)</span>
+        <span class="n">i</span> <span class="o">+=</span> <span class="n">sa</span> <span class="o">*</span> <span class="n">sb</span>
+        <span class="n">rxyz</span><span class="p">[:,</span> <span class="n">i</span><span class="p">:</span><span class="n">i</span> <span class="o">+</span> <span class="n">sa</span> <span class="o">*</span> <span class="n">sc</span><span class="p">,</span> <span class="p">:]</span> <span class="o">+=</span> <span class="n">plane</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">c</span><span class="p">)</span>
+        <span class="n">i</span> <span class="o">+=</span> <span class="n">sa</span> <span class="o">*</span> <span class="n">sc</span>
+        <span class="n">rxyz</span><span class="p">[:,</span> <span class="n">i</span><span class="p">:</span><span class="n">i</span> <span class="o">+</span> <span class="n">sb</span> <span class="o">*</span> <span class="n">sc</span><span class="p">,</span> <span class="p">:]</span> <span class="o">+=</span> <span class="n">plane</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="n">c</span><span class="p">)</span>
+        <span class="k">del</span> <span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">c</span><span class="p">,</span> <span class="n">sa</span><span class="p">,</span> <span class="n">sb</span><span class="p">,</span> <span class="n">sc</span>
+        <span class="n">rxyz</span><span class="o">.</span><span class="n">shape</span> <span class="o">=</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+
+        <span class="c1"># Get all indices of the cuboid planes</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">rxyz</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_index_shape_ellipsoid</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ellipsoid</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Internal routine for ellipsoid shape-indices &quot;&quot;&quot;</span>
+        <span class="c1"># Figure out the points on the ellipsoid</span>
+        <span class="n">rad1</span> <span class="o">=</span> <span class="n">pi</span> <span class="o">/</span> <span class="mi">180</span>
+        <span class="n">theta</span><span class="p">,</span> <span class="n">phi</span> <span class="o">=</span> <span class="n">ogrid</span><span class="p">[</span><span class="o">-</span><span class="n">pi</span><span class="p">:</span><span class="n">pi</span><span class="p">:</span><span class="n">rad1</span><span class="p">,</span> <span class="mi">0</span><span class="p">:</span><span class="n">pi</span><span class="p">:</span><span class="n">rad1</span><span class="p">]</span>
+
+        <span class="n">rxyz</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">emptyd</span><span class="p">([</span><span class="n">theta</span><span class="o">.</span><span class="n">size</span><span class="p">,</span> <span class="n">phi</span><span class="o">.</span><span class="n">size</span><span class="p">,</span> <span class="mi">3</span><span class="p">])</span>
+        <span class="n">rxyz</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">cos</span><span class="p">(</span><span class="n">phi</span><span class="p">)</span>
+        <span class="n">sin</span><span class="p">(</span><span class="n">phi</span><span class="p">,</span> <span class="n">out</span><span class="o">=</span><span class="n">phi</span><span class="p">)</span>
+        <span class="n">rxyz</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">cos</span><span class="p">(</span><span class="n">theta</span><span class="p">)</span> <span class="o">*</span> <span class="n">phi</span>
+        <span class="n">rxyz</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">sin</span><span class="p">(</span><span class="n">theta</span><span class="p">)</span> <span class="o">*</span> <span class="n">phi</span>
+        <span class="n">rxyz</span> <span class="o">=</span> <span class="n">dot</span><span class="p">(</span><span class="n">rxyz</span><span class="p">,</span> <span class="n">ellipsoid</span><span class="o">.</span><span class="n">_v</span><span class="p">)</span> <span class="o">+</span> <span class="n">ellipsoid</span><span class="o">.</span><span class="n">center</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+        <span class="k">del</span> <span class="n">theta</span><span class="p">,</span> <span class="n">phi</span>
+
+        <span class="c1"># Get all indices of the ellipsoid circumference</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">rxyz</span><span class="p">)</span>
 
 <div class="viewcode-block" id="Grid.index"><a class="viewcode-back" href="../../api-generated/sisl.Grid.html#sisl.Grid.index">[docs]</a>    <span class="k">def</span> <span class="nf">index</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">coord</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Returns the index along axis `axis` where `coord` exists</span>
@@ -919,7 +964,7 @@
             <span class="n">g</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mgrid</span><span class="p">[</span><span class="n">slices</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">g</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mgrid</span><span class="p">[</span><span class="n">slices</span><span class="p">]</span>
-        <span class="n">indices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="n">g</span><span class="o">.</span><span class="n">size</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+        <span class="n">indices</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">emptyi</span><span class="p">(</span><span class="n">g</span><span class="o">.</span><span class="n">size</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
         <span class="n">indices</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">g</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
         <span class="n">indices</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">g</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
         <span class="n">indices</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">g</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
@@ -941,7 +986,7 @@
 <span class="sd">        See Also</span>
 <span class="sd">        --------</span>
 <span class="sd">        index : query indices from coordinates (directly passable to this method)</span>
-<span class="sd">        mgrid : Grid equivalent to `numpy.mgrid`. Grid.mgrid returns indices in shapes (*, 3), contrary to `numpy`</span>
+<span class="sd">        mgrid : Grid equivalent to `numpy.mgrid`. Grid.mgrid returns indices in shapes (*, 3), contrary to numpy&#39;s `numpy.mgrid`</span>
 
 <span class="sd">        Raises</span>
 <span class="sd">        ------</span>
@@ -1092,15 +1137,38 @@
         <span class="n">A</span><span class="o">.</span><span class="n">prune</span><span class="p">()</span></div>
 
 <div class="viewcode-block" id="Grid.topyamg"><a class="viewcode-back" href="../../api-generated/sisl.Grid.html#sisl.Grid.topyamg">[docs]</a>    <span class="k">def</span> <span class="nf">topyamg</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot; Create a `pyamg` stencil matrix to be used in pyamg</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot; Create a `pyamg` stencil matrix to be used in pyamg</span>
 
 <span class="sd">        This allows retrieving the grid matrix equivalent of the real-space grid.</span>
 <span class="sd">        Subsequently the returned matrix may be used in pyamg for solutions etc.</span>
+
+<span class="sd">        The `pyamg` suite is it-self a rather complicated code with many options.</span>
+<span class="sd">        For details we refer to `pyamg &lt;pyamg https://github.com/pyamg/pyamg/&gt;`_.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
 <span class="sd">        A : scipy.sparse.csr_matrix which contains the grid stencil for a `pyamg` solver.</span>
 <span class="sd">        b : numpy.ndarray containing RHS of the linear system of equations.</span>
+
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
+<span class="sd">        This example proves the best method for a variety of cases in regards of the 3D Poisson problem:</span>
+
+<span class="sd">        &gt;&gt;&gt; grid = Grid(0.01)</span>
+<span class="sd">        &gt;&gt;&gt; A, b = grid.topyamg() # automatically setups the current boundary conditions</span>
+<span class="sd">        &gt;&gt;&gt; # add terms etc. to A and/or b</span>
+<span class="sd">        &gt;&gt;&gt; import pyamg</span>
+<span class="sd">        &gt;&gt;&gt; from scipy.sparse.linalg import cg</span>
+<span class="sd">        &gt;&gt;&gt; ml = pyamg.aggregation.smoothed_aggregation_solver(A, max_levels=1000)</span>
+<span class="sd">        &gt;&gt;&gt; M = ml.aspreconditioner(cycle=&#39;W&#39;) # pre-conditioner</span>
+<span class="sd">        &gt;&gt;&gt; x, info = cg(A, b, tol=1e-12, M=M)</span>
+
+<span class="sd">        See Also</span>
+<span class="sd">        --------</span>
+<span class="sd">        pyamg_index : convert grid indices into the sparse matrix indices for ``A``</span>
+<span class="sd">        pyamg_fix : fixes stencil for indices and fixes the source for the RHS matrix (uses `pyamg_source`)</span>
+<span class="sd">        pyamg_source : fix the RHS matrix ``b`` to a constant value</span>
+<span class="sd">        pyamg_boundary_condition : setup the sparse matrix ``A`` to given boundary conditions (called in this routine)</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="kn">from</span> <span class="nn">pyamg.gallery</span> <span class="k">import</span> <span class="n">poisson</span>
         <span class="c1"># Initially create the CSR matrix</span>
@@ -1372,6 +1440,9 @@
                            <span class="n">formatter_class</span><span class="o">=</span><span class="n">argparse</span><span class="o">.</span><span class="n">RawDescriptionHelpFormatter</span><span class="p">,</span>
                            <span class="n">description</span><span class="o">=</span><span class="n">description</span><span class="p">)</span>
 
+    <span class="c1"># Add default sisl version stuff</span>
+    <span class="n">cmd</span><span class="o">.</span><span class="n">add_sisl_version_cite_arg</span><span class="p">(</span><span class="n">p</span><span class="p">)</span>
+
     <span class="c1"># First read the input &quot;Sile&quot;</span>
     <span class="k">if</span> <span class="n">grid</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">argv</span><span class="p">,</span> <span class="n">input_file</span> <span class="o">=</span> <span class="n">cmd</span><span class="o">.</span><span class="n">collect_input</span><span class="p">(</span><span class="n">argv</span><span class="p">)</span>
@@ -1452,7 +1523,7 @@
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'../../',
-            VERSION:'0.9.2-320',
+            VERSION:'0.9.2-336',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true,

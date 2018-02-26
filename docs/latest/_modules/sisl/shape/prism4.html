@@ -65,7 +65,7 @@
             
             
               <div class="version">
-                0.9.2-320
+                0.9.2-336
               </div>
             
           
@@ -177,6 +177,7 @@
 <span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">fabs</span><span class="p">,</span> <span class="n">logical_and</span>
 
 <span class="kn">from</span> <span class="nn">sisl._help</span> <span class="k">import</span> <span class="n">ensure_array</span>
+<span class="kn">from</span> <span class="nn">sisl.linalg</span> <span class="k">import</span> <span class="n">inv</span>
 <span class="kn">from</span> <span class="nn">sisl.utils.mathematics</span> <span class="k">import</span> <span class="n">fnorm</span><span class="p">,</span> <span class="n">expand</span>
 
 <span class="kn">from</span> <span class="nn">.base</span> <span class="k">import</span> <span class="n">PureShape</span>
@@ -219,7 +220,7 @@
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s2">&quot; requires initialization with 3 vectors defining the cuboid&quot;</span><span class="p">)</span>
 
         <span class="c1"># Create the reciprocal cell</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_iv</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">inv</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_v</span><span class="p">)</span><span class="o">.</span><span class="n">T</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_iv</span> <span class="o">=</span> <span class="n">inv</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_v</span><span class="p">)</span>
 
 <div class="viewcode-block" id="Cuboid.copy"><a class="viewcode-back" href="../../../api-generated/sisl.shape.Cuboid.html#sisl.shape.Cuboid.copy">[docs]</a>    <span class="k">def</span> <span class="nf">copy</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_v</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">center</span><span class="p">)</span></div>
@@ -269,11 +270,22 @@
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39;.expand requires the length to be either (1,) or (3,)&#39;</span><span class="p">)</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="p">([</span><span class="n">v0</span><span class="p">,</span> <span class="n">v1</span><span class="p">,</span> <span class="n">v2</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">center</span><span class="p">)</span></div>
 
+<div class="viewcode-block" id="Cuboid.toEllipsoid"><a class="viewcode-back" href="../../../api-generated/sisl.shape.Cuboid.html#sisl.shape.Cuboid.toEllipsoid">[docs]</a>    <span class="k">def</span> <span class="nf">toEllipsoid</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Return an ellipsoid that encompass this cuboid &quot;&quot;&quot;</span>
+        <span class="kn">from</span> <span class="nn">.ellipsoid</span> <span class="k">import</span> <span class="n">Ellipsoid</span>
+
+        <span class="c1"># Rescale each vector</span>
+        <span class="k">return</span> <span class="n">Ellipsoid</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_v</span> <span class="o">/</span> <span class="mi">2</span> <span class="o">*</span> <span class="mi">3</span> <span class="o">**</span> <span class="o">.</span><span class="mi">5</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">center</span><span class="o">.</span><span class="n">copy</span><span class="p">())</span></div>
+
 <div class="viewcode-block" id="Cuboid.toSphere"><a class="viewcode-back" href="../../../api-generated/sisl.shape.Cuboid.html#sisl.shape.Cuboid.toSphere">[docs]</a>    <span class="k">def</span> <span class="nf">toSphere</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot; Return a sphere that encompass this cube &quot;&quot;&quot;</span>
-        <span class="n">e</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">edge_length</span><span class="o">.</span><span class="n">max</span><span class="p">()</span>
+        <span class="sd">&quot;&quot;&quot; Return a sphere that encompass this cuboid &quot;&quot;&quot;</span>
         <span class="kn">from</span> <span class="nn">.ellipsoid</span> <span class="k">import</span> <span class="n">Sphere</span>
-        <span class="k">return</span> <span class="n">Sphere</span><span class="p">(</span><span class="n">e</span> <span class="o">*</span> <span class="mi">2</span> <span class="o">**</span> <span class="o">.</span><span class="mi">5</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">center</span><span class="o">.</span><span class="n">copy</span><span class="p">())</span></div>
+
+        <span class="k">return</span> <span class="n">Sphere</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">edge_length</span><span class="o">.</span><span class="n">max</span><span class="p">()</span> <span class="o">/</span> <span class="mi">2</span> <span class="o">*</span> <span class="mi">3</span> <span class="o">**</span> <span class="o">.</span><span class="mi">5</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">center</span><span class="o">.</span><span class="n">copy</span><span class="p">())</span></div>
+
+<div class="viewcode-block" id="Cuboid.toCuboid"><a class="viewcode-back" href="../../../api-generated/sisl.shape.Cuboid.html#sisl.shape.Cuboid.toCuboid">[docs]</a>    <span class="k">def</span> <span class="nf">toCuboid</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Return a copy of itself &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span></div>
 
 <div class="viewcode-block" id="Cuboid.within_index"><a class="viewcode-back" href="../../../api-generated/sisl.shape.Cuboid.html#sisl.shape.Cuboid.within_index">[docs]</a>    <span class="k">def</span> <span class="nf">within_index</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Return indices of the `other` object which are contained in the shape</span>
@@ -288,7 +300,7 @@
         <span class="n">other</span><span class="o">.</span><span class="n">shape</span> <span class="o">=</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
 
         <span class="c1"># Offset origo</span>
-        <span class="n">tmp</span> <span class="o">=</span> <span class="n">dot</span><span class="p">(</span><span class="n">other</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">origo</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="p">:],</span> <span class="bp">self</span><span class="o">.</span><span class="n">_iv</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
+        <span class="n">tmp</span> <span class="o">=</span> <span class="n">dot</span><span class="p">(</span><span class="n">other</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">origo</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="p">:],</span> <span class="bp">self</span><span class="o">.</span><span class="n">_iv</span><span class="p">)</span>
 
         <span class="c1"># First reject those that are definitely not inside</span>
         <span class="n">within</span> <span class="o">=</span> <span class="n">logical_and</span><span class="o">.</span><span class="n">reduce</span><span class="p">(</span><span class="n">tmp</span> <span class="o">&gt;=</span> <span class="mf">0.</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">nonzero</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
@@ -363,7 +375,7 @@
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'../../../',
-            VERSION:'0.9.2-320',
+            VERSION:'0.9.2-336',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true,

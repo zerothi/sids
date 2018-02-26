@@ -67,7 +67,7 @@
             
             
               <div class="version">
-                0.9.2-320
+                0.9.2-336
               </div>
             
           
@@ -711,7 +711,7 @@ correspond to returned quantities from <em class="xref py py-obj">pyamg_indices<
 <dt><a class="reference internal" href="#sisl.Grid.index" title="sisl.Grid.index"><code class="xref py py-obj docutils literal"><span class="pre">index</span></code></a></dt>
 <dd>query indices from coordinates (directly passable to this method)</dd>
 <dt><a class="reference internal" href="#sisl.Grid.mgrid" title="sisl.Grid.mgrid"><code class="xref py py-obj docutils literal"><span class="pre">mgrid</span></code></a></dt>
-<dd>Grid equivalent to <a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.mgrid.html#numpy.mgrid" title="(in NumPy v1.14)"><code class="xref py py-obj docutils literal"><span class="pre">numpy.mgrid</span></code></a>. Grid.mgrid returns indices in shapes (<a href="#id9"><span class="problematic" id="id10">*</span></a>, 3), contrary to <a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/index.html#module-numpy" title="(in NumPy v1.14)"><code class="xref py py-obj docutils literal"><span class="pre">numpy</span></code></a></dd>
+<dd>Grid equivalent to <a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.mgrid.html#numpy.mgrid" title="(in NumPy v1.14)"><code class="xref py py-obj docutils literal"><span class="pre">numpy.mgrid</span></code></a>. Grid.mgrid returns indices in shapes (<a href="#id9"><span class="problematic" id="id10">*</span></a>, 3), contrary to numpy’s <a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.mgrid.html#numpy.mgrid" title="(in NumPy v1.14)"><code class="xref py py-obj docutils literal"><span class="pre">numpy.mgrid</span></code></a></dd>
 </dl>
 </div>
 </dd></dl>
@@ -1078,6 +1078,8 @@ for <code class="docutils literal"><span class="pre">above=False</span></code> g
 <dd><p>Create a <code class="xref py py-obj docutils literal"><span class="pre">pyamg</span></code> stencil matrix to be used in pyamg</p>
 <p>This allows retrieving the grid matrix equivalent of the real-space grid.
 Subsequently the returned matrix may be used in pyamg for solutions etc.</p>
+<p>The <code class="xref py py-obj docutils literal"><span class="pre">pyamg</span></code> suite is it-self a rather complicated code with many options.
+For details we refer to <a class="reference external" href="pyamghttps://github.com/pyamg/pyamg/">pyamg</a>.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
@@ -1088,6 +1090,31 @@ Subsequently the returned matrix may be used in pyamg for solutions etc.</p>
 </tr>
 </tbody>
 </table>
+<div class="admonition seealso">
+<p class="first admonition-title">See also</p>
+<dl class="last docutils">
+<dt><a class="reference internal" href="#sisl.Grid.pyamg_index" title="sisl.Grid.pyamg_index"><code class="xref py py-obj docutils literal"><span class="pre">pyamg_index</span></code></a></dt>
+<dd>convert grid indices into the sparse matrix indices for <code class="docutils literal"><span class="pre">A</span></code></dd>
+<dt><a class="reference internal" href="#sisl.Grid.pyamg_fix" title="sisl.Grid.pyamg_fix"><code class="xref py py-obj docutils literal"><span class="pre">pyamg_fix</span></code></a></dt>
+<dd>fixes stencil for indices and fixes the source for the RHS matrix (uses <a class="reference internal" href="#sisl.Grid.pyamg_source" title="sisl.Grid.pyamg_source"><code class="xref py py-obj docutils literal"><span class="pre">pyamg_source</span></code></a>)</dd>
+<dt><a class="reference internal" href="#sisl.Grid.pyamg_source" title="sisl.Grid.pyamg_source"><code class="xref py py-obj docutils literal"><span class="pre">pyamg_source</span></code></a></dt>
+<dd>fix the RHS matrix <code class="docutils literal"><span class="pre">b</span></code> to a constant value</dd>
+<dt><a class="reference internal" href="#sisl.Grid.pyamg_boundary_condition" title="sisl.Grid.pyamg_boundary_condition"><code class="xref py py-obj docutils literal"><span class="pre">pyamg_boundary_condition</span></code></a></dt>
+<dd>setup the sparse matrix <code class="docutils literal"><span class="pre">A</span></code> to given boundary conditions (called in this routine)</dd>
+</dl>
+</div>
+<p class="rubric">Examples</p>
+<p>This example proves the best method for a variety of cases in regards of the 3D Poisson problem:</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">grid</span> <span class="o">=</span> <span class="n">Grid</span><span class="p">(</span><span class="mf">0.01</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">A</span><span class="p">,</span> <span class="n">b</span> <span class="o">=</span> <span class="n">grid</span><span class="o">.</span><span class="n">topyamg</span><span class="p">()</span> <span class="c1"># automatically setups the current boundary conditions</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># add terms etc. to A and/or b</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">pyamg</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">scipy.sparse.linalg</span> <span class="kn">import</span> <span class="n">cg</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">ml</span> <span class="o">=</span> <span class="n">pyamg</span><span class="o">.</span><span class="n">aggregation</span><span class="o">.</span><span class="n">smoothed_aggregation_solver</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">max_levels</span><span class="o">=</span><span class="mi">1000</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">M</span> <span class="o">=</span> <span class="n">ml</span><span class="o">.</span><span class="n">aspreconditioner</span><span class="p">(</span><span class="n">cycle</span><span class="o">=</span><span class="s1">&#39;W&#39;</span><span class="p">)</span> <span class="c1"># pre-conditioner</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">x</span><span class="p">,</span> <span class="n">info</span> <span class="o">=</span> <span class="n">cg</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="mf">1e-12</span><span class="p">,</span> <span class="n">M</span><span class="o">=</span><span class="n">M</span><span class="p">)</span>
+</pre></div>
+</div>
 </dd></dl>
 
 <dl class="attribute">
@@ -1163,7 +1190,7 @@ if it is a string it will create a new sile using <code class="xref py py-obj do
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'../',
-            VERSION:'0.9.2-320',
+            VERSION:'0.9.2-336',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true,

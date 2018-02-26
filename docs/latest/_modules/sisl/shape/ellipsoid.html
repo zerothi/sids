@@ -65,7 +65,7 @@
             
             
               <div class="version">
-                0.9.2-320
+                0.9.2-336
               </div>
             
           
@@ -176,6 +176,7 @@
 <span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">dot</span>
 <span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">fabs</span><span class="p">,</span> <span class="n">logical_and</span>
 
+<span class="kn">from</span> <span class="nn">sisl.messages</span> <span class="k">import</span> <span class="n">warn</span>
 <span class="kn">from</span> <span class="nn">sisl._help</span> <span class="k">import</span> <span class="n">ensure_array</span>
 <span class="kn">import</span> <span class="nn">sisl._array</span> <span class="k">as</span> <span class="nn">_a</span>
 <span class="kn">from</span> <span class="nn">sisl.utils.mathematics</span> <span class="k">import</span> <span class="n">orthogonalize</span><span class="p">,</span> <span class="n">fnorm</span><span class="p">,</span> <span class="n">fnorm2</span><span class="p">,</span> <span class="n">expand</span>
@@ -193,7 +194,9 @@
 <span class="sd">    ----------</span>
 <span class="sd">    v : float or (3,) or (3, 3)</span>
 <span class="sd">       radius/vectors defining the ellipsoid. For 3 values it corresponds to a Cartesian</span>
-<span class="sd">       oriented ellipsoid.</span>
+<span class="sd">       oriented ellipsoid. If the vectors are non-orthogonal they will be orthogonalized.</span>
+<span class="sd">       I.e. the first vector is considered a principal axis, then the second vector will</span>
+<span class="sd">       be orthogonalized onto the first, and this is the second principal axis. And so on.</span>
 <span class="sd">    center : (3,), optional</span>
 <span class="sd">       the center of the ellipsoid. Defaults to the origo.</span>
 
@@ -209,7 +212,7 @@
         <span class="nb">super</span><span class="p">(</span><span class="n">Ellipsoid</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">center</span><span class="p">)</span>
         <span class="n">v</span> <span class="o">=</span> <span class="n">ensure_array</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">v</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_v</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">identity</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span> <span class="o">*</span> <span class="n">v</span> <span class="c1"># a &quot;Euclidean&quot; sphere</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_v</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">identity</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span> <span class="o">*</span> <span class="n">v</span> <span class="c1"># a &quot;Euclidean&quot; sphere</span>
         <span class="k">elif</span> <span class="n">v</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_v</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">v</span><span class="o">.</span><span class="n">ravel</span><span class="p">())</span> <span class="c1"># a &quot;Euclidean&quot; ellipsoid</span>
         <span class="k">elif</span> <span class="n">v</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="mi">9</span><span class="p">:</span>
@@ -217,14 +220,16 @@
         <span class="k">else</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s2">&quot; requires initialization with 3 vectors defining the ellipsoid&quot;</span><span class="p">)</span>
 
-        <span class="c1"># Ensure each of the vectors are orthogonal to each other</span>
-        <span class="c1"># When performing this operation we do not preserve length of vector.</span>
+        <span class="c1"># The vectors are not orthogonal, orthogonalize them</span>
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">fabs</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_v</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_v</span><span class="o">.</span><span class="n">T</span><span class="p">)</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">identity</span><span class="p">(</span><span class="mi">3</span><span class="p">))</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">&gt;</span> <span class="mf">1e-12</span><span class="p">:</span>
+            <span class="n">warn</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39; principal vectors are not orthogonal. &#39;</span>
+                 <span class="s1">&#39;sisl orthogonalizes the vectors (retaining 1st vector).&#39;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_v</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">orthogonalize</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_v</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="p">:],</span> <span class="bp">self</span><span class="o">.</span><span class="n">_v</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="p">:])</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_v</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">orthogonalize</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_v</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="p">:],</span> <span class="bp">self</span><span class="o">.</span><span class="n">_v</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="p">:])</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_v</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">orthogonalize</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_v</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="p">:],</span> <span class="bp">self</span><span class="o">.</span><span class="n">_v</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="p">:])</span>
 
         <span class="c1"># Create the reciprocal cell</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_iv</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">inv</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_v</span><span class="p">)</span><span class="o">.</span><span class="n">T</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_iv</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">inv</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_v</span><span class="p">)</span>
 
 <div class="viewcode-block" id="Ellipsoid.copy"><a class="viewcode-back" href="../../../api-generated/sisl.shape.Ellipsoid.html#sisl.shape.Ellipsoid.copy">[docs]</a>    <span class="k">def</span> <span class="nf">copy</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_v</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">center</span><span class="p">)</span></div>
@@ -272,10 +277,19 @@
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39;.expand requires the radius to be either (1,) or (3,)&#39;</span><span class="p">)</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="p">([</span><span class="n">v0</span><span class="p">,</span> <span class="n">v1</span><span class="p">,</span> <span class="n">v2</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">center</span><span class="p">)</span></div>
 
+<div class="viewcode-block" id="Ellipsoid.toEllipsoid"><a class="viewcode-back" href="../../../api-generated/sisl.shape.Ellipsoid.html#sisl.shape.Ellipsoid.toEllipsoid">[docs]</a>    <span class="k">def</span> <span class="nf">toEllipsoid</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Return an ellipsoid that encompass this shape (a copy) &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span></div>
+
 <div class="viewcode-block" id="Ellipsoid.toSphere"><a class="viewcode-back" href="../../../api-generated/sisl.shape.Ellipsoid.html#sisl.shape.Ellipsoid.toSphere">[docs]</a>    <span class="k">def</span> <span class="nf">toSphere</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Return a sphere with a radius equal to the largest radial vector &quot;&quot;&quot;</span>
         <span class="n">r</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">radius</span><span class="o">.</span><span class="n">max</span><span class="p">()</span>
         <span class="k">return</span> <span class="n">Sphere</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">center</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Ellipsoid.toCuboid"><a class="viewcode-back" href="../../../api-generated/sisl.shape.Ellipsoid.html#sisl.shape.Ellipsoid.toCuboid">[docs]</a>    <span class="k">def</span> <span class="nf">toCuboid</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Return a cuboid with side lengths equal to the diameter of each ellipsoid vectors &quot;&quot;&quot;</span>
+        <span class="kn">from</span> <span class="nn">.prism4</span> <span class="k">import</span> <span class="n">Cuboid</span>
+        <span class="k">return</span> <span class="n">Cuboid</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_v</span> <span class="o">*</span> <span class="mi">2</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">center</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="Ellipsoid.set_center"><a class="viewcode-back" href="../../../api-generated/sisl.shape.Ellipsoid.html#sisl.shape.Ellipsoid.set_center">[docs]</a>    <span class="k">def</span> <span class="nf">set_center</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">center</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Change the center of the object &quot;&quot;&quot;</span>
@@ -288,7 +302,7 @@
         <span class="n">other</span><span class="o">.</span><span class="n">shape</span> <span class="o">=</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
 
         <span class="c1"># First check</span>
-        <span class="n">tmp</span> <span class="o">=</span> <span class="n">dot</span><span class="p">(</span><span class="n">other</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">center</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="p">:],</span> <span class="bp">self</span><span class="o">.</span><span class="n">_iv</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
+        <span class="n">tmp</span> <span class="o">=</span> <span class="n">dot</span><span class="p">(</span><span class="n">other</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">center</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="p">:],</span> <span class="bp">self</span><span class="o">.</span><span class="n">_iv</span><span class="p">)</span>
 
         <span class="c1"># Get indices where we should do the more</span>
         <span class="c1"># expensive exact check of being inside shape</span>
@@ -361,7 +375,7 @@
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'../../../',
-            VERSION:'0.9.2-320',
+            VERSION:'0.9.2-336',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true,
