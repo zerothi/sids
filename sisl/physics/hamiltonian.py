@@ -1,7 +1,7 @@
 from __future__ import print_function, division
 
 import numpy as np
-from numpy import int32, float64, pi
+from numpy import pi, int32
 from numpy import take, ogrid
 from numpy import add, subtract, multiply, divide
 from numpy import cos, sin, arctan2, conj
@@ -9,7 +9,6 @@ from numpy import dot, sqrt, square, floor, ceil
 
 from sisl.messages import warn
 from sisl._help import _range as range, _str as str
-from sisl._help import ensure_array
 import sisl._array as _a
 from sisl import Geometry
 from sisl.eigensystem import EigenSystem
@@ -17,8 +16,7 @@ from .distribution_function import distribution as dist_func
 from .spin import Spin
 from .sparse import SparseOrbitalBZSpin
 
-__all__ = ['Hamiltonian', 'TightBinding']
-__all__ += ['EigenState']
+__all__ = ['Hamiltonian', 'EigenState']
 
 
 class Hamiltonian(SparseOrbitalBZSpin):
@@ -115,18 +113,22 @@ class Hamiltonian(SparseOrbitalBZSpin):
 
         Parameters
         ----------
-        E : float
-           the energy (in eV) to shift the electronic structure
+        E : float or (2,)
+           the energy (in eV) to shift the electronic structure, if two values are passed
+           the two first spin-components get shifted individually.
         """
+        E = _a.asarrayd(E)
+        if E.size == 1:
+            E = np.tile(_a.asarrayd(E), 2)
         if not self.orthogonal:
             # For non-colinear and SO only the diagonal (real) components
             # should be shifted.
             for i in range(min(self.spin.spins, 2)):
-                self._csr._D[:, i] += self._csr._D[:, self.S_idx] * E
+                self._csr._D[:, i] += self._csr._D[:, self.S_idx] * E[i]
         else:
             for i in range(self.shape[0]):
                 for j in range(min(self.spin.spins, 2)):
-                    self[i, i, j] = self[i, i, j] + E
+                    self[i, i, j] = self[i, i, j] + E[i]
 
     def eigenstate(self, k=(0, 0, 0), gauge='R', **kwargs):
         """ Calculate the eigenstates at `k` and return an `EigenState` object containing all eigenstates
@@ -276,7 +278,7 @@ class EigenState(EigenSystem):
         """
         if idx is None:
             idx = range(len(self))
-        idx = ensure_array(idx)
+        idx = _a.asarrayi(idx)
 
         # Now create the correct normalization for each
         opt = {'k': self.info.get('k', (0, 0, 0))}
@@ -292,7 +294,8 @@ class EigenState(EigenSystem):
             # Assume orthogonal basis set and Gamma-point
             # TODO raise warning, should we do this here?
             class _K(object):
-                def dot(self, v):
+                @staticmethod
+                def dot(v):
                     return v
             Sk = _K()
 
@@ -442,7 +445,7 @@ class EigenState(EigenSystem):
         r""" Add the wave-function (`Orbital.psi`) component of each orbital to the grid
 
         This routine calculates the real-space wave-function components in the
-        specified grid. 
+        specified grid.
 
         This is an *in-place* operation that *adds* to the current values in the grid.
 
@@ -513,7 +516,7 @@ class EigenState(EigenSystem):
         # Check for k-points
         if k is None:
             k = self.info.get('k', (0, 0, 0))
-        k = ensure_array(k, float64)
+        k = _a.asarrayd(k)
         kl = (k ** 2).sum() ** 0.5
         has_k = kl > 0.000001
 
@@ -532,7 +535,7 @@ class EigenState(EigenSystem):
             psi_init = _a.zerosd
 
         # Extract sub variables used throughout the loop
-        shape = ensure_array(grid.shape)
+        shape = _a.asarrayi(grid.shape)
         dcell = grid.dcell
         rc = grid.sc.rcell / (2. * pi) * shape.reshape(1, -1)
 
@@ -566,8 +569,10 @@ class EigenState(EigenSystem):
         # Figure out the max-min indices with a spacing of 1 radians
         rad1 = pi / 180
         theta, phi = ogrid[-pi:pi:rad1, 0:pi:rad1]
-        ctheta, stheta = cos(theta), sin(theta)
         cphi, sphi = cos(phi), sin(phi)
+        ctheta_sphi = cos(theta) * sphi
+        stheta_sphi = sin(theta) * sphi
+        del sphi
         nrxyz = (theta.size, phi.size, 3)
         del theta, phi, rad1
 
@@ -582,14 +587,14 @@ class EigenState(EigenSystem):
 
             # Reshape
             rxyz.shape = nrxyz
-            rxyz[..., 0] = R * ctheta * sphi
-            rxyz[..., 1] = R * stheta * sphi
-            rxyz[..., 2] = R * cphi
+            rxyz[..., 0] = ctheta_sphi
+            rxyz[..., 1] = stheta_sphi
+            rxyz[..., 2] = cphi
             rxyz.shape = (-1, 3)
 
             idx = dot(rc, rxyz.T)
-            idx_m = idx.min(1)
-            idx_M = idx.max(1)
+            idx_m = idx.min(1) * R
+            idx_M = idx.max(1) * R
 
             # Now do it for all the atoms to get indices of the middle of
             # the atoms
@@ -607,7 +612,7 @@ class EigenState(EigenSystem):
         # up in the above table.
 
         # Before continuing, we can easily clean up the temporary arrays
-        del ctheta, stheta, cphi, sphi, nrxyz, rxyz, origo, idx
+        del ctheta_sphi, stheta_sphi, cphi, nrxyz, rxyz, origo, idx
 
         aranged = _a.aranged
 
@@ -665,11 +670,6 @@ class EigenState(EigenSystem):
                 idxM[2] = shape[2] - 1
 
             # Now idxm/M contains min/max indices used
-            # Convert to xyz-coordinate
-            sx = slice(idxm[0], idxM[0]+1)
-            sy = slice(idxm[1], idxM[1]+1)
-            sz = slice(idxm[2], idxM[2]+1)
-
             # Convert to spherical coordinates
             n, idx, r, theta, phi = idx2spherical(aranged(idxm[0], idxM[0] + 0.5),
                                                   aranged(idxm[1], idxM[1] + 0.5),
@@ -685,7 +685,7 @@ class EigenState(EigenSystem):
                 oR = os[0].R
 
                 if oR <= 0.:
-                    warn("Orbital(s) '{}' does not have a wave-function, skipping orbital.".format(os))
+                    warn("Orbital(s) '{}' does not have a wave-function, skipping orbital!".format(os))
                     # Skip these orbitals
                     io += len(os)
                     continue
@@ -716,15 +716,10 @@ class EigenState(EigenSystem):
 
             # Convert to correct shape and add the current atom contribution to the wavefunction
             psi.shape = idxM - idxm + 1
-            grid.grid[sx, sy, sz] += psi
+            grid.grid[idxm[0]:idxM[0]+1, idxm[1]:idxM[1]+1, idxm[2]:idxM[2]+1] += psi
 
             # Clean-up
             del psi
 
         # Reset the error code for division
         np.seterr(**old_err)
-
-
-# For backwards compatibility we also use TightBinding
-# NOTE: that this is not sub-classed...
-TightBinding = Hamiltonian

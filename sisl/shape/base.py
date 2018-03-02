@@ -3,12 +3,8 @@ from math import sqrt as msqrt
 
 import numpy as np
 from numpy import union1d, intersect1d, setdiff1d, setxor1d
-from numpy import logical_and as log_and
-from numpy import logical_or as log_or
-from numpy import logical_xor as log_xor
-from numpy import logical_not as log_not
 
-from sisl._help import ensure_array
+import sisl._array as _a
 from sisl.utils.mathematics import fnorm
 
 
@@ -95,7 +91,7 @@ class Shape(object):
         other : array_like
            the array/object that is checked for containment
         """
-        other = ensure_array(other, np.float64)
+        other = _a.asarrayd(other)
         ndim = other.ndim
         other.shape = (-1, 3)
 
@@ -168,7 +164,9 @@ class CompositeShape(Shape):
         """ Average center of composite shapes """
         return (self.A.center + self.B.center) * 0.5
 
-    def volume(self):
+    @staticmethod
+    def volume():
+        """ Volume of a composite shape is current undefined, so a negative number is returned (may change) """
         # The volume for these set operators cannot easily be defined, so
         # we should rather not do anything about it.
         return -1.
@@ -183,10 +181,10 @@ class CompositeShape(Shape):
 
         # Retrieve spheres
         A = self.A.toSphere()
-        Ar = A.radius[0]
+        Ar = A.radius
         Ac = A.center
         B = self.B.toSphere()
-        Br = B.radius[0]
+        Br = B.radius
         Bc = B.center
 
         if self.op == self._AND:
@@ -327,4 +325,5 @@ class NullShape(PureShape):
         return Cuboid(1.e-64, center=self.center.copy())
 
     def volume(self, *args, **kwargs):
+        """ The volume of a null shape is exactly 0. """
         return 0.

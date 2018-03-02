@@ -3,8 +3,7 @@ from __future__ import print_function, division
 from numbers import Integral
 from scipy.sparse import csr_matrix
 import numpy as np
-from numpy import int32
-from numpy import dot, argsort, where, floor, take
+from numpy import dot, take
 from numpy import logical_and as log_and
 
 
@@ -13,7 +12,6 @@ from sisl.messages import warn
 from sisl._help import _zip as zip, _range as range
 from sisl.utils.ranges import array_arange
 from sisl.utils.mathematics import cart2spher
-from sisl.shape import Sphere
 from .spin import Spin
 from .sparse import SparseOrbitalBZSpin
 
@@ -113,7 +111,7 @@ class DensityMatrix(SparseOrbitalBZSpin):
         r""" Expand the density matrix to a density on the grid
 
         This routine calculates the real-space density components in the
-        specified grid. 
+        specified grid.
 
         This is an *in-place* operation that *adds* to the current values in the grid.
 
@@ -145,14 +143,12 @@ class DensityMatrix(SparseOrbitalBZSpin):
            For non-colinear/spin-orbit density matrices it has to be a 2x2 matrix (defaults to total density).
         """
         geom = self.geom
-        cell = self.geom.cell
 
         if geom is None:
             geom = grid.geometry
 
         # Extract sub variables used throughout the loop
         csr = self._csr
-        o2a = geom.o2a
         dcell = grid.dcell
         frcell = grid.rcell.T / (2 * np.pi)
 

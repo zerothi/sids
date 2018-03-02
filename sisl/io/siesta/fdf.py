@@ -5,8 +5,9 @@ import numpy as np
 import warnings
 
 # Import sile objects
-from sisl._help import _str, ensure_array
-from sisl.messages import warn, info
+import sisl._array as _a
+from sisl._help import _str
+from sisl.messages import warn
 from .sile import SileSiesta
 from ..sile import *
 from sisl.io._help import *
@@ -14,7 +15,6 @@ from sisl.io._help import *
 from .binaries import TSHSSileSiesta, TSDESileSiesta
 from .binaries import DMSileSiesta, HSXSileSiesta
 from .fa import faSileSiesta
-from .eig import eigSileSiesta
 from .pdos import pdosSileSiesta
 from .siesta import ncSileSiesta
 from .basis import ionxmlSileSiesta, ionncSileSiesta
@@ -224,7 +224,8 @@ class fdfSileSiesta(SileSiesta):
 
         return l
 
-    def _type(self, value):
+    @classmethod
+    def _type(cls, value):
         """ Determine the type by the value
 
         Parameters
@@ -736,7 +737,7 @@ class fdfSileSiesta(SileSiesta):
         lor = self.get('AtomicCoordinatesOrigin')
         if lor:
             if kwargs.get('origin', True):
-                origo = ensure_array(map(float, lor[0].split()[:3])) * s
+                origo = _a.asarrayd(map(float, lor[0].split()[:3])) * s
         # Origo cannot be interpreted with fractional coordinates
         # hence, it is not transformed.
 
@@ -771,9 +772,6 @@ class fdfSileSiesta(SileSiesta):
         xyz *= s
         xyz += origo
 
-        # Now we read in the species
-        ns = self.get('NumberOfSpecies', default=0)
-
         # Read the block (not strictly needed, if so we simply set all atoms to H)
         atom = self.read_basis()
         if atom is None:
@@ -781,8 +779,6 @@ class fdfSileSiesta(SileSiesta):
 
             # Default atom (hydrogen)
             atom = Atom(1)
-            # Force number of species to 1
-            ns = 1
         else:
             atom = [atom[i] for i in species]
 

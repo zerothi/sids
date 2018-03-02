@@ -12,7 +12,6 @@ from numpy import dot
 from sisl.utils.mathematics import fnorm
 import sisl._array as _a
 import sisl._plot as plt
-from ._help import ensure_array
 from .quaternion import Quaternion
 
 __all__ = ['SuperCell', 'SuperCellChild']
@@ -37,7 +36,7 @@ class SuperCell(object):
     """
 
     # We limit the scope of this SuperCell object.
-    __slots__ = ('cell', 'origo', 'volume', 'nsc', 'n_s', '_sc_off', '_isc_off')
+    __slots__ = ('cell', '_origo', 'volume', 'nsc', 'n_s', '_sc_off', '_isc_off')
 
     def __init__(self, cell, nsc=None, origo=None):
         """ Initialize a `SuperCell` object from initial quantities
@@ -53,10 +52,10 @@ class SuperCell(object):
         self.cell = self.tocell(cell)
 
         if origo is None:
-            self.origo = _a.zerosd(3)
+            self._origo = _a.zerosd(3)
         else:
-            self.origo = _a.arrayd(origo)
-            if self.origo.size != 3:
+            self._origo = _a.arrayd(origo)
+            if self._origo.size != 3:
                 raise ValueError("Origo *must* be 3 numbers.")
 
         # Set the volume
@@ -66,35 +65,55 @@ class SuperCell(object):
         # Set the super-cell
         self.set_nsc(nsc=nsc)
 
-    def cell_parameter(self, rad=False):
-        """ Return the cell-parameters of this cell. I.e. lattice vector lengths and angles
+    @property
+    def origo(self):
+        """ Origo for the cell """
+        return self._origo
+
+    @origo.setter
+    def origo(self, origo):
+        """ Set origo """
+        self._origo[:] = origo
+
+    def parameters(self, rad=False):
+        r""" Return the cell-parameters of this cell
+
+        Notes
+        -----
+        Since we return the length and angles between vectors it may not be possible to
+        recreate the same cell. Only in the case where the first lattice vector *only*
+        has a Cartesian :math:`x` component will this be the case
 
         Parameters
         ----------
         rad : bool, optional
-           whether the angles are returned in radians
+           whether the angles are returned in radians (otherwise in degree)
+
+        Returns
+        -------
+        a : length of first lattice vector
+        b : length of second lattice vector
+        c : length of third lattice vector
+        alpha : angle between b and c vectors
+        beta : angle between a and c vectors
+        gamma : angle between a and b vectors
         """
-        if not rad:
-            f = 180 / np.pi
-        else:
+        if rad:
             f = 1.
+        else:
+            f = 180 / np.pi
 
-        # Figure out which vectors has the largest component along Cartesian x
-        c = self.copy()
-        cc = c.cell.copy()
-        fn = fnorm(cc)
-        x_frac = np.abs(cc[:, 0]) / fn
-        # Figure out which has the largest component
-        ix = np.argsort(-x_frac)[0]
+        # Calculate length of each lattice vector
+        cell = self.cell.copy()
+        abc = fnorm(cell)
 
-        # Now we have the largest x-component.
-        # Rotate 'ix' vector to be along x vector
-        from math import acos, asin
-        ax = acos(_dot(cc[ix, :], np.array([1., 0, 0])) / fn[ix])
+        from math import acos
+        cell = cell / abc.reshape(-1, 1)
+        alpha = acos(_dot(cell[1, :], cell[2, :])) * f
+        beta = acos(_dot(cell[0, :], cell[2, :])) * f
+        gamma = acos(_dot(cell[0, :], cell[1, :])) * f
 
-        # First we need to rotate the cell etc.
-        # Al
-        pass
+        return abc[0], abc[1], abc[2], alpha, beta, gamma
 
     def _update_vol(self):
         self.volume = np.abs(dot(self.cell[0, :],
@@ -456,7 +475,8 @@ class SuperCell(object):
         only : ('abc'), str, optional
              only rotate the designated cell vectors.
         """
-        vn = np.copy(np.asarray(v, dtype=np.float64)[:])
+        # flatte => copy
+        vn = np.asarray(v, dtype=np.float64).flatten()
         vn /= fnorm(vn)
         q = Quaternion(angle, vn, rad=rad)
         q /= q.norm()  # normalize the quaternion
@@ -656,7 +676,7 @@ class SuperCell(object):
         The angles should be provided in degree (not radians).
         """
         # Convert into true array (flattened)
-        args = np.asarray(args, np.float64).flatten()
+        args = _a.asarrayd(args).ravel()
         nargs = len(args)
 
         # A square-box
@@ -669,7 +689,7 @@ class SuperCell(object):
 
         # Cell parameters
         if nargs == 6:
-            cell = np.zeros([3, 3], np.float64)
+            cell = _a.zerosd([3, 3])
             a = args[0]
             b = args[1]
             c = args[2]
@@ -677,26 +697,28 @@ class SuperCell(object):
             beta = args[4]
             gamma = args[5]
 
+            from math import sqrt, cos, sin, pi
+            pi180 = pi / 180.
+
             cell[0, 0] = a
-            g = gamma * np.pi / 180.
-            cg = np.cos(g)
-            sg = np.sin(g)
+            g = gamma * pi180
+            cg = cos(g)
+            sg = sin(g)
             cell[1, 0] = b * cg
             cell[1, 1] = b * sg
-            b = beta * np.pi / 180.
-            cb = np.cos(b)
-            sb = np.sin(b)
+            b = beta * pi180
+            cb = cos(b)
+            sb = sin(b)
             cell[2, 0] = c * cb
-            a = alpha * np.pi / 180.
-            d = (np.cos(a) - cb * cg) / sg
+            a = alpha * pi180
+            d = (cos(a) - cb * cg) / sg
             cell[2, 1] = c * d
-            cell[2, 2] = c * np.sqrt(sb**2 - d**2)
+            cell[2, 2] = c * sqrt(sb ** 2 - d ** 2)
             return cell
 
         # A complete cell
         if nargs == 9:
-            args.shape = (3, 3)
-            return np.copy(args)
+            return args.copy().reshape(3, 3)
 
         raise ValueError(
             "Creating a unit-cell has to have 1, 3 or 6 arguments, please correct.")
@@ -724,7 +746,7 @@ class SuperCell(object):
         axis : int or array_like
            only check the specified axis (default to all)
         """
-        axis = ensure_array(axis)
+        axis = _a.asarrayi(axis).ravel()
         # Convert to unit-vector cell
         for i in axis:
             a = self.cell[i, :] / fnorm(self.cell[i, :])
@@ -828,9 +850,10 @@ class SuperCell(object):
             axes = plt.mlibplt.figure().add_subplot(111, **d)
 
         # Create vector objects
+        o = self.origo
         v = []
         for a in axis:
-            v.append(np.vstack(([0.]*len(axis), self.cell[a, axis])))
+            v.append(np.vstack((o[axis], o[axis] + self.cell[a, axis])))
         v = np.array(v)
 
         if isinstance(axes, plt.mlib3d.Axes3D):
@@ -838,7 +861,7 @@ class SuperCell(object):
             for vv in v:
                 axes.plot(vv[:, 0], vv[:, 1], vv[:, 2], *args, **kwargs)
 
-            v0, v1 = v[0], v[1]
+            v0, v1 = v[0], v[1] - o
             axes.plot(v0[1, 0] + v1[:, 0], v0[1, 1] + v1[:, 1], v0[1, 2] + v1[:, 2], *args, **kwargs)
 
             axes.set_zlabel('Ang')
@@ -847,7 +870,7 @@ class SuperCell(object):
             for vv in v:
                 axes.plot(vv[:, 0], vv[:, 1], *args, **kwargs)
 
-            v0, v1 = v[0], v[1]
+            v0, v1 = v[0], v[1] - o[axis]
             axes.plot(v0[1, 0] + v1[:, 0], v0[1, 1] + v1[:, 1], *args, **kwargs)
             axes.plot(v1[1, 0] + v0[:, 0], v1[1, 1] + v0[:, 1], *args, **kwargs)
 

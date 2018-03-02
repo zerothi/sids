@@ -5,13 +5,31 @@ import functools as ftool
 import numpy as np
 
 import sisl._array as _a
-from .messages import warn
-from ._help import get_dtype, ensure_array
+from .messages import warn, SislError
+from ._help import get_dtype
 from ._help import _zip as zip, _range as range, _map as map
 from .utils.ranges import array_arange
 from .sparse import SparseCSR
 
 __all__ = ['SparseAtom', 'SparseOrbital']
+
+
+def _get_eta(obj, desc, eta):
+    """ Create a TQDM eta progress bar in when it is requested. Otherwise returns a fake object """
+    if eta:
+        from tqdm import tqdm
+        eta = tqdm(total=obj.na, desc=obj.__class__.__name__ + desc)
+    else:
+        class Fake(object):
+            __slots__ = []
+            def __init__(self):
+                pass
+            def update(self, n=1):
+                pass
+            def close(self):
+                pass
+        eta = Fake()
+    return eta
 
 
 class _SparseGeometry(object):
@@ -157,8 +175,8 @@ class _SparseGeometry(object):
            integer list of supercell indices (all smaller than `n_s`) that the current blocks of matrices
            are being transferred to. Must have same length as `old`.
         """
-        old = ensure_array(old)
-        new = ensure_array(new)
+        old = _a.asarrayi(old).ravel()
+        new = _a.asarrayi(new).ravel()
 
         if len(old) != len(new):
             raise ValueError(self.__class__.__name__+".translate_cells requires input and output indices with "
@@ -255,8 +273,6 @@ class _SparseGeometry(object):
         # Conversion before doing Rij on geometry
         # We default to expect atoms
         conv = lambda val: val
-        # Always only keep unique entries
-        col_conv = np.unique
 
         if what == 'atom':
             cls = SparseAtom
@@ -346,7 +362,8 @@ class _SparseGeometry(object):
                 # Not found, i.e. new, so no need to translate
                 pass
 
-        assert len(old) in [self.n_s, sc.n_s], "Not all supercells are accounted for"
+        if len(old) not in [self.n_s, sc.n_s]:
+            raise SislError("Not all supercells are accounted for")
 
         # 1. Ensure that any one of the *old* supercells that
         #    are now deleted are put in the end
@@ -361,9 +378,12 @@ class _SparseGeometry(object):
         new = _a.arrayi(new)
 
         # Assert that there are only unique values
-        assert len(np.unique(old)) == len(old), "non-unique values in old set_nsc"
-        assert len(np.unique(new)) == len(new), "non-unique values in new set_nsc"
-        assert self.n_s == len(old), "non-valid size of in old set_nsc"
+        if len(np.unique(old)) != len(old):
+            raise SislError("non-unique values in old set_nsc")
+        if len(np.unique(new)) != len(new):
+            raise SislError("non-unique values in new set_nsc")
+        if self.n_s != len(old):
+            raise SislError("non-valid size of in old set_nsc")
 
         # Figure out if we need to do any work
         keep = (old != new).nonzero()[0]
@@ -523,21 +543,8 @@ class _SparseGeometry(object):
 
         iR = self.geom.iR(na_iR)
 
-        # Get number of atoms
-        na = self.na
-        na_run = 0
-
-        from time import time
-        from sys import stdout
-        t0 = time()
-        name = self.__class__.__name__
-
-        def wstdout(st):
-            # Write-out initial line to inform user of the function running
-            stdout.write(st)
-            stdout.flush()
-
-        wstdout(name + ".construct() ETA = ?????h ??m ?????s\r")
+        # Create eta-object
+        eta = _get_eta(self, '.construct()', eta)
 
         # Do the loop
         for ias, idxs in self.geom.iter_block(iR=iR, method=method):
@@ -550,20 +557,9 @@ class _SparseGeometry(object):
             for ia in ias:
                 func(self, ia, idxs, idxs_xyz)
 
-            if eta:
-                # calculate the remaining atoms to process
-                na_run += len(ias)
-                na -= len(ias)
-                # calculate hours, minutes, seconds
-                m, s = divmod((time()-t0)/na_run * na, 60)
-                h, m = divmod(m, 60)
-                wstdout(name + ".construct() ETA = {0:5d}h {1:2d}m {2:5.2f}s\r".format(int(h), int(m), s))
+            eta.update(len(ias))
 
-        if eta:
-            # calculate hours, minutes, seconds spend on the computation
-            m, s = divmod((time()-t0), 60)
-            h, m = divmod(m, 60)
-            wstdout(name + ".construct() finished after {0:d}h {1:d}m {2:.1f}s\n".format(int(h), int(m), s))
+        eta.close()
 
     @property
     def finalized(self):
@@ -624,8 +620,8 @@ class _SparseGeometry(object):
         b : array_like
              the second list of atomic coordinates
         """
-        a = ensure_array(a)
-        b = ensure_array(b)
+        a = _a.asarrayi(a)
+        b = _a.asarrayi(b)
         # Create full index list
         full = _a.arangei(len(self.geom))
         # Regardless of whether swapping or new indices are requested
@@ -895,7 +891,7 @@ class SparseAtom(_SparseGeometry):
             only loop on the non-zero elements coinciding with the atoms
         """
         if not atom is None:
-            atom = ensure_array(atom)
+            atom = _a.asarrayi(atom).ravel()
             for i, j in self._csr.iter_nnz(atom):
                 yield i, j
         else:
@@ -1000,7 +996,7 @@ class SparseAtom(_SparseGeometry):
         # Reduce the sparsity pattern, first create the new one
         S = self.__class__(geom, self.dim, self.dtype, np.amax(self._csr.ncol), **self._cls_kwargs())
 
-        def sca2sca(M, a, m, seps, axis):
+        def _sca2sca(M, a, m, seps, axis):
             # Converts an o from M to m
             isc = np.array(M.a2isc(a), np.int32, copy=True)
             isc[axis] = isc[axis] * seps
@@ -1020,7 +1016,7 @@ class SparseAtom(_SparseGeometry):
         for ja, ia in self.iter_nnz(range(geom.na)):
 
             # Get the equivalent orbital in the smaller cell
-            a, afp, afm = sca2sca(self.geom, ia, S.geom, seps, axis)
+            a, afp, afm = _sca2sca(self.geom, ia, S.geom, seps, axis)
             if a is None:
                 continue
             S[ja, a + afp] = self[ja, ia]
@@ -1351,7 +1347,7 @@ class SparseOrbital(_SparseGeometry):
         if not atom is None:
             orbital = self.geom.a2o(atom)
         elif not orbital is None:
-            orbital = ensure_array(orbital)
+            orbital = _a.asarrayi(orbital)
         if not orbital is None:
             for i, j in self._csr.iter_nnz(orbital):
                 yield i, j
@@ -1457,7 +1453,7 @@ class SparseOrbital(_SparseGeometry):
         # Reduce the sparsity pattern, first create the new one
         S = self.__class__(geom, self.dim, self.dtype, np.amax(self._csr.ncol), **self._cls_kwargs())
 
-        def sco2sco(M, o, m, seps, axis):
+        def _sco2sco(M, o, m, seps, axis):
             # Converts an o from M to m
             isc = _a.arrayi(M.o2isc(o), copy=True)
             isc[axis] = isc[axis] * seps
@@ -1477,7 +1473,7 @@ class SparseOrbital(_SparseGeometry):
         for jo, io in self.iter_nnz(orbital=range(geom.no)):
 
             # Get the equivalent orbital in the smaller cell
-            o, ofp, ofm = sco2sco(self.geom, io, S.geom, seps, axis)
+            o, ofp, ofm = _sco2sco(self.geom, io, S.geom, seps, axis)
             if o is None:
                 continue
             d = self[jo, io]

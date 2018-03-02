@@ -1,14 +1,13 @@
 from __future__ import print_function, division
 
 from functools import wraps
-from os.path import splitext, isfile
+from os.path import split, splitext, isfile
 import gzip
 
 import numpy as np
 
-from sisl.messages import SislException, SislWarning, SislInfo
+from sisl.messages import SislWarning, SislInfo
 from sisl.utils.misc import str_spec
-from sisl._help import _str
 from ._help import *
 
 
@@ -211,7 +210,7 @@ def get_sile_class(filename, *args, **kwargs):
 
     try:
         # Create list of endings on this file
-        f = filename
+        f = split(filename)[1]
         end_list = []
         end = ''
 

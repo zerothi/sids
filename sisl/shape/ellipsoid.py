@@ -1,12 +1,11 @@
 from __future__ import print_function, division
 
-from math import pi, sqrt
+from math import pi
 import numpy as np
 from numpy import dot
 from numpy import fabs, logical_and
 
 from sisl.messages import warn
-from sisl._help import ensure_array
 import sisl._array as _a
 from sisl.utils.mathematics import orthogonalize, fnorm, fnorm2, expand
 
@@ -39,7 +38,7 @@ class Ellipsoid(PureShape):
 
     def __init__(self, v, center=None):
         super(Ellipsoid, self).__init__(center)
-        v = ensure_array(v, np.float64)
+        v = _a.asarrayd(v)
         if v.size == 1:
             self._v = np.identity(3, np.float64) * v # a "Euclidean" sphere
         elif v.size == 3:
@@ -49,10 +48,12 @@ class Ellipsoid(PureShape):
         else:
             raise ValueError(self.__class__.__name__ + " requires initialization with 3 vectors defining the ellipsoid")
 
-        # The vectors are not orthogonal, orthogonalize them
-        if np.fabs(np.dot(self._v, self._v.T) - np.identity(3)).sum() > 1e-12:
+        # If the vectors are not orthogonal, orthogonalize them and issue a warning
+        vv = np.fabs(np.dot(self._v, self._v.T) - np.diag(fnorm2(self._v)))
+        if vv.sum() > 1e-9:
             warn(self.__class__.__name__ + ' principal vectors are not orthogonal. '
-                 'sisl orthogonalizes the vectors (retaining 1st vector).')
+                 'sisl orthogonalizes the vectors (retaining 1st vector)!')
+
         self._v[1, :] = orthogonalize(self._v[0, :], self._v[1, :])
         self._v[2, :] = orthogonalize(self._v[0, :], self._v[2, :])
         self._v[2, :] = orthogonalize(self._v[1, :], self._v[2, :])
@@ -80,7 +81,7 @@ class Ellipsoid(PureShape):
         scale : float or (3,)
             the scale parameter for each of the vectors defining the `Ellipsoid`
         """
-        scale = ensure_array(scale, np.float64)
+        scale = _a.asarrayd(scale)
         if scale.size == 3:
             scale.shape = (3, 1)
         return self.__class__(self._v * scale, self.center)
@@ -93,11 +94,11 @@ class Ellipsoid(PureShape):
         radius : float or (3,)
            the extension in Ang per ellipsoid radial vector
         """
-        radius = ensure_array(radius, np.float64)
+        radius = _a.asarrayd(radius)
         if radius.size == 1:
-            v0 = expand(self._v[0, :], radius[0])
-            v1 = expand(self._v[1, :], radius[0])
-            v2 = expand(self._v[2, :], radius[0])
+            v0 = expand(self._v[0, :], radius)
+            v1 = expand(self._v[1, :], radius)
+            v2 = expand(self._v[2, :], radius)
         elif radius.size == 3:
             v0 = expand(self._v[0, :], radius[0])
             v1 = expand(self._v[1, :], radius[1])
@@ -126,8 +127,7 @@ class Ellipsoid(PureShape):
 
     def within_index(self, other):
         """ Return indices of the points that are within the shape """
-        other = ensure_array(other, np.float64)
-        ndim = other.ndim
+        other = _a.asarrayd(other)
         other.shape = (-1, 3)
 
         # First check
@@ -153,8 +153,6 @@ class Ellipsoid(PureShape):
 class Sphere(Ellipsoid):
     """ 3D Sphere
 
-    Equivalent to ``Ellipsoid([r, r, r])``.
-
     Parameters
     ----------
     r : float
@@ -162,9 +160,53 @@ class Sphere(Ellipsoid):
     """
 
     def __init__(self, radius, center=None):
-        radius = ensure_array(radius, np.float64).ravel()[0]
+        radius = _a.asarrayd(radius).ravel()
+        if len(radius) > 1:
+            raise ValueError(self.__class__.__name__ + ' is defined via a single radius. '
+                             'An array with more than 1 element is not an allowed argument '
+                             'to __init__.')
         super(Sphere, self).__init__(radius, center=center)
+
+    def __repr__(self):
+        return self.__class__.__name__ + ('{{c({1:.2f} {2:.2f} {3:.2f}) '
+                                          'r({0:.2f})}}').format(self.radius, *self.center)
+
+    def copy(self):
+        return self.__class__(self.radius, self.center)
+
+    def volume(self):
+        """ Return the volume of the sphere """
+        return 4. / 3. * pi * self.radius ** 3
+
+    def scale(self, scale):
+        """ Return a new sphere with a larger radius
+
+        Parameters
+        ----------
+        scale : float
+            the scale parameter for the radius
+        """
+        return self.__class__(self.radius * scale, self.center)
+
+    def expand(self, radius):
+        """ Expand sphere by a constant radius
+
+        Parameters
+        ----------
+        radius : float
+           the extension in Ang per ellipsoid radial vector
+        """
+        return self.__class__(self.radius + radius, self.center)
+
+    @property
+    def radius(self):
+        """ Return the radius of the Sphere """
+        return self._v[0, 0]
 
     def toSphere(self):
         """ Return a copy of it-self """
         return self.copy()
+
+    def toEllipsoid(self):
+        """ Convert this sphere into an ellipsoid """
+        return Ellipsoid(self.radius, self.center)
