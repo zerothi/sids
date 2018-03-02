@@ -65,7 +65,7 @@
             
             
               <div class="version">
-                0.9.2-336
+                0.9.2-364
               </div>
             
           
@@ -190,8 +190,8 @@
 <span class="kn">from</span> <span class="nn">scipy.sparse</span> <span class="k">import</span> <span class="n">isspmatrix_lil</span>
 
 <span class="kn">import</span> <span class="nn">sisl._array</span> <span class="k">as</span> <span class="nn">_a</span>
-<span class="kn">from</span> <span class="nn">.messages</span> <span class="k">import</span> <span class="n">warn</span>
-<span class="kn">from</span> <span class="nn">._help</span> <span class="k">import</span> <span class="n">array_fill_repeat</span><span class="p">,</span> <span class="n">ensure_array</span><span class="p">,</span> <span class="n">get_dtype</span>
+<span class="kn">from</span> <span class="nn">.messages</span> <span class="k">import</span> <span class="n">warn</span><span class="p">,</span> <span class="n">SislError</span>
+<span class="kn">from</span> <span class="nn">._help</span> <span class="k">import</span> <span class="n">array_fill_repeat</span><span class="p">,</span> <span class="n">get_dtype</span>
 <span class="kn">from</span> <span class="nn">._help</span> <span class="k">import</span> <span class="n">_range</span> <span class="k">as</span> <span class="nb">range</span><span class="p">,</span> <span class="n">_zip</span> <span class="k">as</span> <span class="nb">zip</span><span class="p">,</span> <span class="n">_map</span> <span class="k">as</span> <span class="nb">map</span>
 <span class="kn">from</span> <span class="nn">.utils.ranges</span> <span class="k">import</span> <span class="n">array_arange</span>
 
@@ -565,8 +565,9 @@
         <span class="c1"># Since map puts it on the stack, we have to force the evaluation.</span>
         <span class="nb">list</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="n">func</span><span class="p">,</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])))</span>
 
-        <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">col</span><span class="p">)</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">nnz</span><span class="p">,</span> <span class="p">(</span><span class="s1">&#39;Final size in the sparse matrix finalization &#39;</span>
-                                      <span class="s1">&#39;went wrong.&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">col</span><span class="p">)</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nnz</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">SislError</span><span class="p">(</span><span class="s1">&#39;Final size in the sparse matrix finalization &#39;</span>
+                            <span class="s1">&#39;went wrong.&#39;</span><span class="p">)</span>
 
         <span class="c1"># Check that all column indices are within the expected shape</span>
         <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">col</span><span class="p">):</span>
@@ -589,11 +590,11 @@
 <span class="sd">           remove edges which are in the `exclude` list.</span>
 <span class="sd">           Default to `row`.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">row</span> <span class="o">=</span> <span class="n">unique</span><span class="p">(</span><span class="n">ensure_array</span><span class="p">(</span><span class="n">row</span><span class="p">))</span>
+        <span class="n">row</span> <span class="o">=</span> <span class="n">unique</span><span class="p">(</span><span class="n">_a</span><span class="o">.</span><span class="n">asarrayi</span><span class="p">(</span><span class="n">row</span><span class="p">))</span>
         <span class="k">if</span> <span class="n">exclude</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">exclude</span> <span class="o">=</span> <span class="n">row</span><span class="o">.</span><span class="n">view</span><span class="p">()</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="n">exclude</span> <span class="o">=</span> <span class="n">unique</span><span class="p">(</span><span class="n">ensure_array</span><span class="p">(</span><span class="n">exclude</span><span class="p">))</span>
+            <span class="n">exclude</span> <span class="o">=</span> <span class="n">unique</span><span class="p">(</span><span class="n">_a</span><span class="o">.</span><span class="n">asarrayi</span><span class="p">(</span><span class="n">exclude</span><span class="p">))</span>
 
         <span class="c1"># Now get the edges</span>
         <span class="n">ptr</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ptr</span><span class="o">.</span><span class="n">view</span><span class="p">()</span>
@@ -621,7 +622,7 @@
         <span class="n">cnz</span> <span class="o">=</span> <span class="n">count_nonzero</span>
 
         <span class="c1"># Sort the columns</span>
-        <span class="n">columns</span> <span class="o">=</span> <span class="n">unique</span><span class="p">(</span><span class="n">ensure_array</span><span class="p">(</span><span class="n">columns</span><span class="p">))</span>
+        <span class="n">columns</span> <span class="o">=</span> <span class="n">unique</span><span class="p">(</span><span class="n">_a</span><span class="o">.</span><span class="n">asarrayi</span><span class="p">(</span><span class="n">columns</span><span class="p">))</span>
         <span class="n">n_cols</span> <span class="o">=</span> <span class="n">cnz</span><span class="p">(</span><span class="n">columns</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
 
         <span class="c1"># Grab pointers</span>
@@ -634,7 +635,7 @@
         <span class="c1"># Convert to boolean array where we have columns to be deleted</span>
         <span class="n">lidx</span> <span class="o">=</span> <span class="n">in1d</span><span class="p">(</span><span class="n">col</span><span class="p">[</span><span class="n">idx</span><span class="p">],</span> <span class="n">columns</span><span class="p">)</span>
         <span class="c1"># Count number of deleted entries per row</span>
-        <span class="n">ndel</span> <span class="o">=</span> <span class="n">ensure_array</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="n">count_nonzero</span><span class="p">,</span> <span class="n">split</span><span class="p">(</span><span class="n">lidx</span><span class="p">,</span> <span class="n">_a</span><span class="o">.</span><span class="n">cumsumi</span><span class="p">(</span><span class="n">ncol</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]))))</span>
+        <span class="n">ndel</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">fromiteri</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="n">count_nonzero</span><span class="p">,</span> <span class="n">split</span><span class="p">(</span><span class="n">lidx</span><span class="p">,</span> <span class="n">_a</span><span class="o">.</span><span class="n">cumsumi</span><span class="p">(</span><span class="n">ncol</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]))))</span>
         <span class="c1"># Backconvert lidx to deleted indices</span>
         <span class="n">lidx</span> <span class="o">=</span> <span class="n">idx</span><span class="p">[</span><span class="n">lidx</span><span class="p">]</span>
         <span class="k">del</span> <span class="n">idx</span>
@@ -703,7 +704,7 @@
         <span class="c1"># Convert to boolean array where we have columns to be deleted</span>
         <span class="n">lidx</span> <span class="o">=</span> <span class="n">col</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="n">nc</span>
         <span class="c1"># Count number of deleted entries per row</span>
-        <span class="n">ndel</span> <span class="o">=</span> <span class="n">ensure_array</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="n">count_nonzero</span><span class="p">,</span> <span class="n">split</span><span class="p">(</span><span class="n">lidx</span><span class="p">,</span> <span class="n">_a</span><span class="o">.</span><span class="n">cumsumi</span><span class="p">(</span><span class="n">ncol</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]))))</span>
+        <span class="n">ndel</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">fromiteri</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="n">count_nonzero</span><span class="p">,</span> <span class="n">split</span><span class="p">(</span><span class="n">lidx</span><span class="p">,</span> <span class="n">_a</span><span class="o">.</span><span class="n">cumsumi</span><span class="p">(</span><span class="n">ncol</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]))))</span>
         <span class="c1"># Backconvert lidx to deleted indices</span>
         <span class="n">lidx</span> <span class="o">=</span> <span class="n">idx</span><span class="p">[</span><span class="n">lidx</span><span class="p">]</span>
         <span class="k">del</span> <span class="n">idx</span>
@@ -733,8 +734,8 @@
 <span class="sd">        new : int or array_like</span>
 <span class="sd">           new column indices</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">old</span> <span class="o">=</span> <span class="n">ensure_array</span><span class="p">(</span><span class="n">old</span><span class="p">)</span>
-        <span class="n">new</span> <span class="o">=</span> <span class="n">ensure_array</span><span class="p">(</span><span class="n">new</span><span class="p">)</span>
+        <span class="n">old</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">asarrayi</span><span class="p">(</span><span class="n">old</span><span class="p">)</span>
+        <span class="n">new</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">asarrayi</span><span class="p">(</span><span class="n">new</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">old</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">new</span><span class="p">):</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="o">+</span><span class="s2">&quot;.translate_columns requires input and output columns with &quot;</span>
@@ -857,7 +858,7 @@
                 <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">col</span><span class="p">[</span><span class="n">ptr</span><span class="p">:</span><span class="n">ptr</span><span class="o">+</span><span class="n">n</span><span class="p">]:</span>
                     <span class="k">yield</span> <span class="n">r</span><span class="p">,</span> <span class="n">c</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">ensure_array</span><span class="p">(</span><span class="n">row</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">_a</span><span class="o">.</span><span class="n">asarrayi</span><span class="p">(</span><span class="n">row</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">():</span>
                 <span class="n">n</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ncol</span><span class="p">[</span><span class="n">r</span><span class="p">]</span>
                 <span class="n">ptr</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ptr</span><span class="p">[</span><span class="n">r</span><span class="p">]</span>
                 <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">col</span><span class="p">[</span><span class="n">ptr</span><span class="p">:</span><span class="n">ptr</span><span class="o">+</span><span class="n">n</span><span class="p">]:</span>
@@ -900,7 +901,7 @@
         <span class="c1">#                     &quot;However, multiple columns at a time are allowed.&quot;)</span>
 
         <span class="c1"># Ensure flattened array...</span>
-        <span class="n">j</span> <span class="o">=</span> <span class="n">ensure_array</span><span class="p">(</span><span class="n">j</span><span class="p">)</span>
+        <span class="n">j</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">asarrayi</span><span class="p">(</span><span class="n">j</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">j</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">_a</span><span class="o">.</span><span class="n">arrayi</span><span class="p">([])</span>
 
@@ -1004,7 +1005,7 @@
 <span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="c1"># Ensure flattened array...</span>
-        <span class="n">j</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">asarrayi</span><span class="p">(</span><span class="n">j</span><span class="p">)</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+        <span class="n">j</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">asarrayi</span><span class="p">(</span><span class="n">j</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
 
         <span class="c1"># Make it a little easier</span>
         <span class="n">ptr</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ptr</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
@@ -1178,7 +1179,7 @@
                     <span class="n">rows</span><span class="p">[</span><span class="n">j</span><span class="p">:</span><span class="n">j</span><span class="o">+</span><span class="n">N</span><span class="p">]</span> <span class="o">=</span> <span class="n">r</span>
                     <span class="n">j</span> <span class="o">+=</span> <span class="n">N</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="n">row</span> <span class="o">=</span> <span class="n">ensure_array</span><span class="p">(</span><span class="n">row</span><span class="p">)</span>
+            <span class="n">row</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">asarrayi</span><span class="p">(</span><span class="n">row</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
             <span class="n">idx</span> <span class="o">=</span> <span class="n">array_arange</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ptr</span><span class="p">[</span><span class="n">row</span><span class="p">],</span> <span class="n">n</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">ncol</span><span class="p">[</span><span class="n">row</span><span class="p">])</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="n">only_col</span><span class="p">:</span>
                 <span class="n">N</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">sumi</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ncol</span><span class="p">[</span><span class="n">row</span><span class="p">])</span>
@@ -1294,7 +1295,7 @@
 <span class="sd">        indices : array_like</span>
 <span class="sd">           the indices of the rows *and* columns that are removed in the sparse pattern</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">indices</span> <span class="o">=</span> <span class="n">ensure_array</span><span class="p">(</span><span class="n">indices</span><span class="p">)</span>
+        <span class="n">indices</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">asarrayi</span><span class="p">(</span><span class="n">indices</span><span class="p">)</span>
 
         <span class="c1"># Check if we have a square matrix or a rectangular one</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]:</span>
@@ -1313,7 +1314,7 @@
 <span class="sd">        indices : array_like</span>
 <span class="sd">           the indices of the rows *and* columns that are retained in the sparse pattern</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">indices</span> <span class="o">=</span> <span class="n">ensure_array</span><span class="p">(</span><span class="n">indices</span><span class="p">)</span>
+        <span class="n">indices</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">asarrayi</span><span class="p">(</span><span class="n">indices</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
 
         <span class="c1"># Check if we have a square matrix or a rectangular one</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]:</span>
@@ -1371,8 +1372,8 @@
 
         <span class="c1"># Count number of entries</span>
         <span class="n">idx_take</span> <span class="o">=</span> <span class="n">col_data</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="p">:]</span> <span class="o">&gt;=</span> <span class="mi">0</span>
-        <span class="n">ncol1</span><span class="p">[:]</span> <span class="o">=</span> <span class="n">ensure_array</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="n">count_nonzero</span><span class="p">,</span>
-                                    <span class="n">split</span><span class="p">(</span><span class="n">idx_take</span><span class="p">,</span> <span class="n">ptr1</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">])))</span>
+        <span class="n">ncol1</span><span class="p">[:]</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">fromiteri</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="n">count_nonzero</span><span class="p">,</span>
+                                    <span class="n">split</span><span class="p">(</span><span class="n">idx_take</span><span class="p">,</span> <span class="n">ptr1</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">])))</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
 
         <span class="c1"># Convert to indices</span>
         <span class="n">idx_take</span> <span class="o">=</span> <span class="n">idx_take</span><span class="o">.</span><span class="n">nonzero</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
@@ -1417,7 +1418,6 @@
             <span class="n">ret</span> <span class="o">=</span> <span class="n">empty</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">]],</span> <span class="n">dtype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
             <span class="n">ptr</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ptr</span><span class="o">.</span><span class="n">view</span><span class="p">()</span>
             <span class="n">ncol</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ncol</span><span class="o">.</span><span class="n">view</span><span class="p">()</span>
-            <span class="n">col</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">col</span><span class="o">.</span><span class="n">view</span><span class="p">()</span>
             <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
                 <span class="n">ret</span><span class="p">[</span><span class="n">r</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_D</span><span class="p">[</span><span class="n">ptr</span><span class="p">[</span><span class="n">r</span><span class="p">]:</span><span class="n">ptr</span><span class="p">[</span><span class="n">r</span><span class="p">]</span><span class="o">+</span><span class="n">ncol</span><span class="p">[</span><span class="n">r</span><span class="p">],</span> <span class="p">:]</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
 
@@ -1905,7 +1905,7 @@
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'../../',
-            VERSION:'0.9.2-336',
+            VERSION:'0.9.2-364',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true,

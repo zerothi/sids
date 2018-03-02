@@ -65,7 +65,7 @@
             
             
               <div class="version">
-                0.9.2-336
+                0.9.2-364
               </div>
             
           
@@ -179,6 +179,7 @@
 <span class="kn">from</span> <span class="nn">..sile</span> <span class="k">import</span> <span class="o">*</span>
 
 <span class="kn">from</span> <span class="nn">sisl._array</span> <span class="k">import</span> <span class="n">aranged</span>
+<span class="kn">from</span> <span class="nn">sisl.messages</span> <span class="k">import</span> <span class="n">info</span>
 <span class="kn">from</span> <span class="nn">sisl.unit.siesta</span> <span class="k">import</span> <span class="n">unit_convert</span>
 <span class="kn">from</span> <span class="nn">sisl</span> <span class="k">import</span> <span class="n">Geometry</span><span class="p">,</span> <span class="n">Atom</span><span class="p">,</span> <span class="n">Atoms</span><span class="p">,</span> <span class="n">SuperCell</span><span class="p">,</span> <span class="n">Grid</span><span class="p">,</span> <span class="n">SphericalOrbital</span>
 <span class="kn">from</span> <span class="nn">sisl.physics</span> <span class="k">import</span> <span class="n">DensityMatrix</span>
@@ -349,7 +350,16 @@
         <span class="n">H</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_read_class_spin</span><span class="p">(</span><span class="n">Hamiltonian</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
         <span class="n">S</span> <span class="o">=</span> <span class="n">H</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">_D</span><span class="p">[:,</span> <span class="n">H</span><span class="o">.</span><span class="n">S_idx</span><span class="p">]</span>
 
-        <span class="n">Ef</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_value</span><span class="p">(</span><span class="s1">&#39;Ef&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">])</span> <span class="o">*</span> <span class="n">Ry2eV</span>
+        <span class="n">Ef</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_value</span><span class="p">(</span><span class="s1">&#39;Ef&#39;</span><span class="p">)[:]</span> <span class="o">*</span> <span class="n">Ry2eV</span>
+        <span class="k">if</span> <span class="n">Ef</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">Ef</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="n">Ef</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">dEf</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">Ef</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">info</span><span class="p">(</span><span class="nb">repr</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;.read_hamiltonian found a calculation with spin-dependent Fermi-levels: &#39;</span>
+                 <span class="s1">&#39;dEf=</span><span class="si">{:.4f}</span><span class="s1"> eV. &#39;</span>
+                 <span class="s1">&#39;Both spin configurations are shifted to 0. This may change in future &#39;</span>
+                 <span class="s1">&#39;versions of sisl.&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">dEf</span><span class="p">))</span>
+
         <span class="n">sp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_crt_grp</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;SPARSE&#39;</span><span class="p">)</span>
 
         <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">H</span><span class="o">.</span><span class="n">spin</span><span class="p">)):</span>
@@ -357,7 +367,7 @@
             <span class="n">h</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">sp</span><span class="o">.</span><span class="n">variables</span><span class="p">[</span><span class="s1">&#39;H&#39;</span><span class="p">][</span><span class="n">i</span><span class="p">,</span> <span class="p">:],</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span> <span class="o">*</span> <span class="n">Ry2eV</span>
             <span class="c1"># Correct for the Fermi-level, Ef == 0</span>
             <span class="k">if</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">:</span>
-                <span class="n">h</span> <span class="o">-=</span> <span class="n">Ef</span> <span class="o">*</span> <span class="n">S</span><span class="p">[:]</span>
+                <span class="n">h</span> <span class="o">-=</span> <span class="n">Ef</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">*</span> <span class="n">S</span><span class="p">[:]</span>
             <span class="n">H</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">_D</span><span class="p">[:,</span> <span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">h</span><span class="p">[:]</span>
 
         <span class="k">return</span> <span class="n">H</span></div>
@@ -960,7 +970,7 @@
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'../../../../',
-            VERSION:'0.9.2-336',
+            VERSION:'0.9.2-364',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true,

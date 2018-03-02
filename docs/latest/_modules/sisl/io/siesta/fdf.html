@@ -65,7 +65,7 @@
             
             
               <div class="version">
-                0.9.2-336
+                0.9.2-364
               </div>
             
           
@@ -176,8 +176,9 @@
 <span class="kn">import</span> <span class="nn">warnings</span>
 
 <span class="c1"># Import sile objects</span>
-<span class="kn">from</span> <span class="nn">sisl._help</span> <span class="k">import</span> <span class="n">_str</span><span class="p">,</span> <span class="n">ensure_array</span>
-<span class="kn">from</span> <span class="nn">sisl.messages</span> <span class="k">import</span> <span class="n">warn</span><span class="p">,</span> <span class="n">info</span>
+<span class="kn">import</span> <span class="nn">sisl._array</span> <span class="k">as</span> <span class="nn">_a</span>
+<span class="kn">from</span> <span class="nn">sisl._help</span> <span class="k">import</span> <span class="n">_str</span>
+<span class="kn">from</span> <span class="nn">sisl.messages</span> <span class="k">import</span> <span class="n">warn</span>
 <span class="kn">from</span> <span class="nn">.sile</span> <span class="k">import</span> <span class="n">SileSiesta</span>
 <span class="kn">from</span> <span class="nn">..sile</span> <span class="k">import</span> <span class="o">*</span>
 <span class="kn">from</span> <span class="nn">sisl.io._help</span> <span class="k">import</span> <span class="o">*</span>
@@ -185,7 +186,6 @@
 <span class="kn">from</span> <span class="nn">.binaries</span> <span class="k">import</span> <span class="n">TSHSSileSiesta</span><span class="p">,</span> <span class="n">TSDESileSiesta</span>
 <span class="kn">from</span> <span class="nn">.binaries</span> <span class="k">import</span> <span class="n">DMSileSiesta</span><span class="p">,</span> <span class="n">HSXSileSiesta</span>
 <span class="kn">from</span> <span class="nn">.fa</span> <span class="k">import</span> <span class="n">faSileSiesta</span>
-<span class="kn">from</span> <span class="nn">.eig</span> <span class="k">import</span> <span class="n">eigSileSiesta</span>
 <span class="kn">from</span> <span class="nn">.pdos</span> <span class="k">import</span> <span class="n">pdosSileSiesta</span>
 <span class="kn">from</span> <span class="nn">.siesta</span> <span class="k">import</span> <span class="n">ncSileSiesta</span>
 <span class="kn">from</span> <span class="nn">.basis</span> <span class="k">import</span> <span class="n">ionxmlSileSiesta</span><span class="p">,</span> <span class="n">ionncSileSiesta</span>
@@ -395,7 +395,8 @@
 
         <span class="k">return</span> <span class="n">l</span>
 
-    <span class="k">def</span> <span class="nf">_type</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">_type</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Determine the type by the value</span>
 
 <span class="sd">        Parameters</span>
@@ -907,7 +908,7 @@
         <span class="n">lor</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;AtomicCoordinatesOrigin&#39;</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">lor</span><span class="p">:</span>
             <span class="k">if</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;origin&#39;</span><span class="p">,</span> <span class="kc">True</span><span class="p">):</span>
-                <span class="n">origo</span> <span class="o">=</span> <span class="n">ensure_array</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="nb">float</span><span class="p">,</span> <span class="n">lor</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">()[:</span><span class="mi">3</span><span class="p">]))</span> <span class="o">*</span> <span class="n">s</span>
+                <span class="n">origo</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">asarrayd</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="nb">float</span><span class="p">,</span> <span class="n">lor</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">()[:</span><span class="mi">3</span><span class="p">]))</span> <span class="o">*</span> <span class="n">s</span>
         <span class="c1"># Origo cannot be interpreted with fractional coordinates</span>
         <span class="c1"># hence, it is not transformed.</span>
 
@@ -942,9 +943,6 @@
         <span class="n">xyz</span> <span class="o">*=</span> <span class="n">s</span>
         <span class="n">xyz</span> <span class="o">+=</span> <span class="n">origo</span>
 
-        <span class="c1"># Now we read in the species</span>
-        <span class="n">ns</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;NumberOfSpecies&#39;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
-
         <span class="c1"># Read the block (not strictly needed, if so we simply set all atoms to H)</span>
         <span class="n">atom</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">read_basis</span><span class="p">()</span>
         <span class="k">if</span> <span class="n">atom</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
@@ -952,8 +950,6 @@
 
             <span class="c1"># Default atom (hydrogen)</span>
             <span class="n">atom</span> <span class="o">=</span> <span class="n">Atom</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
-            <span class="c1"># Force number of species to 1</span>
-            <span class="n">ns</span> <span class="o">=</span> <span class="mi">1</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">atom</span> <span class="o">=</span> <span class="p">[</span><span class="n">atom</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">species</span><span class="p">]</span>
 
@@ -1358,7 +1354,7 @@
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'../../../../',
-            VERSION:'0.9.2-336',
+            VERSION:'0.9.2-364',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true,
