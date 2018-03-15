@@ -65,7 +65,7 @@
             
             
               <div class="version">
-                0.9.2-365
+                0.9.2-394
               </div>
             
           
@@ -178,7 +178,7 @@
 <span class="kn">from</span> <span class="nn">sisl._help</span> <span class="k">import</span> <span class="n">_zip</span> <span class="k">as</span> <span class="nb">zip</span><span class="p">,</span> <span class="n">_range</span> <span class="k">as</span> <span class="nb">range</span>
 
 
-<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;State&#39;</span><span class="p">,</span> <span class="s1">&#39;CState&#39;</span><span class="p">]</span>
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;State&#39;</span><span class="p">,</span> <span class="s1">&#39;CoeffState&#39;</span><span class="p">]</span>
 
 <span class="n">_dot</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span>
 <span class="n">_conj</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">conjugate</span>
@@ -224,12 +224,18 @@
 <span class="sd">           an info dictionary that turns into an attribute on the object.</span>
 <span class="sd">           This `info` may contain anything that may be relevant for the state.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">state</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">state</span><span class="p">)</span>
-        <span class="c1"># Correct for vector</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="o">.</span><span class="n">shape</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">state</span> <span class="o">=</span> <span class="n">state</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">parent</span> <span class="o">=</span> <span class="n">parent</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">info</span> <span class="o">=</span> <span class="n">info</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__state_finalize__</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">__state_finalize__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Finalizer for the state object. &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">state</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">)</span>
+            <span class="c1"># Correct for vector</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="o">.</span><span class="n">shape</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; The string representation of this object &quot;&quot;&quot;</span>
@@ -300,12 +306,30 @@
 <span class="sd">        -------</span>
 <span class="sd">        np.ndarray : the normalization for each state</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">dtype</span> <span class="o">=</span> <span class="n">dtype_complex_to_real</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
-        <span class="n">n</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">norm2</span><span class="p">())</span></div>
 
-        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">)):</span>
-            <span class="n">n</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">_idot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="p">:])</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">n</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">n</span><span class="p">)</span></div>
+<div class="viewcode-block" id="State.norm2"><a class="viewcode-back" href="../../../api-generated/sisl.physics.State.html#sisl.physics.State.norm2">[docs]</a>    <span class="k">def</span> <span class="nf">norm2</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot; Return a vector with the norm of each state :math:`\langle\psi|\psi\rangle`</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        np.ndarray : the normalization for each state</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">dtype</span> <span class="o">=</span> <span class="n">dtype_complex_to_real</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+        <span class="n">shape</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">n</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="n">shape</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span>
+
+        <span class="c1"># A state should only be up to</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">shape</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
+                <span class="n">n</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">_idot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="p">:])</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">n</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">shape</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
+                <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
+                    <span class="n">n</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">_idot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">,</span> <span class="p">:])</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">n</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">SislError</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39;.norm2 does not implement more than 2 dimensions on states.&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">n</span></div>
 
 <div class="viewcode-block" id="State.normalize"><a class="viewcode-back" href="../../../api-generated/sisl.physics.State.html#sisl.physics.State.normalize">[docs]</a>    <span class="k">def</span> <span class="nf">normalize</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sa">r</span><span class="sd">&quot;&quot;&quot; Return a normalized state where each state has :math:`|\psi|^2=1`</span>
@@ -313,7 +337,7 @@
 <span class="sd">        This is roughly equivalent to:</span>
 
 <span class="sd">        &gt;&gt;&gt; state = State(np.arange(10))</span>
-<span class="sd">        &gt;&gt;&gt; n = np.sqrt(state.norm())</span>
+<span class="sd">        &gt;&gt;&gt; n = state.norm()</span>
 <span class="sd">        &gt;&gt;&gt; norm_state = State(state.state / n.reshape(-1, 1))</span>
 
 <span class="sd">        Returns</span>
@@ -321,7 +345,7 @@
 <span class="sd">        state : a new state with all states normalized, otherwise equal to this</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">n</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">norm</span><span class="p">()</span>
-        <span class="n">s</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">state</span> <span class="o">/</span> <span class="n">n</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">parent</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="p">)</span>
+        <span class="n">s</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">state</span> <span class="o">/</span> <span class="n">n</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">n</span><span class="o">.</span><span class="n">shape</span> <span class="o">+</span> <span class="p">(</span><span class="mi">1</span><span class="p">,)),</span> <span class="n">parent</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="p">)</span>
         <span class="n">s</span><span class="o">.</span><span class="n">info</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">info</span>
         <span class="k">return</span> <span class="n">s</span></div>
 
@@ -360,19 +384,19 @@
 <span class="sd">        -------</span>
 <span class="sd">        state : a new state only containing the requested elements</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">idx</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">asarrayi</span><span class="p">(</span><span class="n">idx</span><span class="p">)</span>
-        <span class="n">sub</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="n">idx</span><span class="p">,</span> <span class="p">:]</span><span class="o">.</span><span class="n">copy</span><span class="p">(),</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="p">)</span>
+        <span class="n">idx</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">asarrayi</span><span class="p">(</span><span class="n">idx</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span> <span class="c1"># this ensures that the first dimension is preserved</span>
+        <span class="n">sub</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">(),</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="p">)</span>
         <span class="n">sub</span><span class="o">.</span><span class="n">info</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">info</span>
         <span class="k">return</span> <span class="n">sub</span></div>
 
-<div class="viewcode-block" id="State.toCState"><a class="viewcode-back" href="../../../api-generated/sisl.physics.State.html#sisl.physics.State.toCState">[docs]</a>    <span class="k">def</span> <span class="nf">toCState</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">norm</span><span class="o">=</span><span class="mf">1.</span><span class="p">):</span>
-        <span class="sa">r</span><span class="sd">&quot;&quot;&quot; Transforms the states into normalized values equal to `norm` and specifies the coefficients in `CState` as the norm</span>
+<div class="viewcode-block" id="State.toCoeffState"><a class="viewcode-back" href="../../../api-generated/sisl.physics.State.html#sisl.physics.State.toCoeffState">[docs]</a>    <span class="k">def</span> <span class="nf">toCoeffState</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">norm</span><span class="o">=</span><span class="mf">1.</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot; Transforms the states into normalized values equal to `norm` and specifies the coefficients in `CoeffState` as the norm</span>
 
 <span class="sd">        This is an easy method to renormalize the state vectors to a common (or state dependent) normalization constant.</span>
 
 <span class="sd">        .. math::</span>
-<span class="sd">            c_i &amp;= \sqrt{\langle \psi_i | \psi_i\rangle} / \mathrm{norm}</span>
-<span class="sd">            |\psi_i\rangle &amp;= | \psi_i\rangle / c_i</span>
+<span class="sd">            c_i &amp;= \sqrt{\langle \psi_i | \psi_i\rangle} / \mathrm{norm} \\</span>
+<span class="sd">              |\psi_i\rangle &amp;= | \psi_i\rangle / c_i</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
@@ -381,14 +405,16 @@
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
-<span class="sd">        CState : a new coefficient state object with associated coefficients</span>
+<span class="sd">        CoeffState : a new coefficient state object with associated coefficients</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">n</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
         <span class="n">norm</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">norm</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
         <span class="k">if</span> <span class="n">norm</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="n">n</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
             <span class="n">norm</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="n">norm</span><span class="p">,</span> <span class="n">n</span><span class="p">)</span>
         <span class="k">elif</span> <span class="n">norm</span><span class="o">.</span><span class="n">size</span> <span class="o">!=</span> <span class="n">n</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39;.toCState requires the input norm to be a single float or having equal length to the state!&#39;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39;.toCoeffState requires the input norm to be a single float or having equal length to the state!&#39;</span><span class="p">)</span>
+
+        <span class="c1"># Correct data-type</span>
         <span class="k">if</span> <span class="n">norm</span><span class="o">.</span><span class="n">dtype</span> <span class="ow">in</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">complex64</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">complex128</span><span class="p">]:</span>
             <span class="n">cdtype</span> <span class="o">=</span> <span class="n">norm</span><span class="o">.</span><span class="n">dtype</span>
         <span class="k">else</span><span class="p">:</span>
@@ -399,15 +425,15 @@
         <span class="n">state</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
 
         <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n</span><span class="p">):</span>
-            <span class="n">c</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">_idot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="p">:])</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span> <span class="o">/</span> <span class="n">norm</span><span class="p">[</span><span class="n">i</span><span class="p">])</span> <span class="o">**</span> <span class="mf">0.5</span>
-            <span class="n">state</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="p">:]</span> <span class="o">/</span> <span class="n">c</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+            <span class="n">c</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">_idot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">ravel</span><span class="p">())</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span> <span class="o">/</span> <span class="n">norm</span><span class="p">[</span><span class="n">i</span><span class="p">])</span> <span class="o">**</span> <span class="mf">0.5</span>
+            <span class="n">state</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">/</span> <span class="n">c</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
 
-        <span class="n">cs</span> <span class="o">=</span> <span class="n">CState</span><span class="p">(</span><span class="n">c</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">parent</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="p">)</span>
+        <span class="n">cs</span> <span class="o">=</span> <span class="n">CoeffState</span><span class="p">(</span><span class="n">c</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">parent</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="p">)</span>
         <span class="n">cs</span><span class="o">.</span><span class="n">info</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">info</span>
         <span class="k">return</span> <span class="n">cs</span></div></div>
 
 
-<div class="viewcode-block" id="CState"><a class="viewcode-back" href="../../../api-generated/sisl.physics.CState.html#sisl.physics.CState">[docs]</a><span class="k">class</span> <span class="nc">CState</span><span class="p">(</span><span class="n">State</span><span class="p">):</span>
+<span class="k">class</span> <span class="nc">CoeffState</span><span class="p">(</span><span class="n">State</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot; An object handling a set of vectors describing a given *state* with associated coefficients `c`</span>
 
 <span class="sd">    Notes</span>
@@ -438,18 +464,41 @@
 <span class="sd">           This `info` may contain anything that may be relevant for the state.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">c</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">c</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">state</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">state</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="o">.</span><span class="n">shape</span> <span class="o">=</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">c</span><span class="p">),</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">parent</span> <span class="o">=</span> <span class="n">parent</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">CoeffState</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">parent</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">info</span> <span class="o">=</span> <span class="n">info</span>
 
-<div class="viewcode-block" id="CState.copy"><a class="viewcode-back" href="../../../api-generated/sisl.physics.CState.html#sisl.physics.CState.copy">[docs]</a>    <span class="k">def</span> <span class="nf">copy</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot; Return a copy (only the coefficients and states are copied). Parent and info are passed by reference &quot;&quot;&quot;</span>
-        <span class="n">copy</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">copy</span><span class="p">(),</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="o">.</span><span class="n">copy</span><span class="p">(),</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="p">)</span>
-        <span class="n">copy</span><span class="o">.</span><span class="n">info</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">info</span>
-        <span class="k">return</span> <span class="n">copy</span></div>
+    <span class="k">def</span> <span class="nf">__len__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Length of `CoeffState` &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">c</span><span class="p">)</span>
 
-<div class="viewcode-block" id="CState.outer"><a class="viewcode-back" href="../../../api-generated/sisl.physics.CState.html#sisl.physics.CState.outer">[docs]</a>    <span class="k">def</span> <span class="nf">outer</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">idx</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">copy</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Return a copy (only the coefficients and states are copied). Parent and info are passed by reference &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">copy</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">copy</span><span class="p">(),</span> <span class="kc">None</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">copy</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">copy</span><span class="p">(),</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="o">.</span><span class="n">copy</span><span class="p">(),</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="p">)</span>
+        <span class="n">copy</span><span class="o">.</span><span class="n">info</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">info</span>
+        <span class="k">return</span> <span class="n">copy</span>
+
+    <span class="k">def</span> <span class="nf">normalize</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot; Return a normalized state where each state has :math:`|\psi|^2=1`</span>
+
+<span class="sd">        This is roughly equivalent to:</span>
+
+<span class="sd">        &gt;&gt;&gt; state = CoeffState(1, np.arange(10))</span>
+<span class="sd">        &gt;&gt;&gt; n = state.norm()</span>
+<span class="sd">        &gt;&gt;&gt; norm_state = CoeffState(state.c.copy(), state.state / n.reshape(-1, 1))</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        state : a new state with all states normalized, otherwise equal to this</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">n</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">norm</span><span class="p">()</span>
+        <span class="n">s</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">copy</span><span class="p">(),</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span> <span class="o">/</span> <span class="n">n</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">n</span><span class="o">.</span><span class="n">shape</span> <span class="o">+</span> <span class="p">(</span><span class="mi">1</span><span class="p">,)),</span> <span class="n">parent</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="p">)</span>
+        <span class="n">s</span><span class="o">.</span><span class="n">info</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">info</span>
+        <span class="k">return</span> <span class="n">s</span>
+
+    <span class="k">def</span> <span class="nf">outer</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">idx</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sa">r</span><span class="sd">&quot;&quot;&quot; Return the outer product for the indices `idx` (or all if ``None``) by :math:`\sum_i|\psi_i\rangle c_i\langle\psi_i|`</span>
 
 <span class="sd">        Parameters</span>
@@ -462,17 +511,31 @@
 <span class="sd">        np.ndarray : a matrix with the sum of outer state products</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">idx</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">m</span> <span class="o">=</span> <span class="n">_couter</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">c</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="p">:])</span>
+            <span class="n">m</span> <span class="o">=</span> <span class="n">_couter</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">c</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">ravel</span><span class="p">())</span>
             <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">)):</span>
-                <span class="n">m</span> <span class="o">+=</span> <span class="n">_couter</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">c</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="p">:])</span>
+                <span class="n">m</span> <span class="o">+=</span> <span class="n">_couter</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">c</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">ravel</span><span class="p">())</span>
             <span class="k">return</span> <span class="n">m</span>
         <span class="n">idx</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">asarrayi</span><span class="p">(</span><span class="n">idx</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
-        <span class="n">m</span> <span class="o">=</span> <span class="n">_couter</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">c</span><span class="p">[</span><span class="n">idx</span><span class="p">[</span><span class="mi">0</span><span class="p">]],</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="n">idx</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="p">:])</span>
+        <span class="n">m</span> <span class="o">=</span> <span class="n">_couter</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">c</span><span class="p">[</span><span class="n">idx</span><span class="p">[</span><span class="mi">0</span><span class="p">]],</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="n">idx</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span><span class="o">.</span><span class="n">ravel</span><span class="p">())</span>
         <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">idx</span><span class="p">[</span><span class="mi">1</span><span class="p">:]:</span>
-            <span class="n">m</span> <span class="o">+=</span> <span class="n">_couter</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">c</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="p">:])</span>
-        <span class="k">return</span> <span class="n">m</span></div>
+            <span class="n">m</span> <span class="o">+=</span> <span class="n">_couter</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">c</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">ravel</span><span class="p">())</span>
+        <span class="k">return</span> <span class="n">m</span>
 
-<div class="viewcode-block" id="CState.sub"><a class="viewcode-back" href="../../../api-generated/sisl.physics.CState.html#sisl.physics.CState.sub">[docs]</a>    <span class="k">def</span> <span class="nf">sub</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">idx</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">sort</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ascending</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Sort and return a new `CoeffState` by sorting the coefficients (default to ascending)</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        ascending : bool, optional</span>
+<span class="sd">            sort the contained elements ascending, else they will be sorced descending</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">ascending</span><span class="p">:</span>
+            <span class="n">idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">c</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">c</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="n">idx</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">sub</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">idx</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Return a new state with only the specified states</span>
 
 <span class="sd">        Parameters</span>
@@ -482,12 +545,14 @@
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
-<span class="sd">        CState</span>
+<span class="sd">        CoeffState : a new object with a subset of the states</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">idx</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">asarrayi</span><span class="p">(</span><span class="n">idx</span><span class="p">)</span>
-        <span class="n">sub</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">c</span><span class="p">[</span><span class="n">idx</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="n">idx</span><span class="p">,</span> <span class="p">:],</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="p">)</span>
+        <span class="n">idx</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">asarrayi</span><span class="p">(</span><span class="n">idx</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
+        <span class="n">sub</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">c</span><span class="p">[</span><span class="n">idx</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="n">idx</span><span class="p">,</span> <span class="o">...</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="p">)</span>
         <span class="n">sub</span><span class="o">.</span><span class="n">info</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">info</span>
-        <span class="k">return</span> <span class="n">sub</span></div></div>
+        <span class="k">return</span> <span class="n">sub</span>
+
+    <span class="n">toCoeffState</span> <span class="o">=</span> <span class="kc">None</span>
 </pre></div>
 
            </div>
@@ -524,7 +589,7 @@
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'../../../',
-            VERSION:'0.9.2-365',
+            VERSION:'0.9.2-394',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true,

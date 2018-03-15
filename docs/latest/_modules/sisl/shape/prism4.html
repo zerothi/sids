@@ -65,7 +65,7 @@
             
             
               <div class="version">
-                0.9.2-365
+                0.9.2-394
               </div>
             
           
@@ -294,17 +294,20 @@
 <span class="sd">        other : array_like</span>
 <span class="sd">           the object that is checked for containment</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">other</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">asarrayd</span><span class="p">(</span><span class="n">other</span><span class="p">)</span>
-        <span class="n">other</span><span class="o">.</span><span class="n">shape</span> <span class="o">=</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+        <span class="n">other</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">asarrayd</span><span class="p">(</span><span class="n">other</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
 
         <span class="c1"># Offset origo</span>
         <span class="n">tmp</span> <span class="o">=</span> <span class="n">dot</span><span class="p">(</span><span class="n">other</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">origo</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="p">:],</span> <span class="bp">self</span><span class="o">.</span><span class="n">_iv</span><span class="p">)</span>
+        <span class="n">tol</span> <span class="o">=</span> <span class="mf">1.e-12</span>
 
         <span class="c1"># First reject those that are definitely not inside</span>
-        <span class="n">within</span> <span class="o">=</span> <span class="n">logical_and</span><span class="o">.</span><span class="n">reduce</span><span class="p">(</span><span class="n">tmp</span> <span class="o">&gt;=</span> <span class="mf">0.</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">nonzero</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="c1"># The proximity is 1e-12 of the inverse cell.</span>
+        <span class="c1"># So, sadly, the bigger the cell the bigger the tolerance</span>
+        <span class="c1"># However due to numerics this is probably best anyway</span>
+        <span class="n">within</span> <span class="o">=</span> <span class="n">logical_and</span><span class="o">.</span><span class="n">reduce</span><span class="p">(</span><span class="n">tmp</span> <span class="o">&gt;=</span> <span class="o">-</span><span class="n">tol</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">nonzero</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
 
         <span class="n">tmp</span> <span class="o">=</span> <span class="n">tmp</span><span class="p">[</span><span class="n">within</span><span class="p">,</span> <span class="p">:]</span>
-        <span class="n">wtmp</span> <span class="o">=</span> <span class="n">logical_and</span><span class="o">.</span><span class="n">reduce</span><span class="p">(</span><span class="n">tmp</span> <span class="o">&lt;=</span> <span class="mf">1.</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">nonzero</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">wtmp</span> <span class="o">=</span> <span class="n">logical_and</span><span class="o">.</span><span class="n">reduce</span><span class="p">(</span><span class="n">tmp</span> <span class="o">&lt;=</span> <span class="mf">1.</span> <span class="o">+</span> <span class="n">tol</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">nonzero</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
 
         <span class="k">return</span> <span class="n">within</span><span class="p">[</span><span class="n">wtmp</span><span class="p">]</span></div>
 
@@ -373,7 +376,7 @@
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'../../../',
-            VERSION:'0.9.2-365',
+            VERSION:'0.9.2-394',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true,

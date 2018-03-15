@@ -65,7 +65,7 @@
             
             
               <div class="version">
-                0.9.2-365
+                0.9.2-394
               </div>
             
           
@@ -177,7 +177,7 @@
 <span class="kn">from</span> <span class="nn">sisl.io.sile</span> <span class="k">import</span> <span class="o">*</span>
 
 <span class="c1"># Import the geometry object</span>
-<span class="kn">from</span> <span class="nn">sisl</span> <span class="k">import</span> <span class="n">Geometry</span><span class="p">,</span> <span class="n">Atom</span><span class="p">,</span> <span class="n">SuperCell</span><span class="p">,</span> <span class="n">Grid</span>
+<span class="kn">from</span> <span class="nn">sisl</span> <span class="k">import</span> <span class="n">Geometry</span><span class="p">,</span> <span class="n">Atom</span><span class="p">,</span> <span class="n">SuperCell</span><span class="p">,</span> <span class="n">Grid</span><span class="p">,</span> <span class="n">SislError</span>
 <span class="kn">from</span> <span class="nn">sisl.unit</span> <span class="k">import</span> <span class="n">unit_convert</span>
 
 <span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;CUBESile&#39;</span><span class="p">]</span>
@@ -252,8 +252,12 @@
         <span class="c1"># Check that we can write to the file</span>
         <span class="n">sile_raise_write</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
 
+        <span class="n">geom</span> <span class="o">=</span> <span class="n">grid</span><span class="o">.</span><span class="n">geometry</span>
+        <span class="k">if</span> <span class="n">geom</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">geom</span> <span class="o">=</span> <span class="n">Geometry</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">Atom</span><span class="p">(</span><span class="o">-</span><span class="mi">999</span><span class="p">),</span> <span class="n">sc</span><span class="o">=</span><span class="n">grid</span><span class="o">.</span><span class="n">sc</span><span class="p">)</span>
+
         <span class="c1"># Write the geometry</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">write_geometry</span><span class="p">(</span><span class="n">grid</span><span class="o">.</span><span class="n">geom</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="n">grid</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">write_geometry</span><span class="p">(</span><span class="n">geom</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="n">grid</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 
         <span class="n">buffersize</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;buffersize&#39;</span><span class="p">,</span> <span class="nb">min</span><span class="p">(</span><span class="mi">6144</span><span class="p">,</span> <span class="n">grid</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">size</span><span class="p">))</span>
         <span class="n">buffersize</span> <span class="o">+=</span> <span class="n">buffersize</span> <span class="o">%</span> <span class="mi">6</span> <span class="c1"># ensure multiple of 6</span>
@@ -330,11 +334,23 @@
             <span class="n">xyz</span><span class="p">[</span><span class="n">ia</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">tmp</span><span class="p">[</span><span class="mi">4</span><span class="p">])</span>
 
         <span class="n">xyz</span> <span class="o">/=</span> <span class="n">Ang2Bohr</span>
+        <span class="k">if</span> <span class="n">na</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="n">atom</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">Z</span> <span class="o">==</span> <span class="o">-</span><span class="mi">999</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span>
         <span class="k">return</span> <span class="n">Geometry</span><span class="p">(</span><span class="n">xyz</span><span class="p">,</span> <span class="n">atom</span><span class="p">,</span> <span class="n">sc</span><span class="o">=</span><span class="n">sc</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="CUBESile.read_grid"><a class="viewcode-back" href="../../../api-generated/sisl.io.cube.CUBESile.html#sisl.io.cube.CUBESile.read_grid">[docs]</a>    <span class="nd">@Sile_fh_open</span>
-    <span class="k">def</span> <span class="nf">read_grid</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot; Returns `Grid` object from the CUBE file &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">read_grid</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">imag</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Returns `Grid` object from the CUBE file</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        imag : str or Sile or Grid</span>
+<span class="sd">            the imaginary part of the grid. If the geometries does not match</span>
+<span class="sd">            an error will be raised.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">imag</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">imag</span><span class="p">,</span> <span class="n">Grid</span><span class="p">):</span>
+                <span class="n">imag</span> <span class="o">=</span> <span class="n">Grid</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">imag</span><span class="p">)</span>
         <span class="n">geom</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">read_geometry</span><span class="p">()</span>
 
         <span class="c1"># Now seek behind to read grid sizes</span>
@@ -363,6 +379,20 @@
         <span class="n">lines</span> <span class="o">=</span> <span class="p">[</span><span class="n">item</span> <span class="k">for</span> <span class="n">sublist</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">fh</span><span class="o">.</span><span class="n">readlines</span><span class="p">()</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">sublist</span><span class="o">.</span><span class="n">split</span><span class="p">()]</span>
         <span class="n">grid</span><span class="o">.</span><span class="n">grid</span><span class="p">[:]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">lines</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">grid</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
         <span class="n">grid</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">shape</span> <span class="o">=</span> <span class="n">ngrid</span>
+
+        <span class="k">if</span> <span class="n">imag</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">grid</span>
+
+        <span class="c1"># We are expecting an imaginary part</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">grid</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">equal</span><span class="p">(</span><span class="n">imag</span><span class="o">.</span><span class="n">geometry</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="n">SislError</span><span class="p">(</span><span class="nb">repr</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39; and its imaginary part does not have the same &#39;</span>
+                            <span class="s1">&#39;geometry. Hence a combined complex Grid cannot be formed.&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">grid</span> <span class="o">!=</span> <span class="n">imag</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">SislError</span><span class="p">(</span><span class="nb">repr</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39; and its imaginary part does not have the same &#39;</span>
+                            <span class="s1">&#39;shape. Hence a combined complex Grid cannot be formed.&#39;</span><span class="p">)</span>
+
+        <span class="c1"># Now we have a complex grid</span>
+        <span class="n">grid</span><span class="o">.</span><span class="n">grid</span> <span class="o">=</span> <span class="n">grid</span><span class="o">.</span><span class="n">grid</span> <span class="o">+</span> <span class="mi">1</span><span class="n">j</span> <span class="o">*</span> <span class="n">imag</span><span class="o">.</span><span class="n">grid</span>
 
         <span class="k">return</span> <span class="n">grid</span></div></div>
 
@@ -404,7 +434,7 @@
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'../../../',
-            VERSION:'0.9.2-365',
+            VERSION:'0.9.2-394',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true,

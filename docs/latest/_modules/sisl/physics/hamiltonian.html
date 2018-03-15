@@ -65,7 +65,7 @@
             
             
               <div class="version">
-                0.9.2-365
+                0.9.2-394
               </div>
             
           
@@ -178,7 +178,7 @@
 <span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">cos</span><span class="p">,</span> <span class="n">sin</span><span class="p">,</span> <span class="n">arctan2</span><span class="p">,</span> <span class="n">conj</span>
 <span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">dot</span><span class="p">,</span> <span class="n">sqrt</span><span class="p">,</span> <span class="n">square</span><span class="p">,</span> <span class="n">floor</span><span class="p">,</span> <span class="n">ceil</span>
 
-<span class="kn">from</span> <span class="nn">sisl.messages</span> <span class="k">import</span> <span class="n">warn</span>
+<span class="kn">from</span> <span class="nn">sisl.messages</span> <span class="k">import</span> <span class="n">warn</span><span class="p">,</span> <span class="n">tqdm_eta</span>
 <span class="kn">from</span> <span class="nn">sisl._help</span> <span class="k">import</span> <span class="n">_range</span> <span class="k">as</span> <span class="nb">range</span><span class="p">,</span> <span class="n">_str</span> <span class="k">as</span> <span class="nb">str</span>
 <span class="kn">import</span> <span class="nn">sisl._array</span> <span class="k">as</span> <span class="nn">_a</span>
 <span class="kn">from</span> <span class="nn">sisl</span> <span class="k">import</span> <span class="n">Geometry</span>
@@ -612,7 +612,7 @@
 
         <span class="k">return</span> <span class="n">PDOS</span></div>
 
-<div class="viewcode-block" id="EigenState.psi"><a class="viewcode-back" href="../../../api-generated/sisl.physics.EigenState.html#sisl.physics.EigenState.psi">[docs]</a>    <span class="k">def</span> <span class="nf">psi</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">grid</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">spinor</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+<div class="viewcode-block" id="EigenState.psi"><a class="viewcode-back" href="../../../api-generated/sisl.physics.EigenState.html#sisl.physics.EigenState.psi">[docs]</a>    <span class="k">def</span> <span class="nf">psi</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">grid</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">spinor</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">eta</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
         <span class="sa">r</span><span class="sd">&quot;&quot;&quot; Add the wave-function (`Orbital.psi`) component of each orbital to the grid</span>
 
 <span class="sd">        This routine calculates the real-space wave-function components in the</span>
@@ -658,6 +658,8 @@
 <span class="sd">           eigenstate object has been created from a parent object with a `Spin` object</span>
 <span class="sd">           contained, *and* if the spin-configuration is non-colinear or spin-orbit coupling.</span>
 <span class="sd">           Default to the first spinor component.</span>
+<span class="sd">        eta : bool, optional</span>
+<span class="sd">           Display a progressbar. (Requires tqdm)</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">geom</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="n">is_nc</span> <span class="o">=</span> <span class="kc">False</span>
@@ -673,6 +675,10 @@
             <span class="k">except</span><span class="p">:</span>
                 <span class="k">pass</span>
         <span class="k">if</span> <span class="n">geom</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">geom</span> <span class="o">=</span> <span class="n">grid</span><span class="o">.</span><span class="n">geometry</span>
+            <span class="n">warn</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39;.psi could not find a geometry associated, will use the Grid geometry.&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">geom</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">SislError</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39;.psi can not find a geometry associated!&#39;</span><span class="p">)</span>
             <span class="n">geom</span> <span class="o">=</span> <span class="n">grid</span><span class="o">.</span><span class="n">geometry</span>
 
         <span class="c1"># Do the sum over all eigenstates</span>
@@ -690,6 +696,8 @@
         <span class="n">k</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">asarrayd</span><span class="p">(</span><span class="n">k</span><span class="p">)</span>
         <span class="n">kl</span> <span class="o">=</span> <span class="p">(</span><span class="n">k</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">**</span> <span class="mf">0.5</span>
         <span class="n">has_k</span> <span class="o">=</span> <span class="n">kl</span> <span class="o">&gt;</span> <span class="mf">0.000001</span>
+        <span class="k">if</span> <span class="n">has_k</span><span class="p">:</span>
+            <span class="n">warn</span><span class="p">(</span><span class="s1">&#39;sisl wavefunctions at k != from Gamma does not produce correct wavefunctions!&#39;</span><span class="p">)</span>
 
         <span class="c1"># Check that input/grid makes sense.</span>
         <span class="c1"># If the coefficients are complex valued, then the grid *has* to be</span>
@@ -708,7 +716,8 @@
         <span class="c1"># Extract sub variables used throughout the loop</span>
         <span class="n">shape</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">asarrayi</span><span class="p">(</span><span class="n">grid</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
         <span class="n">dcell</span> <span class="o">=</span> <span class="n">grid</span><span class="o">.</span><span class="n">dcell</span>
-        <span class="n">rc</span> <span class="o">=</span> <span class="n">grid</span><span class="o">.</span><span class="n">sc</span><span class="o">.</span><span class="n">rcell</span> <span class="o">/</span> <span class="p">(</span><span class="mf">2.</span> <span class="o">*</span> <span class="n">pi</span><span class="p">)</span> <span class="o">*</span> <span class="n">shape</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">ic</span> <span class="o">=</span> <span class="n">grid</span><span class="o">.</span><span class="n">sc</span><span class="o">.</span><span class="n">icell</span> <span class="o">*</span> <span class="n">shape</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">geom_shape</span> <span class="o">=</span> <span class="n">dot</span><span class="p">(</span><span class="n">ic</span><span class="p">,</span> <span class="n">geom</span><span class="o">.</span><span class="n">cell</span><span class="o">.</span><span class="n">T</span><span class="p">)</span><span class="o">.</span><span class="n">T</span>
 
         <span class="c1"># In the following we don&#39;t care about division</span>
         <span class="c1"># So 1) save error state, 2) turn off divide by 0, 3) calculate, 4) turn on old error state</span>
@@ -750,101 +759,121 @@
         <span class="c1"># First we calculate the min/max indices for all atoms</span>
         <span class="n">idx_mm</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">emptyi</span><span class="p">([</span><span class="n">geom</span><span class="o">.</span><span class="n">na</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">])</span>
         <span class="n">rxyz</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">emptyd</span><span class="p">(</span><span class="n">nrxyz</span><span class="p">)</span>
+        <span class="n">rxyz</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">ctheta_sphi</span>
+        <span class="n">rxyz</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">stheta_sphi</span>
+        <span class="n">rxyz</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">cphi</span>
+        <span class="c1"># Reshape</span>
+        <span class="n">rxyz</span><span class="o">.</span><span class="n">shape</span> <span class="o">=</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+        <span class="n">idx</span> <span class="o">=</span> <span class="n">dot</span><span class="p">(</span><span class="n">ic</span><span class="p">,</span> <span class="n">rxyz</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
+        <span class="n">idxm</span> <span class="o">=</span> <span class="n">idx</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+        <span class="n">idxM</span> <span class="o">=</span> <span class="n">idx</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+        <span class="k">del</span> <span class="n">ctheta_sphi</span><span class="p">,</span> <span class="n">stheta_sphi</span><span class="p">,</span> <span class="n">cphi</span><span class="p">,</span> <span class="n">idx</span><span class="p">,</span> <span class="n">rxyz</span><span class="p">,</span> <span class="n">nrxyz</span>
+
         <span class="n">origo</span> <span class="o">=</span> <span class="n">grid</span><span class="o">.</span><span class="n">sc</span><span class="o">.</span><span class="n">origo</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
         <span class="k">for</span> <span class="n">atom</span><span class="p">,</span> <span class="n">ia</span> <span class="ow">in</span> <span class="n">geom</span><span class="o">.</span><span class="n">atom</span><span class="o">.</span><span class="n">iter</span><span class="p">(</span><span class="kc">True</span><span class="p">):</span>
             <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">ia</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
                 <span class="k">continue</span>
             <span class="n">R</span> <span class="o">=</span> <span class="n">atom</span><span class="o">.</span><span class="n">maxR</span><span class="p">()</span>
 
-            <span class="c1"># Reshape</span>
-            <span class="n">rxyz</span><span class="o">.</span><span class="n">shape</span> <span class="o">=</span> <span class="n">nrxyz</span>
-            <span class="n">rxyz</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">ctheta_sphi</span>
-            <span class="n">rxyz</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">stheta_sphi</span>
-            <span class="n">rxyz</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">cphi</span>
-            <span class="n">rxyz</span><span class="o">.</span><span class="n">shape</span> <span class="o">=</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
-
-            <span class="n">idx</span> <span class="o">=</span> <span class="n">dot</span><span class="p">(</span><span class="n">rc</span><span class="p">,</span> <span class="n">rxyz</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
-            <span class="n">idx_m</span> <span class="o">=</span> <span class="n">idx</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">R</span>
-            <span class="n">idx_M</span> <span class="o">=</span> <span class="n">idx</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">R</span>
-
             <span class="c1"># Now do it for all the atoms to get indices of the middle of</span>
             <span class="c1"># the atoms</span>
             <span class="c1"># The coordinates are relative to origo, so we need to shift (when writing a grid</span>
             <span class="c1"># it is with respect to origo)</span>
             <span class="n">xyz</span> <span class="o">=</span> <span class="n">geom</span><span class="o">.</span><span class="n">xyz</span><span class="p">[</span><span class="n">ia</span><span class="p">,</span> <span class="p">:]</span> <span class="o">-</span> <span class="n">origo</span>
-            <span class="n">idx</span> <span class="o">=</span> <span class="n">dot</span><span class="p">(</span><span class="n">rc</span><span class="p">,</span> <span class="n">xyz</span><span class="o">.</span><span class="n">T</span><span class="p">)</span><span class="o">.</span><span class="n">T</span>
+            <span class="n">idx</span> <span class="o">=</span> <span class="n">dot</span><span class="p">(</span><span class="n">ic</span><span class="p">,</span> <span class="n">xyz</span><span class="o">.</span><span class="n">T</span><span class="p">)</span><span class="o">.</span><span class="n">T</span>
 
             <span class="c1"># Get min-max for all atoms, note we should first do the floor here</span>
-            <span class="n">idx_mm</span><span class="p">[</span><span class="n">ia</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">floor</span><span class="p">(</span><span class="n">idx_m</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">3</span><span class="p">)</span> <span class="o">+</span> <span class="n">idx</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">int32</span><span class="p">)</span>
-            <span class="n">idx_mm</span><span class="p">[</span><span class="n">ia</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">ceil</span><span class="p">(</span><span class="n">idx_M</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">3</span><span class="p">)</span> <span class="o">+</span> <span class="n">idx</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">int32</span><span class="p">)</span>
+            <span class="n">idx_mm</span><span class="p">[</span><span class="n">ia</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">idxm</span> <span class="o">*</span> <span class="n">R</span> <span class="o">+</span> <span class="n">idx</span>
+            <span class="n">idx_mm</span><span class="p">[</span><span class="n">ia</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">idxM</span> <span class="o">*</span> <span class="n">R</span> <span class="o">+</span> <span class="n">idx</span>
 
         <span class="c1"># Now we have min-max for all atoms</span>
         <span class="c1"># When we run the below loop all indices can be retrieved by looking</span>
         <span class="c1"># up in the above table.</span>
 
         <span class="c1"># Before continuing, we can easily clean up the temporary arrays</span>
-        <span class="k">del</span> <span class="n">ctheta_sphi</span><span class="p">,</span> <span class="n">stheta_sphi</span><span class="p">,</span> <span class="n">cphi</span><span class="p">,</span> <span class="n">nrxyz</span><span class="p">,</span> <span class="n">rxyz</span><span class="p">,</span> <span class="n">origo</span><span class="p">,</span> <span class="n">idx</span>
+        <span class="k">del</span> <span class="n">origo</span><span class="p">,</span> <span class="n">idx</span>
 
         <span class="n">aranged</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">aranged</span>
 
-        <span class="c1"># Loop over all atoms in the full supercell structure</span>
-        <span class="k">for</span> <span class="n">IA</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">geom</span><span class="o">.</span><span class="n">na_s</span><span class="p">):</span>
+        <span class="c1"># In case this grid does not have a Geometry associated</span>
+        <span class="c1"># We can *perhaps* easily attach a geometry with the given</span>
+        <span class="c1"># atoms in the unit-cell</span>
+        <span class="n">sc</span> <span class="o">=</span> <span class="n">grid</span><span class="o">.</span><span class="n">sc</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">grid</span><span class="o">.</span><span class="n">geometry</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># Create the actual geometry that encompass the grid</span>
+            <span class="n">ia</span><span class="p">,</span> <span class="n">xyz</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">geom</span><span class="o">.</span><span class="n">inf_within</span><span class="p">(</span><span class="n">sc</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">ia</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">grid</span><span class="o">.</span><span class="n">set_geometry</span><span class="p">(</span><span class="n">Geometry</span><span class="p">(</span><span class="n">xyz</span><span class="p">,</span> <span class="n">geom</span><span class="o">.</span><span class="n">atom</span><span class="p">[</span><span class="n">ia</span><span class="p">],</span> <span class="n">sc</span><span class="o">=</span><span class="n">grid</span><span class="o">.</span><span class="n">sc</span><span class="p">))</span>
 
-            <span class="c1"># Get atomic coordinate</span>
-            <span class="n">xyz</span> <span class="o">=</span> <span class="n">geom</span><span class="o">.</span><span class="n">axyz</span><span class="p">(</span><span class="n">IA</span><span class="p">)</span> <span class="o">-</span> <span class="n">grid</span><span class="o">.</span><span class="n">origo</span>
-            <span class="c1"># Reduce to unit-cell atom</span>
-            <span class="n">ia</span> <span class="o">=</span> <span class="n">IA</span> <span class="o">%</span> <span class="n">geom</span><span class="o">.</span><span class="n">na</span>
+        <span class="c1"># Instead of looping all atoms in the supercell we find the exact atoms</span>
+        <span class="c1"># and their supercell indices.</span>
+        <span class="n">add_R</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">zerosd</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span> <span class="o">+</span> <span class="n">geom</span><span class="o">.</span><span class="n">maxR</span><span class="p">()</span>
+        <span class="n">sc</span> <span class="o">=</span> <span class="n">sc</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">add_R</span> <span class="o">*</span> <span class="mi">2</span><span class="p">)</span>
+        <span class="n">sc</span><span class="o">.</span><span class="n">origo</span> <span class="o">=</span> <span class="n">sc</span><span class="o">.</span><span class="n">origo</span><span class="p">[:]</span> <span class="o">-</span> <span class="n">add_R</span>
+
+        <span class="c1"># Retrieve all atoms within the grid supercell</span>
+        <span class="c1"># (and the neighbours that connect into the cell)</span>
+        <span class="n">IA</span><span class="p">,</span> <span class="n">XYZ</span><span class="p">,</span> <span class="n">ISC</span> <span class="o">=</span> <span class="n">geom</span><span class="o">.</span><span class="n">inf_within</span><span class="p">(</span><span class="n">sc</span><span class="p">)</span>
+
+        <span class="n">r_k</span> <span class="o">=</span> <span class="n">dot</span><span class="p">(</span><span class="n">geom</span><span class="o">.</span><span class="n">rcell</span><span class="p">,</span> <span class="n">k</span><span class="p">)</span>
+        <span class="n">r_k_cell</span> <span class="o">=</span> <span class="n">dot</span><span class="p">(</span><span class="n">r_k</span><span class="p">,</span> <span class="n">geom</span><span class="o">.</span><span class="n">cell</span><span class="p">)</span>
+        <span class="n">phase</span> <span class="o">=</span> <span class="mi">1</span>
+
+        <span class="c1"># Retrieve progressbar</span>
+        <span class="n">eta</span> <span class="o">=</span> <span class="n">tqdm_eta</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">IA</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39;.psi&#39;</span><span class="p">,</span> <span class="s1">&#39;atoms&#39;</span><span class="p">,</span> <span class="n">eta</span><span class="p">)</span>
+
+        <span class="c1"># Loop over all atoms in the full supercell structure</span>
+        <span class="k">for</span> <span class="n">ia</span><span class="p">,</span> <span class="n">xyz</span><span class="p">,</span> <span class="n">isc</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">IA</span><span class="p">,</span> <span class="n">XYZ</span> <span class="o">-</span> <span class="n">grid</span><span class="o">.</span><span class="n">origo</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span> <span class="n">ISC</span><span class="p">):</span>
             <span class="c1"># Get current atom</span>
             <span class="n">atom</span> <span class="o">=</span> <span class="n">geom</span><span class="o">.</span><span class="n">atom</span><span class="p">[</span><span class="n">ia</span><span class="p">]</span>
-
-            <span class="k">if</span> <span class="n">ia</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-                <span class="c1"># start over for every new supercell</span>
-                <span class="n">io</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
-                <span class="n">isc</span> <span class="o">=</span> <span class="n">geom</span><span class="o">.</span><span class="n">a2isc</span><span class="p">(</span><span class="n">IA</span><span class="p">)</span>
-                <span class="k">if</span> <span class="n">has_k</span><span class="p">:</span>
-                    <span class="n">phase</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="n">j</span> <span class="o">*</span> <span class="n">dot</span><span class="p">(</span><span class="n">dot</span><span class="p">(</span><span class="n">dot</span><span class="p">(</span><span class="n">geom</span><span class="o">.</span><span class="n">rcell</span><span class="p">,</span> <span class="n">k</span><span class="p">),</span> <span class="n">geom</span><span class="o">.</span><span class="n">cell</span><span class="p">),</span> <span class="n">isc</span><span class="p">))</span>
-                <span class="k">else</span><span class="p">:</span>
-                    <span class="c1"># do not force complex values for Gamma only (user is responsible)</span>
-                    <span class="n">phase</span> <span class="o">=</span> <span class="mi">1</span>
 
             <span class="c1"># Extract maximum R</span>
             <span class="n">R</span> <span class="o">=</span> <span class="n">atom</span><span class="o">.</span><span class="n">maxR</span><span class="p">()</span>
             <span class="k">if</span> <span class="n">R</span> <span class="o">&lt;=</span> <span class="mf">0.</span><span class="p">:</span>
                 <span class="n">warn</span><span class="p">(</span><span class="s2">&quot;Atom &#39;</span><span class="si">{}</span><span class="s2">&#39; does not have a wave-function, skipping atom.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">atom</span><span class="p">))</span>
-                <span class="c1"># Skip this atom</span>
-                <span class="n">io</span> <span class="o">+=</span> <span class="n">atom</span><span class="o">.</span><span class="n">no</span>
+                <span class="n">eta</span><span class="o">.</span><span class="n">update</span><span class="p">()</span>
                 <span class="k">continue</span>
 
             <span class="c1"># Get indices in the supercell grid</span>
-            <span class="n">idxm</span> <span class="o">=</span> <span class="n">idx_mm</span><span class="p">[</span><span class="n">ia</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="p">:]</span> <span class="o">+</span> <span class="n">shape</span> <span class="o">*</span> <span class="n">isc</span>
-            <span class="n">idxM</span> <span class="o">=</span> <span class="n">idx_mm</span><span class="p">[</span><span class="n">ia</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="p">:]</span> <span class="o">+</span> <span class="n">shape</span> <span class="o">*</span> <span class="n">isc</span>
+            <span class="n">idx</span> <span class="o">=</span> <span class="p">(</span><span class="n">isc</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">geom_shape</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+            <span class="n">idxm</span> <span class="o">=</span> <span class="p">(</span><span class="n">idx_mm</span><span class="p">[</span><span class="n">ia</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="p">:]</span> <span class="o">+</span> <span class="n">idx</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">int32</span><span class="p">)</span>
+            <span class="n">idxM</span> <span class="o">=</span> <span class="p">(</span><span class="n">idx_mm</span><span class="p">[</span><span class="n">ia</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="p">:]</span> <span class="o">+</span> <span class="n">idx</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">int32</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span>
 
             <span class="c1"># Fast check whether we can skip this point</span>
-            <span class="k">if</span> <span class="n">idxm</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">or</span> <span class="n">idxm</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="ow">or</span> \
-               <span class="n">idxm</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="ow">or</span> \
-               <span class="n">idxM</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">idxM</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">idxM</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
-                <span class="n">io</span> <span class="o">+=</span> <span class="n">atom</span><span class="o">.</span><span class="n">no</span>
+            <span class="k">if</span> <span class="n">idxm</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">or</span> <span class="n">idxm</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="ow">or</span> <span class="n">idxm</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="ow">or</span> \
+               <span class="n">idxM</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">idxM</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">idxM</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">eta</span><span class="o">.</span><span class="n">update</span><span class="p">()</span>
                 <span class="k">continue</span>
 
             <span class="c1"># Truncate values</span>
             <span class="k">if</span> <span class="n">idxm</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
                 <span class="n">idxm</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
-            <span class="k">if</span> <span class="n">idxM</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
-                <span class="n">idxM</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span>
+            <span class="k">if</span> <span class="n">idxM</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
+                <span class="n">idxM</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
             <span class="k">if</span> <span class="n">idxm</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
                 <span class="n">idxm</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
-            <span class="k">if</span> <span class="n">idxM</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]:</span>
-                <span class="n">idxM</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span>
+            <span class="k">if</span> <span class="n">idxM</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]:</span>
+                <span class="n">idxM</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
             <span class="k">if</span> <span class="n">idxm</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
                 <span class="n">idxm</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
-            <span class="k">if</span> <span class="n">idxM</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">]:</span>
-                <span class="n">idxM</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span>
+            <span class="k">if</span> <span class="n">idxM</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">]:</span>
+                <span class="n">idxM</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
 
             <span class="c1"># Now idxm/M contains min/max indices used</span>
             <span class="c1"># Convert to spherical coordinates</span>
-            <span class="n">n</span><span class="p">,</span> <span class="n">idx</span><span class="p">,</span> <span class="n">r</span><span class="p">,</span> <span class="n">theta</span><span class="p">,</span> <span class="n">phi</span> <span class="o">=</span> <span class="n">idx2spherical</span><span class="p">(</span><span class="n">aranged</span><span class="p">(</span><span class="n">idxm</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">idxM</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="mf">0.5</span><span class="p">),</span>
-                                                  <span class="n">aranged</span><span class="p">(</span><span class="n">idxm</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">idxM</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="mf">0.5</span><span class="p">),</span>
-                                                  <span class="n">aranged</span><span class="p">(</span><span class="n">idxm</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">idxM</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">+</span> <span class="mf">0.5</span><span class="p">),</span> <span class="n">xyz</span><span class="p">,</span> <span class="n">dcell</span><span class="p">,</span> <span class="n">R</span><span class="p">)</span>
+            <span class="n">n</span><span class="p">,</span> <span class="n">idx</span><span class="p">,</span> <span class="n">r</span><span class="p">,</span> <span class="n">theta</span><span class="p">,</span> <span class="n">phi</span> <span class="o">=</span> <span class="n">idx2spherical</span><span class="p">(</span><span class="n">aranged</span><span class="p">(</span><span class="n">idxm</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">idxM</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span>
+                                                  <span class="n">aranged</span><span class="p">(</span><span class="n">idxm</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">idxM</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span>
+                                                  <span class="n">aranged</span><span class="p">(</span><span class="n">idxm</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">idxM</span><span class="p">[</span><span class="mi">2</span><span class="p">]),</span> <span class="n">xyz</span><span class="p">,</span> <span class="n">dcell</span><span class="p">,</span> <span class="n">R</span><span class="p">)</span>
+
+            <span class="c1"># Get initial orbital</span>
+            <span class="n">io</span> <span class="o">=</span> <span class="n">geom</span><span class="o">.</span><span class="n">a2o</span><span class="p">(</span><span class="n">ia</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">has_k</span><span class="p">:</span>
+                <span class="n">phase</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="n">j</span> <span class="o">*</span> <span class="p">(</span><span class="n">dot</span><span class="p">(</span><span class="n">r_k_cell</span><span class="p">,</span> <span class="n">isc</span><span class="p">)))</span>
+                <span class="c1"># TODO</span>
+                <span class="c1"># Possibly the phase should be an additional</span>
+                <span class="c1"># array for the position in the unit-cell!</span>
+                <span class="c1">#   + np.exp(-1j * dot(r_k, spher2cart(r, theta, np.arccos(phi)).T) )</span>
 
             <span class="c1"># Allocate a temporary array where we add the psi elements</span>
             <span class="n">psi</span> <span class="o">=</span> <span class="n">psi_init</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
@@ -877,20 +906,24 @@
 
                 <span class="c1"># Loop orbitals with the same radius</span>
                 <span class="k">for</span> <span class="n">o</span> <span class="ow">in</span> <span class="n">os</span><span class="p">:</span>
-                    <span class="n">io</span> <span class="o">+=</span> <span class="mi">1</span>
-
                     <span class="c1"># Evaluate psi component of the wavefunction and add it for this atom</span>
                     <span class="n">psi</span><span class="p">[</span><span class="n">idx1</span><span class="p">]</span> <span class="o">+=</span> <span class="n">o</span><span class="o">.</span><span class="n">psi_spher</span><span class="p">(</span><span class="n">r1</span><span class="p">,</span> <span class="n">theta1</span><span class="p">,</span> <span class="n">phi1</span><span class="p">,</span> <span class="n">cos_phi</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">v</span><span class="p">[</span><span class="n">io</span><span class="p">]</span> <span class="o">*</span> <span class="n">phase</span><span class="p">)</span>
+                    <span class="n">io</span> <span class="o">+=</span> <span class="mi">1</span>
 
             <span class="c1"># Clean-up</span>
             <span class="k">del</span> <span class="n">idx1</span><span class="p">,</span> <span class="n">r1</span><span class="p">,</span> <span class="n">theta1</span><span class="p">,</span> <span class="n">phi1</span><span class="p">,</span> <span class="n">idx</span><span class="p">,</span> <span class="n">r</span><span class="p">,</span> <span class="n">theta</span><span class="p">,</span> <span class="n">phi</span>
 
             <span class="c1"># Convert to correct shape and add the current atom contribution to the wavefunction</span>
-            <span class="n">psi</span><span class="o">.</span><span class="n">shape</span> <span class="o">=</span> <span class="n">idxM</span> <span class="o">-</span> <span class="n">idxm</span> <span class="o">+</span> <span class="mi">1</span>
-            <span class="n">grid</span><span class="o">.</span><span class="n">grid</span><span class="p">[</span><span class="n">idxm</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span><span class="n">idxM</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span> <span class="n">idxm</span><span class="p">[</span><span class="mi">1</span><span class="p">]:</span><span class="n">idxM</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span> <span class="n">idxm</span><span class="p">[</span><span class="mi">2</span><span class="p">]:</span><span class="n">idxM</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span> <span class="o">+=</span> <span class="n">psi</span>
+            <span class="n">psi</span><span class="o">.</span><span class="n">shape</span> <span class="o">=</span> <span class="n">idxM</span> <span class="o">-</span> <span class="n">idxm</span>
+            <span class="n">grid</span><span class="o">.</span><span class="n">grid</span><span class="p">[</span><span class="n">idxm</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span><span class="n">idxM</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">idxm</span><span class="p">[</span><span class="mi">1</span><span class="p">]:</span><span class="n">idxM</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">idxm</span><span class="p">[</span><span class="mi">2</span><span class="p">]:</span><span class="n">idxM</span><span class="p">[</span><span class="mi">2</span><span class="p">]]</span> <span class="o">+=</span> <span class="n">psi</span>
 
             <span class="c1"># Clean-up</span>
             <span class="k">del</span> <span class="n">psi</span>
+
+            <span class="c1"># Step progressbar</span>
+            <span class="n">eta</span><span class="o">.</span><span class="n">update</span><span class="p">()</span>
+
+        <span class="n">eta</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
 
         <span class="c1"># Reset the error code for division</span>
         <span class="n">np</span><span class="o">.</span><span class="n">seterr</span><span class="p">(</span><span class="o">**</span><span class="n">old_err</span><span class="p">)</span></div></div>
@@ -930,7 +963,7 @@
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'../../../',
-            VERSION:'0.9.2-365',
+            VERSION:'0.9.2-394',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true,

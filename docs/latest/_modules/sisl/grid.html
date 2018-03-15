@@ -65,7 +65,7 @@
             
             
               <div class="version">
-                0.9.2-365
+                0.9.2-394
               </div>
             
           
@@ -261,7 +261,8 @@
 
         <span class="c1"># If the user sets the super-cell, that has precedence.</span>
         <span class="k">if</span> <span class="n">sc</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">geom</span><span class="o">.</span><span class="n">set_sc</span><span class="p">(</span><span class="n">sc</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">geometry</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">set_sc</span><span class="p">(</span><span class="n">sc</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">set_sc</span><span class="p">(</span><span class="n">sc</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">__getitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">):</span>
@@ -282,11 +283,11 @@
 <span class="sd">        Setting the `Geometry` for the grid is a possibility</span>
 <span class="sd">        to attach atoms to the grid.</span>
 
-<span class="sd">        It is not a necessary entity.</span>
+<span class="sd">        It is not a necessary entity, so passing `None` is a viable option.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">geometry</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="c1"># Fake geometry</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">set_geometry</span><span class="p">(</span><span class="n">Geometry</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">Atom</span><span class="p">[</span><span class="s1">&#39;H&#39;</span><span class="p">],</span> <span class="n">sc</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">sc</span><span class="p">))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">geometry</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">geometry</span> <span class="o">=</span> <span class="n">geometry</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">set_sc</span><span class="p">(</span><span class="n">geometry</span><span class="o">.</span><span class="n">sc</span><span class="p">)</span></div>
@@ -368,9 +369,11 @@
 
 <div class="viewcode-block" id="Grid.set_grid"><a class="viewcode-back" href="../../api-generated/sisl.Grid.html#sisl.Grid.set_grid">[docs]</a>    <span class="k">def</span> <span class="nf">set_grid</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">shape</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Create the internal grid of certain size. &quot;&quot;&quot;</span>
-        <span class="n">shape</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">asarrayi</span><span class="p">(</span><span class="n">shape</span><span class="p">)</span>
+        <span class="n">shape</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">asarrayi</span><span class="p">(</span><span class="n">shape</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
         <span class="k">if</span> <span class="n">dtype</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">dtype</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span>
+        <span class="k">if</span> <span class="n">shape</span><span class="o">.</span><span class="n">size</span> <span class="o">!=</span> <span class="mi">3</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39;.set_grid requires shape to be of length 3&#39;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">grid</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">shape</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="Grid.set_bc"><a class="viewcode-back" href="../../api-generated/sisl.Grid.html#sisl.Grid.set_bc">[docs]</a>    <span class="k">def</span> <span class="nf">set_bc</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">boundary</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">a</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">b</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">c</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
@@ -416,10 +419,19 @@
     <span class="n">set_boundary</span> <span class="o">=</span> <span class="n">set_bc</span>
     <span class="n">set_boundary_condition</span> <span class="o">=</span> <span class="n">set_bc</span>
 
+    <span class="k">def</span> <span class="nf">__sc_geom_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Internal routine for copying the SuperCell and Geometry &quot;&quot;&quot;</span>
+        <span class="n">d</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+        <span class="n">d</span><span class="p">[</span><span class="s1">&#39;sc&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sc</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">geometry</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">d</span><span class="p">[</span><span class="s1">&#39;geom&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">d</span>
+
 <div class="viewcode-block" id="Grid.copy"><a class="viewcode-back" href="../../api-generated/sisl.Grid.html#sisl.Grid.copy">[docs]</a>    <span class="k">def</span> <span class="nf">copy</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Returns a copy of the object. &quot;&quot;&quot;</span>
+        <span class="n">d</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__sc_geom_dict</span><span class="p">()</span>
         <span class="n">grid</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">),</span> <span class="n">bc</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">bc</span><span class="p">),</span>
-                              <span class="n">dtype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">geom</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">geom</span><span class="o">.</span><span class="n">copy</span><span class="p">())</span>
+                              <span class="n">dtype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="o">**</span><span class="n">d</span><span class="p">)</span>
         <span class="n">grid</span><span class="o">.</span><span class="n">grid</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
         <span class="k">return</span> <span class="n">grid</span></div>
 
@@ -433,9 +445,11 @@
         <span class="n">idx</span><span class="p">[</span><span class="n">b</span><span class="p">]</span> <span class="o">=</span> <span class="n">a</span>
         <span class="n">idx</span><span class="p">[</span><span class="n">a</span><span class="p">]</span> <span class="o">=</span> <span class="n">b</span>
         <span class="n">s</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+        <span class="n">geom</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">geometry</span>
+        <span class="n">d</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__sc_geom_dict</span><span class="p">()</span>
+        <span class="n">d</span><span class="p">[</span><span class="s1">&#39;sc&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">d</span><span class="p">[</span><span class="s1">&#39;sc&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">swapaxes</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">)</span>
         <span class="n">grid</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="p">(</span><span class="n">s</span><span class="p">[</span><span class="n">idx</span><span class="p">],</span> <span class="n">bc</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">bc</span><span class="p">[</span><span class="n">idx</span><span class="p">],</span>
-                              <span class="n">sc</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">sc</span><span class="o">.</span><span class="n">swapaxes</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span>
-                              <span class="n">geom</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">geom</span><span class="o">.</span><span class="n">copy</span><span class="p">())</span>
+                              <span class="n">dtype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="o">**</span><span class="n">d</span><span class="p">)</span>
         <span class="c1"># We need to force the C-order or we loose the contiguity</span>
         <span class="n">grid</span><span class="o">.</span><span class="n">grid</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">swapaxes</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">grid</span><span class="p">,</span> <span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">),</span> <span class="n">order</span><span class="o">=</span><span class="s1">&#39;C&#39;</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">grid</span></div>
@@ -464,7 +478,7 @@
         <span class="c1"># Down-scale cell</span>
         <span class="n">cell</span><span class="p">[</span><span class="n">axis</span><span class="p">,</span> <span class="p">:]</span> <span class="o">/=</span> <span class="n">shape</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span>
         <span class="n">shape</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
-        <span class="n">grid</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="p">(</span><span class="n">shape</span><span class="p">,</span> <span class="n">bc</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">bc</span><span class="p">),</span> <span class="n">geom</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">geom</span><span class="o">.</span><span class="n">copy</span><span class="p">())</span>
+        <span class="n">grid</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="p">(</span><span class="n">shape</span><span class="p">,</span> <span class="n">bc</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">bc</span><span class="p">),</span> <span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">__sc_geom_dict</span><span class="p">())</span>
         <span class="c1"># Update cell shape (the cell is smaller now)</span>
         <span class="n">grid</span><span class="o">.</span><span class="n">set_sc</span><span class="p">(</span><span class="n">cell</span><span class="p">)</span>
 
@@ -488,7 +502,7 @@
         <span class="n">cell</span><span class="p">[</span><span class="n">axis</span><span class="p">,</span> <span class="p">:]</span> <span class="o">/=</span> <span class="n">shape</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span>
         <span class="n">shape</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
 
-        <span class="n">grid</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="p">(</span><span class="n">shape</span><span class="p">,</span> <span class="n">bc</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">bc</span><span class="p">),</span> <span class="n">geom</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">geom</span><span class="o">.</span><span class="n">copy</span><span class="p">())</span>
+        <span class="n">grid</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="p">(</span><span class="n">shape</span><span class="p">,</span> <span class="n">bc</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">bc</span><span class="p">),</span> <span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">__sc_geom_dict</span><span class="p">())</span>
         <span class="c1"># Update cell shape (the cell is smaller now)</span>
         <span class="n">grid</span><span class="o">.</span><span class="n">set_sc</span><span class="p">(</span><span class="n">cell</span><span class="p">)</span>
 
@@ -583,7 +597,7 @@
         <span class="c1"># Down-scale cell</span>
         <span class="n">cell</span><span class="p">[</span><span class="n">axis</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">cell</span><span class="p">[</span><span class="n">axis</span><span class="p">,</span> <span class="p">:]</span> <span class="o">/</span> <span class="n">old_N</span> <span class="o">*</span> <span class="n">shape</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span>
 
-        <span class="n">grid</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="p">(</span><span class="n">shape</span><span class="p">,</span> <span class="n">bc</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">bc</span><span class="p">),</span> <span class="n">geom</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">geom</span><span class="o">.</span><span class="n">copy</span><span class="p">())</span>
+        <span class="n">grid</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="p">(</span><span class="n">shape</span><span class="p">,</span> <span class="n">bc</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">bc</span><span class="p">),</span> <span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">__sc_geom_dict</span><span class="p">())</span>
         <span class="c1"># Update cell shape (the cell is smaller now)</span>
         <span class="n">grid</span><span class="o">.</span><span class="n">set_sc</span><span class="p">(</span><span class="n">cell</span><span class="p">)</span>
 
@@ -734,8 +748,6 @@
             <span class="c1"># We have to do something differently</span>
             <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_index_shape</span><span class="p">(</span><span class="n">coord</span><span class="p">)</span>
 
-        <span class="n">rcell</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">rcell</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">)</span>
-
         <span class="n">coord</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">asarrayd</span><span class="p">(</span><span class="n">coord</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">coord</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span> <span class="c1"># float</span>
             <span class="k">if</span> <span class="n">axis</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
@@ -746,32 +758,39 @@
             <span class="n">c</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dcell</span><span class="p">[</span><span class="n">axis</span><span class="p">,</span> <span class="p">:]</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">**</span> <span class="mf">0.5</span>
             <span class="k">return</span> <span class="nb">int</span><span class="p">(</span><span class="n">floor</span><span class="p">(</span><span class="n">coord</span> <span class="o">/</span> <span class="n">c</span><span class="p">))</span>
 
+        <span class="n">icell</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">icell</span>
+
         <span class="c1"># Ensure we return values in the same dimensionality</span>
         <span class="n">ndim</span> <span class="o">=</span> <span class="n">coord</span><span class="o">.</span><span class="n">ndim</span>
         <span class="n">coord</span><span class="o">.</span><span class="n">shape</span> <span class="o">=</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
 
         <span class="n">shape</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
 
-        <span class="c1"># dot(rcell / 2pi, coord) is the fraction in the</span>
+        <span class="c1"># dot(icell, coord) is the fraction in the</span>
         <span class="c1"># cell. So * l / (l / self.shape) will</span>
         <span class="c1"># give the float of dcell lattice vectors (where l is the length of</span>
         <span class="c1"># each lattice vector)</span>
         <span class="k">if</span> <span class="n">axis</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">if</span> <span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
-                <span class="k">return</span> <span class="n">floor</span><span class="p">(</span><span class="n">dot</span><span class="p">(</span><span class="n">rcell</span><span class="p">,</span> <span class="n">coord</span><span class="o">.</span><span class="n">T</span><span class="p">)</span> <span class="o">*</span> <span class="n">shape</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">int32</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+                <span class="k">return</span> <span class="n">floor</span><span class="p">(</span><span class="n">dot</span><span class="p">(</span><span class="n">icell</span><span class="p">,</span> <span class="n">coord</span><span class="o">.</span><span class="n">T</span><span class="p">)</span> <span class="o">*</span> <span class="n">shape</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">int32</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
             <span class="k">else</span><span class="p">:</span>
-                <span class="k">return</span> <span class="n">floor</span><span class="p">(</span><span class="n">dot</span><span class="p">(</span><span class="n">rcell</span><span class="p">,</span> <span class="n">coord</span><span class="o">.</span><span class="n">T</span><span class="p">)</span> <span class="o">*</span> <span class="n">shape</span><span class="p">)</span><span class="o">.</span><span class="n">T</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">int32</span><span class="p">)</span>
+                <span class="k">return</span> <span class="n">floor</span><span class="p">(</span><span class="n">dot</span><span class="p">(</span><span class="n">icell</span><span class="p">,</span> <span class="n">coord</span><span class="o">.</span><span class="n">T</span><span class="p">)</span> <span class="o">*</span> <span class="n">shape</span><span class="p">)</span><span class="o">.</span><span class="n">T</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">int32</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
-            <span class="k">return</span> <span class="n">floor</span><span class="p">(</span><span class="n">dot</span><span class="p">(</span><span class="n">rcell</span><span class="p">[</span><span class="n">axis</span><span class="p">,</span> <span class="p">:],</span> <span class="n">coord</span><span class="o">.</span><span class="n">T</span><span class="p">)</span> <span class="o">*</span> <span class="n">shape</span><span class="p">[</span><span class="n">axis</span><span class="p">])</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">int32</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">return</span> <span class="n">floor</span><span class="p">(</span><span class="n">dot</span><span class="p">(</span><span class="n">icell</span><span class="p">[</span><span class="n">axis</span><span class="p">,</span> <span class="p">:],</span> <span class="n">coord</span><span class="o">.</span><span class="n">T</span><span class="p">)</span> <span class="o">*</span> <span class="n">shape</span><span class="p">[</span><span class="n">axis</span><span class="p">])</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">int32</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">False</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="k">return</span> <span class="n">floor</span><span class="p">(</span><span class="n">dot</span><span class="p">(</span><span class="n">rcell</span><span class="p">[</span><span class="n">axis</span><span class="p">,</span> <span class="p">:],</span> <span class="n">coord</span><span class="o">.</span><span class="n">T</span><span class="p">)</span> <span class="o">*</span> <span class="n">shape</span><span class="p">[</span><span class="n">axis</span><span class="p">])</span><span class="o">.</span><span class="n">T</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">int32</span><span class="p">)</span></div>
+            <span class="k">return</span> <span class="n">floor</span><span class="p">(</span><span class="n">dot</span><span class="p">(</span><span class="n">icell</span><span class="p">[</span><span class="n">axis</span><span class="p">,</span> <span class="p">:],</span> <span class="n">coord</span><span class="o">.</span><span class="n">T</span><span class="p">)</span> <span class="o">*</span> <span class="n">shape</span><span class="p">[</span><span class="n">axis</span><span class="p">])</span><span class="o">.</span><span class="n">T</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">int32</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="Grid.append"><a class="viewcode-back" href="../../api-generated/sisl.Grid.html#sisl.Grid.append">[docs]</a>    <span class="k">def</span> <span class="nf">append</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">,</span> <span class="n">axis</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Appends other `Grid` to this grid along axis &quot;&quot;&quot;</span>
         <span class="n">shape</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
         <span class="n">shape</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span> <span class="o">+=</span> <span class="n">other</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="p">(</span><span class="n">shape</span><span class="p">,</span> <span class="n">bc</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">bc</span><span class="p">),</span>
-                              <span class="n">geom</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">geom</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">other</span><span class="o">.</span><span class="n">geom</span><span class="p">,</span> <span class="n">axis</span><span class="p">))</span></div>
+        <span class="n">d</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__sc_geom_dict</span><span class="p">()</span>
+        <span class="k">if</span> <span class="s1">&#39;geom&#39;</span> <span class="ow">in</span> <span class="n">d</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">other</span><span class="o">.</span><span class="n">geometry</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">d</span><span class="p">[</span><span class="s1">&#39;geom&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">d</span><span class="p">[</span><span class="s1">&#39;geom&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">other</span><span class="o">.</span><span class="n">geometry</span><span class="p">,</span> <span class="n">axis</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">d</span><span class="p">[</span><span class="s1">&#39;geom&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">other</span><span class="o">.</span><span class="n">geometry</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="p">(</span><span class="n">shape</span><span class="p">,</span> <span class="n">bc</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">bc</span><span class="p">),</span> <span class="o">**</span><span class="n">d</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="Grid.read"><a class="viewcode-back" href="../../api-generated/sisl.Grid.html#sisl.Grid.read">[docs]</a>    <span class="nd">@staticmethod</span>
     <span class="k">def</span> <span class="nf">read</span><span class="p">(</span><span class="n">sile</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
@@ -1521,7 +1540,7 @@
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'../../',
-            VERSION:'0.9.2-365',
+            VERSION:'0.9.2-394',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true,
