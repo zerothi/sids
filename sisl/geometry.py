@@ -59,17 +59,19 @@ class Geometry(SuperCellChild):
 
     Attributes
     ----------
-    na : int
-        number of atoms, ``len(self)``
+    na
     xyz : ndarray (*, 3)
         atomic coordinates
-    atom : Atoms
-        the atomic objects associated with each atom (indexable)
+    atom
+    orbitals
     sc : SuperCell
         the supercell describing the periodicity of the
         geometry
-    no: int
-        total number of orbitals in the geometry
+    no
+    n_s: int
+        total number of supercells in the supercell
+    no_s: int
+        total number of orbitals in the geometry times number of supercells
 
     Parameters
     ----------
@@ -799,10 +801,10 @@ class Geometry(SuperCellChild):
                  ".optimize_nsc could not determine the radius from the "
                  "internal atoms (defaulting to zero radius).")
 
-        rc = self.rcell / (2 * np.pi)
-        nrc = 1 / fnorm(rc)
-        idiv = np.floor(np.maximum(nrc / (2 * R), 1.1)).astype(np.int32)
-        rmcell = rc * idiv.reshape(-1, 1)
+        ic = self.icell
+        nrc = 1 / fnorm(ic)
+        idiv = np.floor(np.maximum(nrc / (2 * R), 1.1)).astype(np.int32, copy=False)
+        imcell = ic * idiv.reshape(-1, 1)
 
         # We know this is the maximum
         nsc = self.nsc.copy()
@@ -811,8 +813,8 @@ class Geometry(SuperCellChild):
         # I don't think we need anything other than this.
         # However, until I am sure that this wouldn't change, regardless of the
         # cell. I will keep it.
-        Rrmcell = R * fnorm(rmcell)[axis]
-        nsc[axis] = (np.floor(Rrmcell) + np.ceil(Rrmcell % 0.5 - 0.5)).astype(np.int32)
+        Rimcell = R * fnorm(imcell)[axis]
+        nsc[axis] = (np.floor(Rimcell) + np.ceil(Rimcell % 0.5 - 0.5)).astype(np.int32)
         # Since for 1 it is not sure that it is a connection or not, we limit the search by
         # removing it.
         nsc[axis] = np.where(nsc[axis] > 1, nsc[axis], 0)
@@ -1730,7 +1732,7 @@ class Geometry(SuperCellChild):
     @property
     def fxyz(self):
         """ Returns geometry coordinates in fractional coordinates """
-        return dot(self.xyz, self.rcell.T / (2. * np.pi))
+        return dot(self.xyz, self.icell.T)
 
     def axyz(self, atom=None, isc=None):
         """ Return the atomic coordinates in the supercell of a given atom.
@@ -2200,18 +2202,18 @@ class Geometry(SuperCellChild):
         # initial work by Jose Soler from Siesta.
 
         # Retrieve reciprocal lattice to divide the mesh into reciprocal divisions.
-        rcell = self.rcell / (2 * np.pi)
+        icell = self.icell
 
         # Calculate number of mesh-divisions
-        divisions = np.maximum(2. / fnorm(rcell) / max_R, 1).floor().astype(int32)
+        divisions = np.maximum(2. / fnorm(icell) / max_R, 1).floor(dtype=int32)
         divisions.shape = (-1, 1)
         celld = self.cell / divisions
-        rdcell = divisions * rcell
+        idcell = divisions * icell
 
         # Calculate mesh indices for atoms
         xyz = self.xyz.view()
-        mesh_a = dot(xyz, rmcell.T) # dmx
-        mesh_i = mesh_a.floor().astype(int32)
+        mesh_a = dot(xyz, imcell.T) # dmx
+        mesh_i = mesh_a.floor(dtype=int32)
         subtract(mesh_a, mesh_i, out=mesh_a)
         mesh_i = mesh_i.astype(int32) # imx
         mod(mesh_i, divisions.T, out=mesh_i)
@@ -2228,7 +2230,7 @@ class Geometry(SuperCellChild):
 
         # Transform into cell-mesh divisions
         c_a = dot(coord, rmcell.T) # dmx
-        c_i = c_a.floor().astype(int32)
+        c_i = c_a.floor(dtype=int32)
         c_a = c_a - c_i
         c_i = c_i.astype(int32) # imx
         mod(c_i, divisions.ravel(), out=c_i)
@@ -2924,6 +2926,74 @@ class Geometry(SuperCellChild):
         d.shape = (-1,)
 
         return d
+
+    def inf_within(self, sc, periodic=None):
+        """ Find all atoms within a provided supercell
+
+        Note this function is rather different from `close` and `within`.
+        Specifically this routine is returning *all* indices for the infinite
+        periodic system (where ``self.nsc > 1`` or `periodic` is true).
+
+        Notes
+        -----
+        The name of this function may change. Currently it should only be used
+        internally in sisl.
+
+        Parameters
+        ----------
+        sc : SuperCell or SuperCellChild
+            the supercell in which this geometry should be expanded into.
+        periodic : list of bool
+            explicitly define the periodic directions, by default the periodic
+            directions are only where ``self.nsc > 1``.
+        """
+        if periodic is None:
+            periodic = self.nsc > 1
+        else:
+            periodic = list(periodic)
+
+        # First we should figure out which atoms we are dealing with
+        idx = dot(self.icell.T, sc.cell + np.diag(sc.origo))
+        idx_origo = dot(self.icell.T, np.diag(sc.origo))
+        tile_min = np.floor(idx.min(0)).astype(dtype=int32)
+        tile_max = np.ceil(idx.max(0)).astype(dtype=int32)
+
+        # Minimize tile to 0 where nsc == 1
+        tile_min = np.where(periodic, tile_min, 0)
+        tile_max = np.where(periodic, tile_max, 1)
+
+        big_origo = (tile_min.reshape(-1, 1) * self.cell).sum(0)
+
+        # The xyz geometry that fully encompass the (possibly) larger supercell
+        tile = tile_max - tile_min
+        # We displace *all* atoms 0.1 Ang along each lattice vector.
+        # This should take care of numerical accuracy in the fxyz routine
+        small_fxyz = 0.1 / fnorm(self.cell)
+        min_xyz = dot(small_fxyz - self.fxyz.min(0), self.cell)
+        full_geom = (self.translate(min_xyz) * tile).translate(big_origo)
+
+        # Now we have to figure out all atomic coordinates within
+        cuboid = sc.toCuboid()
+
+        # Now retrieve all atomic coordinates from the full geometry
+        xyz = full_geom.axyz(_a.arangei(full_geom.na_s))
+        idx = cuboid.within_index(xyz)
+        xyz = xyz[idx, :]
+        del full_geom
+
+        # Figure out supercell connections in the smaller indices
+        # Since we have shifted all coordinates into the primary unit cell we
+        # are sure that these fxyz are [0:1[
+        fxyz = dot(xyz, self.icell.T)
+
+        # Reduce atomic coordinates (and shift back to "correct" coordinates)
+        xyz -= min_xyz.reshape(-1, 3)
+        # Convert to supercell indices
+        isc = np.floor(fxyz).astype(int32)
+
+        # Convert indices to unit-cell indices and also return coordinates and
+        # infinite supercell indices
+        return self.sc2uc(idx), xyz, isc
 
     # Create pickling routines
     def __getstate__(self):

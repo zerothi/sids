@@ -7,7 +7,7 @@ from sisl._help import dtype_complex_to_real
 from sisl._help import _zip as zip, _range as range
 
 
-__all__ = ['State', 'CState']
+__all__ = ['State', 'CoeffState']
 
 _dot = np.dot
 _conj = np.conjugate
@@ -53,12 +53,18 @@ class State(object):
            an info dictionary that turns into an attribute on the object.
            This `info` may contain anything that may be relevant for the state.
         """
-        self.state = _a.asarray(state)
-        # Correct for vector
-        if self.state.ndim == 1:
-            self.state.shape = (1, -1)
+        self.state = state
         self.parent = parent
         self.info = info
+        self.__state_finalize__()
+
+    def __state_finalize__(self):
+        """ Finalizer for the state object. """
+        if not self.state is None:
+            self.state = _a.asarray(self.state)
+            # Correct for vector
+            if self.state.ndim == 1:
+                self.state.shape = (1, -1)
 
     def __repr__(self):
         """ The string representation of this object """
@@ -129,12 +135,30 @@ class State(object):
         -------
         np.ndarray : the normalization for each state
         """
-        dtype = dtype_complex_to_real(self.dtype)
-        n = np.empty(len(self), dtype=dtype)
+        return np.sqrt(self.norm2())
 
-        for i in range(len(self)):
-            n[i] = _idot(self.state[i, :]).astype(n.dtype)
-        return np.sqrt(n)
+    def norm2(self):
+        r""" Return a vector with the norm of each state :math:`\langle\psi|\psi\rangle`
+
+        Returns
+        -------
+        np.ndarray : the normalization for each state
+        """
+        dtype = dtype_complex_to_real(self.dtype)
+        shape = self.shape[:-1]
+        n = np.empty(shape, dtype=dtype)
+
+        # A state should only be up to
+        if len(shape) == 1:
+            for i in range(shape[0]):
+                n[i] = _idot(self.state[i, :]).astype(n.dtype)
+        elif len(shape) == 2:
+            for i in range(shape[0]):
+                for j in range(shape[1]):
+                    n[i, j] = _idot(self.state[i, j, :]).astype(n.dtype)
+        else:
+            raise SislError(self.__class__.__name__ + '.norm2 does not implement more than 2 dimensions on states.')
+        return n
 
     def normalize(self):
         r""" Return a normalized state where each state has :math:`|\psi|^2=1`
@@ -142,7 +166,7 @@ class State(object):
         This is roughly equivalent to:
 
         >>> state = State(np.arange(10))
-        >>> n = np.sqrt(state.norm())
+        >>> n = state.norm()
         >>> norm_state = State(state.state / n.reshape(-1, 1))
 
         Returns
@@ -150,7 +174,7 @@ class State(object):
         state : a new state with all states normalized, otherwise equal to this
         """
         n = self.norm()
-        s = self.__class__(self.state / n.reshape(-1, 1), parent=self.parent)
+        s = self.__class__(self.state / n.reshape(n.shape + (1,)), parent=self.parent)
         s.info = self.info
         return s
 
@@ -189,19 +213,19 @@ class State(object):
         -------
         state : a new state only containing the requested elements
         """
-        idx = _a.asarrayi(idx)
-        sub = self.__class__(self.state[idx, :].copy(), self.parent)
+        idx = _a.asarrayi(idx).ravel() # this ensures that the first dimension is preserved
+        sub = self.__class__(self.state[idx].copy(), self.parent)
         sub.info = self.info
         return sub
 
-    def toCState(self, norm=1.):
-        r""" Transforms the states into normalized values equal to `norm` and specifies the coefficients in `CState` as the norm
+    def toCoeffState(self, norm=1.):
+        r""" Transforms the states into normalized values equal to `norm` and specifies the coefficients in `CoeffState` as the norm
 
         This is an easy method to renormalize the state vectors to a common (or state dependent) normalization constant.
 
         .. math::
-            c_i &= \sqrt{\langle \psi_i | \psi_i\rangle} / \mathrm{norm}
-            |\psi_i\rangle &= | \psi_i\rangle / c_i
+            c_i &= \sqrt{\langle \psi_i | \psi_i\rangle} / \mathrm{norm} \\
+              |\psi_i\rangle &= | \psi_i\rangle / c_i
 
         Parameters
         ----------
@@ -210,14 +234,16 @@ class State(object):
 
         Returns
         -------
-        CState : a new coefficient state object with associated coefficients
+        CoeffState : a new coefficient state object with associated coefficients
         """
         n = len(self)
         norm = _a.asarray(norm).ravel()
         if norm.size == 1 and n > 1:
             norm = np.tile(norm, n)
         elif norm.size != n:
-            raise ValueError(self.__class__.__name__ + '.toCState requires the input norm to be a single float or having equal length to the state!')
+            raise ValueError(self.__class__.__name__ + '.toCoeffState requires the input norm to be a single float or having equal length to the state!')
+
+        # Correct data-type
         if norm.dtype in [np.complex64, np.complex128]:
             cdtype = norm.dtype
         else:
@@ -228,15 +254,15 @@ class State(object):
         state = np.empty(self.shape, dtype=self.dtype)
 
         for i in range(n):
-            c[i] = (_idot(self.state[i, :]).astype(c.dtype) / norm[i]) ** 0.5
-            state[i, :] = self.state[i, :] / c[i]
+            c[i] = (_idot(self.state[i].ravel()).astype(c.dtype) / norm[i]) ** 0.5
+            state[i, ...] = self.state[i, ...] / c[i]
 
-        cs = CState(c, state, parent=self.parent)
+        cs = CoeffState(c, state, parent=self.parent)
         cs.info = self.info
         return cs
 
 
-class CState(State):
+class CoeffState(State):
     """ An object handling a set of vectors describing a given *state* with associated coefficients `c`
 
     Notes
@@ -267,16 +293,39 @@ class CState(State):
            This `info` may contain anything that may be relevant for the state.
         """
         self.c = np.asarray(c).ravel()
-        self.state = np.asarray(state)
-        self.state.shape = (len(self.c), -1)
-        self.parent = parent
+        super(CoeffState, self).__init__(state, parent)
         self.info = info
+
+    def __len__(self):
+        """ Length of `CoeffState` """
+        return len(self.c)
 
     def copy(self):
         """ Return a copy (only the coefficients and states are copied). Parent and info are passed by reference """
-        copy = self.__class__(self.c.copy(), self.state.copy(), self.parent)
+        if self.state is None:
+            copy = self.__class__(self.c.copy(), None, self.parent)
+        else:
+            copy = self.__class__(self.c.copy(), self.state.copy(), self.parent)
         copy.info = self.info
         return copy
+
+    def normalize(self):
+        r""" Return a normalized state where each state has :math:`|\psi|^2=1`
+
+        This is roughly equivalent to:
+
+        >>> state = CoeffState(1, np.arange(10))
+        >>> n = state.norm()
+        >>> norm_state = CoeffState(state.c.copy(), state.state / n.reshape(-1, 1))
+
+        Returns
+        -------
+        state : a new state with all states normalized, otherwise equal to this
+        """
+        n = self.norm()
+        s = self.__class__(self.c.copy(), self.state / n.reshape(n.shape + (1,)), parent=self.parent)
+        s.info = self.info
+        return s
 
     def outer(self, idx=None):
         r""" Return the outer product for the indices `idx` (or all if ``None``) by :math:`\sum_i|\psi_i\rangle c_i\langle\psi_i|`
@@ -291,15 +340,29 @@ class CState(State):
         np.ndarray : a matrix with the sum of outer state products
         """
         if idx is None:
-            m = _couter(self.c[0], self.state[0, :])
+            m = _couter(self.c[0], self.state[0].ravel())
             for i in range(1, len(self)):
-                m += _couter(self.c[i], self.state[i, :])
+                m += _couter(self.c[i], self.state[i].ravel())
             return m
         idx = _a.asarrayi(idx).ravel()
-        m = _couter(self.c[idx[0]], self.state[idx[0], :])
+        m = _couter(self.c[idx[0]], self.state[idx[0]].ravel())
         for i in idx[1:]:
-            m += _couter(self.c[i], self.state[i, :])
+            m += _couter(self.c[i], self.state[i].ravel())
         return m
+
+    def sort(self, ascending=True):
+        """ Sort and return a new `CoeffState` by sorting the coefficients (default to ascending)
+
+        Parameters
+        ----------
+        ascending : bool, optional
+            sort the contained elements ascending, else they will be sorced descending
+        """
+        if ascending:
+            idx = np.argsort(self.c)
+        else:
+            idx = np.argsort(-self.c)
+        return self.sub(idx)
 
     def sub(self, idx):
         """ Return a new state with only the specified states
@@ -311,9 +374,11 @@ class CState(State):
 
         Returns
         -------
-        CState
+        CoeffState : a new object with a subset of the states
         """
-        idx = _a.asarrayi(idx)
-        sub = self.__class__(self.c[idx], self.state[idx, :], self.parent)
+        idx = _a.asarrayi(idx).ravel()
+        sub = self.__class__(self.c[idx], self.state[idx, ...], self.parent)
         sub.info = self.info
         return sub
+
+    toCoeffState = None

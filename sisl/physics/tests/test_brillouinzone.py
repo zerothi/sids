@@ -71,6 +71,7 @@ class TestBrillouinZone(object):
             assert np.allclose(val, np.arange(3) - 1)
         # Average
         assert np.allclose(bz.asaverage().eigh(), np.arange(3))
+        assert np.allclose(bz.asaverage().eigh(eta=True), np.arange(3))
 
     def test_class3(self, setup):
         class Test(SuperCellChild):
@@ -106,6 +107,7 @@ class TestBrillouinZone(object):
         bz1 = MonkhorstPack(setup.s1, [2] * 3, size=0.5, trs=False)
         assert len(bz1) == 8
         assert np.all(bz1.k < 0.25)
+        assert bz1.weight.sum() == pytest.approx(0.5 ** 3)
 
     def test_trs(self, setup):
         size = [0.05, 0.5, 0.9]

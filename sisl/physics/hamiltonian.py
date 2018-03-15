@@ -7,7 +7,7 @@ from numpy import add, subtract, multiply, divide
 from numpy import cos, sin, arctan2, conj
 from numpy import dot, sqrt, square, floor, ceil
 
-from sisl.messages import warn
+from sisl.messages import warn, tqdm_eta
 from sisl._help import _range as range, _str as str
 import sisl._array as _a
 from sisl import Geometry
@@ -441,7 +441,7 @@ class EigenState(EigenSystem):
 
         return PDOS
 
-    def psi(self, grid, k=None, spinor=0):
+    def psi(self, grid, k=None, spinor=0, eta=False):
         r""" Add the wave-function (`Orbital.psi`) component of each orbital to the grid
 
         This routine calculates the real-space wave-function components in the
@@ -487,6 +487,8 @@ class EigenState(EigenSystem):
            eigenstate object has been created from a parent object with a `Spin` object
            contained, *and* if the spin-configuration is non-colinear or spin-orbit coupling.
            Default to the first spinor component.
+        eta : bool, optional
+           Display a progressbar. (Requires tqdm)
         """
         geom = None
         is_nc = False
@@ -502,6 +504,10 @@ class EigenState(EigenSystem):
             except:
                 pass
         if geom is None:
+            geom = grid.geometry
+            warn(self.__class__.__name__ + '.psi could not find a geometry associated, will use the Grid geometry.')
+        if geom is None:
+            raise SislError(self.__class__.__name__ + '.psi can not find a geometry associated!')
             geom = grid.geometry
 
         # Do the sum over all eigenstates
@@ -519,6 +525,8 @@ class EigenState(EigenSystem):
         k = _a.asarrayd(k)
         kl = (k ** 2).sum() ** 0.5
         has_k = kl > 0.000001
+        if has_k:
+            warn('sisl wavefunctions at k != from Gamma does not produce correct wavefunctions!')
 
         # Check that input/grid makes sense.
         # If the coefficients are complex valued, then the grid *has* to be
@@ -537,7 +545,8 @@ class EigenState(EigenSystem):
         # Extract sub variables used throughout the loop
         shape = _a.asarrayi(grid.shape)
         dcell = grid.dcell
-        rc = grid.sc.rcell / (2. * pi) * shape.reshape(1, -1)
+        ic = grid.sc.icell * shape.reshape(1, -1)
+        geom_shape = dot(ic, geom.cell.T).T
 
         # In the following we don't care about division
         # So 1) save error state, 2) turn off divide by 0, 3) calculate, 4) turn on old error state
@@ -579,101 +588,121 @@ class EigenState(EigenSystem):
         # First we calculate the min/max indices for all atoms
         idx_mm = _a.emptyi([geom.na, 2, 3])
         rxyz = _a.emptyd(nrxyz)
+        rxyz[..., 0] = ctheta_sphi
+        rxyz[..., 1] = stheta_sphi
+        rxyz[..., 2] = cphi
+        # Reshape
+        rxyz.shape = (-1, 3)
+        idx = dot(ic, rxyz.T)
+        idxm = idx.min(1).reshape(1, 3)
+        idxM = idx.max(1).reshape(1, 3)
+        del ctheta_sphi, stheta_sphi, cphi, idx, rxyz, nrxyz
+
         origo = grid.sc.origo.reshape(1, -1)
         for atom, ia in geom.atom.iter(True):
             if len(ia) == 0:
                 continue
             R = atom.maxR()
 
-            # Reshape
-            rxyz.shape = nrxyz
-            rxyz[..., 0] = ctheta_sphi
-            rxyz[..., 1] = stheta_sphi
-            rxyz[..., 2] = cphi
-            rxyz.shape = (-1, 3)
-
-            idx = dot(rc, rxyz.T)
-            idx_m = idx.min(1) * R
-            idx_M = idx.max(1) * R
-
             # Now do it for all the atoms to get indices of the middle of
             # the atoms
             # The coordinates are relative to origo, so we need to shift (when writing a grid
             # it is with respect to origo)
             xyz = geom.xyz[ia, :] - origo
-            idx = dot(rc, xyz.T).T
+            idx = dot(ic, xyz.T).T
 
             # Get min-max for all atoms, note we should first do the floor here
-            idx_mm[ia, 0, :] = floor(idx_m.reshape(1, -3) + idx).astype(int32)
-            idx_mm[ia, 1, :] = ceil(idx_M.reshape(1, -3) + idx).astype(int32)
+            idx_mm[ia, 0, :] = idxm * R + idx
+            idx_mm[ia, 1, :] = idxM * R + idx
 
         # Now we have min-max for all atoms
         # When we run the below loop all indices can be retrieved by looking
         # up in the above table.
 
         # Before continuing, we can easily clean up the temporary arrays
-        del ctheta_sphi, stheta_sphi, cphi, nrxyz, rxyz, origo, idx
+        del origo, idx
 
         aranged = _a.aranged
 
-        # Loop over all atoms in the full supercell structure
-        for IA in range(geom.na_s):
+        # In case this grid does not have a Geometry associated
+        # We can *perhaps* easily attach a geometry with the given
+        # atoms in the unit-cell
+        sc = grid.sc.copy()
+        if grid.geometry is None:
+            # Create the actual geometry that encompass the grid
+            ia, xyz, _ = geom.inf_within(sc)
+            if len(ia) > 0:
+                grid.set_geometry(Geometry(xyz, geom.atom[ia], sc=grid.sc))
 
-            # Get atomic coordinate
-            xyz = geom.axyz(IA) - grid.origo
-            # Reduce to unit-cell atom
-            ia = IA % geom.na
+        # Instead of looping all atoms in the supercell we find the exact atoms
+        # and their supercell indices.
+        add_R = _a.zerosd(3) + geom.maxR()
+        sc = sc + np.diag(add_R * 2)
+        sc.origo = sc.origo[:] - add_R
+
+        # Retrieve all atoms within the grid supercell
+        # (and the neighbours that connect into the cell)
+        IA, XYZ, ISC = geom.inf_within(sc)
+
+        r_k = dot(geom.rcell, k)
+        r_k_cell = dot(r_k, geom.cell)
+        phase = 1
+
+        # Retrieve progressbar
+        eta = tqdm_eta(len(IA), self.__class__.__name__ + '.psi', 'atoms', eta)
+
+        # Loop over all atoms in the full supercell structure
+        for ia, xyz, isc in zip(IA, XYZ - grid.origo.reshape(1, 3), ISC):
             # Get current atom
             atom = geom.atom[ia]
-
-            if ia == 0:
-                # start over for every new supercell
-                io = -1
-                isc = geom.a2isc(IA)
-                if has_k:
-                    phase = np.exp(-1j * dot(dot(dot(geom.rcell, k), geom.cell), isc))
-                else:
-                    # do not force complex values for Gamma only (user is responsible)
-                    phase = 1
 
             # Extract maximum R
             R = atom.maxR()
             if R <= 0.:
                 warn("Atom '{}' does not have a wave-function, skipping atom.".format(atom))
-                # Skip this atom
-                io += atom.no
+                eta.update()
                 continue
 
             # Get indices in the supercell grid
-            idxm = idx_mm[ia, 0, :] + shape * isc
-            idxM = idx_mm[ia, 1, :] + shape * isc
+            idx = (isc.reshape(3, 1) * geom_shape).sum(0)
+            idxm = (idx_mm[ia, 0, :] + idx).astype(int32)
+            idxM = (idx_mm[ia, 1, :] + idx).astype(int32) + 1
 
             # Fast check whether we can skip this point
-            if idxm[0] >= shape[0] or idxm[1] >= shape[1] or \
-               idxm[2] >= shape[2] or \
-               idxM[0] < 0 or idxM[1] < 0 or idxM[2] < 0:
-                io += atom.no
+            if idxm[0] >= shape[0] or idxm[1] >= shape[1] or idxm[2] >= shape[2] or \
+               idxM[0] <= 0 or idxM[1] <= 0 or idxM[2] <= 0:
+                eta.update()
                 continue
 
             # Truncate values
             if idxm[0] < 0:
                 idxm[0] = 0
-            if idxM[0] >= shape[0]:
-                idxM[0] = shape[0] - 1
+            if idxM[0] > shape[0]:
+                idxM[0] = shape[0]
             if idxm[1] < 0:
                 idxm[1] = 0
-            if idxM[1] >= shape[1]:
-                idxM[1] = shape[1] - 1
+            if idxM[1] > shape[1]:
+                idxM[1] = shape[1]
             if idxm[2] < 0:
                 idxm[2] = 0
-            if idxM[2] >= shape[2]:
-                idxM[2] = shape[2] - 1
+            if idxM[2] > shape[2]:
+                idxM[2] = shape[2]
 
             # Now idxm/M contains min/max indices used
             # Convert to spherical coordinates
-            n, idx, r, theta, phi = idx2spherical(aranged(idxm[0], idxM[0] + 0.5),
-                                                  aranged(idxm[1], idxM[1] + 0.5),
-                                                  aranged(idxm[2], idxM[2] + 0.5), xyz, dcell, R)
+            n, idx, r, theta, phi = idx2spherical(aranged(idxm[0], idxM[0]),
+                                                  aranged(idxm[1], idxM[1]),
+                                                  aranged(idxm[2], idxM[2]), xyz, dcell, R)
+
+            # Get initial orbital
+            io = geom.a2o(ia)
+
+            if has_k:
+                phase = np.exp(-1j * (dot(r_k_cell, isc)))
+                # TODO
+                # Possibly the phase should be an additional
+                # array for the position in the unit-cell!
+                #   + np.exp(-1j * dot(r_k, spher2cart(r, theta, np.arccos(phi)).T) )
 
             # Allocate a temporary array where we add the psi elements
             psi = psi_init(n)
@@ -706,20 +735,24 @@ class EigenState(EigenSystem):
 
                 # Loop orbitals with the same radius
                 for o in os:
-                    io += 1
-
                     # Evaluate psi component of the wavefunction and add it for this atom
                     psi[idx1] += o.psi_spher(r1, theta1, phi1, cos_phi=True) * (v[io] * phase)
+                    io += 1
 
             # Clean-up
             del idx1, r1, theta1, phi1, idx, r, theta, phi
 
             # Convert to correct shape and add the current atom contribution to the wavefunction
-            psi.shape = idxM - idxm + 1
-            grid.grid[idxm[0]:idxM[0]+1, idxm[1]:idxM[1]+1, idxm[2]:idxM[2]+1] += psi
+            psi.shape = idxM - idxm
+            grid.grid[idxm[0]:idxM[0], idxm[1]:idxM[1], idxm[2]:idxM[2]] += psi
 
             # Clean-up
             del psi
+
+            # Step progressbar
+            eta.update()
+
+        eta.close()
 
         # Reset the error code for division
         np.seterr(**old_err)

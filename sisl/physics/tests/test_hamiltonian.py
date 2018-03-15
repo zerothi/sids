@@ -245,6 +245,16 @@ class TestHamiltonian(object):
             Sk = h.Sk(k=[0.15, 0.15, 0.15])
             assert Sk.dtype == np.float64
 
+    @pytest.mark.parametrize("format", ['array', 'csr', 'csc', 'dense'])
+    def test_Hk_format(self, setup, format):
+        H = setup.HS.copy()
+        H.construct([(0.1, 1.5), ((1., 2.), (0.1, 0.2))])
+        # The loops ensures that we loop over all selector
+        # items
+        h = H.copy()
+        for i in range(4):
+            Hk = h.Hk(k=[0.15, 0.15, 0.15], format=format)
+
     @pytest.mark.xfail(raises=ValueError)
     def test_construct_raise(self, setup):
         # Test that construct fails with more than one
@@ -720,6 +730,57 @@ class TestHamiltonian(object):
         DOS = es.DOS(np.linspace(-1, 1, 100))
         assert np.allclose(PDOS.sum(0)[:, 0], DOS)
 
+    def test_non_colinear_non_orthogonal(self, setup):
+        g = Geometry([[i, 0, 0] for i in range(10)], Atom(6, R=1.01), sc=[100])
+        H = Hamiltonian(g, dtype=np.float64, orthogonal=False, spin=Spin.NONCOLINEAR)
+        for i in range(10):
+            j = range(i*4, i*4+3)
+            H[i, i, 0] = 0.
+            H[i, i, 1] = 0.
+            H[i, i, 2] = 0.1
+            H[i, i, 3] = 0.1
+            if i > 0:
+                H[i, i-1, 0] = 1.
+                H[i, i-1, 1] = 1.
+            if i < 9:
+                H[i, i+1, 0] = 1.
+                H[i, i+1, 1] = 1.
+            H.S[i, i] = 1.
+        eig1 = H.eigh()
+        # Check TimeSelector
+        for i in range(4):
+            assert np.allclose(H.eigh(), eig1)
+        assert len(eig1) == len(H)
+
+        H1 = Hamiltonian(g, dtype=np.float64, orthogonal=False, spin=Spin('non-colinear'))
+        for i in range(10):
+            j = range(i*4, i*4+3)
+            H1[i, i, 0] = 0.
+            H1[i, i, 1] = 0.
+            H1[i, i, 2] = 0.1
+            H1[i, i, 3] = 0.1
+            if i > 0:
+                H1[i, i-1, 0] = 1.
+                H1[i, i-1, 1] = 1.
+            if i < 9:
+                H1[i, i+1, 0] = 1.
+                H1[i, i+1, 1] = 1.
+            H1.S[i, i] = 1.
+        assert H1.spsame(H)
+        eig1 = H1.eigh()
+        # Check TimeSelector
+        for i in range(4):
+            assert np.allclose(H1.eigh(), eig1)
+        assert np.allclose(H.eigh(), H1.eigh())
+
+        es = H1.eigenstate()
+        assert np.allclose(es.e, eig1)
+        assert np.allclose(es.norm().sum(-1), 1)
+
+        PDOS = es.PDOS(np.linspace(-1, 1, 100))
+        DOS = es.DOS(np.linspace(-1, 1, 100))
+        assert np.allclose(PDOS.sum(0)[:, 0], DOS)
+
     def test_so1(self, setup):
         g = Geometry([[i, 0, 0] for i in range(10)], Atom(6, R=1.01), sc=[100])
         H = Hamiltonian(g, dtype=np.float64, spin=Spin.SPINORBIT)
@@ -1097,7 +1158,8 @@ def test_psi2():
     R, param = [0.1, 1.5], [1., 0.1]
     H.construct([R, param])
     ES = H.eigenstate(dtype=np.float64)
-    # Plot in the full thing
+    # This is effectively plotting outside where no atoms exists
+    # (there could however still be psi weight).
     grid = Grid(0.1, sc=SuperCell([2, 2, 2], origo=[2] * 3))
     grid.fill(0.)
     ES.sub(0).psi(grid)
@@ -1113,6 +1175,21 @@ def test_psi3():
     H.construct([R, param])
     ES = H.eigenstate()
     # Plot in the full thing
-    grid = Grid(0.1, dtype=np.complex128, sc=SuperCell([2, 2, 2], origo=[2] * 3))
+    grid = Grid(0.1, dtype=np.complex128, sc=SuperCell([2, 2, 2], origo=[-1] * 3))
     grid.fill(0.)
     ES.sub(0).psi(grid)
+
+
+def test_psi_eta():
+    N = 50
+    o1 = SphericalOrbital(0, (np.linspace(0, 2, N), np.exp(-np.linspace(0, 100, N))))
+    G = Geometry([[1] * 3, [2] * 3], Atom(6, o1), sc=[4, 4, 4])
+    H = Hamiltonian(G, spin=Spin('nc'))
+    R, param = [0.1, 1.5], [[0., 0., 0.1, -0.1],
+                            [1., 1., 0.1, -0.1]]
+    H.construct([R, param])
+    ES = H.eigenstate()
+    # Plot in the full thing
+    grid = Grid(0.1, dtype=np.complex128, sc=SuperCell([2, 2, 2], origo=[-1] * 3))
+    grid.fill(0.)
+    ES.sub(0).psi(grid, eta=True)

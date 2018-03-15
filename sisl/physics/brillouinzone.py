@@ -8,30 +8,12 @@ import numpy as np
 from numpy import sum, dot
 
 import sisl._array as _a
+from sisl.messages import tqdm_eta
 from sisl.supercell import SuperCell
 
 
 __all__ = ['BrillouinZone', 'MonkhorstPack', 'BandStructure']
 __all__ += ['MonkhorstPackBZ', 'PackBZ']
-
-
-def _get_eta(bz, desc, kwargs):
-    """ Create a TQDM eta progress bar in when it is requested. Otherwise returns a fake object """
-    eta = kwargs.pop('eta', False)
-    if eta:
-        from tqdm import tqdm
-        eta = tqdm(total=len(bz), desc=bz.__class__.__name__ + desc)
-    else:
-        class Fake(object):
-            __slots__ = []
-            def __init__(self):
-                pass
-            def update(self):
-                pass
-            def close(self):
-                pass
-        eta = Fake()
-    return eta
 
 
 class BrillouinZone(object):
@@ -159,7 +141,8 @@ class BrillouinZone(object):
 
         def _call(self, *args, **kwargs):
             func = getattr(self.parent, self.__attr)
-            eta = _get_eta(self, '.asarray()', kwargs)
+            eta = tqdm_eta(len(self), self.__class__.__name__ + '.asarray()',
+                           'k', kwargs.pop('eta', False))
             for i, k in enumerate(self):
                 if i == 0:
                     v = func(*args, k=k, **kwargs)
@@ -208,7 +191,8 @@ class BrillouinZone(object):
 
         def _call(self, *args, **kwargs):
             func = getattr(self.parent, self.__attr)
-            eta = _get_eta(self, '.asyield()', kwargs)
+            eta = tqdm_eta(len(self), self.__class__.__name__ + '.asyield()',
+                           'k', kwargs.pop('eta', False))
             for k in self:
                 yield func(*args, k=k, **kwargs).astype(dtype, copy=False)
                 eta.update()
@@ -251,7 +235,8 @@ class BrillouinZone(object):
 
         def _call(self, *args, **kwargs):
             func = getattr(self.parent, self.__attr)
-            eta = _get_eta(self, '.asaverage()', kwargs)
+            eta = tqdm_eta(len(self), self.__class__.__name__ + '.asaverage()',
+                           'k', kwargs.pop('eta', False))
             w = self.weight.view()
             for i, k in enumerate(self):
                 if i == 0:
@@ -360,6 +345,8 @@ class MonkhorstPack(BrillouinZone):
                 if displacement[i] == 0. and Dn[i] > nmax:
                     nmax = Dn[i]
                     i_trs = i
+
+        # Calculate k-points and weights along all directions
         kw = [self.grid(Dn[i], displacement[i], size[i], i == i_trs) for i in (0, 1, 2)]
 
         self._k = _a.emptyd((kw[0][0].size, kw[1][0].size, kw[2][0].size, 3))
@@ -483,7 +470,7 @@ class BandStructure(BrillouinZone):
                 dists = sum(np.diff(kpts, axis=0)**2, axis=1) ** .5
             dist = sum(dists)
 
-            div = np.floor(dists / dist * division).astype(np.int32)
+            div = np.floor(dists / dist * division).astype(dtype=np.int32)
             n = sum(div)
             if n < division:
                 div[-1] +=1

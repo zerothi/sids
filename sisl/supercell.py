@@ -12,6 +12,7 @@ from numpy import dot
 from sisl.utils.mathematics import fnorm
 import sisl._array as _a
 import sisl._plot as plt
+from sisl.shape.prism4 import Cuboid
 from .quaternion import Quaternion
 
 __all__ = ['SuperCell', 'SuperCellChild']
@@ -30,20 +31,40 @@ def _dot(u, v):
 
 
 class SuperCell(object):
-    """ Object to retain a super-cell and its nested values.
+    r""" A cell class to retain lattice vectors and a supercell structure
 
-    This supercell object handles cell vectors and its supercell mirrors.
+    The supercell structure is comprising the *primary* unit-cell and neighbouring
+    unit-cells. The number of supercells is given by the attribute `nsc` which
+    is a vector with 3 elements, one per lattice vector. It describes *how many*
+    times the primary unit-cell is extended along the i'th lattice vector.
+    For ``nsc[i] == 3`` the supercell is made up of 3 unit-cells. One *behind*, the
+    primary unit-cell and one *after*.
+
+    Parameters
+    ----------
+    cell : array_like
+       the lattice parameters of the unit cell (the actual cell
+       is returned from `tocell`.
+    nsc : array_like of int
+       number of supercells along each latticevector
+    origo : (3,) of float
+       the origo of the supercell.
+
+    Attributes
+    ----------
+    cell : (3, 3) of float
+       the lattice vectors (``cell[i, :]`` is the i'th vector)
+    icell : (3, 3) of float
+       the inverse lattice vectors (``icell[i, :]`` is the i'th vector inverse lattice vector)
+    rcell : (3, 3) of float
+       the reciprocal lattice vectors, equivalent to ``icell * 2 * pi``
     """
 
     # We limit the scope of this SuperCell object.
     __slots__ = ('cell', '_origo', 'volume', 'nsc', 'n_s', '_sc_off', '_isc_off')
 
     def __init__(self, cell, nsc=None, origo=None):
-        """ Initialize a `SuperCell` object from initial quantities
 
-        Initialize a `SuperCell` object with cell information
-        and number of supercells in each direction.
-        """
         if nsc is None:
             nsc = [1, 1, 1]
 
@@ -74,6 +95,11 @@ class SuperCell(object):
     def origo(self, origo):
         """ Set origo """
         self._origo[:] = origo
+
+    def toCuboid(self):
+        """ Return a cuboid with vectors as this unit-cell """
+        origo = self.center() + self.origo
+        return Cuboid(self.cell.copy(), origo)
 
     def parameters(self, rad=False):
         r""" Return the cell-parameters of this cell
@@ -299,7 +325,7 @@ class SuperCell(object):
         cell = np.copy(self.cell[:, :])
 
         # Get fractional coordinates to get the divisions in the current cell
-        x = dot(xyz, self.rcell.T / (2 * np.pi))
+        x = dot(xyz, self.icell.T)
 
         # Now we should figure out the correct repetitions
         # by rounding to integer positions of the cell vectors
@@ -423,8 +449,8 @@ class SuperCell(object):
         return -n, up
 
     @property
-    def rcell(self):
-        """ Returns the reciprocal cell for the `SuperCell` without ``2*np.pi``
+    def icell(self):
+        """ Returns the reciprocal (inverse) cell for the `SuperCell` without factor ``2*np.pi``
 
         Note: The returned vectors are still in [0, :] format
         and not as returned by an inverse LAPACK algorithm.
@@ -433,20 +459,29 @@ class SuperCell(object):
         # This should probably be changed and checked for
         # transposition
         cell = self.cell
-        rcell = np.empty([3, 3], dtype=cell.dtype)
-        rcell[0, 0] = cell[1, 1] * cell[2, 2] - cell[1, 2] * cell[2, 1]
-        rcell[0, 1] = cell[1, 2] * cell[2, 0] - cell[1, 0] * cell[2, 2]
-        rcell[0, 2] = cell[1, 0] * cell[2, 1] - cell[1, 1] * cell[2, 0]
-        rcell[1, 0] = cell[2, 1] * cell[0, 2] - cell[2, 2] * cell[0, 1]
-        rcell[1, 1] = cell[2, 2] * cell[0, 0] - cell[2, 0] * cell[0, 2]
-        rcell[1, 2] = cell[2, 0] * cell[0, 1] - cell[2, 1] * cell[0, 0]
-        rcell[2, 0] = cell[0, 1] * cell[1, 2] - cell[0, 2] * cell[1, 1]
-        rcell[2, 1] = cell[0, 2] * cell[1, 0] - cell[0, 0] * cell[1, 2]
-        rcell[2, 2] = cell[0, 0] * cell[1, 1] - cell[0, 1] * cell[1, 0]
-        rcell[0, :] = rcell[0, :] / dot(rcell[0, :], cell[0, :])
-        rcell[1, :] = rcell[1, :] / dot(rcell[1, :], cell[1, :])
-        rcell[2, :] = rcell[2, :] / dot(rcell[2, :], cell[2, :])
-        return rcell * 2. * np.pi
+        icell = np.empty([3, 3], dtype=cell.dtype)
+        icell[0, 0] = cell[1, 1] * cell[2, 2] - cell[1, 2] * cell[2, 1]
+        icell[0, 1] = cell[1, 2] * cell[2, 0] - cell[1, 0] * cell[2, 2]
+        icell[0, 2] = cell[1, 0] * cell[2, 1] - cell[1, 1] * cell[2, 0]
+        icell[1, 0] = cell[2, 1] * cell[0, 2] - cell[2, 2] * cell[0, 1]
+        icell[1, 1] = cell[2, 2] * cell[0, 0] - cell[2, 0] * cell[0, 2]
+        icell[1, 2] = cell[2, 0] * cell[0, 1] - cell[2, 1] * cell[0, 0]
+        icell[2, 0] = cell[0, 1] * cell[1, 2] - cell[0, 2] * cell[1, 1]
+        icell[2, 1] = cell[0, 2] * cell[1, 0] - cell[0, 0] * cell[1, 2]
+        icell[2, 2] = cell[0, 0] * cell[1, 1] - cell[0, 1] * cell[1, 0]
+        icell[0, :] = icell[0, :] / dot(icell[0, :], cell[0, :])
+        icell[1, :] = icell[1, :] / dot(icell[1, :], cell[1, :])
+        icell[2, :] = icell[2, :] / dot(icell[2, :], cell[2, :])
+        return icell
+
+    @property
+    def rcell(self):
+        """ Returns the reciprocal cell for the `SuperCell` with ``2*np.pi``
+
+        Note: The returned vectors are still in [0, :] format
+        and not as returned by an inverse LAPACK algorithm.
+        """
+        return self.icell * 2 * np.pi
 
     def rotatea(self, angle, only='abc', rad=False):
         return self.rotate(angle, self.cell[0, :], only=only, rad=rad)
@@ -504,7 +539,7 @@ class SuperCell(object):
            the lattice vectors of the other supercell to add
         """
         if not isinstance(other, SuperCell):
-            other = self.tocell(other)
+            other = SuperCell(other)
         cell = self.cell + other.cell
         origo = self.origo + other.origo
         nsc = np.where(self.nsc > other.nsc, self.nsc, other.nsc)
@@ -662,18 +697,35 @@ class SuperCell(object):
 
     @classmethod
     def tocell(cls, *args):
-        """ Returns a 3x3 unit-cell dependent on the input
+        r""" Returns a 3x3 unit-cell dependent on the input
 
-        If you supply a single argument it is regarded as either
-        a) a proper unit-cell
-        b) the diagonal elements in the unit-cell
+        1 argument
+          a unit-cell along Cartesian coordinates with side-length
+          equal to the argument.
 
-        If you supply 3 arguments it will be the same as the
-        diagonal elements of the unit-cell
+        3 arguments
+          the diagonal components of a Cartesian unit-cell
 
-        If you supply 6 arguments it will be the same as the
-        cell parameters, a, b, c, alpha, beta, gamma.
-        The angles should be provided in degree (not radians).
+        6 arguments
+          the cell parameters give by :math:`a`, :math:`b`, :math:`c`,
+          :math:`\alpha`, :math:`\beta` and :math:`\gamma` (angles
+          in degrees).
+
+        9 arguments
+          a 3x3 unit-cell.
+
+        Parameters
+        ----------
+        *args : float
+            May be either, 1, 3, 6 or 9 elements.
+            Note that the arguments will be put into an array and flattened
+            before checking the number of arguments.
+
+        Examples
+        --------
+        >>> cell_1_1_1 = SuperCell.tocell(1.)
+        >>> cell_1_2_3 = SuperCell.tocell(1., 2., 3.)
+        >>> cell_1_2_3 = SuperCell.tocell([1., 2., 3.]) # same as above
         """
         # Convert into true array (flattened)
         args = _a.asarrayd(args).ravel()
@@ -933,6 +985,11 @@ class SuperCellChild(object):
     def cell(self):
         """ Returns the inherent `SuperCell` objects `cell` """
         return self.sc.cell
+
+    @property
+    def icell(self):
+        """ Returns the inherent `SuperCell` objects `icell` """
+        return self.sc.icell
 
     @property
     def rcell(self):

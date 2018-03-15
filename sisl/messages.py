@@ -21,25 +21,11 @@ import warnings
 
 
 __all__ = ['SislDeprecation', 'SislInfo', 'SislWarning', 'SislException', 'SislError']
-__all__ += ['warn', 'info']
+__all__ += ['warn', 'info', 'deprecate']
+__all__ += ['tqdm_eta']
 
 # The local registry for warnings issued
 _sisl_warn_registry = {}
-
-
-class SislDeprecation(UserWarning):
-    """ Sisl deprecation informations """
-    pass
-
-
-class SislInfo(UserWarning):
-    """ Sisl informations """
-    pass
-
-
-class SislWarning(UserWarning):
-    """ Sisl warnings """
-    pass
 
 
 class SislException(Exception):
@@ -47,8 +33,23 @@ class SislException(Exception):
     pass
 
 
-class SislError(Exception):
+class SislError(SislException):
     """ Sisl error """
+    pass
+
+
+class SislWarning(SislException, UserWarning):
+    """ Sisl warnings """
+    pass
+
+
+class SislDeprecation(SislWarning):
+    """ Sisl deprecation informations """
+    pass
+
+
+class SislInfo(SislWarning):
+    """ Sisl informations """
     pass
 
 
@@ -96,3 +97,54 @@ def info(message, category=None):
     elif category is None:
         category = SislInfo
     warnings.warn_explicit(message, category, 'info', 0, registry=_sisl_warn_registry)
+
+
+# Figure out if we can import tqdm.
+# If so, simply use the progressbar class there.
+# Otherwise, create a fake one.
+try:
+    from tqdm import tqdm
+except ImportError:
+    # Notify user
+    info('Please install tqdm for better looking progress bars')
+
+    class tqdm(object):
+        """ Fake tqdm progress-bar. I should update this to also work in regular instances """
+        __slots__ = []
+
+        def __init__(self, total, desc, unit):
+            pass
+
+        def update(self, n=1):
+            pass
+
+        def close(self):
+            pass
+
+
+def tqdm_eta(count, desc, unit, eta):
+    """ Create a TQDM eta progress bar in when it is requested. Otherwise returns a fake object
+
+    Parameters
+    ----------
+    count : int
+       number of total iterations
+    desc : str
+       description on the stdout when running the progressbar
+    unit : str
+       unit shown in the progressbar
+    eta : bool
+       if True a ``tqdm`` progressbar is returned. Else a fake instance is returned."""
+    if eta:
+        eta = tqdm(total=count, desc=desc, unit=unit)
+    else:
+        # Since the eta bar is not needed we simply create a fake object which
+        # has the required 2 methods, update and close.
+        class Fake(object):
+            __slots__ = []
+            def update(self, n=1):
+                pass
+            def close(self):
+                pass
+        eta = Fake()
+    return eta
