@@ -13,6 +13,7 @@ from numpy import dot, square, sqrt
 import sisl._plot as plt
 import sisl._array as _a
 
+from ._math_small import indices_max_radius, indices_below, indices_between
 from .messages import warn
 from ._help import _str
 from ._help import _range as range
@@ -1987,10 +1988,6 @@ class Geometry(SuperCellChild):
             If True this method will return the distance
             for each of the couplings.
         """
-        # Common numpy used functions (reduces function look-ups)
-        log_and = np.logical_and
-        fabs = np.fabs
-
         if R is None:
             R = np.array([self.maxR()], np.float64)
         elif not isndarray(R):
@@ -2032,50 +2029,24 @@ class Geometry(SuperCellChild):
         # This abstraction will _only_ help very large
         # systems.
         # For smaller ones this will actually be a slower
-        # method...
-        if dxa.shape[0] > 10000:
-            if idx is None:
-                # first
-                ix = fabs(dxa[:, 0]) <= max_R
-                idx = ix.nonzero()[0]
-                dxa = dxa[ix, :]
-                # second
-                ix = fabs(dxa[:, 1]) <= max_R
-                idx = idx[ix]
-                dxa = dxa[ix, :]
-                # third
-                ix = fabs(dxa[:, 2]) <= max_R
-                idx = idx[ix]
-                dxa = dxa[ix, :]
-            else:
-                for i in [0, 1, 2]:
-                    ix = fabs(dxa[:, i]) <= max_R
-                    idx = idx[ix]
-                    dxa = dxa[ix, :]
+        # method..
+        if idx is None:
+            idx, d = indices_max_radius(dxa, max_R)
+            dxa = dxa[idx, :]
         else:
-            ix = log_and.reduce(fabs(dxa) <= max_R, axis=1)
-
-            if idx is None:
-                # This is because of the pre-check of the
-                # distance checks
-                idx = ix.nonzero()[0]
-            else:
-                idx = idx[ix]
+            ix, d = indices_max_radius(dxa, max_R)
+            idx = idx[ix]
             dxa = dxa[ix, :]
-
-        # Create default return
-        ret = [[np.empty([0], np.int32)] * len(R)]
-        i = 0
-        if ret_xyz:
-            i += 1
-            rc = i
-            ret.append([np.empty([0, 3], np.float64)] * len(R))
-        if ret_rij:
-            i += 1
-            rc = i
-            ret.append([np.empty([0], np.float64)] * len(R))
+            del ix
 
         if len(dxa) == 0:
+            # Create default return
+            ret = [[_a.emptyi([0])] * len(R)]
+            if ret_xyz:
+                ret.append([_a.emptyd([0, 3])] * len(R))
+            if ret_rij:
+                ret.append([_a.emptyd([0])] * len(R))
+
             # Quick return if there are
             # no entries...
             if len(R) == 1:
@@ -2088,30 +2059,14 @@ class Geometry(SuperCellChild):
                 return ret
             return ret[0]
 
-        # Retrieve all atomic indices which are closer
-        # than our delta-R
-        # The linear algebra norm function could be used, but it
-        # has a lot of checks, hence we do it manually
-        # xaR = np.linalg.norm(dxa,axis=-1)
-
-        # It is faster to do a single multiplacation than
-        # a sqrt of MANY values
-        # After having reduced the dxa array, we may then
-        # take the sqrt
-        max_R = max_R * max_R
-        xaR = square(dxa).sum(1)
-        ix = (xaR <= max_R).nonzero()[0]
-
-        # Reduce search space and correct distances
-        d = sqrt(xaR[ix])
         if ret_xyz:
-            xa = dxa[ix, :] + off[None, :]
-        del xaR, dxa  # just because these arrays could be very big...
+            xa = dxa[:, :] + off[None, :]
+        del dxa  # just because this array could be very big...
 
         # Check whether we only have one range to check.
         # If so, we need not reduce the index space
         if len(R) == 1:
-            ret = [idx[ix]]
+            ret = [idx]
             if ret_xyz:
                 ret.append(xa)
             if ret_rij:
@@ -2127,28 +2082,40 @@ class Geometry(SuperCellChild):
         # The more neigbours you wish to find the faster this becomes
         # We only do "one" heavy duty search,
         # then we immediately reduce search space to this subspace
-        tidx = (d <= R[0]).nonzero()[0]
-        ret = [[_a.asarrayi(idx[ix[tidx]]).ravel()]]
-        i = 0
+        tidx = indices_below(d, R[0])
+        ret = [[idx[tidx]]]
+        r_app = ret[0].append
         if ret_xyz:
-            rc = i + 1
-            i += 1
             ret.append([xa[tidx]])
+            r_appx = ret[1].append
         if ret_rij:
-            rd = i + 1
-            i += 1
             ret.append([d[tidx]])
-        for i in range(1, len(R)):
-            # Search in the sub-space
-            # Notice that this sub-space reduction will never
-            # allow the same indice to be in two ranges (due to
-            # numerics)
-            tidx = log_and(R[i - 1] < d, d <= R[i]).nonzero()[0]
-            ret[0].append(_a.asarrayi(idx[ix[tidx]]).ravel())
-            if ret_xyz:
-                ret[rc].append(xa[tidx])
-            if ret_rij:
-                ret[rd].append(d[tidx])
+            r_appd = ret[-1].append
+
+        if ret_xyz and ret_rij:
+            for i in range(1, len(R)):
+                # Search in the sub-space
+                # Notice that this sub-space reduction will never
+                # allow the same indice to be in two ranges (due to
+                # numerics)
+                tidx = indices_between(d, R[i-1], R[i])
+                r_app(idx[tidx])
+                r_appx(xa[tidx])
+                r_appd(d[tidx])
+        elif ret_xyz:
+            for i in range(1, len(R)):
+                tidx = indices_between(d, R[i-1], R[i])
+                r_app(idx[tidx])
+                r_appx(xa[tidx])
+        elif ret_rij:
+            for i in range(1, len(R)):
+                tidx = indices_between(d, R[i-1], R[i])
+                r_app(idx[tidx])
+                r_appd(d[tidx])
+        else:
+            for i in range(1, len(R)):
+                tidx = indices_between(d, R[i-1], R[i])
+                r_app(idx[tidx])
 
         if ret_xyz or ret_rij:
             return ret
