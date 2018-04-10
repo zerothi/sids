@@ -21,7 +21,7 @@ from sisl.utils import *
 import sisl._array as _a
 
 from sisl import Geometry, Atoms
-from sisl.messages import warn
+from sisl.messages import warn, info, SislError
 from sisl._help import _range as range
 from sisl.unit.siesta import unit_convert
 
@@ -70,8 +70,17 @@ class tbtncSileTBtrans(_devncSileTBtrans):
 
         This command will overwrite any previous file with the ending TBT.AV.nc and thus
         will not take notice of any older files.
+
+        Parameters
+        ----------
+        file : str
+            output filename
         """
-        tbtavncSileTBtrans(self._file.replace('.nc', '.AV.nc'), mode='w', access=0).write(tbtav=self)
+        f = self._file.replace('.nc', '.AV.nc')
+        if len(args) > 0:
+            f = args[0]
+        f = kwargs.get('file', f)
+        tbtavncSileTBtrans(f, mode='w', access=0).write_tbtav(self)
 
     def _value_avg(self, name, tree=None, kavg=False):
         """ Local method for obtaining the data from the SileCDF.
@@ -237,7 +246,7 @@ class tbtncSileTBtrans(_devncSileTBtrans):
         elec_from = self._elec(elec_from)
         elec_to = self._elec(elec_to)
         if elec_from == elec_to:
-            raise ValueError("Supplied elec_from and elec_to must not be the same.")
+            raise ValueError(self.__class__.__name__ + ".transmission elec_from and elec_to must not be the same.")
 
         return self._value_avg(elec_to + '.T', elec_from, kavg=kavg)
 
@@ -262,8 +271,7 @@ class tbtncSileTBtrans(_devncSileTBtrans):
         elec_from = self._elec(elec_from)
         elec_to = self._elec(elec_to)
         if elec_from == elec_to:
-            raise ValueError(
-                "Supplied elec_from and elec_to must not be the same.")
+            raise ValueError(self.__class__.__name__ + ".transmission_eig elec_from and elec_to must not be the same.")
 
         return self._value_avg(elec_to + '.T.Eig', elec_from, kavg=kavg)
 
@@ -326,7 +334,7 @@ class tbtncSileTBtrans(_devncSileTBtrans):
         elif norm in ['all', 'atom', 'orbital']:
             NORM = float(self.no_d)
         else:
-            raise ValueError('Error on norm keyword in when requesting normalization')
+            raise ValueError(self.__class__.__name__ + '.norm error on norm keyword in when requesting normalization!')
 
         if atom is None and orbital is None:
             return NORM
@@ -672,7 +680,7 @@ class tbtncSileTBtrans(_devncSileTBtrans):
 
             warn(self.__class__.__name__ + ".current_parameter cannot "
                  "accurately calculate the current due to the calculated energy range. "
-                 "I.e. increase your calculated energy-range.\n" + s)
+                 "Increase the calculated energy-range.\n" + s)
 
         def nf(E, mu, kT):
             return 1. / (np.exp((E - mu) / kT) + 1.)
@@ -695,7 +703,7 @@ class tbtncSileTBtrans(_devncSileTBtrans):
 
         Raises
         ------
-        SislWarning: If *all* of the calculated :math:`T_n(E)` values in the file are above 0.001.
+        SislInfo: If *all* of the calculated :math:`T_n(E)` values in the file are above 0.001.
 
         Parameters
         ----------
@@ -723,13 +731,13 @@ class tbtncSileTBtrans(_devncSileTBtrans):
         e2OVERhV = 2 * 1.6021766208e-19 ** 2 / 4.135667662e-15 * V
         if classical:
             # Calculate the Poisson shot-noise
-            return e3OVERhV * self.transmission(elec_from, elec_to, kavg=kavg)
+            return e2OVERhV * self.transmission(elec_from, elec_to, kavg=kavg)
         else:
             T = self.transmission_eig(elec_from, elec_to, kavg=kavg)
             # Check that at least one value is below the 0.001 limit
             if np.any(np.logical_and.reduce(T > 0.001, axis=-1)):
-                warn(self.__class__.__name__ + ".shot_noise does possibly not have all relevant transmission eigenvalues in the "
-                     "calculation. For some energy values all transmission eigenvalues are above 0.001")
+                info(self.__class__.__name__ + ".shot_noise does possibly not have all relevant transmission eigenvalues in the "
+                     "calculation. For some energy values all transmission eigenvalues are above 0.001!")
             return e2OVERhV * (T * (1 - T)).sum(-1)
 
     def fano(self, elec_from=0, elec_to=1, kavg=True):
@@ -738,7 +746,7 @@ class tbtncSileTBtrans(_devncSileTBtrans):
         Calculate the Fano factor defined as:
 
         .. math::
-           F(E) = \frac{\sum_n T_n(1 - T_n)}{\sum_n T_n} = S(E, V) / S_P(E, V)
+           F(E) = \frac{\sum_n T_n(1 - T_n)}{\sum_n T_n}
 
         Parameters
         ----------
@@ -752,11 +760,13 @@ class tbtncSileTBtrans(_devncSileTBtrans):
 
         See Also
         --------
-        shot_noise : internal routine to calculate the Fano factors (:math:`S(E, V)` and :math: `S_P(E, V)` are calculated in that routine)
+        shot_noise : routine to calculate the shot-noise
         """
-        elec_from = self._elec(elec_from)
-        elec_to = self._elec(elec_to)
-        return self.shot_noise(elec_from, elec_to, kavg=kavg) / self.shot_noise(elec_from, elec_to, classical=True, kavg=kavg)
+        TE = self.transmission_eig(elec_from, elec_to, kavg=kavg)
+        if np.any(np.logical_and.reduce(TE > 0.001, axis=-1)):
+            info(self.__class__.__name__ + ".fano does possibly not have all relevant transmission eigenvalues in the "
+                 "calculation. For some energy values all transmission eigenvalues are above 0.001!")
+        return (TE * (1 - TE)).sum(-1) / self.transmission(elec_from, elec_to, kavg=kavg)
 
     def _sparse_data(self, data, elec, E, kavg=True, isc=None):
         """ Internal routine for retrieving sparse data (orbital current, COOP) """
@@ -1753,6 +1763,8 @@ class tbtncSileTBtrans(_devncSileTBtrans):
         prnt("  - atoms with DOS (fortran indices):")
         prnt("     " + list2str(self.a_dev + 1))
         truefalse('DOS' in self.variables, "DOS Green function", ['TBT.DOS.Gf'])
+        truefalse('COOP' in self.variables, "COOP Green function", ['TBT.COOP.Gf'])
+        truefalse('COHP' in self.variables, "COHP Green function", ['TBT.COHP.Gf'])
         if elec is None:
             elecs = self.elecs
         else:
@@ -1775,6 +1787,8 @@ class tbtncSileTBtrans(_devncSileTBtrans):
                 truefalse('DOS' in gelec.variables, "DOS bulk", ['TBT.DOS.Elecs'])
                 truefalse('ADOS' in gelec.variables, "DOS spectral", ['TBT.DOS.A'])
                 truefalse('J' in gelec.variables, "orbital-current", ['TBT.DOS.A', 'TBT.Current.Orb'])
+                truefalse('COOP' in gelec.variables, "COOP spectral", ['TBT.COOP.A'])
+                truefalse('COHP' in gelec.variables, "COHP spectral", ['TBT.COHP.A'])
                 truefalse('T' in gelec.variables, "transmission bulk", ['TBT.T.Bulk'])
                 truefalse(elec + '.T' in gelec.variables, "transmission out", ['TBT.T.Out'])
                 truefalse(elec + '.C' in gelec.variables, "transmission out correction", ['TBT.T.Out'])
@@ -1865,8 +1879,7 @@ class tbtncSileTBtrans(_devncSileTBtrans):
                         E.append(range(ns._tbt.Eindex(begin), ns._tbt.Eindex(end)+1))
                 # Issuing unique also sorts the entries
                 ns._Erng = np.unique(_a.arrayi(E).flatten())
-        p.add_argument('--energy', '-E',
-                       action=ERange,
+        p.add_argument('--energy', '-E', action=ERange,
                        help="""Denote the sub-section of energies that are extracted: "-1:0,1:2" [eV]
 
                        This flag takes effect on all energy-resolved quantities and is reset whenever --plot or --out is called""")
@@ -1878,8 +1891,7 @@ class tbtncSileTBtrans(_devncSileTBtrans):
             def __call__(self, parser, ns, value, option_string=None):
                 ns._krng = lstranges(strmap(int, value))
         if not self._k_avg:
-            p.add_argument('--kpoint', '-k',
-                           action=kRange,
+            p.add_argument('--kpoint', '-k', action=kRange,
                            help="""Denote the sub-section of k-indices that are extracted.
 
                            This flag takes effect on all k-resolved quantities and is reset whenever --plot or --out is called""")
@@ -2159,8 +2171,8 @@ class tbtncSileTBtrans(_devncSileTBtrans):
                     print("No data has been collected in the arguments, nothing will be written, have you forgotten arguments?")
                     return
 
-                from sisl.io import TableSile
-                TableSile(out, mode='w').write(*ns._data,
+                from sisl.io import tableSile
+                tableSile(out, mode='w').write(*ns._data,
                                                comment=ns._data_description,
                                                header=ns._data_header)
                 # Clean all data
@@ -2275,7 +2287,7 @@ class tbtavncSileTBtrans(tbtncSileTBtrans):
         elif len(args) > 0:
             tbt = args[0]
         else:
-            raise ValueError("tbtncSileTBtrans has not been passed to write the averaged file")
+            raise SislError("tbtncSileTBtrans has not been passed to write the averaged file")
 
         if not isinstance(tbt, tbtncSileTBtrans):
             raise ValueError('first argument of tbtavncSileTBtrans.write *must* be a tbtncSileTBtrans object')
@@ -2380,6 +2392,9 @@ class tbtavncSileTBtrans(tbtncSileTBtrans):
         # Update the source attribute to signal the originating file
         self.setncattr('source', 'k-average of: ' + tbt._file)
         self.sync()
+
+    # Denote default writing routine
+    _write_default = write_tbtav
 
 
 add_sile('TBT.AV.nc', tbtavncSileTBtrans)

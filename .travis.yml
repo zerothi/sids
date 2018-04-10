@@ -1,5 +1,11 @@
 language: python
 
+
+# Manage sub-modules manually
+git:
+  submodules: false
+
+
 branches:
   except:
   - /.*gh-pages.*/
@@ -24,20 +30,52 @@ matrix:
    - python: 2.7
      env: COVERAGE=true
    - python: 2.7
-     env: PYTHONOPTIMIZE=0
-   - python: 2.7
-     env: PYTHONOPTIMIZE=1
+     env:
+       - COVERAGE=true
+       - OPTIONAL_DEPENDENCIES=true
    - python: 2.7
      env: PYTHONOPTIMIZE=2
    - python: 3.5
      env: COVERAGE=true
    - python: 3.6
-   
+     env:
+       - COVERAGE=true
+       - OPTIONAL_DEPENDENCIES=true
+
+
+before_install:
+  - |
+    if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
+        wget http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh
+    elif [[ "$TRAVIS_PYTHON_VERSION" == "3.5" ]]; then
+        wget http://repo.continuum.io/miniconda/Miniconda3-4.2.12-Linux-x86_64.sh -O miniconda.sh
+    else
+        wget http://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh
+    fi
+  - bash miniconda.sh -b -p $HOME/miniconda
+  - export PATH=$HOME/miniconda/bin:$PATH
+  - hash -r
+  - conda config --set always_yes yes --set changeps1 no
+# Do actual package installations
+  - conda info -a
+  - |
+    if [[ ${OPTIONAL_DEPENDENCIES:-false} == true ]]; then
+       conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION --file requirements.txt --file .travis_requirements.txt
+    else
+       conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION --file requirements.txt
+    fi
+  - source activate test-environment
+  - | # In case we have optional dependencies, also download the sisl-files submodule to test large files
+    if [[ ${OPTIONAL_DEPENDENCIES:-false} == true ]]; then
+       export SISL_FILES_TESTS=$(pwd)/files/tests
+       git submodule update --init files
+    fi
+
 
 install:
   - conda install hdf4 libnetcdf
   - |
-    if [[ ${COVERAGE:-false} != false ]]; then
+    if [[ ${COVERAGE:-false} == true ]]; then
        pip install coverage codacy-coverage
     fi
   - pip install pytest pytest-cov
@@ -45,17 +83,22 @@ install:
 
 script:
   - |
-    if [[ ${COVERAGE:-false} != false ]]; then
-        pip install -e .
-        pytest --cov=sisl
+    pwd
+    mkdir travis-sisl-test-directory
+    cd travis-sisl-test-directory
+    pwd
+    if [[ ${COVERAGE:-false} == true ]]; then
+        echo "Running coverage tests..."
+        pytest --cov=sisl --pyargs sisl
     else
+        echo "Running non-coverage tests..."
         pytest --doctest-modules sisl
         pytest --pyargs sisl
     fi
 
 after_success:
   - |
-    if [[ ${COVERAGE:-false} != false ]]; then
+    if [[ ${COVERAGE:-false} == true ]]; then
        bash <(curl -s https://codecov.io/bash)
        python-codacy-coverage -r coverage.xml
     fi
@@ -75,23 +118,6 @@ addons:
       # Speedup builds, particularly when USE_CHROOT=1
       - eatmydata
 
-before_install:
-  - |
-    if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
-        wget http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh
-    elif [[ "$TRAVIS_PYTHON_VERSION" == "3.5" ]]; then
-        wget http://repo.continuum.io/miniconda/Miniconda3-4.2.12-Linux-x86_64.sh -O miniconda.sh
-    else
-        wget http://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh
-    fi
-  - bash miniconda.sh -b -p $HOME/miniconda
-  - export PATH=$HOME/miniconda/bin:$PATH
-  - hash -r
-  - conda config --set always_yes yes --set changeps1 no
-# Do actual package installations
-  - conda info -a
-  - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION --file requirements.txt --file .travis_requirements.txt
-  - source activate test-environment
 
 before_script:
   - |

@@ -36,14 +36,29 @@ class Hamiltonian(SparseOrbitalBZSpin):
 
     which assigns 0.1 as the coupling constant between orbital 2 and 3.
     (remember that Python is 0-based elements).
+
+    Parameters
+    ----------
+    geom : Geometry
+      parent geometry to create a density matrix from. The density matrix will
+      have size equivalent to the number of orbitals in the geometry
+    dim : int or Spin, optional
+      number of components per element, may be a `Spin` object
+    dtype : np.dtype, optional
+      data type contained in the density matrix. See details of `Spin` for default values.
+    nnzpr : int, optional
+      number of initially allocated memory per orbital in the density matrix.
+      For increased performance this should be larger than the actual number of entries
+      per orbital.
+    spin : Spin, optional
+      equivalent to `dim` argument. This keyword-only argument has precedence over `dim`.
+    orthogonal : bool, optional
+      whether the density matrix corresponds to a non-orthogonal basis. In this case
+      the dimensionality of the density matrix is one more than `dim`.
+      This is a keyword-only argument.
     """
 
     def __init__(self, geom, dim=1, dtype=None, nnzpr=None, **kwargs):
-        """Create Hamiltonian model from geometry
-
-        Initializes a Hamiltonian using the ``geom`` object
-        as the underlying geometry for the tight-binding parameters.
-        """
         super(Hamiltonian, self).__init__(geom, dim, dtype, nnzpr, **kwargs)
 
         self.Hk = self.Pk
@@ -632,7 +647,7 @@ class EigenState(EigenSystem):
             # Create the actual geometry that encompass the grid
             ia, xyz, _ = geom.inf_within(sc)
             if len(ia) > 0:
-                grid.set_geometry(Geometry(xyz, geom.atom[ia], sc=grid.sc))
+                grid.set_geometry(Geometry(xyz, geom.atom[ia], sc=sc))
 
         # Instead of looping all atoms in the supercell we find the exact atoms
         # and their supercell indices.
@@ -649,7 +664,7 @@ class EigenState(EigenSystem):
         phase = 1
 
         # Retrieve progressbar
-        eta = tqdm_eta(len(IA), self.__class__.__name__ + '.psi', 'atoms', eta)
+        eta = tqdm_eta(len(IA), self.__class__.__name__ + '.psi', 'atom', eta)
 
         # Loop over all atoms in the full supercell structure
         for ia, xyz, isc in zip(IA, XYZ - grid.origo.reshape(1, 3), ISC):

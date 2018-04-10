@@ -62,7 +62,7 @@ class ionxmlSileSiesta(SileSiesta):
             delta = float(rad.find('delta').text)
 
             # Read in data to a list
-            dat = map(float, rad.find('data').text.split())
+            dat = list(map(float, rad.find('data').text.split()))
 
             # Since the readed data has fewer significant digits we
             # might as well re-create the table of the radial component.
@@ -146,6 +146,7 @@ class ionncSileSiesta(SileCDFSiesta):
 
         # Now create the atom and return
         return Atom(Z, orbital, mass=mass, tag=label)
+
 
 add_sile('ion.xml', ionxmlSileSiesta, case=False, gzip=True)
 add_sile('ion.nc', ionncSileSiesta, case=False)

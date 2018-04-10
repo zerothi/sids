@@ -11,10 +11,10 @@ from sisl.unit.siesta import unit_convert
 
 Bohr2Ang = unit_convert('Bohr', 'Ang')
 
-__all__ = ['OrbIndxSileSiesta']
+__all__ = ['orbindxSileSiesta']
 
 
-class OrbIndxSileSiesta(SileSiesta):
+class orbindxSileSiesta(SileSiesta):
     """ .ORB_INDX file object """
 
     @Sile_fh_open
@@ -23,7 +23,6 @@ class OrbIndxSileSiesta(SileSiesta):
         # First line contains no no_s
         line = self.readline().split()
         no_s = int(line[1])
-        self.readline()
         # two non-used lines
         self.readline()
         self.readline()
@@ -105,4 +104,4 @@ class OrbIndxSileSiesta(SileSiesta):
         return Atoms([atom[i] for i in specs])
 
 
-add_sile('ORB_INDX', OrbIndxSileSiesta, gzip=True)
+add_sile('ORB_INDX', orbindxSileSiesta, gzip=True)

@@ -12,14 +12,14 @@ from sisl.unit.siesta import unit_convert
 
 Bohr2Ang = unit_convert('Bohr', 'Ang')
 
-__all__ = ['XVSileSiesta']
+__all__ = ['xvSileSiesta']
 
 
-class XVSileSiesta(SileSiesta):
+class xvSileSiesta(SileSiesta):
     """ XV file object """
 
     @Sile_fh_open
-    def write_geometry(self, geom, fmt='.8f'):
+    def write_geometry(self, geom, fmt='.9f'):
         """ Writes the geometry to the contained file """
         # Check that we can write to the file
         sile_raise_write(self)
@@ -35,7 +35,7 @@ class XVSileSiesta(SileSiesta):
         self._write('{:12d}\n'.format(geom.na))
 
         # Create format string for the atomic coordinates
-        fmt_str = '{:3d}{:4d} '
+        fmt_str = '{:3d}{:6d} '
         fmt_str += ('{:' + fmt + '} ') * 3 + '   '
         fmt_str += ('{:' + fmt + '} ') * 3 + '\n'
         for ia, a, ips in geom.iter_species():
@@ -69,9 +69,8 @@ class XVSileSiesta(SileSiesta):
         na = int(self.readline())
         atms = [None] * na
         xyz = np.empty([na, 3], np.float64)
-        line = np.empty(8, np.float64)
         for ia in range(na):
-            line[:] = list(map(float, self.readline().split()[:8]))
+            line = list(map(float, self.readline().split()[:8]))
             if species_Z:
                 atms[ia] = Atom(int(line[0]))
             else:
@@ -88,4 +87,4 @@ class XVSileSiesta(SileSiesta):
         return self.read_geometry().ArgumentParser(p, *args, **newkw)
 
 
-add_sile('XV', XVSileSiesta, gzip=True)
+add_sile('XV', xvSileSiesta, gzip=True)

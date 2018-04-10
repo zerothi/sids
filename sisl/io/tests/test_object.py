@@ -3,29 +3,15 @@ from __future__ import print_function, division
 import pytest
 
 import numpy as np
-import os
 
-from tempfile import mkstemp
 from sisl.io import *
 from sisl.io.tbtrans._cdf import *
 from sisl import Geometry, Grid, Hamiltonian
 from sisl import DensityMatrix, EnergyDensityMatrix
 
 
-from . import common as tc
-
 pytestmark = pytest.mark.io
-
-
-_C = type('Temporary', (object, ), {})
-
-
-def setup_module(module):
-    tc.setup(module._C)
-
-
-def teardown_module(module):
-    tc.teardown(module._C)
+_dir = 'sisl/io'
 
 
 gs = get_sile
@@ -42,16 +28,16 @@ def _fnames(base, variants):
 
 def test_get_sile1():
     cls = gsc('test.xyz')
-    assert issubclass(cls, XYZSile)
+    assert issubclass(cls, xyzSile)
 
-    cls = gsc('test.regardless{XYZ}')
-    assert issubclass(cls, XYZSile)
+    cls = gsc('test.regardless{xyz}')
+    assert issubclass(cls, xyzSile)
 
-    cls = gsc('test.fdf{XYZ}')
-    assert issubclass(cls, XYZSile)
+    cls = gsc('test.fdf{xyz}')
+    assert issubclass(cls, xyzSile)
 
-    cls = gsc('test.fdf{XYZ}')
-    assert issubclass(cls, XYZSile)
+    cls = gsc('test.fdf{xyz}')
+    assert issubclass(cls, xyzSile)
 
     cls = gsc('test.xyz{fdf}')
     assert issubclass(cls, fdfSileSiesta)
@@ -72,13 +58,13 @@ class TestObject(object):
     @pytest.mark.parametrize("sile", _fnames('test', ['cube', 'CUBE', 'cube.gz', 'CUBE.gz']))
     def test_cube(self, sile):
         s = gs(sile)
-        for obj in [BaseSile, Sile, CUBESile]:
+        for obj in [BaseSile, Sile, cubeSile]:
             assert isinstance(s, obj)
 
     @pytest.mark.parametrize("sile", _fnames('test', ['ascii', 'ascii.gz', 'ascii.gz']))
     def test_bigdft_ascii(self, sile):
         s = gs(sile)
-        for obj in [BaseSile, Sile, SileBigDFT, ASCIISileBigDFT]:
+        for obj in [BaseSile, Sile, SileBigDFT, asciiSileBigDFT]:
             assert isinstance(s, obj)
 
     @pytest.mark.parametrize("sile", _fnames('test', ['gout', 'gout.gz']))
@@ -90,7 +76,7 @@ class TestObject(object):
     @pytest.mark.parametrize("sile", _fnames('test', ['REF', 'REF.gz']))
     def test_scaleup_REF(self, sile):
         s = gs(sile)
-        for obj in [BaseSile, Sile, SileScaleUp, REFSileScaleUp]:
+        for obj in [BaseSile, Sile, SileScaleUp, refSileScaleUp]:
             assert isinstance(s, obj)
 
     @pytest.mark.parametrize("sile", _fnames('test', ['restart', 'restart.gz']))
@@ -130,13 +116,13 @@ class TestObject(object):
     @pytest.mark.parametrize("sile", _fnames('test', ['XV', 'XV.gz']))
     def test_siesta_xv(self, sile):
         s = gs(sile)
-        for obj in [BaseSile, Sile, SileSiesta, XVSileSiesta]:
+        for obj in [BaseSile, Sile, SileSiesta, xvSileSiesta]:
             assert isinstance(s, obj)
 
     @pytest.mark.parametrize("sile", _fnames('test', ['XV', 'XV.gz']))
     def test_siesta_xv_base(self, sile):
         s = gs(sile, cls=SileSiesta)
-        for obj in [BaseSile, Sile, SileSiesta, XVSileSiesta]:
+        for obj in [BaseSile, Sile, SileSiesta, xvSileSiesta]:
             assert isinstance(s, obj)
 
     @pytest.mark.parametrize("sile", _fnames('test', ['PDOS.xml', 'pdos.xml', 'PDOS.xml.gz', 'pdos.xml.gz']))
@@ -148,7 +134,7 @@ class TestObject(object):
     @pytest.mark.parametrize("sile", _fnames('test', ['ham', 'HAM', 'HAM.gz']))
     def test_ham(self, sile):
         s = gs(sile)
-        for obj in [BaseSile, Sile, HamiltonianSile]:
+        for obj in [BaseSile, Sile, hamiltonianSile]:
             assert isinstance(s, obj)
 
     def test_tbtrans_nc(self):
@@ -164,31 +150,31 @@ class TestObject(object):
     @pytest.mark.parametrize("sile", _fnames('CONTCAR', ['', 'gz']))
     def test_vasp_contcar(self, sile):
         s = gs(sile)
-        for obj in [BaseSile, Sile, SileVASP, CARSileVASP, CONTCARSileVASP]:
+        for obj in [BaseSile, Sile, SileVASP, carSileVASP, contcarSileVASP]:
             assert isinstance(s, obj)
 
     @pytest.mark.parametrize("sile", _fnames('POSCAR', ['', 'gz']))
     def test_vasp_poscar(self, sile):
         s = gs(sile)
-        for obj in [BaseSile, Sile, SileVASP, CARSileVASP, POSCARSileVASP]:
+        for obj in [BaseSile, Sile, SileVASP, carSileVASP, poscarSileVASP]:
             assert isinstance(s, obj)
 
     @pytest.mark.parametrize("sile", _fnames('test', ['xyz', 'XYZ', 'xyz.gz', 'XYZ.gz']))
     def test_xyz(self, sile):
         s = gs(sile)
-        for obj in [BaseSile, Sile, XYZSile]:
+        for obj in [BaseSile, Sile, xyzSile]:
             assert isinstance(s, obj)
 
     @pytest.mark.parametrize("sile", _fnames('test', ['molf', 'MOLF', 'molf.gz', 'MOLF.gz']))
     def test_molf(self, sile):
         s = gs(sile)
-        for obj in [BaseSile, Sile, MoldenSile]:
+        for obj in [BaseSile, Sile, moldenSile]:
             assert isinstance(s, obj)
 
     @pytest.mark.parametrize("sile", _fnames('test', ['xsf', 'XSF', 'xsf.gz', 'XSF.gz']))
     def test_xsf(self, sile):
         s = gs(sile)
-        for obj in [BaseSile, Sile, XSFSile]:
+        for obj in [BaseSile, Sile, xsfSile]:
             assert isinstance(s, obj)
 
     def test_wannier90_seed(self):
@@ -196,22 +182,22 @@ class TestObject(object):
         for obj in [BaseSile, Sile, SileWannier90, winSileWannier90]:
             assert isinstance(sile, obj)
 
-    def test_write(self):
-        G = _C.g.rotatec(-30)
+    def test_write(self, sisl_tmp, sisl_system):
+        G = sisl_system.g.rotatec(-30)
         G.set_nsc([1, 1, 1])
-        f = mkstemp(dir=_C.d)[1]
+        f = sisl_tmp('test_write', _dir)
         for sile in get_siles(['write_geometry']):
             # It is not yet an instance, hence issubclass
-            if issubclass(sile, (HamiltonianSile, _ncSileTBtrans, deltancSileTBtrans)):
+            if issubclass(sile, (hamiltonianSile, _ncSileTBtrans, deltancSileTBtrans)):
                 continue
             # Write
             sile(f, mode='w').write_geometry(G)
 
     @pytest.mark.parametrize("sile", _my_intersect(['read_geometry'], ['write_geometry']))
-    def test_read_write_geom(self, sile):
-        G = _C.g.rotatec(-30)
+    def test_read_write_geom(self, sisl_tmp, sisl_system, sile):
+        G = sisl_system.g.rotatec(-30)
         G.set_nsc([1, 1, 1])
-        f = mkstemp(dir=_C.d)[1] + '.win'
+        f = sisl_tmp('test_read_write_geom.win', _dir)
         # These files does not store the atomic species
         if issubclass(sile, (_ncSileTBtrans, deltancSileTBtrans)):
             return
@@ -229,15 +215,13 @@ class TestObject(object):
             assert g.equal(G, R=False)
         except UnicodeDecodeError as e:
             pass
-        # Clean-up file
-        os.remove(f)
 
     @pytest.mark.parametrize("sile", _my_intersect(['read_hamiltonian'], ['write_hamiltonian']))
-    def test_read_write_hamiltonian(self, sile):
-        G = _C.g.rotatec(-30)
+    def test_read_write_hamiltonian(self, sisl_tmp, sisl_system, sile):
+        G = sisl_system.g.rotatec(-30)
         H = Hamiltonian(G)
         H.construct([[0.1, 1.45], [0.1, -2.7]])
-        f = mkstemp(dir=_C.d)[1]
+        f = sisl_tmp('test_read_write_hamiltonian.win', _dir)
         # Write
         sile(f, mode='w').write_hamiltonian(H)
         # Read 1
@@ -252,15 +236,13 @@ class TestObject(object):
             assert H.spsame(h)
         except UnicodeDecodeError as e:
             pass
-        # Clean-up file
-        os.remove(f)
 
     @pytest.mark.parametrize("sile", _my_intersect(['read_density_matrix'], ['write_density_matrix']))
-    def test_read_write_density_matrix(self, sile):
-        G = _C.g.rotatec(-30)
+    def test_read_write_density_matrix(self, sisl_tmp, sisl_system, sile):
+        G = sisl_system.g.rotatec(-30)
         DM = DensityMatrix(G, orthogonal=True)
         DM.construct([[0.1, 1.45], [0.1, -2.7]])
-        f = mkstemp(dir=_C.d)[1]
+        f = sisl_tmp('test_read_write_density_matrix.win', _dir)
         # Write
         sile(f, mode='w').write_density_matrix(DM)
         # Read 1
@@ -275,15 +257,13 @@ class TestObject(object):
             assert DM.spsame(dm)
         except UnicodeDecodeError as e:
             pass
-        # Clean-up file
-        os.remove(f)
 
     @pytest.mark.parametrize("sile", _my_intersect(['read_energy_density_matrix'], ['write_energy_density_matrix']))
-    def test_read_write_energy_density_matrix(self, sile):
-        G = _C.g.rotatec(-30)
+    def test_read_write_energy_density_matrix(self, sisl_tmp, sisl_system, sile):
+        G = sisl_system.g.rotatec(-30)
         EDM = EnergyDensityMatrix(G, orthogonal=True)
         EDM.construct([[0.1, 1.45], [0.1, -2.7]])
-        f = mkstemp(dir=_C.d)[1]
+        f = sisl_tmp('test_read_write_energy_density_matrix.win', _dir)
         # Write
         sile(f, mode='w').write_energy_density_matrix(EDM)
         # Read 1
@@ -298,15 +278,13 @@ class TestObject(object):
             assert EDM.spsame(edm)
         except UnicodeDecodeError as e:
             pass
-        # Clean-up file
-        os.remove(f)
 
     @pytest.mark.parametrize("sile", _my_intersect(['read_hamiltonian'], ['write_hamiltonian']))
-    def test_read_write_hamiltonian_overlap(self, sile):
-        G = _C.g.rotatec(-30)
+    def test_read_write_hamiltonian_overlap(self, sisl_tmp, sisl_system, sile):
+        G = sisl_system.g.rotatec(-30)
         H = Hamiltonian(G, orthogonal=False)
         H.construct([[0.1, 1.45], [(0.1, 1), (-2.7, 0.1)]])
-        f = mkstemp(dir=_C.d)[1]
+        f = sisl_tmp('test_read_write_hamiltonian_overlap.win', _dir)
         # Write
         sile(f, mode='w').write_hamiltonian(H)
         # Read 1
@@ -321,16 +299,14 @@ class TestObject(object):
             assert H.spsame(h)
         except UnicodeDecodeError as e:
             pass
-        # Clean-up file
-        os.remove(f)
 
     @pytest.mark.parametrize("sile", _my_intersect(['read_grid'], ['write_grid']))
-    def test_read_write_grid(self, sile):
-        g = _C.g.rotatec(-30)
+    def test_read_write_grid(self, sisl_tmp, sisl_system, sile):
+        g = sisl_system.g.rotatec(-30)
         G = Grid([10, 11, 12])
         G[:, :, :] = np.random.rand(10, 11, 12)
 
-        f = mkstemp(dir=_C.d)[1]
+        f = sisl_tmp('test_read_write_grid.win', _dir)
         # Write
         try:
             sile(f, mode='w').write_grid(G)
@@ -348,19 +324,17 @@ class TestObject(object):
             assert np.allclose(g.grid, G.grid, atol=1e-5)
         except UnicodeDecodeError as e:
             pass
-        # Clean-up file
-        os.remove(f)
 
-    def test_arg_parser1(self):
-        f = mkstemp(dir=_C.d)[1]
+    def test_arg_parser1(self, sisl_tmp):
+        f = sisl_tmp('something', _dir)
         for sile in get_siles(['ArgumentParser']):
             try:
                 sile(f).ArgumentParser()
             except:
                 pass
 
-    def test_arg_parser2(self):
-        f = mkstemp(dir=_C.d)[1]
+    def test_arg_parser2(self, sisl_tmp):
+        f = sisl_tmp('something', _dir)
         for sile in get_siles(['ArgumentParser_out']):
             try:
                 sile(f).ArgumentParser()

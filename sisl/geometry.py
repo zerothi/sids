@@ -13,8 +13,9 @@ from numpy import dot, square, sqrt
 import sisl._plot as plt
 import sisl._array as _a
 
-from ._math_small import indices_max_radius, indices_below, indices_between
-from .messages import warn
+from ._math_small import is_ascending
+from ._indices import indices_in_sphere_with_dist, indices_le, indices_gt_le
+from .messages import warn, SislError
 from ._help import _str
 from ._help import _range as range
 from ._help import isndarray
@@ -513,6 +514,10 @@ class Geometry(SuperCellChild):
            initial `iR` value, which the sphere is estitametd from
         R : float, optional
            the value used for atomic range (defaults to ``self.maxR()``)
+
+        Returns
+        -------
+        int : number of radius needed to contain `na` atoms. Minimally 2 will be returned.
         """
         ia = np.random.randint(len(self))
 
@@ -528,7 +533,7 @@ class Geometry(SuperCellChild):
         # Convert to na atoms spherical radii
         iR = int(4 / 3 * np.pi * R ** 3 / naiR * na)
 
-        return iR
+        return max(2, iR)
 
     def iter_block_rand(self, iR=20, R=None, atom=None):
         """ Perform the *random* block-iteration by randomly selecting the next center of block """
@@ -546,6 +551,9 @@ class Geometry(SuperCellChild):
 
         # Figure out how many we need to loop on
         not_passed_N = np.sum(not_passed)
+
+        if iR < 2:
+            raise SislError(self.__class__.__name__ + '.iter_block_rand too small iR!')
 
         if R is None:
             R = self.maxR()
@@ -573,7 +581,6 @@ class Geometry(SuperCellChild):
 
             # get all elements within two radii
             all_idx = self.close(idx, R=R)
-
             # Get unit-cell atoms
             all_idx[0] = self.sc2uc(all_idx[0], uniq=True)
             # First extend the search-space (before reducing)
@@ -582,7 +589,7 @@ class Geometry(SuperCellChild):
             # Only select those who have not been runned yet
             all_idx[0] = all_idx[0][not_passed[all_idx[0]].nonzero()[0]]
             if len(all_idx[0]) == 0:
-                raise ValueError('Internal error, please report to the developers')
+                raise SislError('Internal error, please report to the developers')
 
             # Tell the next loop to skip those passed
             not_passed[all_idx[0]] = False
@@ -595,7 +602,9 @@ class Geometry(SuperCellChild):
             yield all_idx[0], all_idx[1]
 
         if np.any(not_passed):
-            raise ValueError('Error on iterations. Not all atoms has been visited.')
+            print(not_passed.nonzero()[0])
+            print(np.sum(not_passed), len(self))
+            raise SislError(self.__class__.__name__ + '.iter_block_rand error on iterations. Not all atoms have been visited.')
 
     def iter_block_shape(self, shape=None, iR=20, atom=None):
         """ Perform the *grid* block-iteration by looping a grid """
@@ -612,6 +621,9 @@ class Geometry(SuperCellChild):
 
         # Figure out how many we need to loop on
         not_passed_N = np.sum(not_passed)
+
+        if iR < 2:
+            raise SislError(self.__class__.__name__ + '.iter_block_shape too small iR!')
 
         R = self.maxR()
         if shape is None:
@@ -712,7 +724,7 @@ class Geometry(SuperCellChild):
         if np.any(not_passed):
             print(not_passed.nonzero()[0])
             print(np.sum(not_passed), len(self))
-            raise ValueError('Error on iterations. Not all atoms has been visited.')
+            raise SislError(self.__class__.__name__ + '.iter_block_shape error on iterations. Not all atoms have been visited.')
 
     def iter_block(self, iR=20, R=None, atom=None, method='rand'):
         """ Iterator for performance critical loops
@@ -751,6 +763,9 @@ class Geometry(SuperCellChild):
         Two lists with ``[0]`` being a list of atoms to be looped and ``[1]`` being the atoms that
         need searched.
         """
+        if iR < 2:
+            raise SislError(self.__class__.__name__ + '.iter_block too small iR!')
+
         method = method.lower()
         if method == 'rand' or method == 'random':
             for ias, idxs in self.iter_block_rand(iR, R, atom):
@@ -2016,12 +2031,12 @@ class Geometry(SuperCellChild):
 
         # Get atomic coordinate in principal cell
         if idx_xyz is None:
-            dxa = self[idx, :] + foff[None, :]
+            dxa = np.add(self.axyz(idx), foff.reshape(1, 3))
         else:
             # For extremely large systems re-using the
             # idx_xyz is faster than indexing
             # a very large array
-            dxa = idx_xyz[:, :] + foff[None, :]
+            dxa = np.add(idx_xyz, foff.reshape(1, 3))
 
         # Immediately downscale by easy checking
         # This will reduce the computation of the vector-norm
@@ -2031,15 +2046,15 @@ class Geometry(SuperCellChild):
         # For smaller ones this will actually be a slower
         # method..
         if idx is None:
-            idx, d = indices_max_radius(dxa, max_R)
-            dxa = dxa[idx, :]
+            idx, d = indices_in_sphere_with_dist(dxa, max_R)
+            dxa = dxa[idx, :].reshape(-1, 3)
         else:
-            ix, d = indices_max_radius(dxa, max_R)
+            ix, d = indices_in_sphere_with_dist(dxa, max_R)
             idx = idx[ix]
-            dxa = dxa[ix, :]
+            dxa = dxa[ix, :].reshape(-1, 3)
             del ix
 
-        if len(dxa) == 0:
+        if len(idx) == 0:
             # Create default return
             ret = [[_a.emptyi([0])] * len(R)]
             if ret_xyz:
@@ -2075,14 +2090,14 @@ class Geometry(SuperCellChild):
                 return ret
             return ret[0]
 
-        if np.any(np.diff(R) < 0.):
-            raise ValueError(('Proximity checks for several quantities '
-                              'at a time requires ascending R values.'))
+        if not is_ascending(R):
+            raise ValueError(self.__class__.__name__ + '.close_sc proximity checks for several '
+                             'quantities at a time requires ascending R values.')
 
         # The more neigbours you wish to find the faster this becomes
         # We only do "one" heavy duty search,
         # then we immediately reduce search space to this subspace
-        tidx = indices_below(d, R[0])
+        tidx = indices_le(d, R[0])
         ret = [[idx[tidx]]]
         r_app = ret[0].append
         if ret_xyz:
@@ -2098,23 +2113,23 @@ class Geometry(SuperCellChild):
                 # Notice that this sub-space reduction will never
                 # allow the same indice to be in two ranges (due to
                 # numerics)
-                tidx = indices_between(d, R[i-1], R[i])
+                tidx = indices_gt_le(d, R[i-1], R[i])
                 r_app(idx[tidx])
                 r_appx(xa[tidx])
                 r_appd(d[tidx])
         elif ret_xyz:
             for i in range(1, len(R)):
-                tidx = indices_between(d, R[i-1], R[i])
+                tidx = indices_gt_le(d, R[i-1], R[i])
                 r_app(idx[tidx])
                 r_appx(xa[tidx])
         elif ret_rij:
             for i in range(1, len(R)):
-                tidx = indices_between(d, R[i-1], R[i])
+                tidx = indices_gt_le(d, R[i-1], R[i])
                 r_app(idx[tidx])
                 r_appd(d[tidx])
         else:
             for i in range(1, len(R)):
-                tidx = indices_between(d, R[i-1], R[i])
+                tidx = indices_gt_le(d, R[i-1], R[i])
                 r_app(idx[tidx])
 
         if ret_xyz or ret_rij:
@@ -2935,8 +2950,7 @@ class Geometry(SuperCellChild):
         tile = tile_max - tile_min
         # We displace *all* atoms 0.1 Ang along each lattice vector.
         # This should take care of numerical accuracy in the fxyz routine
-        small_fxyz = 0.1 / fnorm(self.cell)
-        min_xyz = dot(small_fxyz - self.fxyz.min(0), self.cell)
+        min_xyz = dot(0.1 / fnorm(self.cell), self.cell)
         full_geom = (self.translate(min_xyz) * tile).translate(big_origo)
 
         # Now we have to figure out all atomic coordinates within
