@@ -65,7 +65,7 @@
             
             
               <div class="version">
-                0.9.2-417
+                0.9.2-466
               </div>
             
           
@@ -256,27 +256,27 @@
 
 
 <div class="viewcode-block" id="Orbital"><a class="viewcode-back" href="../../api-generated/sisl.Orbital.html#sisl.Orbital">[docs]</a><span class="k">class</span> <span class="nc">Orbital</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot; Base class for orbital information. This base class holds nothing but the *tag* and the orbital radius</span>
+    <span class="sd">&quot;&quot;&quot; Base class for orbital information.</span>
 
 <span class="sd">    The orbital class is still in an experimental stage and will probably evolve over some time.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
 <span class="sd">    R : float</span>
-<span class="sd">        the orbital radius</span>
+<span class="sd">        maximum radius</span>
 <span class="sd">    q0 : float, optional</span>
-<span class="sd">        the orbital initial charge</span>
+<span class="sd">        initial charge</span>
 <span class="sd">    tag : str, optional</span>
-<span class="sd">        the provided tag of the orbital</span>
+<span class="sd">        user defined tag</span>
 
 <span class="sd">    Attributes</span>
 <span class="sd">    ----------</span>
 <span class="sd">    R : float</span>
-<span class="sd">        the maximum orbital range, any query on values beyond this range should return 0.</span>
+<span class="sd">        maximum radius (in Ang)</span>
 <span class="sd">    q0 : float</span>
-<span class="sd">        the charge on the orbital, (only for initialization purposes)</span>
-<span class="sd">    tag :</span>
-<span class="sd">        the assigned tag for this orbital</span>
+<span class="sd">        initial electronic charge</span>
+<span class="sd">    tag : str</span>
+<span class="sd">        user defined tag</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="vm">__slots__</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;R&#39;</span><span class="p">,</span> <span class="s1">&#39;tag&#39;</span><span class="p">,</span> <span class="s1">&#39;q0&#39;</span><span class="p">]</span>
 
@@ -471,45 +471,44 @@
 <span class="sd">    number :math:`n` is not necessary as that value is implicit in the</span>
 <span class="sd">    :math:`\phi_{ln}(|\mathbf r|)` function.</span>
 
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    l : int</span>
+<span class="sd">       azimuthal quantum number</span>
+<span class="sd">    rf_or_func : tuple of (r, f) or func</span>
+<span class="sd">       radial components as a tuple/list, or the function which can interpolate to any R</span>
+<span class="sd">       See `set_radial` for details.</span>
+<span class="sd">    q0 : float, optional</span>
+<span class="sd">       initial charge</span>
+<span class="sd">    tag : str, optional</span>
+<span class="sd">       user defined tag</span>
+
 <span class="sd">    Attributes</span>
 <span class="sd">    ----------</span>
 <span class="sd">    R : float</span>
-<span class="sd">        the maximum orbital range</span>
+<span class="sd">        maximum radius (in Ang)</span>
 <span class="sd">    q0 : float</span>
-<span class="sd">        the charge on the orbital, (only for initialization purposes)</span>
+<span class="sd">        initial electronic charge</span>
 <span class="sd">    l : int</span>
 <span class="sd">        azimuthal quantum number</span>
 <span class="sd">    f : func</span>
-<span class="sd">        the interpolation function that returns `f(r)` for the provided data</span>
-<span class="sd">    tag : str, optional</span>
-<span class="sd">        a tag for this orbital</span>
+<span class="sd">        interpolation function that returns `f(r)` for a given radius</span>
+<span class="sd">    tag : str</span>
+<span class="sd">       user defined tag</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; from scipy.interpolate import interp1d</span>
+<span class="sd">    &gt;&gt;&gt; orb = SphericalOrbital(1, (np.arange(10.), np.arange(10.)))</span>
+<span class="sd">    &gt;&gt;&gt; orb.equal(SphericalOrbital(1, interp1d(np.arange(10.), np.arange(10.),</span>
+<span class="sd">    ...       fill_value=(0., 0.), kind=&#39;cubic&#39;, bounds_error=False)))</span>
+<span class="sd">    True</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="c1"># Additional slots (inherited classes retain the same slots)</span>
     <span class="vm">__slots__</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;l&#39;</span><span class="p">,</span> <span class="s1">&#39;f&#39;</span><span class="p">]</span>
 
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">l</span><span class="p">,</span> <span class="n">rf_or_func</span><span class="p">,</span> <span class="n">q0</span><span class="o">=</span><span class="mf">0.</span><span class="p">,</span> <span class="n">tag</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot; Initialize a spherical orbital via a radial grid</span>
-
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        l : int</span>
-<span class="sd">           azimuthal quantum number</span>
-<span class="sd">        rf_or_func : tuple of (r, f) or func</span>
-<span class="sd">           the radial components as a tuple/list, or the function which can interpolate to any R</span>
-<span class="sd">           See `set_radial` for details.</span>
-<span class="sd">        q0 : float, optional</span>
-<span class="sd">           the orbital initial charge</span>
-<span class="sd">        tag : str, optional</span>
-<span class="sd">           tag of the orbital</span>
-
-<span class="sd">        Examples</span>
-<span class="sd">        --------</span>
-<span class="sd">        &gt;&gt;&gt; from scipy.interpolate import interp1d</span>
-<span class="sd">        &gt;&gt;&gt; orb = SphericalOrbital(1, (np.arange(10.), np.arange(10.)))</span>
-<span class="sd">        &gt;&gt;&gt; orb.equal(SphericalOrbital(1, interp1d(np.arange(10.), np.arange(10.),</span>
-<span class="sd">        ...       fill_value=(0., 0.), kind=&#39;cubic&#39;, bounds_error=False)))</span>
-<span class="sd">        True</span>
-<span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">l</span> <span class="o">=</span> <span class="n">l</span>
 
         <span class="c1"># Set the internal function</span>
@@ -824,7 +823,7 @@
 
 
 <div class="viewcode-block" id="AtomicOrbital"><a class="viewcode-back" href="../../api-generated/sisl.AtomicOrbital.html#sisl.AtomicOrbital">[docs]</a><span class="k">class</span> <span class="nc">AtomicOrbital</span><span class="p">(</span><span class="n">Orbital</span><span class="p">):</span>
-    <span class="sa">r</span><span class="sd">&quot;&quot;&quot; A projected atomic orbital made of real harmonics</span>
+    <span class="sa">r</span><span class="sd">&quot;&quot;&quot; A projected atomic orbital consisting of real harmonics</span>
 
 <span class="sd">    The `AtomicOrbital` is a specification of the `SphericalOrbital` by</span>
 <span class="sd">    assigning the magnetic quantum number :math:`m` to the object.</span>
@@ -832,10 +831,19 @@
 <span class="sd">    `AtomicOrbital` should always be preferred over the</span>
 <span class="sd">    `SphericalOrbital` because it explicitly contains *all* quantum numbers.</span>
 
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    *args : list of arguments</span>
+<span class="sd">        list of arguments can be in different input options</span>
+<span class="sd">    q0 : float, optional</span>
+<span class="sd">        initial charge</span>
+<span class="sd">    tag : str, optional</span>
+<span class="sd">        user defined tag</span>
+
 <span class="sd">    Attributes</span>
 <span class="sd">    ----------</span>
 <span class="sd">    R : float</span>
-<span class="sd">        the maximum orbital range</span>
+<span class="sd">        maximum radius (in Ang)</span>
 <span class="sd">    n : int</span>
 <span class="sd">        principal quantum number</span>
 <span class="sd">    l : int</span>
@@ -844,14 +852,22 @@
 <span class="sd">        magnetic quantum number</span>
 <span class="sd">    Z : int</span>
 <span class="sd">        zeta shell</span>
-<span class="sd">    P : int</span>
+<span class="sd">    P : bool</span>
 <span class="sd">        whether this corresponds to a polarized shell (``True``)</span>
 <span class="sd">    f : func</span>
-<span class="sd">        the interpolation function that returns `f(r)` for the provided data</span>
+<span class="sd">        interpolation function that returns `f(r)` for a given radius</span>
 <span class="sd">    q0 : float</span>
-<span class="sd">        the charge on the orbital, (only for initialization purposes)</span>
-<span class="sd">    tag : str or None</span>
-<span class="sd">        a tag for this orbital</span>
+<span class="sd">        initial electronic charge</span>
+<span class="sd">    tag : str</span>
+<span class="sd">        user defined tag</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; r = np.linspace(0, 5, 50)</span>
+<span class="sd">    &gt;&gt;&gt; f = np.exp(-r)</span>
+<span class="sd">    &gt;&gt;&gt; #                    n, l, m, [Z, [P]]</span>
+<span class="sd">    &gt;&gt;&gt; orb1 = AtomicOrbital(2, 1, 0, 1, (r, f))</span>
+<span class="sd">    &gt;&gt;&gt; orb2 = AtomicOrbital(n=2, l=1, m=0, Z=1, (r, f))</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="c1"># All of these follow standard notation:</span>
@@ -865,15 +881,6 @@
     <span class="vm">__slots__</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;n&#39;</span><span class="p">,</span> <span class="s1">&#39;l&#39;</span><span class="p">,</span> <span class="s1">&#39;m&#39;</span><span class="p">,</span> <span class="s1">&#39;Z&#39;</span><span class="p">,</span> <span class="s1">&#39;P&#39;</span><span class="p">,</span> <span class="s1">&#39;orb&#39;</span><span class="p">]</span>
 
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot; Initialize the orbital class with a radius (`R`) and a tag (`tag`)</span>
-
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        *args : list of arguments</span>
-<span class="sd">           the list of arguments can be in different input options</span>
-<span class="sd">        tag : str, optional</span>
-<span class="sd">           the provided tag of the orbital</span>
-<span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># Immediately setup R and tag</span>
         <span class="nb">super</span><span class="p">(</span><span class="n">AtomicOrbital</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="mf">0.</span><span class="p">,</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;q0&#39;</span><span class="p">,</span> <span class="mf">0.</span><span class="p">),</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;tag&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">))</span>
 
@@ -1207,7 +1214,7 @@
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'../../',
-            VERSION:'0.9.2-417',
+            VERSION:'0.9.2-466',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true,

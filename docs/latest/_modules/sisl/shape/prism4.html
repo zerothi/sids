@@ -65,7 +65,7 @@
             
             
               <div class="version">
-                0.9.2-417
+                0.9.2-466
               </div>
             
           
@@ -176,12 +176,14 @@
 <span></span><span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">print_function</span><span class="p">,</span> <span class="n">division</span>
 
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-<span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">dot</span><span class="p">,</span> <span class="n">cross</span>
-<span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">logical_and</span>
+<span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">dot</span><span class="p">,</span> <span class="n">logical_and</span>
 
 <span class="kn">import</span> <span class="nn">sisl._array</span> <span class="k">as</span> <span class="nn">_a</span>
 <span class="kn">from</span> <span class="nn">sisl.linalg</span> <span class="k">import</span> <span class="n">inv</span>
 <span class="kn">from</span> <span class="nn">sisl.utils.mathematics</span> <span class="k">import</span> <span class="n">fnorm</span><span class="p">,</span> <span class="n">expand</span>
+<span class="kn">from</span> <span class="nn">sisl._math_small</span> <span class="k">import</span> <span class="n">dot3</span><span class="p">,</span> <span class="n">cross3</span>
+<span class="kn">from</span> <span class="nn">sisl._indices</span> <span class="k">import</span> <span class="n">indices_gt_le</span>
+
 
 <span class="kn">from</span> <span class="nn">.base</span> <span class="k">import</span> <span class="n">PureShape</span>
 
@@ -233,7 +235,7 @@
 
 <div class="viewcode-block" id="Cuboid.volume"><a class="viewcode-back" href="../../../api-generated/sisl.shape.Cuboid.html#sisl.shape.Cuboid.volume">[docs]</a>    <span class="k">def</span> <span class="nf">volume</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Return volume of Cuboid &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="n">dot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_v</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="p">:],</span> <span class="n">cross</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_v</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="p">:],</span> <span class="bp">self</span><span class="o">.</span><span class="n">_v</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="p">:]))</span></div>
+        <span class="k">return</span> <span class="nb">abs</span><span class="p">(</span><span class="n">dot3</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_v</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="p">:],</span> <span class="n">cross3</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_v</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="p">:],</span> <span class="bp">self</span><span class="o">.</span><span class="n">_v</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="p">:])))</span></div>
 
 <div class="viewcode-block" id="Cuboid.set_center"><a class="viewcode-back" href="../../../api-generated/sisl.shape.Cuboid.html#sisl.shape.Cuboid.set_center">[docs]</a>    <span class="k">def</span> <span class="nf">set_center</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">center</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Re-setting the center can sometimes be necessary &quot;&quot;&quot;</span>
@@ -308,12 +310,7 @@
         <span class="c1"># The proximity is 1e-12 of the inverse cell.</span>
         <span class="c1"># So, sadly, the bigger the cell the bigger the tolerance</span>
         <span class="c1"># However due to numerics this is probably best anyway</span>
-        <span class="n">within</span> <span class="o">=</span> <span class="n">logical_and</span><span class="o">.</span><span class="n">reduce</span><span class="p">(</span><span class="n">tmp</span> <span class="o">&gt;=</span> <span class="o">-</span><span class="n">tol</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">nonzero</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
-
-        <span class="n">tmp</span> <span class="o">=</span> <span class="n">tmp</span><span class="p">[</span><span class="n">within</span><span class="p">,</span> <span class="p">:]</span>
-        <span class="n">wtmp</span> <span class="o">=</span> <span class="n">logical_and</span><span class="o">.</span><span class="n">reduce</span><span class="p">(</span><span class="n">tmp</span> <span class="o">&lt;=</span> <span class="mf">1.</span> <span class="o">+</span> <span class="n">tol</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">nonzero</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
-
-        <span class="k">return</span> <span class="n">within</span><span class="p">[</span><span class="n">wtmp</span><span class="p">]</span></div>
+        <span class="k">return</span> <span class="n">indices_gt_le</span><span class="p">(</span><span class="n">tmp</span><span class="p">,</span> <span class="o">-</span><span class="n">tol</span><span class="p">,</span> <span class="mf">1.</span> <span class="o">+</span> <span class="n">tol</span><span class="p">)</span></div>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">origo</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -380,7 +377,7 @@
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'../../../',
-            VERSION:'0.9.2-417',
+            VERSION:'0.9.2-466',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true,

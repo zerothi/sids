@@ -65,7 +65,7 @@
             
             
               <div class="version">
-                0.9.2-417
+                0.9.2-466
               </div>
             
           
@@ -185,6 +185,7 @@
 <span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">insert</span><span class="p">,</span> <span class="n">take</span><span class="p">,</span> <span class="n">delete</span><span class="p">,</span> <span class="n">copyto</span><span class="p">,</span> <span class="n">split</span>
 <span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">intersect1d</span><span class="p">,</span> <span class="n">setdiff1d</span><span class="p">,</span> <span class="n">unique</span><span class="p">,</span> <span class="n">in1d</span>
 <span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">diff</span><span class="p">,</span> <span class="n">count_nonzero</span>
+<span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="nb">any</span> <span class="k">as</span> <span class="n">np_any</span>
 <span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">argsort</span>
 
 <span class="kn">from</span> <span class="nn">scipy.sparse</span> <span class="k">import</span> <span class="n">isspmatrix</span>
@@ -194,6 +195,7 @@
 <span class="kn">from</span> <span class="nn">scipy.sparse</span> <span class="k">import</span> <span class="n">isspmatrix_lil</span>
 
 <span class="kn">import</span> <span class="nn">sisl._array</span> <span class="k">as</span> <span class="nn">_a</span>
+<span class="kn">from</span> <span class="nn">._indices</span> <span class="k">import</span> <span class="n">indices</span><span class="p">,</span> <span class="n">sorted_unique</span>
 <span class="kn">from</span> <span class="nn">.messages</span> <span class="k">import</span> <span class="n">warn</span><span class="p">,</span> <span class="n">SislError</span>
 <span class="kn">from</span> <span class="nn">._help</span> <span class="k">import</span> <span class="n">array_fill_repeat</span><span class="p">,</span> <span class="n">get_dtype</span>
 <span class="kn">from</span> <span class="nn">._help</span> <span class="k">import</span> <span class="n">_range</span> <span class="k">as</span> <span class="nb">range</span><span class="p">,</span> <span class="n">_zip</span> <span class="k">as</span> <span class="nb">zip</span><span class="p">,</span> <span class="n">_map</span> <span class="k">as</span> <span class="nb">map</span>
@@ -203,22 +205,6 @@
 <span class="c1"># we use it slightly differently and thus require this new sparse pattern.</span>
 
 <span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;SparseCSR&#39;</span><span class="p">,</span> <span class="s1">&#39;ispmatrix&#39;</span><span class="p">,</span> <span class="s1">&#39;ispmatrixd&#39;</span><span class="p">]</span>
-
-
-<span class="k">def</span> <span class="nf">indices_single</span><span class="p">(</span><span class="n">col</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">offset</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot; Return indices of values in col with a possible offset &quot;&quot;&quot;</span>
-    <span class="n">w</span> <span class="o">=</span> <span class="p">(</span><span class="n">col</span> <span class="o">==</span> <span class="n">value</span><span class="p">)</span><span class="o">.</span><span class="n">nonzero</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
-    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">w</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-        <span class="k">return</span> <span class="o">-</span><span class="mi">1</span>
-    <span class="k">else</span><span class="p">:</span>
-        <span class="k">return</span> <span class="n">offset</span> <span class="o">+</span> <span class="n">w</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-
-<span class="c1"># Vectorize the function,</span>
-<span class="c1"># The return-type is always numpy.int32</span>
-<span class="c1"># The column indices are passed &quot;as-is&quot; via the</span>
-<span class="c1"># excluded keyword</span>
-<span class="n">indices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vectorize</span><span class="p">(</span><span class="n">indices_single</span><span class="p">,</span> <span class="n">otypes</span><span class="o">=</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">],</span>
-                       <span class="n">excluded</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;col&#39;</span><span class="p">])</span>
 
 
 <div class="viewcode-block" id="SparseCSR"><a class="viewcode-back" href="../../api-generated/sisl.SparseCSR.html#sisl.SparseCSR">[docs]</a><span class="k">class</span> <span class="nc">SparseCSR</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
@@ -320,8 +306,8 @@
                                   <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 
             <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">arg1</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">3</span><span class="p">:</span>
-                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">((</span><span class="s1">&#39;The sparse array *must* be created &#39;</span>
-                                  <span class="s1">&#39;with data, indices, indptr&#39;</span><span class="p">))</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;The sparse array *must* be created &#39;</span>
+                                 <span class="s1">&#39;with data, indices, indptr&#39;</span><span class="p">)</span>
             <span class="k">else</span><span class="p">:</span>
 
                 <span class="c1"># Correct dimension according to passed array</span>
@@ -544,42 +530,38 @@
 
         <span class="c1"># We truncate all the connections</span>
         <span class="k">if</span> <span class="n">sort</span><span class="p">:</span>
-            <span class="k">def</span> <span class="nf">func</span><span class="p">(</span><span class="n">r</span><span class="p">):</span>
-                <span class="sd">&quot;&quot;&quot; Sort and check whether there are double entries &quot;&quot;&quot;</span>
-                <span class="n">ptr1</span> <span class="o">=</span> <span class="n">ptr</span><span class="p">[</span><span class="n">r</span><span class="p">]</span>
-                <span class="n">ptr2</span> <span class="o">=</span> <span class="n">ptr</span><span class="p">[</span><span class="n">r</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span>
-                <span class="n">sl</span> <span class="o">=</span> <span class="nb">slice</span><span class="p">(</span><span class="n">ptr1</span><span class="p">,</span> <span class="n">ptr2</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
+                <span class="c1"># Sort and check whether there are double entries</span>
+                <span class="n">sl</span> <span class="o">=</span> <span class="nb">slice</span><span class="p">(</span><span class="n">ptr</span><span class="p">[</span><span class="n">r</span><span class="p">],</span> <span class="n">ptr</span><span class="p">[</span><span class="n">r</span><span class="o">+</span><span class="mi">1</span><span class="p">])</span>
                 <span class="n">ccol</span> <span class="o">=</span> <span class="n">col</span><span class="p">[</span><span class="n">sl</span><span class="p">]</span><span class="o">.</span><span class="n">view</span><span class="p">()</span>
                 <span class="n">DD</span> <span class="o">=</span> <span class="n">D</span><span class="p">[</span><span class="n">sl</span><span class="p">,</span> <span class="p">:]</span><span class="o">.</span><span class="n">view</span><span class="p">()</span>
-                <span class="k">if</span> <span class="n">unique</span><span class="p">(</span><span class="n">ccol</span><span class="p">)</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="n">ptr2</span> <span class="o">-</span> <span class="n">ptr1</span><span class="p">:</span>
-                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">((</span><span class="s1">&#39;You cannot have two elements between the same &#39;</span> <span class="o">+</span>
-                                      <span class="s1">&#39;i,j index (</span><span class="si">{}</span><span class="s1">), something has went terribly wrong.&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">ptr1</span><span class="p">)))</span>
                 <span class="n">idx</span> <span class="o">=</span> <span class="n">argsort</span><span class="p">(</span><span class="n">ccol</span><span class="p">)</span>
                 <span class="c1"># Do in-place sorting</span>
                 <span class="n">ccol</span><span class="p">[:]</span> <span class="o">=</span> <span class="n">ccol</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">sorted_unique</span><span class="p">(</span><span class="n">ccol</span><span class="p">):</span>
+                    <span class="k">raise</span> <span class="n">SislError</span><span class="p">(</span><span class="s1">&#39;You cannot have two elements between the same &#39;</span> <span class="o">+</span>
+                                    <span class="s1">&#39;i,j index (i=</span><span class="si">{}</span><span class="s1">), something has went terribly wrong.&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">r</span><span class="p">))</span>
                 <span class="n">DD</span><span class="p">[:,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">DD</span><span class="p">[</span><span class="n">idx</span><span class="p">,</span> <span class="p">:]</span>
 
         <span class="k">else</span><span class="p">:</span>
-            <span class="k">def</span> <span class="nf">func</span><span class="p">(</span><span class="n">r</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
                 <span class="n">ptr1</span> <span class="o">=</span> <span class="n">ptr</span><span class="p">[</span><span class="n">r</span><span class="p">]</span>
                 <span class="n">ptr2</span> <span class="o">=</span> <span class="n">ptr</span><span class="p">[</span><span class="n">r</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span>
                 <span class="k">if</span> <span class="n">unique</span><span class="p">(</span><span class="n">col</span><span class="p">[</span><span class="n">ptr1</span><span class="p">:</span><span class="n">ptr2</span><span class="p">])</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="n">ptr2</span> <span class="o">-</span> <span class="n">ptr1</span><span class="p">:</span>
-                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">((</span><span class="s1">&#39;You cannot have two elements between the same &#39;</span> <span class="o">+</span>
-                                      <span class="s1">&#39;i,j index (</span><span class="si">{}</span><span class="s1">), something has went terribly wrong.&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">ptr1</span><span class="p">)))</span>
-        <span class="c1"># Since map puts it on the stack, we have to force the evaluation.</span>
-        <span class="nb">list</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="n">func</span><span class="p">,</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])))</span>
+                    <span class="k">raise</span> <span class="n">SislError</span><span class="p">(</span><span class="s1">&#39;You cannot have two elements between the same &#39;</span> <span class="o">+</span>
+                                    <span class="s1">&#39;i,j index (i=</span><span class="si">{}</span><span class="s1">), something has went terribly wrong.&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">r</span><span class="p">))</span>
 
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">col</span><span class="p">)</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nnz</span><span class="p">:</span>
             <span class="k">raise</span> <span class="n">SislError</span><span class="p">(</span><span class="s1">&#39;Final size in the sparse matrix finalization &#39;</span>
                             <span class="s1">&#39;went wrong.&#39;</span><span class="p">)</span>
 
         <span class="c1"># Check that all column indices are within the expected shape</span>
-        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">col</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">np_any</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">col</span><span class="p">):</span>
             <span class="n">warn</span><span class="p">(</span><span class="s2">&quot;Sparse matrix contains column indices outside the shape &quot;</span>
                  <span class="s2">&quot;of the matrix. Data may not represent what is expected!&quot;</span><span class="p">)</span>
 
         <span class="c1"># Signal that we indeed have finalized the data</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_finalized</span> <span class="o">=</span> <span class="kc">True</span></div>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_finalized</span> <span class="o">=</span> <span class="n">sort</span></div>
 
 <div class="viewcode-block" id="SparseCSR.edges"><a class="viewcode-back" href="../../api-generated/sisl.SparseCSR.html#sisl.SparseCSR.edges">[docs]</a>    <span class="k">def</span> <span class="nf">edges</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">row</span><span class="p">,</span> <span class="n">exclude</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Retrieve edges (connections) of a given `row` or list of `row`&#39;s</span>
@@ -668,7 +650,7 @@
         <span class="n">update_col</span> <span class="o">=</span> <span class="ow">not</span> <span class="n">keep_shape</span>
         <span class="k">if</span> <span class="n">update_col</span><span class="p">:</span>
             <span class="c1"># Check that we really do have to update</span>
-            <span class="n">update_col</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">columns</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">n_cols</span><span class="p">)</span>
+            <span class="n">update_col</span> <span class="o">=</span> <span class="n">np_any</span><span class="p">(</span><span class="n">columns</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">n_cols</span><span class="p">)</span>
 
         <span class="c1"># Correct number of elements per column, and the pointers</span>
         <span class="n">ncol</span><span class="p">[:]</span> <span class="o">-=</span> <span class="n">ndel</span>
@@ -745,11 +727,11 @@
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="o">+</span><span class="s2">&quot;.translate_columns requires input and output columns with &quot;</span>
                              <span class="s2">&quot;equal length&quot;</span><span class="p">)</span>
 
-        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">old</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
+        <span class="k">if</span> <span class="n">np_any</span><span class="p">(</span><span class="n">old</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="o">+</span><span class="s2">&quot;.translate_columns has non-existing old column values&quot;</span><span class="p">)</span>
 
         <span class="n">end_clean</span> <span class="o">=</span> <span class="kc">False</span>
-        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">new</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
+        <span class="k">if</span> <span class="n">np_any</span><span class="p">(</span><span class="n">new</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
             <span class="n">end_clean</span> <span class="o">=</span> <span class="kc">True</span>
 
         <span class="c1"># Now do the translation</span>
@@ -911,6 +893,7 @@
 
         <span class="c1"># fast reference</span>
         <span class="n">ptr</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ptr</span>
+        <span class="n">ptr_i</span> <span class="o">=</span> <span class="n">ptr</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
         <span class="n">ncol</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ncol</span>
         <span class="n">col</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">col</span>
 
@@ -922,7 +905,7 @@
             <span class="c1"># Checks whether any non-zero elements are</span>
             <span class="c1"># already in the sparse pattern</span>
             <span class="c1"># If so we remove those from the j</span>
-            <span class="n">exists</span> <span class="o">=</span> <span class="n">intersect1d</span><span class="p">(</span><span class="n">j</span><span class="p">,</span> <span class="n">col</span><span class="p">[</span><span class="n">ptr</span><span class="p">[</span><span class="n">i</span><span class="p">]:</span><span class="n">ptr</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">+</span><span class="n">ncol</span><span class="p">[</span><span class="n">i</span><span class="p">]],</span>
+            <span class="n">exists</span> <span class="o">=</span> <span class="n">intersect1d</span><span class="p">(</span><span class="n">j</span><span class="p">,</span> <span class="n">col</span><span class="p">[</span><span class="n">ptr_i</span><span class="p">:</span><span class="n">ptr_i</span><span class="o">+</span><span class="n">ncol</span><span class="p">[</span><span class="n">i</span><span class="p">]],</span>
                                  <span class="n">assume_unique</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">exists</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">arrayi</span><span class="p">([])</span>
@@ -933,7 +916,7 @@
 
         <span class="c1"># Check how many elements cannot fit in the currently</span>
         <span class="c1"># allocated sparse matrix...</span>
-        <span class="n">new_nnz</span> <span class="o">=</span> <span class="n">ncol</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">+</span> <span class="n">new_n</span> <span class="o">-</span> <span class="p">(</span><span class="n">ptr</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">ptr</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+        <span class="n">new_nnz</span> <span class="o">=</span> <span class="n">ncol</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">+</span> <span class="n">new_n</span> <span class="o">-</span> <span class="p">(</span><span class="n">ptr</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">ptr_i</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="n">new_nnz</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
 
@@ -949,12 +932,9 @@
 
             <span class="c1"># ...expand size of the sparsity pattern...</span>
 
-            <span class="c1"># Insert pointer of new data</span>
-            <span class="n">iptr</span> <span class="o">=</span> <span class="n">ptr</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">+</span> <span class="n">ncol</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
-
             <span class="c1"># Insert new empty elements in the column index</span>
             <span class="c1"># after the column</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">col</span> <span class="o">=</span> <span class="n">insert</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">col</span><span class="p">,</span> <span class="n">iptr</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">col</span> <span class="o">=</span> <span class="n">insert</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">col</span><span class="p">,</span> <span class="n">ptr_i</span> <span class="o">+</span> <span class="n">ncol</span><span class="p">[</span><span class="n">i</span><span class="p">],</span>
                               <span class="n">empty</span><span class="p">(</span><span class="n">ns</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">col</span><span class="o">.</span><span class="n">dtype</span><span class="p">))</span>
 
             <span class="c1"># update reference</span>
@@ -974,7 +954,7 @@
             <span class="c1"># Ensure that we write the new elements to the matrix...</span>
 
             <span class="c1"># new data begins from this index location</span>
-            <span class="n">old_ptr</span> <span class="o">=</span> <span class="n">ptr</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">+</span> <span class="n">ncol</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+            <span class="n">old_ptr</span> <span class="o">=</span> <span class="n">ptr_i</span> <span class="o">+</span> <span class="n">ncol</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
 
             <span class="c1"># assign the column indices for the new entries</span>
             <span class="c1"># NOTE that this may not assign them in the order</span>
@@ -991,7 +971,7 @@
         <span class="c1"># information that is required...</span>
 
         <span class="c1"># ... retrieve the indices and return</span>
-        <span class="k">return</span> <span class="n">indices</span><span class="p">(</span><span class="n">col</span><span class="p">[</span><span class="n">ptr</span><span class="p">[</span><span class="n">i</span><span class="p">]:</span><span class="n">ptr</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">+</span> <span class="n">ncol</span><span class="p">[</span><span class="n">i</span><span class="p">]],</span> <span class="n">j</span><span class="p">,</span> <span class="n">ptr</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">indices</span><span class="p">(</span><span class="n">col</span><span class="p">[</span><span class="n">ptr_i</span><span class="p">:</span><span class="n">ptr_i</span> <span class="o">+</span> <span class="n">ncol</span><span class="p">[</span><span class="n">i</span><span class="p">]],</span> <span class="n">j</span><span class="p">,</span> <span class="n">ptr_i</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">_get</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Retrieves the data pointer arrays of the elements, if it is non-existing, it will return ``-1``</span>
@@ -1909,7 +1889,7 @@
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'../../',
-            VERSION:'0.9.2-417',
+            VERSION:'0.9.2-466',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true,

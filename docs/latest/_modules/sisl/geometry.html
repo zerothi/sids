@@ -65,7 +65,7 @@
             
             
               <div class="version">
-                0.9.2-417
+                0.9.2-466
               </div>
             
           
@@ -188,7 +188,9 @@
 <span class="kn">import</span> <span class="nn">sisl._plot</span> <span class="k">as</span> <span class="nn">plt</span>
 <span class="kn">import</span> <span class="nn">sisl._array</span> <span class="k">as</span> <span class="nn">_a</span>
 
-<span class="kn">from</span> <span class="nn">.messages</span> <span class="k">import</span> <span class="n">warn</span>
+<span class="kn">from</span> <span class="nn">._math_small</span> <span class="k">import</span> <span class="n">is_ascending</span>
+<span class="kn">from</span> <span class="nn">._indices</span> <span class="k">import</span> <span class="n">indices_in_sphere_with_dist</span><span class="p">,</span> <span class="n">indices_le</span><span class="p">,</span> <span class="n">indices_gt_le</span>
+<span class="kn">from</span> <span class="nn">.messages</span> <span class="k">import</span> <span class="n">warn</span><span class="p">,</span> <span class="n">SislError</span>
 <span class="kn">from</span> <span class="nn">._help</span> <span class="k">import</span> <span class="n">_str</span>
 <span class="kn">from</span> <span class="nn">._help</span> <span class="k">import</span> <span class="n">_range</span> <span class="k">as</span> <span class="nb">range</span>
 <span class="kn">from</span> <span class="nn">._help</span> <span class="k">import</span> <span class="n">isndarray</span>
@@ -687,6 +689,10 @@
 <span class="sd">           initial `iR` value, which the sphere is estitametd from</span>
 <span class="sd">        R : float, optional</span>
 <span class="sd">           the value used for atomic range (defaults to ``self.maxR()``)</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        int : number of radius needed to contain `na` atoms. Minimally 2 will be returned.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">ia</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span>
 
@@ -702,7 +708,7 @@
         <span class="c1"># Convert to na atoms spherical radii</span>
         <span class="n">iR</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="mi">4</span> <span class="o">/</span> <span class="mi">3</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="n">R</span> <span class="o">**</span> <span class="mi">3</span> <span class="o">/</span> <span class="n">naiR</span> <span class="o">*</span> <span class="n">na</span><span class="p">)</span>
 
-        <span class="k">return</span> <span class="n">iR</span></div>
+        <span class="k">return</span> <span class="nb">max</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="n">iR</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="Geometry.iter_block_rand"><a class="viewcode-back" href="../../api-generated/sisl.Geometry.html#sisl.Geometry.iter_block_rand">[docs]</a>    <span class="k">def</span> <span class="nf">iter_block_rand</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">iR</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span> <span class="n">R</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">atom</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Perform the *random* block-iteration by randomly selecting the next center of block &quot;&quot;&quot;</span>
@@ -720,6 +726,9 @@
 
         <span class="c1"># Figure out how many we need to loop on</span>
         <span class="n">not_passed_N</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">not_passed</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">iR</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">SislError</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39;.iter_block_rand too small iR!&#39;</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="n">R</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">R</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">maxR</span><span class="p">()</span>
@@ -747,7 +756,6 @@
 
             <span class="c1"># get all elements within two radii</span>
             <span class="n">all_idx</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">close</span><span class="p">(</span><span class="n">idx</span><span class="p">,</span> <span class="n">R</span><span class="o">=</span><span class="n">R</span><span class="p">)</span>
-
             <span class="c1"># Get unit-cell atoms</span>
             <span class="n">all_idx</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sc2uc</span><span class="p">(</span><span class="n">all_idx</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">uniq</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
             <span class="c1"># First extend the search-space (before reducing)</span>
@@ -756,7 +764,7 @@
             <span class="c1"># Only select those who have not been runned yet</span>
             <span class="n">all_idx</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">all_idx</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="n">not_passed</span><span class="p">[</span><span class="n">all_idx</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span><span class="o">.</span><span class="n">nonzero</span><span class="p">()[</span><span class="mi">0</span><span class="p">]]</span>
             <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">all_idx</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Internal error, please report to the developers&#39;</span><span class="p">)</span>
+                <span class="k">raise</span> <span class="n">SislError</span><span class="p">(</span><span class="s1">&#39;Internal error, please report to the developers&#39;</span><span class="p">)</span>
 
             <span class="c1"># Tell the next loop to skip those passed</span>
             <span class="n">not_passed</span><span class="p">[</span><span class="n">all_idx</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">False</span>
@@ -769,7 +777,9 @@
             <span class="k">yield</span> <span class="n">all_idx</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">all_idx</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
 
         <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">not_passed</span><span class="p">):</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Error on iterations. Not all atoms has been visited.&#39;</span><span class="p">)</span></div>
+            <span class="nb">print</span><span class="p">(</span><span class="n">not_passed</span><span class="o">.</span><span class="n">nonzero</span><span class="p">()[</span><span class="mi">0</span><span class="p">])</span>
+            <span class="nb">print</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">not_passed</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span>
+            <span class="k">raise</span> <span class="n">SislError</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39;.iter_block_rand error on iterations. Not all atoms have been visited.&#39;</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="Geometry.iter_block_shape"><a class="viewcode-back" href="../../api-generated/sisl.Geometry.html#sisl.Geometry.iter_block_shape">[docs]</a>    <span class="k">def</span> <span class="nf">iter_block_shape</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">iR</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span> <span class="n">atom</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Perform the *grid* block-iteration by looping a grid &quot;&quot;&quot;</span>
@@ -786,6 +796,9 @@
 
         <span class="c1"># Figure out how many we need to loop on</span>
         <span class="n">not_passed_N</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">not_passed</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">iR</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">SislError</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39;.iter_block_shape too small iR!&#39;</span><span class="p">)</span>
 
         <span class="n">R</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">maxR</span><span class="p">()</span>
         <span class="k">if</span> <span class="n">shape</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
@@ -886,7 +899,7 @@
         <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">not_passed</span><span class="p">):</span>
             <span class="nb">print</span><span class="p">(</span><span class="n">not_passed</span><span class="o">.</span><span class="n">nonzero</span><span class="p">()[</span><span class="mi">0</span><span class="p">])</span>
             <span class="nb">print</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">not_passed</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Error on iterations. Not all atoms has been visited.&#39;</span><span class="p">)</span></div>
+            <span class="k">raise</span> <span class="n">SislError</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39;.iter_block_shape error on iterations. Not all atoms have been visited.&#39;</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="Geometry.iter_block"><a class="viewcode-back" href="../../api-generated/sisl.Geometry.html#sisl.Geometry.iter_block">[docs]</a>    <span class="k">def</span> <span class="nf">iter_block</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">iR</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span> <span class="n">R</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">atom</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s1">&#39;rand&#39;</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Iterator for performance critical loops</span>
@@ -925,6 +938,9 @@
 <span class="sd">        Two lists with ``[0]`` being a list of atoms to be looped and ``[1]`` being the atoms that</span>
 <span class="sd">        need searched.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">iR</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">SislError</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39;.iter_block too small iR!&#39;</span><span class="p">)</span>
+
         <span class="n">method</span> <span class="o">=</span> <span class="n">method</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
         <span class="k">if</span> <span class="n">method</span> <span class="o">==</span> <span class="s1">&#39;rand&#39;</span> <span class="ow">or</span> <span class="n">method</span> <span class="o">==</span> <span class="s1">&#39;random&#39;</span><span class="p">:</span>
             <span class="k">for</span> <span class="n">ias</span><span class="p">,</span> <span class="n">idxs</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">iter_block_rand</span><span class="p">(</span><span class="n">iR</span><span class="p">,</span> <span class="n">R</span><span class="p">,</span> <span class="n">atom</span><span class="p">):</span>
@@ -2162,10 +2178,6 @@
 <span class="sd">            If True this method will return the distance</span>
 <span class="sd">            for each of the couplings.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="c1"># Common numpy used functions (reduces function look-ups)</span>
-        <span class="n">log_and</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">logical_and</span>
-        <span class="n">fabs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">fabs</span>
-
         <span class="k">if</span> <span class="n">R</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">R</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">maxR</span><span class="p">()],</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
         <span class="k">elif</span> <span class="ow">not</span> <span class="n">isndarray</span><span class="p">(</span><span class="n">R</span><span class="p">):</span>
@@ -2194,12 +2206,12 @@
 
         <span class="c1"># Get atomic coordinate in principal cell</span>
         <span class="k">if</span> <span class="n">idx_xyz</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">dxa</span> <span class="o">=</span> <span class="bp">self</span><span class="p">[</span><span class="n">idx</span><span class="p">,</span> <span class="p">:]</span> <span class="o">+</span> <span class="n">foff</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="p">:]</span>
+            <span class="n">dxa</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">axyz</span><span class="p">(</span><span class="n">idx</span><span class="p">),</span> <span class="n">foff</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="c1"># For extremely large systems re-using the</span>
             <span class="c1"># idx_xyz is faster than indexing</span>
             <span class="c1"># a very large array</span>
-            <span class="n">dxa</span> <span class="o">=</span> <span class="n">idx_xyz</span><span class="p">[:,</span> <span class="p">:]</span> <span class="o">+</span> <span class="n">foff</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="p">:]</span>
+            <span class="n">dxa</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">idx_xyz</span><span class="p">,</span> <span class="n">foff</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
 
         <span class="c1"># Immediately downscale by easy checking</span>
         <span class="c1"># This will reduce the computation of the vector-norm</span>
@@ -2207,50 +2219,24 @@
         <span class="c1"># This abstraction will _only_ help very large</span>
         <span class="c1"># systems.</span>
         <span class="c1"># For smaller ones this will actually be a slower</span>
-        <span class="c1"># method...</span>
-        <span class="k">if</span> <span class="n">dxa</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">10000</span><span class="p">:</span>
-            <span class="k">if</span> <span class="n">idx</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-                <span class="c1"># first</span>
-                <span class="n">ix</span> <span class="o">=</span> <span class="n">fabs</span><span class="p">(</span><span class="n">dxa</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">])</span> <span class="o">&lt;=</span> <span class="n">max_R</span>
-                <span class="n">idx</span> <span class="o">=</span> <span class="n">ix</span><span class="o">.</span><span class="n">nonzero</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
-                <span class="n">dxa</span> <span class="o">=</span> <span class="n">dxa</span><span class="p">[</span><span class="n">ix</span><span class="p">,</span> <span class="p">:]</span>
-                <span class="c1"># second</span>
-                <span class="n">ix</span> <span class="o">=</span> <span class="n">fabs</span><span class="p">(</span><span class="n">dxa</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">])</span> <span class="o">&lt;=</span> <span class="n">max_R</span>
-                <span class="n">idx</span> <span class="o">=</span> <span class="n">idx</span><span class="p">[</span><span class="n">ix</span><span class="p">]</span>
-                <span class="n">dxa</span> <span class="o">=</span> <span class="n">dxa</span><span class="p">[</span><span class="n">ix</span><span class="p">,</span> <span class="p">:]</span>
-                <span class="c1"># third</span>
-                <span class="n">ix</span> <span class="o">=</span> <span class="n">fabs</span><span class="p">(</span><span class="n">dxa</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">])</span> <span class="o">&lt;=</span> <span class="n">max_R</span>
-                <span class="n">idx</span> <span class="o">=</span> <span class="n">idx</span><span class="p">[</span><span class="n">ix</span><span class="p">]</span>
-                <span class="n">dxa</span> <span class="o">=</span> <span class="n">dxa</span><span class="p">[</span><span class="n">ix</span><span class="p">,</span> <span class="p">:]</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">]:</span>
-                    <span class="n">ix</span> <span class="o">=</span> <span class="n">fabs</span><span class="p">(</span><span class="n">dxa</span><span class="p">[:,</span> <span class="n">i</span><span class="p">])</span> <span class="o">&lt;=</span> <span class="n">max_R</span>
-                    <span class="n">idx</span> <span class="o">=</span> <span class="n">idx</span><span class="p">[</span><span class="n">ix</span><span class="p">]</span>
-                    <span class="n">dxa</span> <span class="o">=</span> <span class="n">dxa</span><span class="p">[</span><span class="n">ix</span><span class="p">,</span> <span class="p">:]</span>
+        <span class="c1"># method..</span>
+        <span class="k">if</span> <span class="n">idx</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">idx</span><span class="p">,</span> <span class="n">d</span> <span class="o">=</span> <span class="n">indices_in_sphere_with_dist</span><span class="p">(</span><span class="n">dxa</span><span class="p">,</span> <span class="n">max_R</span><span class="p">)</span>
+            <span class="n">dxa</span> <span class="o">=</span> <span class="n">dxa</span><span class="p">[</span><span class="n">idx</span><span class="p">,</span> <span class="p">:]</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="n">ix</span> <span class="o">=</span> <span class="n">log_and</span><span class="o">.</span><span class="n">reduce</span><span class="p">(</span><span class="n">fabs</span><span class="p">(</span><span class="n">dxa</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="n">max_R</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">ix</span><span class="p">,</span> <span class="n">d</span> <span class="o">=</span> <span class="n">indices_in_sphere_with_dist</span><span class="p">(</span><span class="n">dxa</span><span class="p">,</span> <span class="n">max_R</span><span class="p">)</span>
+            <span class="n">idx</span> <span class="o">=</span> <span class="n">idx</span><span class="p">[</span><span class="n">ix</span><span class="p">]</span>
+            <span class="n">dxa</span> <span class="o">=</span> <span class="n">dxa</span><span class="p">[</span><span class="n">ix</span><span class="p">,</span> <span class="p">:]</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+            <span class="k">del</span> <span class="n">ix</span>
 
-            <span class="k">if</span> <span class="n">idx</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-                <span class="c1"># This is because of the pre-check of the</span>
-                <span class="c1"># distance checks</span>
-                <span class="n">idx</span> <span class="o">=</span> <span class="n">ix</span><span class="o">.</span><span class="n">nonzero</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="n">idx</span> <span class="o">=</span> <span class="n">idx</span><span class="p">[</span><span class="n">ix</span><span class="p">]</span>
-            <span class="n">dxa</span> <span class="o">=</span> <span class="n">dxa</span><span class="p">[</span><span class="n">ix</span><span class="p">,</span> <span class="p">:]</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">idx</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="c1"># Create default return</span>
+            <span class="n">ret</span> <span class="o">=</span> <span class="p">[[</span><span class="n">_a</span><span class="o">.</span><span class="n">emptyi</span><span class="p">([</span><span class="mi">0</span><span class="p">])]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">R</span><span class="p">)]</span>
+            <span class="k">if</span> <span class="n">ret_xyz</span><span class="p">:</span>
+                <span class="n">ret</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">_a</span><span class="o">.</span><span class="n">emptyd</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">3</span><span class="p">])]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">R</span><span class="p">))</span>
+            <span class="k">if</span> <span class="n">ret_rij</span><span class="p">:</span>
+                <span class="n">ret</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">_a</span><span class="o">.</span><span class="n">emptyd</span><span class="p">([</span><span class="mi">0</span><span class="p">])]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">R</span><span class="p">))</span>
 
-        <span class="c1"># Create default return</span>
-        <span class="n">ret</span> <span class="o">=</span> <span class="p">[[</span><span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">([</span><span class="mi">0</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">R</span><span class="p">)]</span>
-        <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span>
-        <span class="k">if</span> <span class="n">ret_xyz</span><span class="p">:</span>
-            <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
-            <span class="n">rc</span> <span class="o">=</span> <span class="n">i</span>
-            <span class="n">ret</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">R</span><span class="p">))</span>
-        <span class="k">if</span> <span class="n">ret_rij</span><span class="p">:</span>
-            <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
-            <span class="n">rc</span> <span class="o">=</span> <span class="n">i</span>
-            <span class="n">ret</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">([</span><span class="mi">0</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">R</span><span class="p">))</span>
-
-        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">dxa</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
             <span class="c1"># Quick return if there are</span>
             <span class="c1"># no entries...</span>
             <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">R</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
@@ -2263,30 +2249,14 @@
                 <span class="k">return</span> <span class="n">ret</span>
             <span class="k">return</span> <span class="n">ret</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
 
-        <span class="c1"># Retrieve all atomic indices which are closer</span>
-        <span class="c1"># than our delta-R</span>
-        <span class="c1"># The linear algebra norm function could be used, but it</span>
-        <span class="c1"># has a lot of checks, hence we do it manually</span>
-        <span class="c1"># xaR = np.linalg.norm(dxa,axis=-1)</span>
-
-        <span class="c1"># It is faster to do a single multiplacation than</span>
-        <span class="c1"># a sqrt of MANY values</span>
-        <span class="c1"># After having reduced the dxa array, we may then</span>
-        <span class="c1"># take the sqrt</span>
-        <span class="n">max_R</span> <span class="o">=</span> <span class="n">max_R</span> <span class="o">*</span> <span class="n">max_R</span>
-        <span class="n">xaR</span> <span class="o">=</span> <span class="n">square</span><span class="p">(</span><span class="n">dxa</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
-        <span class="n">ix</span> <span class="o">=</span> <span class="p">(</span><span class="n">xaR</span> <span class="o">&lt;=</span> <span class="n">max_R</span><span class="p">)</span><span class="o">.</span><span class="n">nonzero</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
-
-        <span class="c1"># Reduce search space and correct distances</span>
-        <span class="n">d</span> <span class="o">=</span> <span class="n">sqrt</span><span class="p">(</span><span class="n">xaR</span><span class="p">[</span><span class="n">ix</span><span class="p">])</span>
         <span class="k">if</span> <span class="n">ret_xyz</span><span class="p">:</span>
-            <span class="n">xa</span> <span class="o">=</span> <span class="n">dxa</span><span class="p">[</span><span class="n">ix</span><span class="p">,</span> <span class="p">:]</span> <span class="o">+</span> <span class="n">off</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="p">:]</span>
-        <span class="k">del</span> <span class="n">xaR</span><span class="p">,</span> <span class="n">dxa</span>  <span class="c1"># just because these arrays could be very big...</span>
+            <span class="n">xa</span> <span class="o">=</span> <span class="n">dxa</span><span class="p">[:,</span> <span class="p">:]</span> <span class="o">+</span> <span class="n">off</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="p">:]</span>
+        <span class="k">del</span> <span class="n">dxa</span>  <span class="c1"># just because this array could be very big...</span>
 
         <span class="c1"># Check whether we only have one range to check.</span>
         <span class="c1"># If so, we need not reduce the index space</span>
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">R</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
-            <span class="n">ret</span> <span class="o">=</span> <span class="p">[</span><span class="n">idx</span><span class="p">[</span><span class="n">ix</span><span class="p">]]</span>
+            <span class="n">ret</span> <span class="o">=</span> <span class="p">[</span><span class="n">idx</span><span class="p">]</span>
             <span class="k">if</span> <span class="n">ret_xyz</span><span class="p">:</span>
                 <span class="n">ret</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">xa</span><span class="p">)</span>
             <span class="k">if</span> <span class="n">ret_rij</span><span class="p">:</span>
@@ -2295,35 +2265,47 @@
                 <span class="k">return</span> <span class="n">ret</span>
             <span class="k">return</span> <span class="n">ret</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
 
-        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">R</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mf">0.</span><span class="p">):</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">((</span><span class="s1">&#39;Proximity checks for several quantities &#39;</span>
-                              <span class="s1">&#39;at a time requires ascending R values.&#39;</span><span class="p">))</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">is_ascending</span><span class="p">(</span><span class="n">R</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39;.close_sc proximity checks for several &#39;</span>
+                             <span class="s1">&#39;quantities at a time requires ascending R values.&#39;</span><span class="p">)</span>
 
         <span class="c1"># The more neigbours you wish to find the faster this becomes</span>
         <span class="c1"># We only do &quot;one&quot; heavy duty search,</span>
         <span class="c1"># then we immediately reduce search space to this subspace</span>
-        <span class="n">tidx</span> <span class="o">=</span> <span class="p">(</span><span class="n">d</span> <span class="o">&lt;=</span> <span class="n">R</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">.</span><span class="n">nonzero</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
-        <span class="n">ret</span> <span class="o">=</span> <span class="p">[[</span><span class="n">_a</span><span class="o">.</span><span class="n">asarrayi</span><span class="p">(</span><span class="n">idx</span><span class="p">[</span><span class="n">ix</span><span class="p">[</span><span class="n">tidx</span><span class="p">]])</span><span class="o">.</span><span class="n">ravel</span><span class="p">()]]</span>
-        <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">tidx</span> <span class="o">=</span> <span class="n">indices_le</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="n">R</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="n">ret</span> <span class="o">=</span> <span class="p">[[</span><span class="n">idx</span><span class="p">[</span><span class="n">tidx</span><span class="p">]]]</span>
+        <span class="n">r_app</span> <span class="o">=</span> <span class="n">ret</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">append</span>
         <span class="k">if</span> <span class="n">ret_xyz</span><span class="p">:</span>
-            <span class="n">rc</span> <span class="o">=</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">1</span>
-            <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
             <span class="n">ret</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">xa</span><span class="p">[</span><span class="n">tidx</span><span class="p">]])</span>
+            <span class="n">r_appx</span> <span class="o">=</span> <span class="n">ret</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">append</span>
         <span class="k">if</span> <span class="n">ret_rij</span><span class="p">:</span>
-            <span class="n">rd</span> <span class="o">=</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">1</span>
-            <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
             <span class="n">ret</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">d</span><span class="p">[</span><span class="n">tidx</span><span class="p">]])</span>
-        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">R</span><span class="p">)):</span>
-            <span class="c1"># Search in the sub-space</span>
-            <span class="c1"># Notice that this sub-space reduction will never</span>
-            <span class="c1"># allow the same indice to be in two ranges (due to</span>
-            <span class="c1"># numerics)</span>
-            <span class="n">tidx</span> <span class="o">=</span> <span class="n">log_and</span><span class="p">(</span><span class="n">R</span><span class="p">[</span><span class="n">i</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">d</span><span class="p">,</span> <span class="n">d</span> <span class="o">&lt;=</span> <span class="n">R</span><span class="p">[</span><span class="n">i</span><span class="p">])</span><span class="o">.</span><span class="n">nonzero</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
-            <span class="n">ret</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">_a</span><span class="o">.</span><span class="n">asarrayi</span><span class="p">(</span><span class="n">idx</span><span class="p">[</span><span class="n">ix</span><span class="p">[</span><span class="n">tidx</span><span class="p">]])</span><span class="o">.</span><span class="n">ravel</span><span class="p">())</span>
-            <span class="k">if</span> <span class="n">ret_xyz</span><span class="p">:</span>
-                <span class="n">ret</span><span class="p">[</span><span class="n">rc</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">xa</span><span class="p">[</span><span class="n">tidx</span><span class="p">])</span>
-            <span class="k">if</span> <span class="n">ret_rij</span><span class="p">:</span>
-                <span class="n">ret</span><span class="p">[</span><span class="n">rd</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">d</span><span class="p">[</span><span class="n">tidx</span><span class="p">])</span>
+            <span class="n">r_appd</span> <span class="o">=</span> <span class="n">ret</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">append</span>
+
+        <span class="k">if</span> <span class="n">ret_xyz</span> <span class="ow">and</span> <span class="n">ret_rij</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">R</span><span class="p">)):</span>
+                <span class="c1"># Search in the sub-space</span>
+                <span class="c1"># Notice that this sub-space reduction will never</span>
+                <span class="c1"># allow the same indice to be in two ranges (due to</span>
+                <span class="c1"># numerics)</span>
+                <span class="n">tidx</span> <span class="o">=</span> <span class="n">indices_gt_le</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="n">R</span><span class="p">[</span><span class="n">i</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">R</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+                <span class="n">r_app</span><span class="p">(</span><span class="n">idx</span><span class="p">[</span><span class="n">tidx</span><span class="p">])</span>
+                <span class="n">r_appx</span><span class="p">(</span><span class="n">xa</span><span class="p">[</span><span class="n">tidx</span><span class="p">])</span>
+                <span class="n">r_appd</span><span class="p">(</span><span class="n">d</span><span class="p">[</span><span class="n">tidx</span><span class="p">])</span>
+        <span class="k">elif</span> <span class="n">ret_xyz</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">R</span><span class="p">)):</span>
+                <span class="n">tidx</span> <span class="o">=</span> <span class="n">indices_gt_le</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="n">R</span><span class="p">[</span><span class="n">i</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">R</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+                <span class="n">r_app</span><span class="p">(</span><span class="n">idx</span><span class="p">[</span><span class="n">tidx</span><span class="p">])</span>
+                <span class="n">r_appx</span><span class="p">(</span><span class="n">xa</span><span class="p">[</span><span class="n">tidx</span><span class="p">])</span>
+        <span class="k">elif</span> <span class="n">ret_rij</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">R</span><span class="p">)):</span>
+                <span class="n">tidx</span> <span class="o">=</span> <span class="n">indices_gt_le</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="n">R</span><span class="p">[</span><span class="n">i</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">R</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+                <span class="n">r_app</span><span class="p">(</span><span class="n">idx</span><span class="p">[</span><span class="n">tidx</span><span class="p">])</span>
+                <span class="n">r_appd</span><span class="p">(</span><span class="n">d</span><span class="p">[</span><span class="n">tidx</span><span class="p">])</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">R</span><span class="p">)):</span>
+                <span class="n">tidx</span> <span class="o">=</span> <span class="n">indices_gt_le</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="n">R</span><span class="p">[</span><span class="n">i</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">R</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+                <span class="n">r_app</span><span class="p">(</span><span class="n">idx</span><span class="p">[</span><span class="n">tidx</span><span class="p">])</span>
 
         <span class="k">if</span> <span class="n">ret_xyz</span> <span class="ow">or</span> <span class="n">ret_rij</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">ret</span>
@@ -3143,8 +3125,7 @@
         <span class="n">tile</span> <span class="o">=</span> <span class="n">tile_max</span> <span class="o">-</span> <span class="n">tile_min</span>
         <span class="c1"># We displace *all* atoms 0.1 Ang along each lattice vector.</span>
         <span class="c1"># This should take care of numerical accuracy in the fxyz routine</span>
-        <span class="n">small_fxyz</span> <span class="o">=</span> <span class="mf">0.1</span> <span class="o">/</span> <span class="n">fnorm</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cell</span><span class="p">)</span>
-        <span class="n">min_xyz</span> <span class="o">=</span> <span class="n">dot</span><span class="p">(</span><span class="n">small_fxyz</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">fxyz</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">cell</span><span class="p">)</span>
+        <span class="n">min_xyz</span> <span class="o">=</span> <span class="n">dot</span><span class="p">(</span><span class="mf">0.1</span> <span class="o">/</span> <span class="n">fnorm</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cell</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">cell</span><span class="p">)</span>
         <span class="n">full_geom</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">translate</span><span class="p">(</span><span class="n">min_xyz</span><span class="p">)</span> <span class="o">*</span> <span class="n">tile</span><span class="p">)</span><span class="o">.</span><span class="n">translate</span><span class="p">(</span><span class="n">big_origo</span><span class="p">)</span>
 
         <span class="c1"># Now we have to figure out all atomic coordinates within</span>
@@ -3672,7 +3653,7 @@
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'../../',
-            VERSION:'0.9.2-417',
+            VERSION:'0.9.2-466',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true,
