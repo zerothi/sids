@@ -12,12 +12,11 @@ import sisl._array as _a
 from ._help import dtype_complex_to_real
 from .shape import Shape
 from .utils import default_ArgumentParser, default_namespace
-from .utils import cmd, strseq, direction
+from .utils import cmd, strseq, direction, str_spec
 from .utils import array_arange
 from .utils.mathematics import fnorm
 
 from .supercell import SuperCellChild
-from .atom import Atom
 from .geometry import Geometry
 
 __all__ = ['Grid', 'sgrid']
@@ -272,7 +271,6 @@ class Grid(SuperCellChild):
         idx[b] = a
         idx[a] = b
         s = np.copy(self.shape)
-        geom = self.geometry
         d = self.__sc_geom_dict()
         d['sc'] = d['sc'].swapaxes(a, b)
         grid = self.__class__(s[idx], bc=self.bc[idx],
@@ -636,6 +634,12 @@ class Grid(SuperCellChild):
         if isinstance(sile, BaseSile):
             return sile.read_grid(*args, **kwargs)
         else:
+            sile, spec = str_spec(sile)
+            if spec is not None:
+                if ',' in spec:
+                    kwargs['spin'] = list(map(float, spec.split(',')))
+                else:
+                    kwargs['spin'] = int(spec)
             with get_sile(sile) as fh:
                 return fh.read_grid(*args, **kwargs)
 
@@ -1288,19 +1292,35 @@ This may be unexpected but enables one to do advanced manipulations.
     cmd.add_sisl_version_cite_arg(p)
 
     # First read the input "Sile"
+    stdout_grid = True
     if grid is None:
+        from os.path import isfile
         argv, input_file = cmd.collect_input(argv)
-        with get_sile(input_file) as fh:
-            grid = fh.read_grid()
 
-    elif isinstance(grid, Grid):
-        # Do nothing, the grid is already created
-        pass
+        # Extract specification of the input file
+        input_file, spec = str_spec(input_file)
+        kwargs = {}
+        if spec is not None:
+            if ',' in spec:
+                kwargs['spin'] = list(map(float, spec.split(',')))
+            else:
+                kwargs['spin'] = int(spec)
+
+        if input_file is None:
+            grid = Grid(0.1)
+            stdout_grid = False
+
+        elif isfile(input_file):
+            grid = get_sile(input_file).read_grid(**kwargs)
+
+        elif not isfile(input_file):
+            from .messages import info
+            info("Cannot find file '{}'!".format(input_file))
 
     elif isinstance(grid, BaseSile):
-        grid = grid.read_grid()
         # Store the input file...
         input_file = grid.file
+        grid = grid.read_grid()
 
     # Do the argument parser
     p, ns = grid.ArgumentParser(p, **grid._ArgumentParser_args_single())
@@ -1323,7 +1343,7 @@ This may be unexpected but enables one to do advanced manipulations.
     args = p.parse_args(argv, namespace=ns)
     g = args._grid
 
-    if not args._stored_grid:
+    if stdout_grid and not args._stored_grid:
         # We should write out the information to the stdout
         # This is merely for testing purposes and may not be used for anything.
         print(g)

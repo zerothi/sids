@@ -189,6 +189,11 @@ class Geometry(SuperCellChild):
     # Backwards compatability (do not use)
     atoms = atom
 
+    @property
+    def q0(self):
+        """ Total initial charge in this geometry (sum of q0 in all atoms) """
+        return self._atom.q0.sum()
+
     def maxR(self, all=False):
         """ Maximum orbital range of the atoms """
         return self.atom.maxR(all)
@@ -2936,7 +2941,7 @@ class Geometry(SuperCellChild):
 
         # First we should figure out which atoms we are dealing with
         idx = dot(self.icell.T, sc.cell + np.diag(sc.origo))
-        idx_origo = dot(self.icell.T, np.diag(sc.origo))
+        #idx_origo = dot(self.icell.T, np.diag(sc.origo))
         tile_min = np.floor(idx.min(0)).astype(dtype=int32)
         tile_max = np.ceil(idx.max(0)).astype(dtype=int32)
 

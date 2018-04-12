@@ -297,8 +297,8 @@ class ncSileSiesta(SileCDFSiesta):
             grid.grid = v[spin, :, :, :] * unit.get(name, 1.)
         else:
             if len(spin) > v.shape[0]:
-                raise ValueError(self.__class__.__name__ + '.read_grid requires spin to be an integer or '
-                                 'an array of length equal to the number of spin components.')
+                raise SileError(self.__class__.__name__ + '.read_grid requires spin to be an integer or '
+                                'an array of length equal to the number of spin components.')
             grid.grid[:, :, :] = v[0, :, :, :] * spin[0]
             for i, scale in enumerate(spin[1:]):
                 grid.grid[:, :, :] += v[1+i, :, :, :] * scale
@@ -425,11 +425,7 @@ class ncSileSiesta(SileCDFSiesta):
         v[:] = kwargs.get('Ef', 0.) / Ry2eV
         v = self._crt_var(self, 'Qtot', 'f8', ('one',))
         v.info = 'Total charge'
-        v[:] = np.sum(H.geom.atom.q0)
-        if 'Qtot' in kwargs:
-            v[:] = kwargs['Qtot']
-        if 'Q' in kwargs:
-            v[:] = kwargs['Q']
+        v[0] = kwargs.get('Q', kwargs.get('Qtot', H.geom.q0))
 
         # Append the sparsity pattern
         # Create basis group
