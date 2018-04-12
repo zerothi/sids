@@ -65,7 +65,7 @@
             
             
               <div class="version">
-                0.9.2-466
+                0.9.2-488
               </div>
             
           
@@ -552,8 +552,7 @@
                                     <span class="s1">&#39;i,j index (i=</span><span class="si">{}</span><span class="s1">), something has went terribly wrong.&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">r</span><span class="p">))</span>
 
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">col</span><span class="p">)</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nnz</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="n">SislError</span><span class="p">(</span><span class="s1">&#39;Final size in the sparse matrix finalization &#39;</span>
-                            <span class="s1">&#39;went wrong.&#39;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="n">SislError</span><span class="p">(</span><span class="s1">&#39;Final size in the sparse matrix finalization went wrong.&#39;</span><span class="p">)</span> <span class="c1"># pragma: no cover</span>
 
         <span class="c1"># Check that all column indices are within the expected shape</span>
         <span class="k">if</span> <span class="n">np_any</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">col</span><span class="p">):</span>
@@ -1415,78 +1414,78 @@
     <span class="c1">###############################</span>
     <span class="c1"># Overload of math operations #</span>
     <span class="c1">###############################</span>
-    <span class="k">def</span> <span class="nf">__add__</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">):</span>
-        <span class="n">c</span> <span class="o">=</span> <span class="n">a</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="n">get_dtype</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="n">other</span><span class="o">=</span><span class="n">a</span><span class="o">.</span><span class="n">dtype</span><span class="p">))</span>
-        <span class="n">c</span> <span class="o">+=</span> <span class="n">b</span>
+    <span class="k">def</span> <span class="nf">__add__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="n">c</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="n">get_dtype</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">other</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">))</span>
+        <span class="n">c</span> <span class="o">+=</span> <span class="n">other</span>
         <span class="k">return</span> <span class="n">c</span>
     <span class="fm">__radd__</span> <span class="o">=</span> <span class="fm">__add__</span>
 
-    <span class="k">def</span> <span class="nf">__iadd__</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">):</span>
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="n">SparseCSR</span><span class="p">):</span>
-            <span class="k">if</span> <span class="n">a</span><span class="o">.</span><span class="n">shape</span> <span class="o">!=</span> <span class="n">b</span><span class="o">.</span><span class="n">shape</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">__iadd__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">SparseCSR</span><span class="p">):</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape</span> <span class="o">!=</span> <span class="n">other</span><span class="o">.</span><span class="n">shape</span><span class="p">:</span>
                 <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Adding two sparse matrices requires the same shape&#39;</span><span class="p">)</span>
             <span class="c1"># Ensure that a is aligned with b</span>
-            <span class="n">a</span><span class="o">.</span><span class="n">align</span><span class="p">(</span><span class="n">b</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">align</span><span class="p">(</span><span class="n">other</span><span class="p">)</span>
 
             <span class="c1"># loop and add elements</span>
-            <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">a</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
+            <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
                 <span class="c1"># pointers</span>
-                <span class="n">bptr</span> <span class="o">=</span> <span class="n">b</span><span class="o">.</span><span class="n">ptr</span><span class="p">[</span><span class="n">r</span><span class="p">]</span>
-                <span class="n">bn</span> <span class="o">=</span> <span class="n">b</span><span class="o">.</span><span class="n">ncol</span><span class="p">[</span><span class="n">r</span><span class="p">]</span>
+                <span class="n">bptr</span> <span class="o">=</span> <span class="n">other</span><span class="o">.</span><span class="n">ptr</span><span class="p">[</span><span class="n">r</span><span class="p">]</span>
+                <span class="n">bn</span> <span class="o">=</span> <span class="n">other</span><span class="o">.</span><span class="n">ncol</span><span class="p">[</span><span class="n">r</span><span class="p">]</span>
                 <span class="n">sl</span> <span class="o">=</span> <span class="nb">slice</span><span class="p">(</span><span class="n">bptr</span><span class="p">,</span> <span class="n">bptr</span><span class="o">+</span><span class="n">bn</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
 
                 <span class="c1"># Get positions of b-elements in a:</span>
-                <span class="n">in_a</span> <span class="o">=</span> <span class="n">a</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">b</span><span class="o">.</span><span class="n">col</span><span class="p">[</span><span class="n">sl</span><span class="p">])</span>
-                <span class="n">a</span><span class="o">.</span><span class="n">_D</span><span class="p">[</span><span class="n">in_a</span><span class="p">,</span> <span class="p">:]</span> <span class="o">+=</span> <span class="n">b</span><span class="o">.</span><span class="n">_D</span><span class="p">[</span><span class="n">sl</span><span class="p">,</span> <span class="p">:]</span>
+                <span class="n">in_a</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">other</span><span class="o">.</span><span class="n">col</span><span class="p">[</span><span class="n">sl</span><span class="p">])</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_D</span><span class="p">[</span><span class="n">in_a</span><span class="p">,</span> <span class="p">:]</span> <span class="o">+=</span> <span class="n">other</span><span class="o">.</span><span class="n">_D</span><span class="p">[</span><span class="n">sl</span><span class="p">,</span> <span class="p">:]</span>
 
         <span class="k">else</span><span class="p">:</span>
-            <span class="n">a</span><span class="o">.</span><span class="n">_D</span> <span class="o">+=</span> <span class="n">b</span>
-        <span class="k">return</span> <span class="n">a</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_D</span> <span class="o">+=</span> <span class="n">other</span>
+        <span class="k">return</span> <span class="bp">self</span>
 
-    <span class="k">def</span> <span class="nf">__sub__</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">):</span>
-        <span class="n">c</span> <span class="o">=</span> <span class="n">a</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="n">get_dtype</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="n">other</span><span class="o">=</span><span class="n">a</span><span class="o">.</span><span class="n">dtype</span><span class="p">))</span>
-        <span class="n">c</span> <span class="o">-=</span> <span class="n">b</span>
+    <span class="k">def</span> <span class="nf">__sub__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="n">c</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="n">get_dtype</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">other</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">))</span>
+        <span class="n">c</span> <span class="o">-=</span> <span class="n">other</span>
         <span class="k">return</span> <span class="n">c</span>
 
-    <span class="k">def</span> <span class="nf">__rsub__</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">):</span>
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="n">SparseCSR</span><span class="p">):</span>
-            <span class="n">c</span> <span class="o">=</span> <span class="n">b</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="n">get_dtype</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">other</span><span class="o">=</span><span class="n">b</span><span class="o">.</span><span class="n">dtype</span><span class="p">))</span>
-            <span class="n">c</span> <span class="o">+=</span> <span class="o">-</span><span class="mi">1</span> <span class="o">*</span> <span class="n">a</span>
+    <span class="k">def</span> <span class="nf">__rsub__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">SparseCSR</span><span class="p">):</span>
+            <span class="n">c</span> <span class="o">=</span> <span class="n">other</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="n">get_dtype</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="o">=</span><span class="n">other</span><span class="o">.</span><span class="n">dtype</span><span class="p">))</span>
+            <span class="n">c</span> <span class="o">+=</span> <span class="o">-</span><span class="mi">1</span> <span class="o">*</span> <span class="bp">self</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="n">c</span> <span class="o">=</span> <span class="n">b</span> <span class="o">+</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">a</span>
+            <span class="n">c</span> <span class="o">=</span> <span class="n">other</span> <span class="o">+</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span>
         <span class="k">return</span> <span class="n">c</span>
 
-    <span class="k">def</span> <span class="nf">__isub__</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">):</span>
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="n">SparseCSR</span><span class="p">):</span>
-            <span class="k">if</span> <span class="n">a</span><span class="o">.</span><span class="n">shape</span> <span class="o">!=</span> <span class="n">b</span><span class="o">.</span><span class="n">shape</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">__isub__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">SparseCSR</span><span class="p">):</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape</span> <span class="o">!=</span> <span class="n">other</span><span class="o">.</span><span class="n">shape</span><span class="p">:</span>
                 <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Subtracting two sparse matrices requires the same shape&#39;</span><span class="p">)</span>
             <span class="c1"># Ensure that a is aligned with b</span>
-            <span class="n">a</span><span class="o">.</span><span class="n">align</span><span class="p">(</span><span class="n">b</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">align</span><span class="p">(</span><span class="n">other</span><span class="p">)</span>
 
             <span class="c1"># loop and add elements</span>
-            <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">a</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
+            <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
                 <span class="c1"># pointers</span>
-                <span class="n">bptr</span> <span class="o">=</span> <span class="n">b</span><span class="o">.</span><span class="n">ptr</span><span class="p">[</span><span class="n">r</span><span class="p">]</span>
-                <span class="n">bn</span> <span class="o">=</span> <span class="n">b</span><span class="o">.</span><span class="n">ncol</span><span class="p">[</span><span class="n">r</span><span class="p">]</span>
+                <span class="n">bptr</span> <span class="o">=</span> <span class="n">other</span><span class="o">.</span><span class="n">ptr</span><span class="p">[</span><span class="n">r</span><span class="p">]</span>
+                <span class="n">bn</span> <span class="o">=</span> <span class="n">other</span><span class="o">.</span><span class="n">ncol</span><span class="p">[</span><span class="n">r</span><span class="p">]</span>
                 <span class="n">sl</span> <span class="o">=</span> <span class="nb">slice</span><span class="p">(</span><span class="n">bptr</span><span class="p">,</span> <span class="n">bptr</span><span class="o">+</span><span class="n">bn</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
 
                 <span class="c1"># Get positions of b-elements in a:</span>
-                <span class="n">in_a</span> <span class="o">=</span> <span class="n">a</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">b</span><span class="o">.</span><span class="n">col</span><span class="p">[</span><span class="n">sl</span><span class="p">])</span>
-                <span class="n">a</span><span class="o">.</span><span class="n">_D</span><span class="p">[</span><span class="n">in_a</span><span class="p">,</span> <span class="p">:]</span> <span class="o">-=</span> <span class="n">b</span><span class="o">.</span><span class="n">_D</span><span class="p">[</span><span class="n">sl</span><span class="p">,</span> <span class="p">:]</span>
+                <span class="n">in_a</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">other</span><span class="o">.</span><span class="n">col</span><span class="p">[</span><span class="n">sl</span><span class="p">])</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_D</span><span class="p">[</span><span class="n">in_a</span><span class="p">,</span> <span class="p">:]</span> <span class="o">-=</span> <span class="n">other</span><span class="o">.</span><span class="n">_D</span><span class="p">[</span><span class="n">sl</span><span class="p">,</span> <span class="p">:]</span>
 
         <span class="k">else</span><span class="p">:</span>
-            <span class="n">a</span><span class="o">.</span><span class="n">_D</span> <span class="o">-=</span> <span class="n">b</span>
-        <span class="k">return</span> <span class="n">a</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_D</span> <span class="o">-=</span> <span class="n">other</span>
+        <span class="k">return</span> <span class="bp">self</span>
 
-    <span class="k">def</span> <span class="nf">__mul__</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">):</span>
-        <span class="n">c</span> <span class="o">=</span> <span class="n">a</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="n">get_dtype</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="n">other</span><span class="o">=</span><span class="n">a</span><span class="o">.</span><span class="n">dtype</span><span class="p">))</span>
-        <span class="n">c</span> <span class="o">*=</span> <span class="n">b</span>
+    <span class="k">def</span> <span class="nf">__mul__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="n">c</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="n">get_dtype</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">other</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">))</span>
+        <span class="n">c</span> <span class="o">*=</span> <span class="n">other</span>
         <span class="k">return</span> <span class="n">c</span>
     <span class="fm">__rmul__</span> <span class="o">=</span> <span class="fm">__mul__</span>
 
-    <span class="k">def</span> <span class="nf">__imul__</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">):</span>
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="n">SparseCSR</span><span class="p">):</span>
-            <span class="k">if</span> <span class="n">a</span><span class="o">.</span><span class="n">shape</span> <span class="o">!=</span> <span class="n">b</span><span class="o">.</span><span class="n">shape</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">__imul__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">SparseCSR</span><span class="p">):</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape</span> <span class="o">!=</span> <span class="n">other</span><span class="o">.</span><span class="n">shape</span><span class="p">:</span>
                 <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Multiplication of two sparse matrices requires the same shape&#39;</span><span class="p">)</span>
 
             <span class="c1"># Note that for multiplication of these two matrices</span>
@@ -1495,158 +1494,158 @@
             <span class="c1"># Hence aligning is superfluous</span>
 
             <span class="c1"># loop and add elements</span>
-            <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">a</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
+            <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
                 <span class="c1"># pointers</span>
-                <span class="n">aptr</span> <span class="o">=</span> <span class="n">a</span><span class="o">.</span><span class="n">ptr</span><span class="p">[</span><span class="n">r</span><span class="p">]</span>
-                <span class="n">an</span> <span class="o">=</span> <span class="n">a</span><span class="o">.</span><span class="n">ncol</span><span class="p">[</span><span class="n">r</span><span class="p">]</span>
-                <span class="n">bptr</span> <span class="o">=</span> <span class="n">b</span><span class="o">.</span><span class="n">ptr</span><span class="p">[</span><span class="n">r</span><span class="p">]</span>
-                <span class="n">bn</span> <span class="o">=</span> <span class="n">b</span><span class="o">.</span><span class="n">ncol</span><span class="p">[</span><span class="n">r</span><span class="p">]</span>
+                <span class="n">aptr</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ptr</span><span class="p">[</span><span class="n">r</span><span class="p">]</span>
+                <span class="n">an</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ncol</span><span class="p">[</span><span class="n">r</span><span class="p">]</span>
+                <span class="n">bptr</span> <span class="o">=</span> <span class="n">other</span><span class="o">.</span><span class="n">ptr</span><span class="p">[</span><span class="n">r</span><span class="p">]</span>
+                <span class="n">bn</span> <span class="o">=</span> <span class="n">other</span><span class="o">.</span><span class="n">ncol</span><span class="p">[</span><span class="n">r</span><span class="p">]</span>
 
-                <span class="n">acol</span> <span class="o">=</span> <span class="n">a</span><span class="o">.</span><span class="n">col</span><span class="p">[</span><span class="n">aptr</span><span class="p">:</span><span class="n">aptr</span><span class="o">+</span><span class="n">an</span><span class="p">]</span>
-                <span class="n">bcol</span> <span class="o">=</span> <span class="n">b</span><span class="o">.</span><span class="n">col</span><span class="p">[</span><span class="n">bptr</span><span class="p">:</span><span class="n">bptr</span><span class="o">+</span><span class="n">bn</span><span class="p">]</span>
+                <span class="n">acol</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">col</span><span class="p">[</span><span class="n">aptr</span><span class="p">:</span><span class="n">aptr</span><span class="o">+</span><span class="n">an</span><span class="p">]</span>
+                <span class="n">bcol</span> <span class="o">=</span> <span class="n">other</span><span class="o">.</span><span class="n">col</span><span class="p">[</span><span class="n">bptr</span><span class="p">:</span><span class="n">bptr</span><span class="o">+</span><span class="n">bn</span><span class="p">]</span>
 
                 <span class="c1"># Get positions of b-elements in a:</span>
-                <span class="n">in_a</span> <span class="o">=</span> <span class="n">a</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">bcol</span><span class="p">)</span>
+                <span class="n">in_a</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">bcol</span><span class="p">)</span>
                 <span class="c1"># remove all -1&#39;s</span>
                 <span class="n">in_a</span> <span class="o">=</span> <span class="n">in_a</span><span class="p">[</span><span class="n">in_a</span> <span class="o">&gt;</span> <span class="o">-</span><span class="mi">1</span><span class="p">]</span>
                 <span class="c1"># Everything else *must* be zeroes! :)</span>
-                <span class="n">a</span><span class="o">.</span><span class="n">_D</span><span class="p">[</span><span class="n">in_a</span><span class="p">,</span> <span class="p">:]</span> <span class="o">*=</span> <span class="n">b</span><span class="o">.</span><span class="n">_D</span><span class="p">[</span><span class="n">bptr</span><span class="p">:</span><span class="n">bptr</span><span class="o">+</span><span class="n">bn</span><span class="p">,</span> <span class="p">:]</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_D</span><span class="p">[</span><span class="n">in_a</span><span class="p">,</span> <span class="p">:]</span> <span class="o">*=</span> <span class="n">other</span><span class="o">.</span><span class="n">_D</span><span class="p">[</span><span class="n">bptr</span><span class="p">:</span><span class="n">bptr</span><span class="o">+</span><span class="n">bn</span><span class="p">,</span> <span class="p">:]</span>
 
                 <span class="c1"># Now set everything *not* in b but in a, to zero</span>
                 <span class="n">not_in_b</span> <span class="o">=</span> <span class="n">in1d</span><span class="p">(</span><span class="n">acol</span><span class="p">,</span> <span class="n">bcol</span><span class="p">,</span> <span class="n">invert</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">nonzero</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
-                <span class="n">a</span><span class="o">.</span><span class="n">_D</span><span class="p">[</span><span class="n">aptr</span><span class="o">+</span><span class="n">not_in_b</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="mi">0</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_D</span><span class="p">[</span><span class="n">aptr</span><span class="o">+</span><span class="n">not_in_b</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="mi">0</span>
 
         <span class="k">else</span><span class="p">:</span>
-            <span class="n">a</span><span class="o">.</span><span class="n">_D</span> <span class="o">*=</span> <span class="n">b</span>
-        <span class="k">return</span> <span class="n">a</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_D</span> <span class="o">*=</span> <span class="n">other</span>
+        <span class="k">return</span> <span class="bp">self</span>
 
-    <span class="k">def</span> <span class="nf">__div__</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">):</span>
-        <span class="n">c</span> <span class="o">=</span> <span class="n">a</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="n">get_dtype</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="n">other</span><span class="o">=</span><span class="n">a</span><span class="o">.</span><span class="n">dtype</span><span class="p">))</span>
-        <span class="n">c</span> <span class="o">/=</span> <span class="n">b</span>
+    <span class="k">def</span> <span class="nf">__div__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="n">c</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="n">get_dtype</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">other</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">))</span>
+        <span class="n">c</span> <span class="o">/=</span> <span class="n">other</span>
         <span class="k">return</span> <span class="n">c</span>
 
-    <span class="k">def</span> <span class="nf">__rdiv__</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">):</span>
-        <span class="n">c</span> <span class="o">=</span> <span class="n">b</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="n">get_dtype</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">other</span><span class="o">=</span><span class="n">b</span><span class="o">.</span><span class="n">dtype</span><span class="p">))</span>
-        <span class="n">c</span> <span class="o">/=</span> <span class="n">a</span>
+    <span class="k">def</span> <span class="nf">__rdiv__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="n">c</span> <span class="o">=</span> <span class="n">other</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="n">get_dtype</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="o">=</span><span class="n">other</span><span class="o">.</span><span class="n">dtype</span><span class="p">))</span>
+        <span class="n">c</span> <span class="o">/=</span> <span class="bp">self</span>
         <span class="k">return</span> <span class="n">c</span>
 
-    <span class="k">def</span> <span class="nf">__idiv__</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">):</span>
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="n">SparseCSR</span><span class="p">):</span>
-            <span class="k">if</span> <span class="n">a</span><span class="o">.</span><span class="n">shape</span> <span class="o">!=</span> <span class="n">b</span><span class="o">.</span><span class="n">shape</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">__idiv__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">SparseCSR</span><span class="p">):</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape</span> <span class="o">!=</span> <span class="n">other</span><span class="o">.</span><span class="n">shape</span><span class="p">:</span>
                 <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Division of two sparse matrices requires the same shape&#39;</span><span class="p">)</span>
 
             <span class="c1"># Ensure that a is aligned with b</span>
-            <span class="n">a</span><span class="o">.</span><span class="n">align</span><span class="p">(</span><span class="n">b</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">align</span><span class="p">(</span><span class="n">other</span><span class="p">)</span>
 
             <span class="c1"># loop and add elements</span>
-            <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">a</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
+            <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
                 <span class="c1"># pointers</span>
-                <span class="n">bptr</span> <span class="o">=</span> <span class="n">b</span><span class="o">.</span><span class="n">ptr</span><span class="p">[</span><span class="n">r</span><span class="p">]</span>
-                <span class="n">bn</span> <span class="o">=</span> <span class="n">b</span><span class="o">.</span><span class="n">ncol</span><span class="p">[</span><span class="n">r</span><span class="p">]</span>
+                <span class="n">bptr</span> <span class="o">=</span> <span class="n">other</span><span class="o">.</span><span class="n">ptr</span><span class="p">[</span><span class="n">r</span><span class="p">]</span>
+                <span class="n">bn</span> <span class="o">=</span> <span class="n">other</span><span class="o">.</span><span class="n">ncol</span><span class="p">[</span><span class="n">r</span><span class="p">]</span>
 
                 <span class="c1"># Get positions of b-elements in a:</span>
-                <span class="n">in_a</span> <span class="o">=</span> <span class="n">a</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">b</span><span class="o">.</span><span class="n">col</span><span class="p">[</span><span class="n">bptr</span><span class="p">:</span><span class="n">bptr</span><span class="o">+</span><span class="n">bn</span><span class="p">])</span>
-                <span class="n">a</span><span class="o">.</span><span class="n">_D</span><span class="p">[</span><span class="n">in_a</span><span class="p">,</span> <span class="p">:]</span> <span class="o">/=</span> <span class="n">b</span><span class="o">.</span><span class="n">_D</span><span class="p">[</span><span class="n">bptr</span><span class="p">:</span><span class="n">bptr</span><span class="o">+</span><span class="n">bn</span><span class="p">,</span> <span class="p">:]</span>
+                <span class="n">in_a</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">other</span><span class="o">.</span><span class="n">col</span><span class="p">[</span><span class="n">bptr</span><span class="p">:</span><span class="n">bptr</span><span class="o">+</span><span class="n">bn</span><span class="p">])</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_D</span><span class="p">[</span><span class="n">in_a</span><span class="p">,</span> <span class="p">:]</span> <span class="o">/=</span> <span class="n">other</span><span class="o">.</span><span class="n">_D</span><span class="p">[</span><span class="n">bptr</span><span class="p">:</span><span class="n">bptr</span><span class="o">+</span><span class="n">bn</span><span class="p">,</span> <span class="p">:]</span>
 
         <span class="k">else</span><span class="p">:</span>
-            <span class="n">a</span><span class="o">.</span><span class="n">_D</span> <span class="o">/=</span> <span class="n">b</span>
-        <span class="k">return</span> <span class="n">a</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_D</span> <span class="o">/=</span> <span class="n">other</span>
+        <span class="k">return</span> <span class="bp">self</span>
 
-    <span class="k">def</span> <span class="nf">__floordiv__</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">):</span>
-        <span class="n">c</span> <span class="o">=</span> <span class="n">a</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="n">get_dtype</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="n">other</span><span class="o">=</span><span class="n">a</span><span class="o">.</span><span class="n">dtype</span><span class="p">))</span>
-        <span class="n">c</span> <span class="o">//=</span> <span class="n">b</span>
+    <span class="k">def</span> <span class="nf">__floordiv__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="n">c</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="n">get_dtype</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">other</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">))</span>
+        <span class="n">c</span> <span class="o">//=</span> <span class="n">other</span>
         <span class="k">return</span> <span class="n">c</span>
 
-    <span class="k">def</span> <span class="nf">__ifloordiv__</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">):</span>
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="n">SparseCSR</span><span class="p">):</span>
-            <span class="k">if</span> <span class="n">a</span><span class="o">.</span><span class="n">shape</span> <span class="o">!=</span> <span class="n">b</span><span class="o">.</span><span class="n">shape</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">__ifloordiv__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">SparseCSR</span><span class="p">):</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape</span> <span class="o">!=</span> <span class="n">other</span><span class="o">.</span><span class="n">shape</span><span class="p">:</span>
                 <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Floor-division of two sparse matrices requires the same shape&#39;</span><span class="p">)</span>
             <span class="c1"># Ensure that a is aligned with b</span>
-            <span class="n">a</span><span class="o">.</span><span class="n">align</span><span class="p">(</span><span class="n">b</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">align</span><span class="p">(</span><span class="n">other</span><span class="p">)</span>
 
             <span class="c1"># loop and add elements</span>
-            <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">a</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
+            <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
                 <span class="c1"># pointers</span>
-                <span class="n">bptr</span> <span class="o">=</span> <span class="n">b</span><span class="o">.</span><span class="n">ptr</span><span class="p">[</span><span class="n">r</span><span class="p">]</span>
-                <span class="n">bn</span> <span class="o">=</span> <span class="n">b</span><span class="o">.</span><span class="n">ncol</span><span class="p">[</span><span class="n">r</span><span class="p">]</span>
+                <span class="n">bptr</span> <span class="o">=</span> <span class="n">other</span><span class="o">.</span><span class="n">ptr</span><span class="p">[</span><span class="n">r</span><span class="p">]</span>
+                <span class="n">bn</span> <span class="o">=</span> <span class="n">other</span><span class="o">.</span><span class="n">ncol</span><span class="p">[</span><span class="n">r</span><span class="p">]</span>
 
                 <span class="c1"># Get positions of b-elements in a:</span>
-                <span class="n">in_a</span> <span class="o">=</span> <span class="n">a</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">b</span><span class="o">.</span><span class="n">col</span><span class="p">[</span><span class="n">bptr</span><span class="p">:</span><span class="n">bptr</span><span class="o">+</span><span class="n">bn</span><span class="p">])</span>
-                <span class="n">a</span><span class="o">.</span><span class="n">_D</span><span class="p">[</span><span class="n">in_a</span><span class="p">,</span> <span class="p">:]</span> <span class="o">//=</span> <span class="n">b</span><span class="o">.</span><span class="n">_D</span><span class="p">[</span><span class="n">bptr</span><span class="p">:</span><span class="n">bptr</span><span class="o">+</span><span class="n">bn</span><span class="p">,</span> <span class="p">:]</span>
+                <span class="n">in_a</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">other</span><span class="o">.</span><span class="n">col</span><span class="p">[</span><span class="n">bptr</span><span class="p">:</span><span class="n">bptr</span><span class="o">+</span><span class="n">bn</span><span class="p">])</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_D</span><span class="p">[</span><span class="n">in_a</span><span class="p">,</span> <span class="p">:]</span> <span class="o">//=</span> <span class="n">other</span><span class="o">.</span><span class="n">_D</span><span class="p">[</span><span class="n">bptr</span><span class="p">:</span><span class="n">bptr</span><span class="o">+</span><span class="n">bn</span><span class="p">,</span> <span class="p">:]</span>
 
         <span class="k">else</span><span class="p">:</span>
-            <span class="n">a</span><span class="o">.</span><span class="n">_D</span> <span class="o">//=</span> <span class="n">b</span>
-        <span class="k">return</span> <span class="n">a</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_D</span> <span class="o">//=</span> <span class="n">other</span>
+        <span class="k">return</span> <span class="bp">self</span>
 
-    <span class="k">def</span> <span class="nf">__truediv__</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">):</span>
-        <span class="n">c</span> <span class="o">=</span> <span class="n">a</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="n">get_dtype</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="n">other</span><span class="o">=</span><span class="n">a</span><span class="o">.</span><span class="n">dtype</span><span class="p">))</span>
-        <span class="n">c</span> <span class="o">/=</span> <span class="n">b</span>
+    <span class="k">def</span> <span class="nf">__truediv__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="n">c</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="n">get_dtype</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">other</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">))</span>
+        <span class="n">c</span> <span class="o">/=</span> <span class="n">other</span>
         <span class="k">return</span> <span class="n">c</span>
 
-    <span class="k">def</span> <span class="nf">__itruediv__</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">):</span>
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="n">SparseCSR</span><span class="p">):</span>
-            <span class="k">if</span> <span class="n">a</span><span class="o">.</span><span class="n">shape</span> <span class="o">!=</span> <span class="n">b</span><span class="o">.</span><span class="n">shape</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">__itruediv__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">SparseCSR</span><span class="p">):</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape</span> <span class="o">!=</span> <span class="n">other</span><span class="o">.</span><span class="n">shape</span><span class="p">:</span>
                 <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;True-division of two sparse matrices requires the same shape&#39;</span><span class="p">)</span>
             <span class="c1"># Ensure that a is aligned with b</span>
-            <span class="n">a</span><span class="o">.</span><span class="n">align</span><span class="p">(</span><span class="n">b</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">align</span><span class="p">(</span><span class="n">other</span><span class="p">)</span>
 
             <span class="c1"># loop and add elements</span>
-            <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">a</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
+            <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
                 <span class="c1"># pointers</span>
-                <span class="n">bptr</span> <span class="o">=</span> <span class="n">b</span><span class="o">.</span><span class="n">ptr</span><span class="p">[</span><span class="n">r</span><span class="p">]</span>
-                <span class="n">bn</span> <span class="o">=</span> <span class="n">b</span><span class="o">.</span><span class="n">ncol</span><span class="p">[</span><span class="n">r</span><span class="p">]</span>
+                <span class="n">bptr</span> <span class="o">=</span> <span class="n">other</span><span class="o">.</span><span class="n">ptr</span><span class="p">[</span><span class="n">r</span><span class="p">]</span>
+                <span class="n">bn</span> <span class="o">=</span> <span class="n">other</span><span class="o">.</span><span class="n">ncol</span><span class="p">[</span><span class="n">r</span><span class="p">]</span>
 
                 <span class="c1"># Get positions of b-elements in a:</span>
-                <span class="n">in_a</span> <span class="o">=</span> <span class="n">a</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">b</span><span class="o">.</span><span class="n">col</span><span class="p">[</span><span class="n">bptr</span><span class="p">:</span><span class="n">bptr</span><span class="o">+</span><span class="n">bn</span><span class="p">])</span>
-                <span class="n">a</span><span class="o">.</span><span class="n">_D</span><span class="p">[</span><span class="n">in_a</span><span class="p">,</span> <span class="p">:]</span><span class="o">.</span><span class="fm">__itruediv__</span><span class="p">(</span><span class="n">b</span><span class="o">.</span><span class="n">_D</span><span class="p">[</span><span class="n">bptr</span><span class="p">:</span><span class="n">bptr</span><span class="o">+</span><span class="n">bn</span><span class="p">,</span> <span class="p">:])</span>
+                <span class="n">in_a</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">other</span><span class="o">.</span><span class="n">col</span><span class="p">[</span><span class="n">bptr</span><span class="p">:</span><span class="n">bptr</span><span class="o">+</span><span class="n">bn</span><span class="p">])</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_D</span><span class="p">[</span><span class="n">in_a</span><span class="p">,</span> <span class="p">:]</span><span class="o">.</span><span class="fm">__itruediv__</span><span class="p">(</span><span class="n">other</span><span class="o">.</span><span class="n">_D</span><span class="p">[</span><span class="n">bptr</span><span class="p">:</span><span class="n">bptr</span><span class="o">+</span><span class="n">bn</span><span class="p">,</span> <span class="p">:])</span>
 
         <span class="k">else</span><span class="p">:</span>
-            <span class="n">a</span><span class="o">.</span><span class="n">_D</span> <span class="o">/=</span> <span class="n">b</span>
-        <span class="k">return</span> <span class="n">a</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_D</span> <span class="o">/=</span> <span class="n">other</span>
+        <span class="k">return</span> <span class="bp">self</span>
 
-    <span class="k">def</span> <span class="nf">__pow__</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">):</span>
-        <span class="n">c</span> <span class="o">=</span> <span class="n">a</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="n">get_dtype</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="n">other</span><span class="o">=</span><span class="n">a</span><span class="o">.</span><span class="n">dtype</span><span class="p">))</span>
-        <span class="n">c</span> <span class="o">**=</span> <span class="n">b</span>
+    <span class="k">def</span> <span class="nf">__pow__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="n">c</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="n">get_dtype</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">other</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">))</span>
+        <span class="n">c</span> <span class="o">**=</span> <span class="n">other</span>
         <span class="k">return</span> <span class="n">c</span>
 
-    <span class="k">def</span> <span class="nf">__rpow__</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">):</span>
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="n">SparseCSR</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__rpow__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">SparseCSR</span><span class="p">):</span>
             <span class="k">raise</span> <span class="ne">NotImplementedError</span>
-        <span class="n">c</span> <span class="o">=</span> <span class="n">a</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="n">get_dtype</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="n">other</span><span class="o">=</span><span class="n">a</span><span class="o">.</span><span class="n">dtype</span><span class="p">))</span>
-        <span class="n">c</span><span class="o">.</span><span class="n">_D</span><span class="p">[</span><span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">b</span> <span class="o">**</span> <span class="n">c</span><span class="o">.</span><span class="n">_D</span><span class="p">[</span><span class="o">...</span><span class="p">]</span>
+        <span class="n">c</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="n">get_dtype</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">other</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">))</span>
+        <span class="n">c</span><span class="o">.</span><span class="n">_D</span><span class="p">[</span><span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">other</span> <span class="o">**</span> <span class="n">c</span><span class="o">.</span><span class="n">_D</span><span class="p">[</span><span class="o">...</span><span class="p">]</span>
         <span class="k">return</span> <span class="n">c</span>
 
-    <span class="k">def</span> <span class="nf">__ipow__</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">):</span>
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="n">SparseCSR</span><span class="p">):</span>
-            <span class="k">if</span> <span class="n">a</span><span class="o">.</span><span class="n">shape</span> <span class="o">!=</span> <span class="n">b</span><span class="o">.</span><span class="n">shape</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">__ipow__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">SparseCSR</span><span class="p">):</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape</span> <span class="o">!=</span> <span class="n">other</span><span class="o">.</span><span class="n">shape</span><span class="p">:</span>
                 <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;True-division of two sparse matrices requires the same shape&#39;</span><span class="p">)</span>
             <span class="c1"># Ensure that a is aligned with b</span>
             <span class="c1"># 0 ** float == 1.</span>
-            <span class="n">a</span><span class="o">.</span><span class="n">align</span><span class="p">(</span><span class="n">b</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">align</span><span class="p">(</span><span class="n">other</span><span class="p">)</span>
 
             <span class="c1"># loop and add elements</span>
-            <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">a</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
+            <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
                 <span class="c1"># pointers</span>
-                <span class="n">aptr</span> <span class="o">=</span> <span class="n">a</span><span class="o">.</span><span class="n">ptr</span><span class="p">[</span><span class="n">r</span><span class="p">]</span>
-                <span class="n">an</span> <span class="o">=</span> <span class="n">a</span><span class="o">.</span><span class="n">ncol</span><span class="p">[</span><span class="n">r</span><span class="p">]</span>
-                <span class="n">bptr</span> <span class="o">=</span> <span class="n">b</span><span class="o">.</span><span class="n">ptr</span><span class="p">[</span><span class="n">r</span><span class="p">]</span>
-                <span class="n">bn</span> <span class="o">=</span> <span class="n">b</span><span class="o">.</span><span class="n">ncol</span><span class="p">[</span><span class="n">r</span><span class="p">]</span>
+                <span class="n">aptr</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ptr</span><span class="p">[</span><span class="n">r</span><span class="p">]</span>
+                <span class="n">an</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ncol</span><span class="p">[</span><span class="n">r</span><span class="p">]</span>
+                <span class="n">bptr</span> <span class="o">=</span> <span class="n">other</span><span class="o">.</span><span class="n">ptr</span><span class="p">[</span><span class="n">r</span><span class="p">]</span>
+                <span class="n">bn</span> <span class="o">=</span> <span class="n">other</span><span class="o">.</span><span class="n">ncol</span><span class="p">[</span><span class="n">r</span><span class="p">]</span>
 
-                <span class="n">acol</span> <span class="o">=</span> <span class="n">a</span><span class="o">.</span><span class="n">col</span><span class="p">[</span><span class="n">aptr</span><span class="p">:</span><span class="n">aptr</span><span class="o">+</span><span class="n">an</span><span class="p">]</span>
-                <span class="n">bcol</span> <span class="o">=</span> <span class="n">b</span><span class="o">.</span><span class="n">col</span><span class="p">[</span><span class="n">bptr</span><span class="p">:</span><span class="n">bptr</span><span class="o">+</span><span class="n">bn</span><span class="p">]</span>
+                <span class="n">acol</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">col</span><span class="p">[</span><span class="n">aptr</span><span class="p">:</span><span class="n">aptr</span><span class="o">+</span><span class="n">an</span><span class="p">]</span>
+                <span class="n">bcol</span> <span class="o">=</span> <span class="n">other</span><span class="o">.</span><span class="n">col</span><span class="p">[</span><span class="n">bptr</span><span class="p">:</span><span class="n">bptr</span><span class="o">+</span><span class="n">bn</span><span class="p">]</span>
 
                 <span class="c1"># Get positions of b-elements in a:</span>
-                <span class="n">in_a</span> <span class="o">=</span> <span class="n">a</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">bcol</span><span class="p">)</span>
-                <span class="n">a</span><span class="o">.</span><span class="n">_D</span><span class="p">[</span><span class="n">in_a</span><span class="p">,</span> <span class="p">:]</span> <span class="o">**=</span> <span class="n">b</span><span class="o">.</span><span class="n">_D</span><span class="p">[</span><span class="n">bptr</span><span class="p">:</span><span class="n">bptr</span><span class="o">+</span><span class="n">bn</span><span class="p">,</span> <span class="p">:]</span>
+                <span class="n">in_a</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">bcol</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_D</span><span class="p">[</span><span class="n">in_a</span><span class="p">,</span> <span class="p">:]</span> <span class="o">**=</span> <span class="n">other</span><span class="o">.</span><span class="n">_D</span><span class="p">[</span><span class="n">bptr</span><span class="p">:</span><span class="n">bptr</span><span class="o">+</span><span class="n">bn</span><span class="p">,</span> <span class="p">:]</span>
 
                 <span class="c1"># Now set everything *not* in b but in a, to 1</span>
                 <span class="c1">#  float ** 0 == 1</span>
                 <span class="n">not_in_b</span> <span class="o">=</span> <span class="n">in1d</span><span class="p">(</span><span class="n">acol</span><span class="p">,</span> <span class="n">bcol</span><span class="p">,</span> <span class="n">invert</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">nonzero</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
-                <span class="n">a</span><span class="o">.</span><span class="n">_D</span><span class="p">[</span><span class="n">aptr</span><span class="o">+</span><span class="n">not_in_b</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="mi">1</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_D</span><span class="p">[</span><span class="n">aptr</span><span class="o">+</span><span class="n">not_in_b</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="mi">1</span>
 
         <span class="k">else</span><span class="p">:</span>
-            <span class="n">a</span><span class="o">.</span><span class="n">_D</span> <span class="o">**=</span> <span class="n">b</span>
-        <span class="k">return</span> <span class="n">a</span></div>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_D</span> <span class="o">**=</span> <span class="n">other</span>
+        <span class="k">return</span> <span class="bp">self</span></div>
 
 
 <span class="k">def</span> <span class="nf">ispmatrix</span><span class="p">(</span><span class="n">matrix</span><span class="p">,</span> <span class="n">map_row</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">map_col</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
@@ -1889,7 +1888,7 @@
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'../../',
-            VERSION:'0.9.2-466',
+            VERSION:'0.9.2-488',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true,

@@ -67,7 +67,7 @@
             
             
               <div class="version">
-                0.9.2-466
+                0.9.2-488
               </div>
             
           
@@ -247,16 +247,32 @@ implemented in <a class="reference internal" href="../api-generated/sisl.html#mo
 <div class="highlight-bash"><div class="highlight"><pre><span></span>sgrid Rho.grid.nc --geometry RUN.fdf Rho.cube
 </pre></div>
 </div>
-<p>the shorthand is <code class="docutils literal"><span class="pre">-g</span></code>.</p>
+<p>the shorthand flag for <code class="docutils literal"><span class="pre">-geometry</span></code> is <code class="docutils literal"><span class="pre">-G</span></code>.</p>
 </div>
 <div class="section" id="grid-differences">
 <h2>Grid differences<a class="headerlink" href="#grid-differences" title="Permalink to this headline">¶</a></h2>
-<p>Often differences between two grids are needed. For this one can use the <code class="docutils literal"><span class="pre">--diff</span></code> flag which
+<p>To easily obtain differences between two grids one may use the <code class="docutils literal"><span class="pre">--diff</span></code> flag which
 takes one additional grid file for the difference. I.e.</p>
-<div class="highlight-bash"><div class="highlight"><pre><span></span>sgrid Rho.grid.nc<span class="o">[</span><span class="m">0</span><span class="o">]</span> -g RUN.fdf --diff Rho.grid.nc<span class="o">[</span><span class="m">1</span><span class="o">]</span> diff_up-down.cube
+<div class="highlight-bash"><div class="highlight"><pre><span></span>sgrid Rho.grid.nc<span class="o">{</span><span class="m">0</span><span class="o">}</span> -G RUN.fdf --diff Rho.grid.nc<span class="o">{</span><span class="m">1</span><span class="o">}</span> diff_up-down.cube
 </pre></div>
 </div>
-<p>which takes the difference between the spin up and spin down in the same <code class="docutils literal"><span class="pre">Rho.grid.nc</span></code> file.</p>
+<p>which takes the difference between the spin up and spin down in the same <code class="docutils literal"><span class="pre">Rho.grid.nc</span></code> file.
+The spin specification takes either a single integer or a list of floating point values, as can be
+seen in the below and shorter equivalent syntax:</p>
+<div class="highlight-bash"><div class="highlight"><pre><span></span>sgrid <span class="s2">&quot;Rho.grid.nc{1.,-1.}&quot;</span> -G RUN.fdf diff_up-down.cube
+</pre></div>
+</div>
+<p>The bracketed specification is an array of the fractions for each spin-component, so here we take the
+first spin-component and subtract the second spin-component.
+The quotation marks are typically required due to Python’s <a class="reference external" href="https://docs.python.org/dev/library/argparse.html#module-argparse" title="(in Python v3.8)"><code class="xref py py-obj docutils literal"><span class="pre">argparse</span></code></a> module.</p>
+<p>Note that these spin specifications <em>only</em> work for files that contain <strong>all</strong> spin relevant quantities.</p>
+<p>The above is largely equivalent to this small snippet:</p>
+<div class="highlight-bash"><div class="highlight"><pre><span></span><span class="nv">geom</span> <span class="o">=</span> sisl.get_sile<span class="o">(</span><span class="s1">&#39;RUN.fdf&#39;</span><span class="o">)</span>.read_geometry<span class="o">()</span>
+<span class="nv">diff</span> <span class="o">=</span> sisl.get_sile<span class="o">(</span><span class="s1">&#39;Rho.grid.nc&#39;</span><span class="o">)</span>.read_grid<span class="o">(</span><span class="nv">spin</span><span class="o">=[</span><span class="m">1</span>, -1<span class="o">])</span>
+diff.set_geometry<span class="o">(</span>geom<span class="o">)</span>
+diff.write<span class="o">(</span><span class="s1">&#39;diff_up-down.cube&#39;</span><span class="o">)</span>
+</pre></div>
+</div>
 </div>
 <div class="section" id="reducing-grid-sizes">
 <h2>Reducing grid sizes<a class="headerlink" href="#reducing-grid-sizes" title="Permalink to this headline">¶</a></h2>
@@ -350,7 +366,7 @@ For inspiration you can check the <em class="xref py py-obj">sgrid</em> executab
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'../',
-            VERSION:'0.9.2-466',
+            VERSION:'0.9.2-488',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true,

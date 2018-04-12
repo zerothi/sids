@@ -65,7 +65,7 @@
             
             
               <div class="version">
-                0.9.2-466
+                0.9.2-488
               </div>
             
           
@@ -187,12 +187,11 @@
 <span class="kn">from</span> <span class="nn">._help</span> <span class="k">import</span> <span class="n">dtype_complex_to_real</span>
 <span class="kn">from</span> <span class="nn">.shape</span> <span class="k">import</span> <span class="n">Shape</span>
 <span class="kn">from</span> <span class="nn">.utils</span> <span class="k">import</span> <span class="n">default_ArgumentParser</span><span class="p">,</span> <span class="n">default_namespace</span>
-<span class="kn">from</span> <span class="nn">.utils</span> <span class="k">import</span> <span class="n">cmd</span><span class="p">,</span> <span class="n">strseq</span><span class="p">,</span> <span class="n">direction</span>
+<span class="kn">from</span> <span class="nn">.utils</span> <span class="k">import</span> <span class="n">cmd</span><span class="p">,</span> <span class="n">strseq</span><span class="p">,</span> <span class="n">direction</span><span class="p">,</span> <span class="n">str_spec</span>
 <span class="kn">from</span> <span class="nn">.utils</span> <span class="k">import</span> <span class="n">array_arange</span>
 <span class="kn">from</span> <span class="nn">.utils.mathematics</span> <span class="k">import</span> <span class="n">fnorm</span>
 
 <span class="kn">from</span> <span class="nn">.supercell</span> <span class="k">import</span> <span class="n">SuperCellChild</span>
-<span class="kn">from</span> <span class="nn">.atom</span> <span class="k">import</span> <span class="n">Atom</span>
 <span class="kn">from</span> <span class="nn">.geometry</span> <span class="k">import</span> <span class="n">Geometry</span>
 
 <span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;Grid&#39;</span><span class="p">,</span> <span class="s1">&#39;sgrid&#39;</span><span class="p">]</span>
@@ -447,7 +446,6 @@
         <span class="n">idx</span><span class="p">[</span><span class="n">b</span><span class="p">]</span> <span class="o">=</span> <span class="n">a</span>
         <span class="n">idx</span><span class="p">[</span><span class="n">a</span><span class="p">]</span> <span class="o">=</span> <span class="n">b</span>
         <span class="n">s</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
-        <span class="n">geom</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">geometry</span>
         <span class="n">d</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__sc_geom_dict</span><span class="p">()</span>
         <span class="n">d</span><span class="p">[</span><span class="s1">&#39;sc&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">d</span><span class="p">[</span><span class="s1">&#39;sc&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">swapaxes</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">)</span>
         <span class="n">grid</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="p">(</span><span class="n">s</span><span class="p">[</span><span class="n">idx</span><span class="p">],</span> <span class="n">bc</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">bc</span><span class="p">[</span><span class="n">idx</span><span class="p">],</span>
@@ -811,6 +809,12 @@
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">sile</span><span class="p">,</span> <span class="n">BaseSile</span><span class="p">):</span>
             <span class="k">return</span> <span class="n">sile</span><span class="o">.</span><span class="n">read_grid</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
+            <span class="n">sile</span><span class="p">,</span> <span class="n">spec</span> <span class="o">=</span> <span class="n">str_spec</span><span class="p">(</span><span class="n">sile</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">spec</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">if</span> <span class="s1">&#39;,&#39;</span> <span class="ow">in</span> <span class="n">spec</span><span class="p">:</span>
+                    <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;spin&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="nb">float</span><span class="p">,</span> <span class="n">spec</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;,&#39;</span><span class="p">)))</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;spin&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">spec</span><span class="p">)</span>
             <span class="k">with</span> <span class="n">get_sile</span><span class="p">(</span><span class="n">sile</span><span class="p">)</span> <span class="k">as</span> <span class="n">fh</span><span class="p">:</span>
                 <span class="k">return</span> <span class="n">fh</span><span class="o">.</span><span class="n">read_grid</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
 
@@ -1463,19 +1467,35 @@
     <span class="n">cmd</span><span class="o">.</span><span class="n">add_sisl_version_cite_arg</span><span class="p">(</span><span class="n">p</span><span class="p">)</span>
 
     <span class="c1"># First read the input &quot;Sile&quot;</span>
+    <span class="n">stdout_grid</span> <span class="o">=</span> <span class="kc">True</span>
     <span class="k">if</span> <span class="n">grid</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="kn">from</span> <span class="nn">os.path</span> <span class="k">import</span> <span class="n">isfile</span>
         <span class="n">argv</span><span class="p">,</span> <span class="n">input_file</span> <span class="o">=</span> <span class="n">cmd</span><span class="o">.</span><span class="n">collect_input</span><span class="p">(</span><span class="n">argv</span><span class="p">)</span>
-        <span class="k">with</span> <span class="n">get_sile</span><span class="p">(</span><span class="n">input_file</span><span class="p">)</span> <span class="k">as</span> <span class="n">fh</span><span class="p">:</span>
-            <span class="n">grid</span> <span class="o">=</span> <span class="n">fh</span><span class="o">.</span><span class="n">read_grid</span><span class="p">()</span>
 
-    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">grid</span><span class="p">,</span> <span class="n">Grid</span><span class="p">):</span>
-        <span class="c1"># Do nothing, the grid is already created</span>
-        <span class="k">pass</span>
+        <span class="c1"># Extract specification of the input file</span>
+        <span class="n">input_file</span><span class="p">,</span> <span class="n">spec</span> <span class="o">=</span> <span class="n">str_spec</span><span class="p">(</span><span class="n">input_file</span><span class="p">)</span>
+        <span class="n">kwargs</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">if</span> <span class="n">spec</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="s1">&#39;,&#39;</span> <span class="ow">in</span> <span class="n">spec</span><span class="p">:</span>
+                <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;spin&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="nb">float</span><span class="p">,</span> <span class="n">spec</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;,&#39;</span><span class="p">)))</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;spin&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">spec</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">input_file</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">grid</span> <span class="o">=</span> <span class="n">Grid</span><span class="p">(</span><span class="mf">0.1</span><span class="p">)</span>
+            <span class="n">stdout_grid</span> <span class="o">=</span> <span class="kc">False</span>
+
+        <span class="k">elif</span> <span class="n">isfile</span><span class="p">(</span><span class="n">input_file</span><span class="p">):</span>
+            <span class="n">grid</span> <span class="o">=</span> <span class="n">get_sile</span><span class="p">(</span><span class="n">input_file</span><span class="p">)</span><span class="o">.</span><span class="n">read_grid</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="k">elif</span> <span class="ow">not</span> <span class="n">isfile</span><span class="p">(</span><span class="n">input_file</span><span class="p">):</span>
+            <span class="kn">from</span> <span class="nn">.messages</span> <span class="k">import</span> <span class="n">info</span>
+            <span class="n">info</span><span class="p">(</span><span class="s2">&quot;Cannot find file &#39;</span><span class="si">{}</span><span class="s2">&#39;!&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">input_file</span><span class="p">))</span>
 
     <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">grid</span><span class="p">,</span> <span class="n">BaseSile</span><span class="p">):</span>
-        <span class="n">grid</span> <span class="o">=</span> <span class="n">grid</span><span class="o">.</span><span class="n">read_grid</span><span class="p">()</span>
         <span class="c1"># Store the input file...</span>
         <span class="n">input_file</span> <span class="o">=</span> <span class="n">grid</span><span class="o">.</span><span class="n">file</span>
+        <span class="n">grid</span> <span class="o">=</span> <span class="n">grid</span><span class="o">.</span><span class="n">read_grid</span><span class="p">()</span>
 
     <span class="c1"># Do the argument parser</span>
     <span class="n">p</span><span class="p">,</span> <span class="n">ns</span> <span class="o">=</span> <span class="n">grid</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="o">**</span><span class="n">grid</span><span class="o">.</span><span class="n">_ArgumentParser_args_single</span><span class="p">())</span>
@@ -1498,7 +1518,7 @@
     <span class="n">args</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">parse_args</span><span class="p">(</span><span class="n">argv</span><span class="p">,</span> <span class="n">namespace</span><span class="o">=</span><span class="n">ns</span><span class="p">)</span>
     <span class="n">g</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">_grid</span>
 
-    <span class="k">if</span> <span class="ow">not</span> <span class="n">args</span><span class="o">.</span><span class="n">_stored_grid</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">stdout_grid</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">args</span><span class="o">.</span><span class="n">_stored_grid</span><span class="p">:</span>
         <span class="c1"># We should write out the information to the stdout</span>
         <span class="c1"># This is merely for testing purposes and may not be used for anything.</span>
         <span class="nb">print</span><span class="p">(</span><span class="n">g</span><span class="p">)</span>
@@ -1542,7 +1562,7 @@
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'../../',
-            VERSION:'0.9.2-466',
+            VERSION:'0.9.2-488',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true,
