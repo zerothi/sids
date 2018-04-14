@@ -21,13 +21,7 @@ import shlex
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 _this_dir = os.path.dirname(__file__)
 
-
-def _add(p):
-    sys.path.insert(0, os.path.abspath(_this_dir))
-_add(_this_dir)
-_add(os.path.dirname(_this_dir))
-_add(os.path.dirname(os.path.dirname(_this_dir)))
-del _add
+sys.path.insert(0, os.path.dirname(_this_dir))
 
 # -- General configuration ------------------------------------------------
 
@@ -92,7 +86,7 @@ author = u'Nick R. Papior'
 copyright = u'2015-2018, ' + author
 
 # If building this on RTD, mock out fortran sources
-on_rtd = os.environ.get('READTHEDOCS') == 'True'
+on_rtd = os.environ.get('READTHEDOCS', 'false').lower() == 'true'
 if on_rtd:
     nbsphinx_allow_errors = True
     if tuple(sys.version_info[:2]) >= (3, 3):
@@ -105,7 +99,9 @@ if on_rtd:
         def __getattr__(cls, name):
             return MagicMock()
 
-    MOCK_MODULES = ['_siesta']
+    # Add Mock modules
+    MOCK_MODULES = ['sisl.io.siesta._siesta',
+                    'sisl._math_small', 'sisl._indices', 'sisl._supercell']
     sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
 
 # The version info for the project you're documenting, acts as replacement for
