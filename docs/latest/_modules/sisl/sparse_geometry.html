@@ -65,7 +65,7 @@
             
             
               <div class="version">
-                0.9.2-504
+                latest
               </div>
             
           
@@ -180,7 +180,7 @@
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 
 <span class="kn">import</span> <span class="nn">sisl._array</span> <span class="k">as</span> <span class="nn">_a</span>
-<span class="kn">from</span> <span class="nn">.messages</span> <span class="k">import</span> <span class="n">warn</span><span class="p">,</span> <span class="n">SislError</span><span class="p">,</span> <span class="n">tqdm_eta</span>
+<span class="kn">from</span> <span class="nn">.messages</span> <span class="k">import</span> <span class="n">warn</span><span class="p">,</span> <span class="n">SislError</span><span class="p">,</span> <span class="n">SislWarning</span><span class="p">,</span> <span class="n">tqdm_eta</span>
 <span class="kn">from</span> <span class="nn">._help</span> <span class="k">import</span> <span class="n">get_dtype</span>
 <span class="kn">from</span> <span class="nn">._help</span> <span class="k">import</span> <span class="n">_zip</span> <span class="k">as</span> <span class="nb">zip</span><span class="p">,</span> <span class="n">_range</span> <span class="k">as</span> <span class="nb">range</span><span class="p">,</span> <span class="n">_map</span> <span class="k">as</span> <span class="nb">map</span>
 <span class="kn">from</span> <span class="nn">.utils.ranges</span> <span class="k">import</span> <span class="n">array_arange</span>
@@ -204,17 +204,23 @@
 
 <span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">geom</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">nnzpr</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">geometry</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">nnzpr</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Create sparse object with element between orbitals &quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_geom</span> <span class="o">=</span> <span class="n">geom</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_geometry</span> <span class="o">=</span> <span class="n">geometry</span>
 
         <span class="c1"># Initialize the sparsity pattern</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">reset</span><span class="p">(</span><span class="n">dim</span><span class="p">,</span> <span class="n">dtype</span><span class="p">,</span> <span class="n">nnzpr</span><span class="p">)</span>
 
     <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">geometry</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Associated geometry &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_geometry</span>
+    <span class="n">geom</span> <span class="o">=</span> <span class="n">geometry</span>
+
+    <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">_size</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; The size of the sparse object &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">geom</span><span class="o">.</span><span class="n">na</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">na</span>
 
     <span class="k">def</span> <span class="nf">__len__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Number of rows in the basis &quot;&quot;&quot;</span>
@@ -251,7 +257,7 @@
         <span class="c1"># We check the first atom and its neighbours, we then</span>
         <span class="c1"># select max(5,len(nc) * 4)</span>
         <span class="k">if</span> <span class="n">nnzpr</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">nnzpr</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">geom</span><span class="o">.</span><span class="n">close</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+            <span class="n">nnzpr</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">close</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
             <span class="k">if</span> <span class="n">nnzpr</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
                 <span class="n">nnzpr</span> <span class="o">=</span> <span class="mi">8</span>
             <span class="k">else</span><span class="p">:</span>
@@ -259,7 +265,7 @@
 
         <span class="c1"># query dimension of sparse matrix</span>
         <span class="n">s</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_size</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span> <span class="o">=</span> <span class="n">SparseCSR</span><span class="p">((</span><span class="n">s</span><span class="p">,</span> <span class="n">s</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">geom</span><span class="o">.</span><span class="n">n_s</span><span class="p">,</span> <span class="n">dim</span><span class="p">),</span> <span class="n">nnzpr</span><span class="o">=</span><span class="n">nnzpr</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span> <span class="o">=</span> <span class="n">SparseCSR</span><span class="p">((</span><span class="n">s</span><span class="p">,</span> <span class="n">s</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">n_s</span><span class="p">,</span> <span class="n">dim</span><span class="p">),</span> <span class="n">nnzpr</span><span class="o">=</span><span class="n">nnzpr</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span>
 
         <span class="c1"># Denote that one *must* specify all details of the elements</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_def_dim</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
@@ -279,16 +285,10 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">dtype</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">dtype</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dtype</span>
-        <span class="n">new</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">geom</span><span class="o">.</span><span class="n">copy</span><span class="p">(),</span> <span class="bp">self</span><span class="o">.</span><span class="n">dim</span><span class="p">,</span> <span class="n">dtype</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">_cls_kwargs</span><span class="p">())</span>
+        <span class="n">new</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">copy</span><span class="p">(),</span> <span class="bp">self</span><span class="o">.</span><span class="n">dim</span><span class="p">,</span> <span class="n">dtype</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">_cls_kwargs</span><span class="p">())</span>
         <span class="c1"># Be sure to copy the content of the SparseCSR object</span>
         <span class="n">new</span><span class="o">.</span><span class="n">_csr</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">new</span>
-
-    <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">geometry</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot; Associated geometry &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_geom</span>
-    <span class="n">geom</span> <span class="o">=</span> <span class="n">geometry</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">dim</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -351,7 +351,7 @@
         <span class="sd">&quot;&quot;&quot; Retrieve edges (connections) of a given `atom` or list of `atom`&#39;s</span>
 
 <span class="sd">        The returned edges are unique and sorted (see `numpy.unique`) and are returned</span>
-<span class="sd">        in supercell indices (i.e. ``0 &lt;= edge &lt; self.geom.na_s``).</span>
+<span class="sd">        in supercell indices (i.e. ``0 &lt;= edge &lt; self.geometry.na_s``).</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
@@ -418,7 +418,7 @@
             <span class="k">else</span><span class="p">:</span>
                 <span class="n">what</span> <span class="o">=</span> <span class="s1">&#39;atom&#39;</span>
 
-        <span class="n">geom</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">geom</span>
+        <span class="n">geom</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">geometry</span>
 
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">SparseAtom</span><span class="p">):</span>
             <span class="n">Rij</span> <span class="o">=</span> <span class="n">geom</span><span class="o">.</span><span class="n">Rij</span>
@@ -464,7 +464,7 @@
     <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Representation of the sparse model &quot;&quot;&quot;</span>
         <span class="n">s</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39;{{dim: </span><span class="si">{0}</span><span class="s1">, non-zero: </span><span class="si">{1}</span><span class="s1">, kind=</span><span class="si">{2}</span><span class="se">\n</span><span class="s1"> &#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dim</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">nnz</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dkind</span><span class="p">)</span>
-        <span class="n">s</span> <span class="o">+=</span> <span class="nb">repr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">geom</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">,</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1"> &#39;</span><span class="p">)</span>
+        <span class="n">s</span> <span class="o">+=</span> <span class="nb">repr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">geometry</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">,</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1"> &#39;</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">s</span> <span class="o">+</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">}&#39;</span>
 
     <span class="k">def</span> <span class="nf">__getattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">attr</span><span class="p">):</span>
@@ -473,7 +473,7 @@
 <span class="sd">        Any attribute not found in the sparse class will</span>
 <span class="sd">        be looked up in the hosting geometry.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">geom</span><span class="p">,</span> <span class="n">attr</span><span class="p">)</span>
+        <span class="k">return</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">geometry</span><span class="p">,</span> <span class="n">attr</span><span class="p">)</span>
 
     <span class="c1"># Make the indicis behave on the contained sparse matrix</span>
     <span class="k">def</span> <span class="nf">__delitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">):</span>
@@ -567,7 +567,7 @@
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">delete</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">delete_columns</span><span class="p">(</span><span class="n">delete</span><span class="p">)</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">geom</span><span class="o">.</span><span class="n">set_nsc</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">set_nsc</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">spalign</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; See `SparseCSR.align` for details &quot;&quot;&quot;</span>
@@ -608,7 +608,7 @@
 <span class="sd">        Basically this returns a function:</span>
 
 <span class="sd">        &gt;&gt;&gt; def func(self, ia, idxs, idxs_xyz=None): # doctest: +SKIP</span>
-<span class="sd">        ...     idx = self.geom.close(ia, R=R, idx=idxs) # doctest: +SKIP</span>
+<span class="sd">        ...     idx = self.geometry.close(ia, R=R, idx=idxs) # doctest: +SKIP</span>
 <span class="sd">        ...     for ix, p in zip(idx, param): # doctest: +SKIP</span>
 <span class="sd">        ...         self[ia, ix] = p # doctest: +SKIP</span>
 
@@ -635,7 +635,7 @@
 <span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="k">def</span> <span class="nf">func</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ia</span><span class="p">,</span> <span class="n">idxs</span><span class="p">,</span> <span class="n">idxs_xyz</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-            <span class="n">idx</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">geom</span><span class="o">.</span><span class="n">close</span><span class="p">(</span><span class="n">ia</span><span class="p">,</span> <span class="n">R</span><span class="o">=</span><span class="n">R</span><span class="p">,</span> <span class="n">idx</span><span class="o">=</span><span class="n">idxs</span><span class="p">,</span> <span class="n">idx_xyz</span><span class="o">=</span><span class="n">idxs_xyz</span><span class="p">)</span>
+            <span class="n">idx</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">close</span><span class="p">(</span><span class="n">ia</span><span class="p">,</span> <span class="n">R</span><span class="o">=</span><span class="n">R</span><span class="p">,</span> <span class="n">idx</span><span class="o">=</span><span class="n">idxs</span><span class="p">,</span> <span class="n">idx_xyz</span><span class="o">=</span><span class="n">idxs_xyz</span><span class="p">)</span>
             <span class="k">for</span> <span class="n">ix</span><span class="p">,</span> <span class="n">p</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">idx</span><span class="p">,</span> <span class="n">param</span><span class="p">):</span>
                 <span class="bp">self</span><span class="p">[</span><span class="n">ia</span><span class="p">,</span> <span class="n">ix</span><span class="p">]</span> <span class="o">=</span> <span class="n">p</span>
 
@@ -667,7 +667,7 @@
 <span class="sd">           An example `func` could be:</span>
 
 <span class="sd">           &gt;&gt;&gt; def func(self, ia, idxs, idxs_xyz=None): # doctest: +SKIP</span>
-<span class="sd">           ...     idx = self.geom.close(ia, R=[0.1, 1.44], idx=idxs, idx_xyz=idxs_xyz) # doctest: +SKIP</span>
+<span class="sd">           ...     idx = self.geometry.close(ia, R=[0.1, 1.44], idx=idxs, idx_xyz=idxs_xyz) # doctest: +SKIP</span>
 <span class="sd">           ...     self[ia, idx[0]] = 0 # doctest: +SKIP</span>
 <span class="sd">           ...     self[ia, idx[1]] = -2.7 # doctest: +SKIP</span>
 
@@ -690,7 +690,7 @@
             <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">func</span><span class="p">,</span> <span class="p">(</span><span class="nb">tuple</span><span class="p">,</span> <span class="nb">list</span><span class="p">)):</span>
                 <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Passed `func` which is not a function, nor tuple/list of `R, param`&#39;</span><span class="p">)</span>
 
-            <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">geom</span><span class="o">.</span><span class="n">lasto</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">lasto</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">):</span>
                 <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Automatically setting a sparse model &quot;</span>
                               <span class="s2">&quot;for systems with atoms having more than 1 &quot;</span>
                               <span class="s2">&quot;orbital *must* be done by your-self. You have to define a corresponding `func`.&quot;</span><span class="p">)</span>
@@ -698,17 +698,17 @@
             <span class="c1"># Convert to a proper function</span>
             <span class="n">func</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_construct</span><span class="p">(</span><span class="n">func</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">func</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
 
-        <span class="n">iR</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">geom</span><span class="o">.</span><span class="n">iR</span><span class="p">(</span><span class="n">na_iR</span><span class="p">)</span>
+        <span class="n">iR</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">iR</span><span class="p">(</span><span class="n">na_iR</span><span class="p">)</span>
 
         <span class="c1"># Create eta-object</span>
         <span class="n">eta</span> <span class="o">=</span> <span class="n">tqdm_eta</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">na</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39;.construct()&#39;</span><span class="p">,</span> <span class="s1">&#39;atom&#39;</span><span class="p">,</span> <span class="n">eta</span><span class="p">)</span>
 
         <span class="c1"># Do the loop</span>
-        <span class="k">for</span> <span class="n">ias</span><span class="p">,</span> <span class="n">idxs</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">geom</span><span class="o">.</span><span class="n">iter_block</span><span class="p">(</span><span class="n">iR</span><span class="o">=</span><span class="n">iR</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="n">method</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">ias</span><span class="p">,</span> <span class="n">idxs</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">iter_block</span><span class="p">(</span><span class="n">iR</span><span class="o">=</span><span class="n">iR</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="n">method</span><span class="p">):</span>
 
             <span class="c1"># Get all the indexed atoms...</span>
             <span class="c1"># This speeds up the searching for coordinates...</span>
-            <span class="n">idxs_xyz</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">geom</span><span class="p">[</span><span class="n">idxs</span><span class="p">,</span> <span class="p">:]</span>
+            <span class="n">idxs_xyz</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">geometry</span><span class="p">[</span><span class="n">idxs</span><span class="p">,</span> <span class="p">:]</span>
 
             <span class="c1"># Loop the atoms inside</span>
             <span class="k">for</span> <span class="n">ia</span> <span class="ow">in</span> <span class="n">ias</span><span class="p">:</span>
@@ -780,7 +780,7 @@
         <span class="n">a</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">asarrayi</span><span class="p">(</span><span class="n">a</span><span class="p">)</span>
         <span class="n">b</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">asarrayi</span><span class="p">(</span><span class="n">b</span><span class="p">)</span>
         <span class="c1"># Create full index list</span>
-        <span class="n">full</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">arangei</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">geom</span><span class="p">))</span>
+        <span class="n">full</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">arangei</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">geometry</span><span class="p">))</span>
         <span class="c1"># Regardless of whether swapping or new indices are requested</span>
         <span class="c1"># this should work.</span>
         <span class="n">full</span><span class="p">[</span><span class="n">a</span><span class="p">]</span> <span class="o">=</span> <span class="n">b</span>
@@ -984,9 +984,9 @@
             <span class="c1"># This may be a specification of supercell indices</span>
             <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">key</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="nb">tuple</span><span class="p">):</span>
                 <span class="c1"># We guess it is the supercell index</span>
-                <span class="n">off</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">geom</span><span class="o">.</span><span class="n">sc_index</span><span class="p">(</span><span class="n">key</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">na</span>
+                <span class="n">off</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">sc_index</span><span class="p">(</span><span class="n">key</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">na</span>
                 <span class="n">key</span> <span class="o">=</span> <span class="p">[</span><span class="n">el</span> <span class="k">for</span> <span class="n">el</span> <span class="ow">in</span> <span class="n">key</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]]</span>
-                <span class="n">key</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">geom</span><span class="o">.</span><span class="n">sc2uc</span><span class="p">(</span><span class="n">key</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="o">+</span> <span class="n">off</span>
+                <span class="n">key</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">sc2uc</span><span class="p">(</span><span class="n">key</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="o">+</span> <span class="n">off</span>
         <span class="k">if</span> <span class="n">dd</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">:</span>
             <span class="n">key</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">key</span><span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="n">dd</span><span class="p">,)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_def_dim</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
@@ -1004,9 +1004,9 @@
             <span class="c1"># This may be a specification of supercell indices</span>
             <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">key</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="nb">tuple</span><span class="p">):</span>
                 <span class="c1"># We guess it is the supercell index</span>
-                <span class="n">off</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">geom</span><span class="o">.</span><span class="n">sc_index</span><span class="p">(</span><span class="n">key</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">na</span>
+                <span class="n">off</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">sc_index</span><span class="p">(</span><span class="n">key</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">na</span>
                 <span class="n">key</span> <span class="o">=</span> <span class="p">[</span><span class="n">el</span> <span class="k">for</span> <span class="n">el</span> <span class="ow">in</span> <span class="n">key</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]]</span>
-                <span class="n">key</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">geom</span><span class="o">.</span><span class="n">sc2uc</span><span class="p">(</span><span class="n">key</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="o">+</span> <span class="n">off</span>
+                <span class="n">key</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">sc2uc</span><span class="p">(</span><span class="n">key</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="o">+</span> <span class="n">off</span>
         <span class="k">if</span> <span class="n">dd</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">:</span>
             <span class="n">key</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">key</span><span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="n">dd</span><span class="p">,)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_def_dim</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
@@ -1014,7 +1014,7 @@
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">_size</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">geom</span><span class="o">.</span><span class="n">na</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">na</span>
 
 <div class="viewcode-block" id="SparseAtom.nonzero"><a class="viewcode-back" href="../../api-generated/sisl.SparseAtom.html#sisl.SparseAtom.nonzero">[docs]</a>    <span class="k">def</span> <span class="nf">nonzero</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">atom</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">only_col</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Indices row and column indices where non-zero elements exists</span>
@@ -1090,7 +1090,7 @@
             <span class="c1"># Cause all warnings to always be triggered.</span>
             <span class="n">warnings</span><span class="o">.</span><span class="n">simplefilter</span><span class="p">(</span><span class="s2">&quot;always&quot;</span><span class="p">)</span>
             <span class="c1"># Create new cut geometry</span>
-            <span class="n">geom</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">geom</span><span class="o">.</span><span class="n">cut</span><span class="p">(</span><span class="n">seps</span><span class="p">,</span> <span class="n">axis</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+            <span class="n">geom</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">cut</span><span class="p">(</span><span class="n">seps</span><span class="p">,</span> <span class="n">axis</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
             <span class="c1"># Check whether the warning exists</span>
             <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">w</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
                 <span class="k">if</span> <span class="nb">issubclass</span><span class="p">(</span><span class="n">w</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">category</span><span class="p">,</span> <span class="n">SislWarning</span><span class="p">):</span>
@@ -1173,7 +1173,7 @@
         <span class="k">for</span> <span class="n">ja</span><span class="p">,</span> <span class="n">ia</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">iter_nnz</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">geom</span><span class="o">.</span><span class="n">na</span><span class="p">)):</span>
 
             <span class="c1"># Get the equivalent orbital in the smaller cell</span>
-            <span class="n">a</span><span class="p">,</span> <span class="n">afp</span><span class="p">,</span> <span class="n">afm</span> <span class="o">=</span> <span class="n">_sca2sca</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">geom</span><span class="p">,</span> <span class="n">ia</span><span class="p">,</span> <span class="n">S</span><span class="o">.</span><span class="n">geom</span><span class="p">,</span> <span class="n">seps</span><span class="p">,</span> <span class="n">axis</span><span class="p">)</span>
+            <span class="n">a</span><span class="p">,</span> <span class="n">afp</span><span class="p">,</span> <span class="n">afm</span> <span class="o">=</span> <span class="n">_sca2sca</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">geometry</span><span class="p">,</span> <span class="n">ia</span><span class="p">,</span> <span class="n">S</span><span class="o">.</span><span class="n">geom</span><span class="p">,</span> <span class="n">seps</span><span class="p">,</span> <span class="n">axis</span><span class="p">)</span>
             <span class="k">if</span> <span class="n">a</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
                 <span class="k">continue</span>
             <span class="n">S</span><span class="p">[</span><span class="n">ja</span><span class="p">,</span> <span class="n">a</span> <span class="o">+</span> <span class="n">afp</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="p">[</span><span class="n">ja</span><span class="p">,</span> <span class="n">ia</span><span class="p">]</span>
@@ -1201,7 +1201,7 @@
 <span class="sd">        remove : the negative of `sub`, i.e. remove a subset of atoms</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">atom</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sc2uc</span><span class="p">(</span><span class="n">atom</span><span class="p">)</span>
-        <span class="n">geom</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">geom</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="n">atom</span><span class="p">)</span>
+        <span class="n">geom</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="n">atom</span><span class="p">)</span>
 
         <span class="n">idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="n">atom</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_s</span><span class="p">)</span>
         <span class="c1"># Use broadcasting rules</span>
@@ -1243,13 +1243,13 @@
 <span class="sd">        repeat: a different ordering of the final geometry</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># Create the new sparse object</span>
-        <span class="n">g</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">geom</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="n">reps</span><span class="p">,</span> <span class="n">axis</span><span class="p">)</span>
+        <span class="n">g</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="n">reps</span><span class="p">,</span> <span class="n">axis</span><span class="p">)</span>
         <span class="n">S</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="p">(</span><span class="n">g</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dim</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">_cls_kwargs</span><span class="p">())</span>
 
         <span class="c1"># Now begin to populate it accordingly</span>
         <span class="c1"># Retrieve local pointers to the information</span>
         <span class="c1"># regarding the current Hamiltonian sparse matrix</span>
-        <span class="n">geom</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">geom</span>
+        <span class="n">geom</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">geometry</span>
         <span class="n">na</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">na</span>
         <span class="n">ncol</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">ncol</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">finalized</span><span class="p">:</span>
@@ -1322,13 +1322,13 @@
 <span class="sd">        tile: a different ordering of the final geometry</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># Create the new sparse object</span>
-        <span class="n">g</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">geom</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">reps</span><span class="p">,</span> <span class="n">axis</span><span class="p">)</span>
+        <span class="n">g</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">reps</span><span class="p">,</span> <span class="n">axis</span><span class="p">)</span>
         <span class="n">S</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="p">(</span><span class="n">g</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dim</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">_cls_kwargs</span><span class="p">())</span>
 
         <span class="c1"># Now begin to populate it accordingly</span>
         <span class="c1"># Retrieve local pointers to the information</span>
         <span class="c1"># regarding the current Hamiltonian sparse matrix</span>
-        <span class="n">geom</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">geom</span>
+        <span class="n">geom</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">geometry</span>
         <span class="n">na</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">na</span>
         <span class="n">ncol</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">ncol</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">finalized</span><span class="p">:</span>
@@ -1403,9 +1403,9 @@
             <span class="c1"># This may be a specification of supercell indices</span>
             <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">key</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="nb">tuple</span><span class="p">):</span>
                 <span class="c1"># We guess it is the supercell index</span>
-                <span class="n">off</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">geom</span><span class="o">.</span><span class="n">sc_index</span><span class="p">(</span><span class="n">key</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">no</span>
+                <span class="n">off</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">sc_index</span><span class="p">(</span><span class="n">key</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">no</span>
                 <span class="n">key</span> <span class="o">=</span> <span class="p">[</span><span class="n">el</span> <span class="k">for</span> <span class="n">el</span> <span class="ow">in</span> <span class="n">key</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]]</span>
-                <span class="n">key</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">geom</span><span class="o">.</span><span class="n">osc2uc</span><span class="p">(</span><span class="n">key</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="o">+</span> <span class="n">off</span>
+                <span class="n">key</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">osc2uc</span><span class="p">(</span><span class="n">key</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="o">+</span> <span class="n">off</span>
         <span class="k">if</span> <span class="n">dd</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">:</span>
             <span class="n">key</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">key</span><span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="n">dd</span><span class="p">,)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_def_dim</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
@@ -1423,9 +1423,9 @@
             <span class="c1"># This may be a specification of supercell indices</span>
             <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">key</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="nb">tuple</span><span class="p">):</span>
                 <span class="c1"># We guess it is the supercell index</span>
-                <span class="n">off</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">geom</span><span class="o">.</span><span class="n">sc_index</span><span class="p">(</span><span class="n">key</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">no</span>
+                <span class="n">off</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">sc_index</span><span class="p">(</span><span class="n">key</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">no</span>
                 <span class="n">key</span> <span class="o">=</span> <span class="p">[</span><span class="n">el</span> <span class="k">for</span> <span class="n">el</span> <span class="ow">in</span> <span class="n">key</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]]</span>
-                <span class="n">key</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">geom</span><span class="o">.</span><span class="n">osc2uc</span><span class="p">(</span><span class="n">key</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="o">+</span> <span class="n">off</span>
+                <span class="n">key</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">osc2uc</span><span class="p">(</span><span class="n">key</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="o">+</span> <span class="n">off</span>
         <span class="k">if</span> <span class="n">dd</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">:</span>
             <span class="n">key</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">key</span><span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="n">dd</span><span class="p">,)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_def_dim</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
@@ -1433,13 +1433,13 @@
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">_size</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">geom</span><span class="o">.</span><span class="n">no</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">no</span>
 
 <div class="viewcode-block" id="SparseOrbital.edges"><a class="viewcode-back" href="../../api-generated/sisl.SparseOrbital.html#sisl.SparseOrbital.edges">[docs]</a>    <span class="k">def</span> <span class="nf">edges</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">atom</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">exclude</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">orbital</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Retrieve edges (connections) of a given `atom` or list of `atom`&#39;s</span>
 
 <span class="sd">        The returned edges are unique and sorted (see `numpy.unique`) and are returned</span>
-<span class="sd">        in supercell indices (i.e. ``0 &lt;= edge &lt; self.geom.no_s``).</span>
+<span class="sd">        in supercell indices (i.e. ``0 &lt;= edge &lt; self.geometry.no_s``).</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
@@ -1459,7 +1459,7 @@
         <span class="k">if</span> <span class="n">atom</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">orbital</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39;.edges must have either &quot;atom&quot; or &quot;orbital&quot; keyword defined.&#39;</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">orbital</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">geom</span><span class="o">.</span><span class="n">o2a</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">edges</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">geom</span><span class="o">.</span><span class="n">a2o</span><span class="p">(</span><span class="n">atom</span><span class="p">,</span> <span class="kc">True</span><span class="p">),</span> <span class="n">exclude</span><span class="p">)))</span>
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">o2a</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">edges</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">a2o</span><span class="p">(</span><span class="n">atom</span><span class="p">,</span> <span class="kc">True</span><span class="p">),</span> <span class="n">exclude</span><span class="p">)))</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">edges</span><span class="p">(</span><span class="n">orbital</span><span class="p">,</span> <span class="n">exclude</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="SparseOrbital.nonzero"><a class="viewcode-back" href="../../api-generated/sisl.SparseOrbital.html#sisl.SparseOrbital.nonzero">[docs]</a>    <span class="k">def</span> <span class="nf">nonzero</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">atom</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">only_col</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
@@ -1479,7 +1479,7 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">atom</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">nonzero</span><span class="p">(</span><span class="n">only_col</span><span class="o">=</span><span class="n">only_col</span><span class="p">)</span>
-        <span class="n">row</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">geom</span><span class="o">.</span><span class="n">a2o</span><span class="p">(</span><span class="n">atom</span><span class="p">,</span> <span class="nb">all</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">row</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">a2o</span><span class="p">(</span><span class="n">atom</span><span class="p">,</span> <span class="nb">all</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">nonzero</span><span class="p">(</span><span class="n">row</span><span class="o">=</span><span class="n">row</span><span class="p">,</span> <span class="n">only_col</span><span class="o">=</span><span class="n">only_col</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="SparseOrbital.iter_nnz"><a class="viewcode-back" href="../../api-generated/sisl.SparseOrbital.html#sisl.SparseOrbital.iter_nnz">[docs]</a>    <span class="k">def</span> <span class="nf">iter_nnz</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">atom</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">orbital</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
@@ -1502,7 +1502,7 @@
 <span class="sd">            (not compatible with the ``atom`` keyword)</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">atom</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">orbital</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">geom</span><span class="o">.</span><span class="n">a2o</span><span class="p">(</span><span class="n">atom</span><span class="p">)</span>
+            <span class="n">orbital</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">a2o</span><span class="p">(</span><span class="n">atom</span><span class="p">)</span>
         <span class="k">elif</span> <span class="ow">not</span> <span class="n">orbital</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">orbital</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">asarrayi</span><span class="p">(</span><span class="n">orbital</span><span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">orbital</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
@@ -1547,7 +1547,7 @@
             <span class="c1"># Cause all warnings to always be triggered.</span>
             <span class="n">warnings</span><span class="o">.</span><span class="n">simplefilter</span><span class="p">(</span><span class="s2">&quot;always&quot;</span><span class="p">)</span>
             <span class="c1"># Create new cut geometry</span>
-            <span class="n">geom</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">geom</span><span class="o">.</span><span class="n">cut</span><span class="p">(</span><span class="n">seps</span><span class="p">,</span> <span class="n">axis</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+            <span class="n">geom</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">cut</span><span class="p">(</span><span class="n">seps</span><span class="p">,</span> <span class="n">axis</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
             <span class="c1"># Check whether the warning exists</span>
             <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">w</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
                 <span class="k">if</span> <span class="nb">issubclass</span><span class="p">(</span><span class="n">w</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">category</span><span class="p">,</span> <span class="n">SislWarning</span><span class="p">):</span>
@@ -1630,7 +1630,7 @@
         <span class="k">for</span> <span class="n">jo</span><span class="p">,</span> <span class="n">io</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">iter_nnz</span><span class="p">(</span><span class="n">orbital</span><span class="o">=</span><span class="nb">range</span><span class="p">(</span><span class="n">geom</span><span class="o">.</span><span class="n">no</span><span class="p">)):</span>
 
             <span class="c1"># Get the equivalent orbital in the smaller cell</span>
-            <span class="n">o</span><span class="p">,</span> <span class="n">ofp</span><span class="p">,</span> <span class="n">ofm</span> <span class="o">=</span> <span class="n">_sco2sco</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">geom</span><span class="p">,</span> <span class="n">io</span><span class="p">,</span> <span class="n">S</span><span class="o">.</span><span class="n">geom</span><span class="p">,</span> <span class="n">seps</span><span class="p">,</span> <span class="n">axis</span><span class="p">)</span>
+            <span class="n">o</span><span class="p">,</span> <span class="n">ofp</span><span class="p">,</span> <span class="n">ofm</span> <span class="o">=</span> <span class="n">_sco2sco</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">geometry</span><span class="p">,</span> <span class="n">io</span><span class="p">,</span> <span class="n">S</span><span class="o">.</span><span class="n">geom</span><span class="p">,</span> <span class="n">seps</span><span class="p">,</span> <span class="n">axis</span><span class="p">)</span>
             <span class="k">if</span> <span class="n">o</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
                 <span class="k">continue</span>
             <span class="n">d</span> <span class="o">=</span> <span class="bp">self</span><span class="p">[</span><span class="n">jo</span><span class="p">,</span> <span class="n">io</span><span class="p">]</span>
@@ -1659,7 +1659,7 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">atom</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sc2uc</span><span class="p">(</span><span class="n">atom</span><span class="p">)</span>
         <span class="n">orbs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">a2o</span><span class="p">(</span><span class="n">atom</span><span class="p">,</span> <span class="nb">all</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-        <span class="n">geom</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">geom</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="n">atom</span><span class="p">)</span>
+        <span class="n">geom</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="n">atom</span><span class="p">)</span>
 
         <span class="n">idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="n">orbs</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_s</span><span class="p">)</span>
         <span class="c1"># Use broadcasting rules</span>
@@ -1696,13 +1696,13 @@
 <span class="sd">        repeat: a different ordering of the final geometry</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># Create the new sparse object</span>
-        <span class="n">g</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">geom</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="n">reps</span><span class="p">,</span> <span class="n">axis</span><span class="p">)</span>
+        <span class="n">g</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="n">reps</span><span class="p">,</span> <span class="n">axis</span><span class="p">)</span>
         <span class="n">S</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="p">(</span><span class="n">g</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dim</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">_cls_kwargs</span><span class="p">())</span>
 
         <span class="c1"># Now begin to populate it accordingly</span>
         <span class="c1"># Retrieve local pointers to the information</span>
         <span class="c1"># regarding the current Hamiltonian sparse matrix</span>
-        <span class="n">geom</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">geom</span>
+        <span class="n">geom</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">geometry</span>
         <span class="n">no</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">no</span>
         <span class="n">ncol</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">ncol</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">finalized</span><span class="p">:</span>
@@ -1775,13 +1775,13 @@
 <span class="sd">        tile: a different ordering of the final geometry</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># Create the new sparse object</span>
-        <span class="n">g</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">geom</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">reps</span><span class="p">,</span> <span class="n">axis</span><span class="p">)</span>
+        <span class="n">g</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">reps</span><span class="p">,</span> <span class="n">axis</span><span class="p">)</span>
         <span class="n">S</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="p">(</span><span class="n">g</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dim</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">_cls_kwargs</span><span class="p">())</span>
 
         <span class="c1"># Now begin to populate it accordingly</span>
         <span class="c1"># Retrieve local pointers to the information</span>
         <span class="c1"># regarding the current Hamiltonian sparse matrix</span>
-        <span class="n">geom</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">geom</span>
+        <span class="n">geom</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">geometry</span>
         <span class="n">no</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">no</span>
         <span class="n">ncol</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">ncol</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">finalized</span><span class="p">:</span>
@@ -1905,7 +1905,7 @@
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'../../',
-            VERSION:'0.9.2-504',
+            VERSION:'latest',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true,

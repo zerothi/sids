@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>sisl.physics.distribution_function &mdash; sisl |release| documentation</title>
+  <title>sisl.physics.distributions &mdash; sisl |release| documentation</title>
   
 
   
@@ -65,7 +65,7 @@
             
             
               <div class="version">
-                0.9.2-504
+                latest
               </div>
             
           
@@ -155,7 +155,7 @@
         
           <li><a href="../../index.html">Module code</a> &raquo;</li>
         
-      <li>sisl.physics.distribution_function</li>
+      <li>sisl.physics.distributions</li>
     
     
       <li class="wy-breadcrumbs-aside">
@@ -172,25 +172,46 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
             
-  <h1>Source code for sisl.physics.distribution_function</h1><div class="highlight"><pre>
-<span></span><span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">print_function</span><span class="p">,</span> <span class="n">division</span>
+  <h1>Source code for sisl.physics.distributions</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;Distribution functions</span>
+<span class="sd">=========================</span>
+
+<span class="sd">.. module:: sisl.physics.distributions</span>
+<span class="sd">   :noindex:</span>
+
+<span class="sd">Various distributions using different smearing techniques.</span>
+
+<span class="sd">.. autosummary::</span>
+<span class="sd">   :toctree:</span>
+
+<span class="sd">   distribution</span>
+<span class="sd">   gaussian</span>
+<span class="sd">   lorentzian</span>
+
+<span class="sd">.. autofunction:: gaussian</span>
+<span class="sd">   :noindex:</span>
+<span class="sd">.. autofunction:: lorentzian</span>
+<span class="sd">   :noindex:</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">print_function</span><span class="p">,</span> <span class="n">division</span>
 
 <span class="kn">from</span> <span class="nn">functools</span> <span class="k">import</span> <span class="n">partial</span>
 
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-<span class="n">pi</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span>
-<span class="n">sqrt_2pi</span> <span class="o">=</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">pi</span><span class="p">)</span> <span class="o">**</span> <span class="mf">0.5</span>
+<span class="n">_pi</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span>
+<span class="n">_sqrt_2pi</span> <span class="o">=</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">_pi</span><span class="p">)</span> <span class="o">**</span> <span class="mf">0.5</span>
 
 <span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;distribution&#39;</span><span class="p">,</span> <span class="s1">&#39;gaussian&#39;</span><span class="p">,</span> <span class="s1">&#39;lorentzian&#39;</span><span class="p">]</span>
 
 
-<div class="viewcode-block" id="distribution"><a class="viewcode-back" href="../../../api-generated/sisl.physics.distribution.html#sisl.physics.distribution">[docs]</a><span class="k">def</span> <span class="nf">distribution</span><span class="p">(</span><span class="n">method</span><span class="p">,</span> <span class="n">smearing</span><span class="o">=</span><span class="mf">0.1</span><span class="p">):</span>
+<div class="viewcode-block" id="distribution"><a class="viewcode-back" href="../../../api-generated/sisl.physics.distributions.distribution.html#sisl.physics.distribution">[docs]</a><span class="k">def</span> <span class="nf">distribution</span><span class="p">(</span><span class="n">method</span><span class="p">,</span> <span class="n">smearing</span><span class="o">=</span><span class="mf">0.1</span><span class="p">):</span>
     <span class="sa">r</span><span class="sd">&quot;&quot;&quot; Create a distribution function for input in e.g. `DOS`. Gaussian, Lorentzian etc.</span>
 
 <span class="sd">    The Gaussian distribution is calculated as:</span>
 
 <span class="sd">    .. math::</span>
-<span class="sd">        G(x) = \frac{1}{\sqrt{2\pi\sigma^2}}\exp\big[- x^2 / (2\sigma^2)\big]</span>
+<span class="sd">        G(x) = \frac{1}{\sqrt{2\pi\sigma^2}}\exp\Big[\frac{- x^2}{2\sigma^2}\Big]</span>
 
 <span class="sd">    where :math:`\sigma` is the `smearing` parameter.</span>
 
@@ -200,18 +221,19 @@
 <span class="sd">        L(x) = \frac{1}{\pi}\frac{\gamma}{x^2 + \gamma^2}</span>
 
 <span class="sd">    where :math:`\gamma` is the `smearing` parameter, note that here :math:`\gamma` is the</span>
-<span class="sd">    half-width at half-maximum (:math:`2\gamma` would be the full-width at half-maximum).</span>
+<span class="sd">    half-width at half-maximum (:math:`2\gamma` the full-width at half-maximum).</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    method : {&#39;gaussian&#39;, &#39;lorentzian&#39;}</span>
+<span class="sd">    method: {&#39;gaussian&#39;, &#39;lorentzian&#39;}</span>
 <span class="sd">        the distribution function</span>
-<span class="sd">    smearing : float, optional</span>
-<span class="sd">        the smearing parameter for the method (:math:`\sigma` for Gaussian, etc.)</span>
+<span class="sd">    smearing: float, optional</span>
+<span class="sd">        the smearing parameter for the method (:math:`\sigma` for Gaussian, :math:`\gamma` for Lorenztian etc.)</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
-<span class="sd">    func : a function which accepts one argument</span>
+<span class="sd">    callable</span>
+<span class="sd">        a function which accepts one argument</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">if</span> <span class="n">method</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;gauss&#39;</span><span class="p">,</span> <span class="s1">&#39;gaussian&#39;</span><span class="p">]:</span>
         <span class="k">return</span> <span class="n">partial</span><span class="p">(</span><span class="n">gaussian</span><span class="p">,</span> <span class="n">sigma</span><span class="o">=</span><span class="n">smearing</span><span class="p">)</span>
@@ -227,21 +249,21 @@
 <span class="sd">    The Gaussian distribution is calculated as:</span>
 
 <span class="sd">    .. math::</span>
-<span class="sd">        G(x) = \frac{1}{\sqrt{2\pi\sigma^2}}\exp\big[- x^2 / (2\sigma^2)\big]</span>
+<span class="sd">        G(x) = \frac{1}{\sqrt{2\pi\sigma^2}}\exp\Big[\frac{- x^2}{2\sigma^2}\Big]</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    x : array_like</span>
+<span class="sd">    x: array_like</span>
 <span class="sd">        the points at which the Gaussian distribution is calculated</span>
-<span class="sd">    sigma : float, optional</span>
+<span class="sd">    sigma: float, optional</span>
 <span class="sd">        the spread of the Gaussian</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
-<span class="sd">    y : array_like</span>
+<span class="sd">    numpy.ndarray</span>
 <span class="sd">        the Gaussian distribution, same length as `x`</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">x</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">sigma</span> <span class="o">**</span> <span class="mi">2</span><span class="p">))</span> <span class="o">/</span> <span class="p">(</span><span class="n">sqrt_2pi</span> <span class="o">*</span> <span class="n">sigma</span><span class="p">)</span></div>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">x</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">sigma</span> <span class="o">**</span> <span class="mi">2</span><span class="p">))</span> <span class="o">/</span> <span class="p">(</span><span class="n">_sqrt_2pi</span> <span class="o">*</span> <span class="n">sigma</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="lorentzian"><a class="viewcode-back" href="../../../api-generated/sisl.physics.lorentzian.html#sisl.physics.lorentzian">[docs]</a><span class="k">def</span> <span class="nf">lorentzian</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">gamma</span><span class="o">=</span><span class="mf">0.1</span><span class="p">):</span>
@@ -254,17 +276,17 @@
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    x : array_like</span>
+<span class="sd">    x: array_like</span>
 <span class="sd">        the points at which the Lorentzian distribution is calculated</span>
-<span class="sd">    gamma : float, optional</span>
+<span class="sd">    gamma: float, optional</span>
 <span class="sd">        the spread of the Lorentzian</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
-<span class="sd">    y : array_like</span>
+<span class="sd">    numpy.ndarray</span>
 <span class="sd">        the Lorentzian distribution, same length as `x`</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">return</span> <span class="p">(</span><span class="n">gamma</span> <span class="o">/</span> <span class="n">pi</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">x</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="n">gamma</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span></div>
+    <span class="k">return</span> <span class="p">(</span><span class="n">gamma</span> <span class="o">/</span> <span class="n">_pi</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">x</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="n">gamma</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span></div>
 </pre></div>
 
            </div>
@@ -301,7 +323,7 @@
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'../../../',
-            VERSION:'0.9.2-504',
+            VERSION:'latest',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true,

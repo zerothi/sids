@@ -65,7 +65,7 @@
             
             
               <div class="version">
-                0.9.2-504
+                latest
               </div>
             
           
@@ -190,6 +190,10 @@
 <span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;BrillouinZone&#39;</span><span class="p">,</span> <span class="s1">&#39;MonkhorstPack&#39;</span><span class="p">,</span> <span class="s1">&#39;BandStructure&#39;</span><span class="p">]</span>
 
 
+<span class="k">def</span> <span class="nf">_do_nothing</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">x</span>
+
+
 <div class="viewcode-block" id="BrillouinZone"><a class="viewcode-back" href="../../../api-generated/sisl.physics.BrillouinZone.html#sisl.physics.BrillouinZone">[docs]</a><span class="k">class</span> <span class="nc">BrillouinZone</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot; A class to construct Brillouin zone related quantities</span>
 
@@ -292,8 +296,13 @@
 
 <span class="sd">        Notes</span>
 <span class="sd">        -----</span>
-<span class="sd">        All subsequent invokations of sub-methods are provided an additional keyword</span>
-<span class="sd">        ``eta`` which prints, to stdout a progress bar.</span>
+<span class="sd">        All invocations of sub-methods are added these keyword-only arguments:</span>
+
+<span class="sd">        eta : bool, optional</span>
+<span class="sd">           if true a progress-bar is created, default false.</span>
+<span class="sd">        wraps : callable, optional</span>
+<span class="sd">           a function that accepts the output of the given routine and post-process</span>
+<span class="sd">           it. Defaults to ``lambda x: x``.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
@@ -309,15 +318,17 @@
 <span class="sd">        --------</span>
 <span class="sd">        asyield : all output returned through an iterator</span>
 <span class="sd">        asaverage : take the average (with k-weights) of the Brillouin zone</span>
+<span class="sd">        aslist : all output returned as a Python list</span>
 <span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="k">def</span> <span class="nf">_call</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
             <span class="n">func</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__attr</span><span class="p">)</span>
+            <span class="n">wraps</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;wraps&#39;</span><span class="p">,</span> <span class="n">_do_nothing</span><span class="p">)</span>
             <span class="n">eta</span> <span class="o">=</span> <span class="n">tqdm_eta</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39;.asarray()&#39;</span><span class="p">,</span>
                            <span class="s1">&#39;k&#39;</span><span class="p">,</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;eta&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">))</span>
             <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
                 <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-                    <span class="n">v</span> <span class="o">=</span> <span class="n">func</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="n">k</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+                    <span class="n">v</span> <span class="o">=</span> <span class="n">wraps</span><span class="p">(</span><span class="n">func</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="n">k</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">))</span>
                     <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
                         <span class="k">return</span> <span class="n">v</span>
                     <span class="n">shp</span> <span class="o">=</span> <span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">)]</span>
@@ -326,7 +337,49 @@
                     <span class="n">a</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">v</span><span class="p">[:]</span>
                     <span class="k">del</span> <span class="n">v</span>
                 <span class="k">else</span><span class="p">:</span>
-                    <span class="n">a</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">func</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="n">k</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+                    <span class="n">a</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">wraps</span><span class="p">(</span><span class="n">func</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="n">k</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">))</span>
+                <span class="n">eta</span><span class="o">.</span><span class="n">update</span><span class="p">()</span>
+            <span class="n">eta</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+            <span class="k">return</span> <span class="n">a</span>
+        <span class="c1"># Set instance __call__</span>
+        <span class="nb">setattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;__call__&#39;</span><span class="p">,</span> <span class="n">types</span><span class="o">.</span><span class="n">MethodType</span><span class="p">(</span><span class="n">_call</span><span class="p">,</span> <span class="bp">self</span><span class="p">))</span>
+        <span class="k">return</span> <span class="bp">self</span></div>
+
+<div class="viewcode-block" id="BrillouinZone.aslist"><a class="viewcode-back" href="../../../api-generated/sisl.physics.BrillouinZone.html#sisl.physics.BrillouinZone.aslist">[docs]</a>    <span class="k">def</span> <span class="nf">aslist</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Return `self` with `list` returned quantities</span>
+
+<span class="sd">        This forces the `__call__` routine to return a list with returned values.</span>
+
+<span class="sd">        Notes</span>
+<span class="sd">        -----</span>
+<span class="sd">        All invocations of sub-methods are added these keyword-only arguments:</span>
+
+<span class="sd">        eta : bool, optional</span>
+<span class="sd">           if true a progress-bar is created, default false.</span>
+<span class="sd">        wraps : callable, optional</span>
+<span class="sd">           a function that accepts the output of the given routine and post-process</span>
+<span class="sd">           it. Defaults to ``lambda x: x``.</span>
+
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
+<span class="sd">        &gt;&gt;&gt; obj = BrillouinZone(...) # doctest: +SKIP</span>
+<span class="sd">        &gt;&gt;&gt; obj.aslist().eigenstate(eta=True) # doctest: +SKIP</span>
+
+<span class="sd">        See Also</span>
+<span class="sd">        --------</span>
+<span class="sd">        asarray : all output as a single array</span>
+<span class="sd">        asyield : all output returned through an iterator</span>
+<span class="sd">        asaverage : take the average (with k-weights) of the Brillouin zone</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">def</span> <span class="nf">_call</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+            <span class="n">func</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__attr</span><span class="p">)</span>
+            <span class="n">wraps</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;wraps&#39;</span><span class="p">,</span> <span class="n">_do_nothing</span><span class="p">)</span>
+            <span class="n">eta</span> <span class="o">=</span> <span class="n">tqdm_eta</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39;.aslist()&#39;</span><span class="p">,</span>
+                           <span class="s1">&#39;k&#39;</span><span class="p">,</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;eta&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">))</span>
+            <span class="n">a</span> <span class="o">=</span> <span class="p">[</span><span class="kc">None</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+                <span class="n">a</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">wraps</span><span class="p">(</span><span class="n">func</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="n">k</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">))</span>
                 <span class="n">eta</span><span class="o">.</span><span class="n">update</span><span class="p">()</span>
             <span class="n">eta</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
             <span class="k">return</span> <span class="n">a</span>
@@ -342,8 +395,13 @@
 
 <span class="sd">        Notes</span>
 <span class="sd">        -----</span>
-<span class="sd">        All subsequent invokations of sub-methods are provided an additional keyword</span>
-<span class="sd">        ``eta`` which prints, to stdout a progress bar.</span>
+<span class="sd">        All invocations of sub-methods are added these keyword-only arguments:</span>
+
+<span class="sd">        eta : bool, optional</span>
+<span class="sd">           if true a progress-bar is created, default false.</span>
+<span class="sd">        wraps : callable, optional</span>
+<span class="sd">           a function that accepts the output of the given routine and post-process</span>
+<span class="sd">           it. Defaults to ``lambda x: x``.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
@@ -359,14 +417,16 @@
 <span class="sd">        --------</span>
 <span class="sd">        asarray : all output as a single array</span>
 <span class="sd">        asaverage : take the average (with k-weights) of the Brillouin zone</span>
+<span class="sd">        aslist : all output returned as a Python list</span>
 <span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="k">def</span> <span class="nf">_call</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
             <span class="n">func</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__attr</span><span class="p">)</span>
+            <span class="n">wraps</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;wraps&#39;</span><span class="p">,</span> <span class="n">_do_nothing</span><span class="p">)</span>
             <span class="n">eta</span> <span class="o">=</span> <span class="n">tqdm_eta</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39;.asyield()&#39;</span><span class="p">,</span>
                            <span class="s1">&#39;k&#39;</span><span class="p">,</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;eta&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">))</span>
             <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="bp">self</span><span class="p">:</span>
-                <span class="k">yield</span> <span class="n">func</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="n">k</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">dtype</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+                <span class="k">yield</span> <span class="n">wraps</span><span class="p">(</span><span class="n">func</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="n">k</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">dtype</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">False</span><span class="p">))</span>
                 <span class="n">eta</span><span class="o">.</span><span class="n">update</span><span class="p">()</span>
             <span class="n">eta</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
         <span class="c1"># Set instance __call__</span>
@@ -381,8 +441,13 @@
 
 <span class="sd">        Notes</span>
 <span class="sd">        -----</span>
-<span class="sd">        All subsequent invokations of sub-methods are provided an additional keyword</span>
-<span class="sd">        ``eta`` which prints, to stdout a progress bar.</span>
+<span class="sd">        All invocations of sub-methods are added these keyword-only arguments:</span>
+
+<span class="sd">        eta : bool, optional</span>
+<span class="sd">           if true a progress-bar is created, default false.</span>
+<span class="sd">        wraps : callable, optional</span>
+<span class="sd">           a function that accepts the output of the given routine and post-process</span>
+<span class="sd">           it. Defaults to ``lambda x: x``.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
@@ -403,18 +468,20 @@
 <span class="sd">        --------</span>
 <span class="sd">        asarray : all output as a single array</span>
 <span class="sd">        asyield : all output returned through an iterator</span>
+<span class="sd">        aslist : all output returned as a Python list</span>
 <span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="k">def</span> <span class="nf">_call</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
             <span class="n">func</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__attr</span><span class="p">)</span>
+            <span class="n">wraps</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;wraps&#39;</span><span class="p">,</span> <span class="n">_do_nothing</span><span class="p">)</span>
             <span class="n">eta</span> <span class="o">=</span> <span class="n">tqdm_eta</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39;.asaverage()&#39;</span><span class="p">,</span>
                            <span class="s1">&#39;k&#39;</span><span class="p">,</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;eta&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">))</span>
             <span class="n">w</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">weight</span><span class="o">.</span><span class="n">view</span><span class="p">()</span>
             <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
                 <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-                    <span class="n">v</span> <span class="o">=</span> <span class="n">func</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="n">k</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">*</span> <span class="n">w</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+                    <span class="n">v</span> <span class="o">=</span> <span class="n">wraps</span><span class="p">(</span><span class="n">func</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="n">k</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">))</span> <span class="o">*</span> <span class="n">w</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
                 <span class="k">else</span><span class="p">:</span>
-                    <span class="n">v</span> <span class="o">+=</span> <span class="n">func</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="n">k</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">*</span> <span class="n">w</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+                    <span class="n">v</span> <span class="o">+=</span> <span class="n">wraps</span><span class="p">(</span><span class="n">func</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="n">k</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">))</span> <span class="o">*</span> <span class="n">w</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
                 <span class="n">eta</span><span class="o">.</span><span class="n">update</span><span class="p">()</span>
             <span class="n">eta</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
             <span class="k">return</span> <span class="n">v</span>
@@ -473,7 +540,7 @@
 <span class="sd">    size : float or array_like of float, optional</span>
 <span class="sd">       the size of the Brillouin zone sampled. This reduces the boundaries</span>
 <span class="sd">       of the Brillouin zone around the displacement to the fraction specified.</span>
-<span class="sd">       I.e. `size` must be of values :math:`]0 ; 1]`. Default to the entire BZ.</span>
+<span class="sd">       I.e. `size` must be of values :math:`]0 ; 1]`. Defaults to the entire BZ.</span>
 <span class="sd">       Note that this will also reduce the weights such that the weights</span>
 <span class="sd">       are normalized to the entire BZ.</span>
 <span class="sd">    trs : bool, optional</span>
@@ -806,7 +873,7 @@
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'../../../',
-            VERSION:'0.9.2-504',
+            VERSION:'latest',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true,
