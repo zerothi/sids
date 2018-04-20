@@ -83,15 +83,18 @@ Electrons (:mod:`sisl.physics.electron`)
    EigenstateElectron
 
 
-Distribution functions (:mod:`sisl.physics.distributions`)
-==========================================================
+Distribution functions (:mod:`sisl.physics.distribution`)
+=========================================================
 
 .. autosummary::
    :toctree:
 
-   distribution
+   get_distribution
    gaussian
    lorentzian
+   fermi_dirac
+   bose_einstein
+   cold
 
 
 .. autosummary::
@@ -99,10 +102,10 @@ Distribution functions (:mod:`sisl.physics.distributions`)
    :hidden:
 
    sisl.physics.electron
-   sisl.physics.distributions
+   sisl.physics.distribution
 
 """
-from .distributions import *
+from .distribution import *
 from .brillouinzone import *
 from .spin import *
 from .sparse import *

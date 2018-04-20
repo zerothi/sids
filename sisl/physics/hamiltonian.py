@@ -127,7 +127,7 @@ class Hamiltonian(SparseOrbitalBZSpin):
         if E.size == 1:
             E = np.tile(_a.asarrayd(E), 2)
         if not self.orthogonal:
-            # For non-colinear and SO only the diagonal (real) components
+            # For non-collinear and SO only the diagonal (real) components
             # should be shifted.
             for i in range(min(self.spin.spins, 2)):
                 self._csr._D[:, i] += self._csr._D[:, self.S_idx] * E[i]
@@ -137,14 +137,14 @@ class Hamiltonian(SparseOrbitalBZSpin):
                     self[i, i, j] = self[i, i, j] + E[i]
 
     def eigenvalue(self, k=(0, 0, 0), gauge='R', **kwargs):
-        """ Calculate the eigenstates at `k` and return an `EigenvalueElectron` object containing all eigenstates
+        """ Calculate the eigenvalues at `k` and return an `EigenvalueElectron` object containing all eigenvalues for a given `k`
 
         Parameters
         ----------
         k : array_like*3, optional
-            the k-point at which to evaluate the eigenstates at
+            the k-point at which to evaluate the eigenvalues at
         gauge : str, optional
-            the gauge used for calculating the eigenstates
+            the gauge used for calculating the eigenvalues
         sparse : bool, optional
             if ``True``, `eigsh` will be called, else `eigh` will be
             called (default).
