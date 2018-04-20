@@ -3101,12 +3101,16 @@
 
         <span class="k">return</span> <span class="n">d</span></div>
 
-<div class="viewcode-block" id="Geometry.inf_within"><a class="viewcode-back" href="../../api-generated/sisl.Geometry.html#sisl.Geometry.inf_within">[docs]</a>    <span class="k">def</span> <span class="nf">inf_within</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sc</span><span class="p">,</span> <span class="n">periodic</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<div class="viewcode-block" id="Geometry.within_inf"><a class="viewcode-back" href="../../api-generated/sisl.Geometry.html#sisl.Geometry.within_inf">[docs]</a>    <span class="k">def</span> <span class="nf">within_inf</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sc</span><span class="p">,</span> <span class="n">periodic</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">ftol</span><span class="o">=</span><span class="mf">1e-6</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Find all atoms within a provided supercell</span>
 
 <span class="sd">        Note this function is rather different from `close` and `within`.</span>
 <span class="sd">        Specifically this routine is returning *all* indices for the infinite</span>
 <span class="sd">        periodic system (where ``self.nsc &gt; 1`` or `periodic` is true).</span>
+
+<span class="sd">        Atomic coordinates lying on the boundary of the supercell will be duplicated</span>
+<span class="sd">        on the neighbouring supercell images. Thus performing `geom.within_inf(geom.sc)`</span>
+<span class="sd">        may result in more atoms than in the structure.</span>
 
 <span class="sd">        Notes</span>
 <span class="sd">        -----</span>
@@ -3120,30 +3124,44 @@
 <span class="sd">        periodic : list of bool</span>
 <span class="sd">            explicitly define the periodic directions, by default the periodic</span>
 <span class="sd">            directions are only where ``self.nsc &gt; 1``.</span>
+<span class="sd">        ftol : float, optional</span>
+<span class="sd">            tolerance for the fractional coordinates to be on a duplicate site.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        ia : numpy.ndarray</span>
+<span class="sd">           unit-cell atomic indices which are inside the `sc` cell</span>
+<span class="sd">        xyz : numpy.ndarray</span>
+<span class="sd">           atomic coordinates for the `ia` atoms</span>
+<span class="sd">        isc : numpy.ndarray</span>
+<span class="sd">           integer supercell offsets for `ia` atoms</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">periodic</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">periodic</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nsc</span> <span class="o">&gt;</span> <span class="mi">1</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">periodic</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">periodic</span><span class="p">)</span>
 
-        <span class="c1"># First we should figure out which atoms we are dealing with</span>
-        <span class="n">idx</span> <span class="o">=</span> <span class="n">dot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">icell</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">sc</span><span class="o">.</span><span class="n">cell</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">sc</span><span class="o">.</span><span class="n">origo</span><span class="p">))</span>
-        <span class="c1">#idx_origo = dot(self.icell.T, np.diag(sc.origo))</span>
+        <span class="c1"># Our first task is to construct a geometry large</span>
+        <span class="c1"># enough to fully encompass the supercell</span>
+
+        <span class="c1"># 1. Number of times each lattice vector must be expanded to fit</span>
+        <span class="c1">#    inside the &quot;possibly&quot; larger `sc`.</span>
+        <span class="n">idx</span> <span class="o">=</span> <span class="n">dot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">icell</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">sc</span><span class="o">.</span><span class="n">cell</span><span class="p">)</span>
         <span class="n">tile_min</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="n">idx</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="n">int32</span><span class="p">)</span>
         <span class="n">tile_max</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="n">idx</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="n">int32</span><span class="p">)</span>
 
-        <span class="c1"># Minimize tile to 0 where nsc == 1</span>
+        <span class="c1"># 2. Reduce tiling along non-periodic directions</span>
         <span class="n">tile_min</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">periodic</span><span class="p">,</span> <span class="n">tile_min</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
         <span class="n">tile_max</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">periodic</span><span class="p">,</span> <span class="n">tile_max</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
 
+        <span class="c1"># 3. Find the *new* origo according to the *negative* tilings.</span>
+        <span class="c1">#    This is important for skewed cells as the placement of the new</span>
+        <span class="c1">#    larger geometry has to be shifted to have sc inside</span>
         <span class="n">big_origo</span> <span class="o">=</span> <span class="p">(</span><span class="n">tile_min</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">cell</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
 
         <span class="c1"># The xyz geometry that fully encompass the (possibly) larger supercell</span>
         <span class="n">tile</span> <span class="o">=</span> <span class="n">tile_max</span> <span class="o">-</span> <span class="n">tile_min</span>
-        <span class="c1"># We displace *all* atoms 0.1 Ang along each lattice vector.</span>
-        <span class="c1"># This should take care of numerical accuracy in the fxyz routine</span>
-        <span class="n">min_xyz</span> <span class="o">=</span> <span class="n">dot</span><span class="p">(</span><span class="mf">0.1</span> <span class="o">/</span> <span class="n">fnorm</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cell</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">cell</span><span class="p">)</span>
-        <span class="n">full_geom</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">translate</span><span class="p">(</span><span class="n">min_xyz</span><span class="p">)</span> <span class="o">*</span> <span class="n">tile</span><span class="p">)</span><span class="o">.</span><span class="n">translate</span><span class="p">(</span><span class="n">big_origo</span><span class="p">)</span>
+        <span class="n">full_geom</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span> <span class="o">*</span> <span class="n">tile</span><span class="p">)</span><span class="o">.</span><span class="n">translate</span><span class="p">(</span><span class="n">big_origo</span><span class="p">)</span>
 
         <span class="c1"># Now we have to figure out all atomic coordinates within</span>
         <span class="n">cuboid</span> <span class="o">=</span> <span class="n">sc</span><span class="o">.</span><span class="n">toCuboid</span><span class="p">()</span>
@@ -3159,10 +3177,19 @@
         <span class="c1"># are sure that these fxyz are [0:1[</span>
         <span class="n">fxyz</span> <span class="o">=</span> <span class="n">dot</span><span class="p">(</span><span class="n">xyz</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">icell</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
 
-        <span class="c1"># Reduce atomic coordinates (and shift back to &quot;correct&quot; coordinates)</span>
-        <span class="n">xyz</span> <span class="o">-=</span> <span class="n">min_xyz</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
-        <span class="c1"># Convert to supercell indices</span>
-        <span class="n">isc</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="n">fxyz</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">int32</span><span class="p">)</span>
+        <span class="c1"># Since there are numerical errors for the above operation</span>
+        <span class="c1"># we *have* to account for possible sign-errors</span>
+
+        <span class="n">isc</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="n">fxyz</span> <span class="o">-</span> <span class="n">ftol</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">int32</span><span class="p">)</span>
+
+        <span class="c1"># Now we can extract the indices where the two are non-matching.</span>
+        <span class="c1"># At these indices we have some &quot;errors&quot; that we have to fix and</span>
+        <span class="c1"># thus select the correct isc.</span>
+        <span class="n">idx_diff</span> <span class="o">=</span> <span class="p">(</span><span class="n">isc</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="n">fxyz</span> <span class="o">+</span> <span class="n">ftol</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">int32</span><span class="p">))</span><span class="o">.</span><span class="n">nonzero</span><span class="p">()</span>
+
+        <span class="c1"># For these indices we can use the nearest integer as that</span>
+        <span class="c1"># selects the closest. floor will ONLY be wrong for -0.0000, 0.99999, ...</span>
+        <span class="n">isc</span><span class="p">[</span><span class="n">idx_diff</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">idx_diff</span><span class="p">[</span><span class="mi">1</span><span class="p">]]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">rint</span><span class="p">(</span><span class="n">fxyz</span><span class="p">[</span><span class="n">idx_diff</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">idx_diff</span><span class="p">[</span><span class="mi">1</span><span class="p">]])</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">int32</span><span class="p">)</span>
 
         <span class="c1"># Convert indices to unit-cell indices and also return coordinates and</span>
         <span class="c1"># infinite supercell indices</span>
