@@ -206,11 +206,14 @@
 
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">floor</span><span class="p">,</span> <span class="n">ceil</span>
-<span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">conj</span><span class="p">,</span> <span class="n">dot</span><span class="p">,</span> <span class="n">take</span><span class="p">,</span> <span class="n">ogrid</span>
-<span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">arctan2</span><span class="p">,</span> <span class="n">cos</span><span class="p">,</span> <span class="n">sin</span><span class="p">,</span> <span class="n">pi</span><span class="p">,</span> <span class="n">int32</span>
-<span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">add</span><span class="p">,</span> <span class="n">sqrt</span><span class="p">,</span> <span class="n">divide</span>
+<span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">conj</span><span class="p">,</span> <span class="n">dot</span><span class="p">,</span> <span class="n">ogrid</span>
+<span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">cos</span><span class="p">,</span> <span class="n">sin</span><span class="p">,</span> <span class="n">pi</span><span class="p">,</span> <span class="n">int32</span>
+<span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">add</span>
 
+<span class="kn">from</span> <span class="nn">sisl.supercell</span> <span class="k">import</span> <span class="n">SuperCell</span>
 <span class="kn">from</span> <span class="nn">sisl.geometry</span> <span class="k">import</span> <span class="n">Geometry</span>
+<span class="kn">from</span> <span class="nn">sisl._indices</span> <span class="k">import</span> <span class="n">indices_le</span>
+<span class="kn">from</span> <span class="nn">sisl._math_small</span> <span class="k">import</span> <span class="n">xyz_to_spherical_cos_phi</span>
 <span class="kn">import</span> <span class="nn">sisl._array</span> <span class="k">as</span> <span class="nn">_a</span>
 <span class="kn">from</span> <span class="nn">sisl.messages</span> <span class="k">import</span> <span class="n">info</span><span class="p">,</span> <span class="n">warn</span><span class="p">,</span> <span class="n">tqdm_eta</span>
 <span class="kn">from</span> <span class="nn">sisl._help</span> <span class="k">import</span> <span class="n">dtype_complex_to_real</span><span class="p">,</span> <span class="n">_range</span> <span class="k">as</span> <span class="nb">range</span>
@@ -538,9 +541,9 @@
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">if</span> <span class="n">geometry</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">geometry</span> <span class="o">=</span> <span class="n">grid</span><span class="o">.</span><span class="n">geometry</span>
-        <span class="n">warn</span><span class="p">(</span><span class="s1">&#39;psi was not passed a geometry associated, will use the geometry associated with the Grid.&#39;</span><span class="p">)</span>
+        <span class="n">warn</span><span class="p">(</span><span class="s1">&#39;wavefunction was not passed a geometry associated, will use the geometry associated with the Grid.&#39;</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">geometry</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="n">SislError</span><span class="p">(</span><span class="s1">&#39;psi did not find a usable Geometry through keywords or the Grid!&#39;</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="n">SislError</span><span class="p">(</span><span class="s1">&#39;wavefunction did not find a usable Geometry through keywords or the Grid!&#39;</span><span class="p">)</span>
 
     <span class="c1"># In case the user has passed several vectors we sum them to plot the summed state</span>
     <span class="k">if</span> <span class="n">v</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
@@ -550,21 +553,21 @@
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="o">//</span> <span class="mi">2</span> <span class="o">==</span> <span class="n">geometry</span><span class="o">.</span><span class="n">no</span><span class="p">:</span>
             <span class="c1"># We can see from the input that the vector *must* be a non-collinear calculation</span>
             <span class="n">v</span> <span class="o">=</span> <span class="n">v</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">)[:,</span> <span class="n">spinor</span><span class="p">]</span>
-            <span class="n">info</span><span class="p">(</span><span class="s1">&#39;psi assumes the input wavefunction coefficients to originate from a non-collinear calculation!&#39;</span><span class="p">)</span>
+            <span class="n">info</span><span class="p">(</span><span class="s1">&#39;wavefunction assumes the input wavefunction coefficients to originate from a non-collinear calculation!&#39;</span><span class="p">)</span>
 
     <span class="k">elif</span> <span class="n">spin</span><span class="o">.</span><span class="n">kind</span> <span class="o">&gt;</span> <span class="n">Spin</span><span class="o">.</span><span class="n">POLARIZED</span><span class="p">:</span>
         <span class="c1"># For non-collinear cases the user selects the spinor component.</span>
         <span class="n">v</span> <span class="o">=</span> <span class="n">v</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">)[:,</span> <span class="n">spinor</span><span class="p">]</span>
 
     <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="o">!=</span> <span class="n">geometry</span><span class="o">.</span><span class="n">no</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;psi require wavefunction coefficients corresponding to number of orbitals in the geometry.&quot;</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;wavefunction require wavefunction coefficients corresponding to number of orbitals in the geometry.&quot;</span><span class="p">)</span>
 
     <span class="c1"># Check for k-points</span>
     <span class="n">k</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">asarrayd</span><span class="p">(</span><span class="n">k</span><span class="p">)</span>
     <span class="n">kl</span> <span class="o">=</span> <span class="p">(</span><span class="n">k</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">**</span> <span class="mf">0.5</span>
     <span class="n">has_k</span> <span class="o">=</span> <span class="n">kl</span> <span class="o">&gt;</span> <span class="mf">0.000001</span>
     <span class="k">if</span> <span class="n">has_k</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s1">&#39;psi for k != Gamma does not produce correct wavefunctions!&#39;</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s1">&#39;wavefunction for k != Gamma does not produce correct wavefunctions!&#39;</span><span class="p">)</span>
 
     <span class="c1"># Check that input/grid makes sense.</span>
     <span class="c1"># If the coefficients are complex valued, then the grid *has* to be</span>
@@ -572,7 +575,7 @@
     <span class="c1"># Likewise if a k-point has been passed.</span>
     <span class="n">is_complex</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">iscomplexobj</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="ow">or</span> <span class="n">has_k</span>
     <span class="k">if</span> <span class="n">is_complex</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">iscomplexobj</span><span class="p">(</span><span class="n">grid</span><span class="o">.</span><span class="n">grid</span><span class="p">):</span>
-        <span class="k">raise</span> <span class="n">SislError</span><span class="p">(</span><span class="s2">&quot;psi input coefficients are complex, while grid only contains real.&quot;</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="n">SislError</span><span class="p">(</span><span class="s2">&quot;wavefunction input coefficients are complex, while grid only contains real.&quot;</span><span class="p">)</span>
 
     <span class="k">if</span> <span class="n">is_complex</span><span class="p">:</span>
         <span class="n">psi_init</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">zerosz</span>
@@ -597,18 +600,13 @@
         <span class="n">rz</span> <span class="o">=</span> <span class="n">addouter</span><span class="p">(</span><span class="n">addouter</span><span class="p">(</span><span class="n">ix</span> <span class="o">*</span> <span class="n">dc</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">],</span> <span class="n">iy</span> <span class="o">*</span> <span class="n">dc</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">]),</span> <span class="n">iz</span> <span class="o">*</span> <span class="n">dc</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">-</span> <span class="n">offset</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
         <span class="c1"># Total size of the indices</span>
         <span class="n">n</span> <span class="o">=</span> <span class="n">rx</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-        <span class="c1"># Calculate radius ** 2</span>
-        <span class="n">rr</span> <span class="o">=</span> <span class="n">rx</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="n">ry</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="n">rz</span> <span class="o">**</span> <span class="mi">2</span>
         <span class="c1"># Reduce our arrays to where the radius is &quot;fine&quot;</span>
-        <span class="n">idx</span> <span class="o">=</span> <span class="p">(</span><span class="n">rr</span> <span class="o">&lt;=</span> <span class="n">R</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">nonzero</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">idx</span> <span class="o">=</span> <span class="n">indices_le</span><span class="p">(</span><span class="n">rx</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="n">ry</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="n">rz</span> <span class="o">**</span> <span class="mi">2</span><span class="p">,</span> <span class="n">R</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>
         <span class="n">rx</span> <span class="o">=</span> <span class="n">rx</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span>
         <span class="n">ry</span> <span class="o">=</span> <span class="n">ry</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span>
         <span class="n">rz</span> <span class="o">=</span> <span class="n">rz</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span>
-        <span class="n">arctan2</span><span class="p">(</span><span class="n">ry</span><span class="p">,</span> <span class="n">rx</span><span class="p">,</span> <span class="n">out</span><span class="o">=</span><span class="n">rx</span><span class="p">)</span> <span class="c1"># theta == rx</span>
-        <span class="n">sqrt</span><span class="p">(</span><span class="n">rr</span><span class="p">[</span><span class="n">idx</span><span class="p">],</span> <span class="n">out</span><span class="o">=</span><span class="n">ry</span><span class="p">)</span> <span class="c1"># rr == ry</span>
-        <span class="n">divide</span><span class="p">(</span><span class="n">rz</span><span class="p">,</span> <span class="n">ry</span><span class="p">,</span> <span class="n">out</span><span class="o">=</span><span class="n">rz</span><span class="p">)</span> <span class="c1"># cos_phi == rz</span>
-        <span class="n">rz</span><span class="p">[</span><span class="n">ry</span> <span class="o">==</span> <span class="mf">0.</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
-        <span class="k">return</span> <span class="n">n</span><span class="p">,</span> <span class="n">idx</span><span class="p">,</span> <span class="n">ry</span><span class="p">,</span> <span class="n">rx</span><span class="p">,</span> <span class="n">rz</span>
+        <span class="n">xyz_to_spherical_cos_phi</span><span class="p">(</span><span class="n">rx</span><span class="p">,</span> <span class="n">ry</span><span class="p">,</span> <span class="n">rz</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">n</span><span class="p">,</span> <span class="n">idx</span><span class="p">,</span> <span class="n">rx</span><span class="p">,</span> <span class="n">ry</span><span class="p">,</span> <span class="n">rz</span>
 
     <span class="c1"># Figure out the max-min indices with a spacing of 1 radian</span>
     <span class="n">rad1</span> <span class="o">=</span> <span class="n">pi</span> <span class="o">/</span> <span class="mi">180</span>
@@ -658,7 +656,6 @@
     <span class="k">del</span> <span class="n">origo</span><span class="p">,</span> <span class="n">idx</span>
 
     <span class="n">aranged</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">aranged</span>
-    <span class="n">allclose</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">allclose</span>
 
     <span class="c1"># In case this grid does not have a Geometry associated</span>
     <span class="c1"># We can *perhaps* easily attach a geometry with the given</span>
@@ -675,11 +672,11 @@
     <span class="n">add_R</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">zerosd</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span> <span class="o">+</span> <span class="n">geometry</span><span class="o">.</span><span class="n">maxR</span><span class="p">()</span>
     <span class="c1"># Calculate the required additional vectors required to increase the fictitious</span>
     <span class="c1"># supercell by add_R in each direction.</span>
-    <span class="c1"># For extremely skewed lattices this will be way too much.</span>
-    <span class="c1"># But perhaps these supercells are often small?</span>
-    <span class="n">sc</span> <span class="o">=</span> <span class="n">sc</span> <span class="o">+</span> <span class="n">dot</span><span class="p">(</span><span class="n">add_R</span><span class="p">,</span> <span class="n">sc</span><span class="o">.</span><span class="n">icell</span><span class="o">.</span><span class="n">T</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">sc</span><span class="o">.</span><span class="n">cell</span>
-
-    <span class="n">sc</span><span class="o">.</span><span class="n">origo</span> <span class="o">=</span> <span class="n">sc</span><span class="o">.</span><span class="n">origo</span><span class="p">[:]</span> <span class="o">-</span> <span class="n">add_R</span>
+    <span class="c1"># For extremely skewed lattices this will be way too much, hence we make</span>
+    <span class="c1"># them square.</span>
+    <span class="n">o</span> <span class="o">=</span> <span class="n">sc</span><span class="o">.</span><span class="n">toCuboid</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">sc</span> <span class="o">=</span> <span class="n">SuperCell</span><span class="p">(</span><span class="n">o</span><span class="o">.</span><span class="n">_v</span><span class="p">,</span> <span class="n">origo</span><span class="o">=</span><span class="n">o</span><span class="o">.</span><span class="n">origo</span><span class="p">)</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">add_R</span><span class="p">)</span>
+    <span class="n">sc</span><span class="o">.</span><span class="n">origo</span> <span class="o">-=</span> <span class="n">add_R</span>
 
     <span class="c1"># Retrieve all atoms within the grid supercell</span>
     <span class="c1"># (and the neighbours that connect into the cell)</span>
@@ -692,7 +689,7 @@
     <span class="c1"># Retrieve progressbar</span>
     <span class="n">eta</span> <span class="o">=</span> <span class="n">tqdm_eta</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">IA</span><span class="p">),</span> <span class="s1">&#39;wavefunction&#39;</span><span class="p">,</span> <span class="s1">&#39;atom&#39;</span><span class="p">,</span> <span class="n">eta</span><span class="p">)</span>
 
-    <span class="c1"># Loop over all atoms in the full supercell structure</span>
+    <span class="c1"># Loop over all atoms in the grid-cell</span>
     <span class="k">for</span> <span class="n">ia</span><span class="p">,</span> <span class="n">xyz</span><span class="p">,</span> <span class="n">isc</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">IA</span><span class="p">,</span> <span class="n">XYZ</span> <span class="o">-</span> <span class="n">grid</span><span class="o">.</span><span class="n">origo</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span> <span class="n">ISC</span><span class="p">):</span>
         <span class="c1"># Get current atom</span>
         <span class="n">atom</span> <span class="o">=</span> <span class="n">geometry</span><span class="o">.</span><span class="n">atom</span><span class="p">[</span><span class="n">ia</span><span class="p">]</span>
@@ -761,18 +758,18 @@
                 <span class="k">continue</span>
 
             <span class="c1"># Downsize to the correct indices</span>
-            <span class="k">if</span> <span class="n">allclose</span><span class="p">(</span><span class="n">oR</span><span class="p">,</span> <span class="n">R</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">R</span> <span class="o">-</span> <span class="n">oR</span> <span class="o">&lt;</span> <span class="mf">1e-6</span><span class="p">:</span>
                 <span class="n">idx1</span> <span class="o">=</span> <span class="n">idx</span><span class="o">.</span><span class="n">view</span><span class="p">()</span>
                 <span class="n">r1</span> <span class="o">=</span> <span class="n">r</span><span class="o">.</span><span class="n">view</span><span class="p">()</span>
                 <span class="n">theta1</span> <span class="o">=</span> <span class="n">theta</span><span class="o">.</span><span class="n">view</span><span class="p">()</span>
                 <span class="n">phi1</span> <span class="o">=</span> <span class="n">phi</span><span class="o">.</span><span class="n">view</span><span class="p">()</span>
             <span class="k">else</span><span class="p">:</span>
-                <span class="n">idx1</span> <span class="o">=</span> <span class="p">(</span><span class="n">r</span> <span class="o">&lt;=</span> <span class="n">oR</span><span class="p">)</span><span class="o">.</span><span class="n">nonzero</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="n">idx1</span> <span class="o">=</span> <span class="n">indices_le</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">oR</span><span class="p">)</span>
                 <span class="c1"># Reduce arrays</span>
-                <span class="n">r1</span> <span class="o">=</span> <span class="n">take</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">idx1</span><span class="p">)</span>
-                <span class="n">theta1</span> <span class="o">=</span> <span class="n">take</span><span class="p">(</span><span class="n">theta</span><span class="p">,</span> <span class="n">idx1</span><span class="p">)</span>
-                <span class="n">phi1</span> <span class="o">=</span> <span class="n">take</span><span class="p">(</span><span class="n">phi</span><span class="p">,</span> <span class="n">idx1</span><span class="p">)</span>
-                <span class="n">idx1</span> <span class="o">=</span> <span class="n">take</span><span class="p">(</span><span class="n">idx</span><span class="p">,</span> <span class="n">idx1</span><span class="p">)</span>
+                <span class="n">r1</span> <span class="o">=</span> <span class="n">r</span><span class="p">[</span><span class="n">idx1</span><span class="p">]</span>
+                <span class="n">theta1</span> <span class="o">=</span> <span class="n">theta</span><span class="p">[</span><span class="n">idx1</span><span class="p">]</span>
+                <span class="n">phi1</span> <span class="o">=</span> <span class="n">phi</span><span class="p">[</span><span class="n">idx1</span><span class="p">]</span>
+                <span class="n">idx1</span> <span class="o">=</span> <span class="n">idx</span><span class="p">[</span><span class="n">idx1</span><span class="p">]</span>
 
             <span class="c1"># Loop orbitals with the same radius</span>
             <span class="k">for</span> <span class="n">o</span> <span class="ow">in</span> <span class="n">os</span><span class="p">:</span>
@@ -886,7 +883,7 @@
         <span class="sa">r</span><span class="sd">&quot;&quot;&quot; Calculate spin moment from the states</span>
 
 <span class="sd">        This routine calls `sisl.physics.electrons.spin_moment` with appropriate arguments</span>
-<span class="sd">        and returns the spin moment.</span>
+<span class="sd">        and returns the spin moment for the states.</span>
 
 <span class="sd">        See `sisl.physics.electrons.spin_moment` for argument details.</span>
 <span class="sd">        &quot;&quot;&quot;</span>

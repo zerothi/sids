@@ -216,72 +216,73 @@
 <span class="sd">    Note that this sparse matrix of data does not retain the number of columns</span>
 <span class="sd">    in the matrix, i.e. it has no way of determining whether the input is</span>
 <span class="sd">    correct.</span>
+
+
+<span class="sd">    This sparse matrix class tries to resemble the</span>
+<span class="sd">    ``scipy.sparse.csr_matrix`` as much as possible with</span>
+<span class="sd">    the difference of this class being multi-dimensional.</span>
+
+<span class="sd">    Creating a new sparse matrix is much similar to the</span>
+<span class="sd">    ``scipy`` equivalent.</span>
+
+<span class="sd">    `nnz` is only used if ``nnz &gt; nr * nnzpr``.</span>
+
+<span class="sd">    This class may be instantiated by verious means.</span>
+
+<span class="sd">    - ``SparseCSR(S)``</span>
+<span class="sd">      where ``S`` is a ``scipy.sparse`` matrix</span>
+<span class="sd">    - ``SparseCSR((M,N)[, dtype])``</span>
+<span class="sd">      the shape of the sparse matrix (equivalent</span>
+<span class="sd">      to ``SparseCSR((M,N,1)[, dtype])``.</span>
+<span class="sd">    - ``SparseCSR((M,N), dim=K, [, dtype])``</span>
+<span class="sd">      the shape of the sparse matrix (equivalent</span>
+<span class="sd">      to ``SparseCSR((M,N,K)[, dtype])``.</span>
+<span class="sd">    - ``SparseCSR((M,N,K)[, dtype])``</span>
+<span class="sd">      creating a sparse matrix with ``M`` rows, ``N`` columns</span>
+<span class="sd">      and ``K`` elements per sparse element.</span>
+
+<span class="sd">    Additionally these parameters control the</span>
+<span class="sd">    creation of the sparse matrix</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    arg1 : tuple</span>
+<span class="sd">       various initialization methods as described above</span>
+<span class="sd">    dim : int, optional</span>
+<span class="sd">       number of elements stored per sparse element, only used if (M,N) is passed</span>
+<span class="sd">    dtype : numpy.dtype, optional</span>
+<span class="sd">       data type of the matrix, defaults to `numpy.float64`</span>
+<span class="sd">    nnzpr : int, optional</span>
+<span class="sd">       initial number of non-zero elements per row.</span>
+<span class="sd">       Only used if `nnz` is not supplied</span>
+<span class="sd">    nnz : int, optional</span>
+<span class="sd">       initial total number of non-zero elements</span>
+<span class="sd">       This quantity has precedence over `nnzpr`</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    ncol: int-array, ``self.shape[0]``</span>
+<span class="sd">       number of entries per row</span>
+<span class="sd">    ptr: int-array, ``self.shape[0]+1``</span>
+<span class="sd">       pointer index in the 1D column indices of the corresponding row</span>
+<span class="sd">    col: int-array</span>
+<span class="sd">       column indices of the sparse elements</span>
+<span class="sd">    data:</span>
+<span class="sd">       the data in the sparse matrix</span>
+<span class="sd">    dim: int</span>
+<span class="sd">       the extra dimension of the sparse matrix</span>
+<span class="sd">    nnz: int</span>
+<span class="sd">       number of contained sparse elements</span>
+<span class="sd">    shape: tuple, 3*(,)</span>
+<span class="sd">       size of contained matrix, M, N, K</span>
+<span class="sd">    finalized: boolean</span>
+<span class="sd">       whether the sparse matrix is finalized and non-set elements</span>
+<span class="sd">       are removed</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">arg1</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">nnzpr</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span> <span class="n">nnz</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
                  <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Initialize a new sparse CSR matrix</span>
-
-<span class="sd">        This sparse matrix class tries to resemble the</span>
-<span class="sd">        ``scipy.sparse.csr_matrix`` as much as possible with</span>
-<span class="sd">        the difference of this class being multi-dimensional.</span>
-
-<span class="sd">        Creating a new sparse matrix is much similar to the</span>
-<span class="sd">        ``scipy`` equivalent.</span>
-
-<span class="sd">        `nnz` is only used if ``nnz &gt; nr * nnzpr``.</span>
-
-<span class="sd">        This class may be instantiated by verious means.</span>
-
-<span class="sd">        - ``SparseCSR(S)``</span>
-<span class="sd">          where ``S`` is a ``scipy.sparse`` matrix</span>
-<span class="sd">        - ``SparseCSR((M,N)[, dtype])``</span>
-<span class="sd">          the shape of the sparse matrix (equivalent</span>
-<span class="sd">          to ``SparseCSR((M,N,1)[, dtype])``.</span>
-<span class="sd">        - ``SparseCSR((M,N), dim=K, [, dtype])``</span>
-<span class="sd">          the shape of the sparse matrix (equivalent</span>
-<span class="sd">          to ``SparseCSR((M,N,K)[, dtype])``.</span>
-<span class="sd">        - ``SparseCSR((M,N,K)[, dtype])``</span>
-<span class="sd">          creating a sparse matrix with ``M`` rows, ``N`` columns</span>
-<span class="sd">          and ``K`` elements per sparse element.</span>
-
-<span class="sd">        Additionally these parameters control the</span>
-<span class="sd">        creation of the sparse matrix</span>
-
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        arg1 : tuple</span>
-<span class="sd">           various initialization methods as described above</span>
-<span class="sd">        dim : int, optional</span>
-<span class="sd">           number of elements stored per sparse element, only used if (M,N) is passed</span>
-<span class="sd">        dtype : numpy.dtype, optional</span>
-<span class="sd">           data type of the matrix, defaults to `numpy.float64`</span>
-<span class="sd">        nnzpr : int, optional</span>
-<span class="sd">           initial number of non-zero elements per row.</span>
-<span class="sd">           Only used if `nnz` is not supplied</span>
-<span class="sd">        nnz : int, optional</span>
-<span class="sd">           initial total number of non-zero elements</span>
-<span class="sd">           This quantity has precedence over `nnzpr`</span>
-
-<span class="sd">        Attributes</span>
-<span class="sd">        ----------</span>
-<span class="sd">        ncol: int-array, ``self.shape[0]``</span>
-<span class="sd">           number of entries per row</span>
-<span class="sd">        ptr: int-array, ``self.shape[0]+1``</span>
-<span class="sd">           pointer index in the 1D column indices of the corresponding row</span>
-<span class="sd">        col: int-array</span>
-<span class="sd">           column indices of the sparse elements</span>
-<span class="sd">        data:</span>
-<span class="sd">           the data in the sparse matrix</span>
-<span class="sd">        dim: int</span>
-<span class="sd">           the extra dimension of the sparse matrix</span>
-<span class="sd">        nnz: int</span>
-<span class="sd">           number of contained sparse elements</span>
-<span class="sd">        shape: tuple, 3*(,)</span>
-<span class="sd">           size of contained matrix, M, N, K</span>
-<span class="sd">        finalized: boolean</span>
-<span class="sd">           whether the sparse matrix is finalized and non-set elements</span>
-<span class="sd">           are removed</span>
 <span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="c1"># step size in sparse elements</span>
@@ -295,6 +296,8 @@
             <span class="c1"># The data-type is infered from the</span>
             <span class="c1"># input sparse matrix.</span>
             <span class="n">arg1</span> <span class="o">=</span> <span class="n">arg1</span><span class="o">.</span><span class="n">tocsr</span><span class="p">()</span>
+            <span class="c1"># Default shape to the CSR matrix</span>
+            <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;shape&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;shape&#39;</span><span class="p">,</span> <span class="n">arg1</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="fm">__init__</span><span class="p">((</span><span class="n">arg1</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="n">arg1</span><span class="o">.</span><span class="n">indices</span><span class="p">,</span> <span class="n">arg1</span><span class="o">.</span><span class="n">indptr</span><span class="p">),</span>
                           <span class="n">dim</span><span class="o">=</span><span class="n">dim</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 

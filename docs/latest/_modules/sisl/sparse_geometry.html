@@ -1868,7 +1868,59 @@
         <span class="n">S</span><span class="o">.</span><span class="n">_csr</span> <span class="o">=</span> <span class="n">SparseCSR</span><span class="p">((</span><span class="n">D</span><span class="p">,</span> <span class="n">indices</span><span class="p">,</span> <span class="n">indptr</span><span class="p">),</span>
                            <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">geom_n</span><span class="o">.</span><span class="n">no</span><span class="p">,</span> <span class="n">geom_n</span><span class="o">.</span><span class="n">no_s</span><span class="p">))</span>
 
-        <span class="k">return</span> <span class="n">S</span></div></div>
+        <span class="k">return</span> <span class="n">S</span></div>
+
+<div class="viewcode-block" id="SparseOrbital.toSparseAtom"><a class="viewcode-back" href="../../api-generated/sisl.SparseOrbital.html#sisl.SparseOrbital.toSparseAtom">[docs]</a>    <span class="k">def</span> <span class="nf">toSparseAtom</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Convert the sparse object (without data) to a new sparse object with equivalent but reduced sparse pattern</span>
+
+<span class="sd">        This converts the orbital sparse pattern to an atomic sparse pattern.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        dtype: numpy.dtype, optional</span>
+<span class="sd">           the data-container for the sparse object. Defaults to the same.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">dtype</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">dtype</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dtype</span>
+
+        <span class="n">geom</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">geometry</span>
+        <span class="c1"># Create a conversion vector</span>
+        <span class="n">orb2atom</span> <span class="o">=</span> <span class="n">geom</span><span class="o">.</span><span class="n">o2a</span><span class="p">(</span><span class="n">_a</span><span class="o">.</span><span class="n">arangei</span><span class="p">(</span><span class="n">geom</span><span class="o">.</span><span class="n">no_s</span><span class="p">))</span>
+
+        <span class="c1"># First convert all rows to the same</span>
+        <span class="n">csr</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span>
+
+        <span class="n">idx</span> <span class="o">=</span> <span class="n">array_arange</span><span class="p">(</span><span class="n">csr</span><span class="o">.</span><span class="n">ptr</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">n</span><span class="o">=</span><span class="n">csr</span><span class="o">.</span><span class="n">ncol</span><span class="p">)</span>
+        <span class="n">acol</span> <span class="o">=</span> <span class="n">orb2atom</span><span class="p">[</span><span class="n">csr</span><span class="o">.</span><span class="n">col</span><span class="p">[</span><span class="n">idx</span><span class="p">]]</span>
+
+        <span class="c1"># Now build the new sparse pattern</span>
+        <span class="n">ptr</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">emptyi</span><span class="p">(</span><span class="n">geom</span><span class="o">.</span><span class="n">na</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">ptr</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">col</span> <span class="o">=</span> <span class="p">[</span><span class="kc">None</span><span class="p">]</span> <span class="o">*</span> <span class="n">geom</span><span class="o">.</span><span class="n">na</span>
+        <span class="k">for</span> <span class="n">ia</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">geom</span><span class="o">.</span><span class="n">na</span><span class="p">):</span>
+
+            <span class="n">o1</span><span class="p">,</span> <span class="n">o2</span> <span class="o">=</span> <span class="n">geom</span><span class="o">.</span><span class="n">a2o</span><span class="p">([</span><span class="n">ia</span><span class="p">,</span> <span class="n">ia</span> <span class="o">+</span> <span class="mi">1</span><span class="p">])</span>
+            <span class="c1"># Get current atomic elements</span>
+            <span class="n">idx</span> <span class="o">=</span> <span class="n">array_arange</span><span class="p">(</span><span class="n">csr</span><span class="o">.</span><span class="n">ptr</span><span class="p">[</span><span class="n">o1</span><span class="p">:</span><span class="n">o2</span><span class="p">],</span> <span class="n">n</span><span class="o">=</span><span class="n">csr</span><span class="o">.</span><span class="n">ncol</span><span class="p">[</span><span class="n">o1</span><span class="p">:</span><span class="n">o2</span><span class="p">])</span>
+
+            <span class="c1"># These are now the atomic columns</span>
+            <span class="c1"># Immediately reduce to unique elements</span>
+            <span class="n">acol</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">orb2atom</span><span class="p">[</span><span class="n">csr</span><span class="o">.</span><span class="n">col</span><span class="p">[</span><span class="n">idx</span><span class="p">]])</span>
+
+            <span class="c1"># Step counters</span>
+            <span class="n">col</span><span class="p">[</span><span class="n">ia</span><span class="p">]</span> <span class="o">=</span> <span class="n">acol</span>
+            <span class="n">ptr</span><span class="p">[</span><span class="n">ia</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">ptr</span><span class="p">[</span><span class="n">ia</span><span class="p">]</span> <span class="o">+</span> <span class="nb">len</span><span class="p">(</span><span class="n">acol</span><span class="p">)</span>
+
+        <span class="c1"># Now we can create the sparse atomic</span>
+        <span class="n">col</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span><span class="n">col</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="n">spAtom</span> <span class="o">=</span> <span class="n">SparseAtom</span><span class="p">(</span><span class="n">geom</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">,</span> <span class="n">nnzpr</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">spAtom</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">ptr</span><span class="p">[:]</span> <span class="o">=</span> <span class="n">ptr</span><span class="p">[:]</span>
+        <span class="n">spAtom</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">ncol</span><span class="p">[:]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">ptr</span><span class="p">)</span>
+        <span class="n">spAtom</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">col</span> <span class="o">=</span> <span class="n">col</span>
+        <span class="n">spAtom</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">_D</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">([</span><span class="nb">len</span><span class="p">(</span><span class="n">col</span><span class="p">),</span> <span class="mi">1</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span>
+        <span class="n">spAtom</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">_nnz</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">col</span><span class="p">)</span>
+        <span class="n">spAtom</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">_finalized</span> <span class="o">=</span> <span class="kc">True</span> <span class="c1"># unique returns sorted elements</span>
+        <span class="k">return</span> <span class="n">spAtom</span></div></div>
 </pre></div>
 
            </div>

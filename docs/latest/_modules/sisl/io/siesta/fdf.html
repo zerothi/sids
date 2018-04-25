@@ -182,7 +182,7 @@
 <span class="c1"># Import sile objects</span>
 <span class="kn">import</span> <span class="nn">sisl._array</span> <span class="k">as</span> <span class="nn">_a</span>
 <span class="kn">from</span> <span class="nn">sisl._help</span> <span class="k">import</span> <span class="n">_str</span>
-<span class="kn">from</span> <span class="nn">sisl.messages</span> <span class="k">import</span> <span class="n">warn</span>
+<span class="kn">from</span> <span class="nn">sisl.messages</span> <span class="k">import</span> <span class="n">info</span><span class="p">,</span> <span class="n">warn</span>
 <span class="kn">from</span> <span class="nn">.sile</span> <span class="k">import</span> <span class="n">SileSiesta</span>
 <span class="kn">from</span> <span class="nn">..sile</span> <span class="k">import</span> <span class="o">*</span>
 <span class="kn">from</span> <span class="nn">sisl.io._help</span> <span class="k">import</span> <span class="o">*</span>
@@ -703,12 +703,12 @@
         <span class="k">if</span> <span class="n">spgeom</span><span class="o">.</span><span class="n">na</span> <span class="o">!=</span> <span class="n">geom</span><span class="o">.</span><span class="n">na</span> <span class="ow">and</span> <span class="n">spgeom</span><span class="o">.</span><span class="n">no</span> <span class="o">==</span> <span class="n">geom</span><span class="o">.</span><span class="n">no</span><span class="p">:</span>
             <span class="c1"># In this case we cannot compare individiual atoms # of orbitals.</span>
             <span class="c1"># I.e. we suspect the incoming geometry to be correct.</span>
-            <span class="n">spgeom</span><span class="o">.</span><span class="n">_geom</span> <span class="o">=</span> <span class="n">geom</span>
+            <span class="n">spgeom</span><span class="o">.</span><span class="n">_geometry</span> <span class="o">=</span> <span class="n">geom</span>
             <span class="k">return</span> <span class="kc">True</span>
 
         <span class="k">elif</span> <span class="n">spgeom</span><span class="o">.</span><span class="n">na</span> <span class="o">!=</span> <span class="n">geom</span><span class="o">.</span><span class="n">na</span><span class="p">:</span>
-            <span class="n">warn</span><span class="p">(</span><span class="n">SileWarning</span><span class="p">(</span><span class="s1">&#39;cannot replace geometry due to insufficient information regarding number of &#39;</span>
-                                    <span class="s1">&#39;atoms and orbitals, ensuring correct geometry failed...&#39;</span><span class="p">))</span>
+            <span class="n">warn</span><span class="p">(</span><span class="s1">&#39;cannot replace geometry due to insufficient information regarding number of &#39;</span>
+                 <span class="s1">&#39;atoms and orbitals, ensuring correct geometry failed...&#39;</span><span class="p">)</span>
 
         <span class="n">no_no</span> <span class="o">=</span> <span class="n">spgeom</span><span class="o">.</span><span class="n">no</span> <span class="o">==</span> <span class="n">geom</span><span class="o">.</span><span class="n">no</span>
         <span class="c1"># Loop and make sure the number of orbitals is consistent</span>
@@ -723,6 +723,34 @@
             <span class="n">spgeom</span><span class="o">.</span><span class="n">geom</span><span class="o">.</span><span class="n">atom</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">idx</span><span class="p">,</span> <span class="n">a</span><span class="p">)</span>
             <span class="n">spgeom</span><span class="o">.</span><span class="n">geom</span><span class="o">.</span><span class="n">reduce</span><span class="p">()</span>
         <span class="k">return</span> <span class="n">no_no</span>
+
+<div class="viewcode-block" id="fdfSileSiesta.read_supercell_nsc"><a class="viewcode-back" href="../../../../api-generated/sisl.io.siesta.fdfSileSiesta.html#sisl.io.siesta.fdfSileSiesta.read_supercell_nsc">[docs]</a>    <span class="k">def</span> <span class="nf">read_supercell_nsc</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Read supercell size using any method available</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        SislWarning if none of the files can be read</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">order</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;order&#39;</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;nc&#39;</span><span class="p">,</span> <span class="s1">&#39;ORB_INDX&#39;</span><span class="p">])</span>
+        <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">order</span><span class="p">:</span>
+            <span class="n">v</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;_r_supercell_nsc_</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">lower</span><span class="p">()))(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">v</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">v</span>
+        <span class="n">warn</span><span class="p">(</span><span class="s1">&#39;number of supercells could not be read from output files. Assuming molecule cell &#39;</span>
+             <span class="s1">&#39;(no supercell connections)&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">_a</span><span class="o">.</span><span class="n">onesi</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span></div>
+
+    <span class="k">def</span> <span class="nf">_r_supercell_nsc_nc</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="n">f</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tofile</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;SystemLabel&#39;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="s1">&#39;siesta&#39;</span><span class="p">))</span> <span class="o">+</span> <span class="s1">&#39;.nc&#39;</span>
+        <span class="k">if</span> <span class="n">isfile</span><span class="p">(</span><span class="n">f</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">ncSileSiesta</span><span class="p">(</span><span class="n">f</span><span class="p">)</span><span class="o">.</span><span class="n">read_supercell_nsc</span><span class="p">()</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+    <span class="k">def</span> <span class="nf">_r_supercell_nsc_orb_indx</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="n">f</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tofile</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;SystemLabel&#39;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="s1">&#39;siesta&#39;</span><span class="p">))</span> <span class="o">+</span> <span class="s1">&#39;.ORB_INDX&#39;</span>
+        <span class="k">if</span> <span class="n">isfile</span><span class="p">(</span><span class="n">f</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">orbindxSileSiesta</span><span class="p">(</span><span class="n">f</span><span class="p">)</span><span class="o">.</span><span class="n">read_supercell_nsc</span><span class="p">()</span>
+        <span class="k">return</span> <span class="kc">None</span>
 
 <div class="viewcode-block" id="fdfSileSiesta.read_supercell"><a class="viewcode-back" href="../../../../api-generated/sisl.io.siesta.fdfSileSiesta.html#sisl.io.siesta.fdfSileSiesta.read_supercell">[docs]</a>    <span class="k">def</span> <span class="nf">read_supercell</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">output</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Returns SuperCell object by reading fdf or Siesta output related files.</span>
@@ -781,7 +809,12 @@
             <span class="k">raise</span> <span class="n">SileError</span><span class="p">(</span><span class="s1">&#39;Could not find LatticeVectors or LatticeParameters block in file&#39;</span><span class="p">)</span>
         <span class="n">cell</span> <span class="o">*=</span> <span class="n">s</span>
 
-        <span class="k">return</span> <span class="n">SuperCell</span><span class="p">(</span><span class="n">cell</span><span class="p">)</span>
+        <span class="c1"># When reading from the fdf, the warning should be suppressed</span>
+        <span class="k">with</span> <span class="n">warnings</span><span class="o">.</span><span class="n">catch_warnings</span><span class="p">():</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">simplefilter</span><span class="p">(</span><span class="s2">&quot;ignore&quot;</span><span class="p">)</span>
+            <span class="n">nsc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">read_supercell_nsc</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="n">SuperCell</span><span class="p">(</span><span class="n">cell</span><span class="p">,</span> <span class="n">nsc</span><span class="o">=</span><span class="n">nsc</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">_r_supercell_nc</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="c1"># Read supercell from &lt;&gt;.nc file</span>
@@ -794,7 +827,10 @@
         <span class="sd">&quot;&quot;&quot; Returns `SuperCell` object from the FDF file &quot;&quot;&quot;</span>
         <span class="n">f</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tofile</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;SystemLabel&#39;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="s1">&#39;siesta&#39;</span><span class="p">))</span> <span class="o">+</span> <span class="s1">&#39;.XV&#39;</span>
         <span class="k">if</span> <span class="n">isfile</span><span class="p">(</span><span class="n">f</span><span class="p">):</span>
-            <span class="k">return</span> <span class="n">xvSileSiesta</span><span class="p">(</span><span class="n">f</span><span class="p">)</span><span class="o">.</span><span class="n">read_supercell</span><span class="p">()</span>
+            <span class="n">nsc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">read_supercell_nsc</span><span class="p">()</span>
+            <span class="n">sc</span> <span class="o">=</span> <span class="n">xvSileSiesta</span><span class="p">(</span><span class="n">f</span><span class="p">)</span><span class="o">.</span><span class="n">read_supercell</span><span class="p">()</span>
+            <span class="n">sc</span><span class="o">.</span><span class="n">set_nsc</span><span class="p">(</span><span class="n">nsc</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">sc</span>
         <span class="k">return</span> <span class="kc">None</span>
 
 <div class="viewcode-block" id="fdfSileSiesta.read_force"><a class="viewcode-back" href="../../../../api-generated/sisl.io.siesta.fdfSileSiesta.html#sisl.io.siesta.fdfSileSiesta.read_force">[docs]</a>    <span class="k">def</span> <span class="nf">read_force</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
@@ -886,6 +922,8 @@
                     <span class="k">for</span> <span class="n">atom</span><span class="p">,</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">geom</span><span class="o">.</span><span class="n">atom</span><span class="o">.</span><span class="n">iter</span><span class="p">(</span><span class="kc">True</span><span class="p">):</span>
                         <span class="n">geom</span><span class="o">.</span><span class="n">atom</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">atom</span><span class="p">,</span> <span class="n">basis</span><span class="p">[</span><span class="n">atom</span><span class="o">.</span><span class="n">Z</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
                     <span class="n">geom</span><span class="o">.</span><span class="n">reduce</span><span class="p">()</span>
+            <span class="n">nsc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">read_supercell_nsc</span><span class="p">()</span>
+            <span class="n">geom</span><span class="o">.</span><span class="n">set_nsc</span><span class="p">(</span><span class="n">nsc</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">geom</span>
 
     <span class="k">def</span> <span class="nf">_r_geometry_nc</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -1043,7 +1081,7 @@
     <span class="k">def</span> <span class="nf">_r_basis_orb_indx</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="n">f</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tofile</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;SystemLabel&#39;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="s1">&#39;siesta&#39;</span><span class="p">))</span> <span class="o">+</span> <span class="s1">&#39;.ORB_INDX&#39;</span>
         <span class="k">if</span> <span class="n">isfile</span><span class="p">(</span><span class="n">f</span><span class="p">):</span>
-            <span class="n">showinfo</span><span class="p">(</span><span class="n">SileInfo</span><span class="p">(</span><span class="s1">&#39;Siesta basis information is read from </span><span class="si">{}</span><span class="s1">, the radial functions are in accessible.&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">f</span><span class="p">)))</span>
+            <span class="n">info</span><span class="p">(</span><span class="n">SileInfo</span><span class="p">(</span><span class="s1">&#39;Siesta basis information is read from </span><span class="si">{}</span><span class="s1">, the radial functions are in accessible.&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">f</span><span class="p">)))</span>
             <span class="k">return</span> <span class="n">orbindxSileSiesta</span><span class="p">(</span><span class="n">f</span><span class="p">)</span><span class="o">.</span><span class="n">read_basis</span><span class="p">()</span>
         <span class="k">return</span> <span class="kc">None</span>
 
@@ -1107,10 +1145,9 @@
         <span class="n">f</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tofile</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;SystemLabel&#39;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="s1">&#39;siesta&#39;</span><span class="p">))</span> <span class="o">+</span> <span class="s1">&#39;.DM&#39;</span>
         <span class="n">DM</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="k">if</span> <span class="n">isfile</span><span class="p">(</span><span class="n">f</span><span class="p">):</span>
-            <span class="n">geom</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">read_geometry</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+            <span class="k">if</span> <span class="s1">&#39;geometry&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="p">:</span>
+                <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;geometry&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">read_geometry</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
             <span class="n">DM</span> <span class="o">=</span> <span class="n">dmSileSiesta</span><span class="p">(</span><span class="n">f</span><span class="p">)</span><span class="o">.</span><span class="n">read_density_matrix</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
-            <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_SpGeom_replace_geom</span><span class="p">(</span><span class="n">DM</span><span class="p">,</span> <span class="n">geom</span><span class="p">):</span>
-                <span class="n">warn</span><span class="p">(</span><span class="n">SileWarning</span><span class="p">(</span><span class="s1">&#39;DM from </span><span class="si">{}</span><span class="s1"> will most likely have a wrong supercell specification.&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">f</span><span class="p">)))</span>
         <span class="k">return</span> <span class="n">DM</span>
 
 <div class="viewcode-block" id="fdfSileSiesta.read_energy_density_matrix"><a class="viewcode-back" href="../../../../api-generated/sisl.io.siesta.fdfSileSiesta.html#sisl.io.siesta.fdfSileSiesta.read_energy_density_matrix">[docs]</a>    <span class="k">def</span> <span class="nf">read_energy_density_matrix</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
@@ -1144,7 +1181,8 @@
         <span class="n">f</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tofile</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;SystemLabel&#39;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="s1">&#39;siesta&#39;</span><span class="p">))</span> <span class="o">+</span> <span class="s1">&#39;.TSDE&#39;</span>
         <span class="n">EDM</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="k">if</span> <span class="n">isfile</span><span class="p">(</span><span class="n">f</span><span class="p">):</span>
-            <span class="n">geom</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">read_geometry</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+            <span class="k">if</span> <span class="s1">&#39;geometry&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="p">:</span>
+                <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;geometry&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">read_geometry</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
             <span class="n">EDM</span> <span class="o">=</span> <span class="n">tsdeSileSiesta</span><span class="p">(</span><span class="n">f</span><span class="p">)</span><span class="o">.</span><span class="n">read_energy_density_matrix</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_SpGeom_replace_geom</span><span class="p">(</span><span class="n">EDM</span><span class="p">,</span> <span class="n">geom</span><span class="p">):</span>
                 <span class="n">warn</span><span class="p">(</span><span class="n">SileWarning</span><span class="p">(</span><span class="s1">&#39;EDM from </span><span class="si">{}</span><span class="s1"> will most likely have a wrong supercell specification.&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">f</span><span class="p">)))</span>
