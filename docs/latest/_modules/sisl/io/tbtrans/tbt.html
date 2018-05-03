@@ -200,6 +200,7 @@
 <span class="kn">from</span> <span class="nn">sisl._help</span> <span class="k">import</span> <span class="n">_range</span> <span class="k">as</span> <span class="nb">range</span>
 <span class="kn">from</span> <span class="nn">sisl.unit.siesta</span> <span class="k">import</span> <span class="n">unit_convert</span>
 <span class="kn">from</span> <span class="nn">sisl.physics.distribution</span> <span class="k">import</span> <span class="n">fermi_dirac</span>
+<span class="kn">from</span> <span class="nn">sisl.physics.densitymatrix</span> <span class="k">import</span> <span class="n">DensityMatrix</span>
 
 
 <span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;tbtncSileTBtrans&#39;</span><span class="p">,</span> <span class="s1">&#39;phtncSileTBtrans&#39;</span><span class="p">]</span>
@@ -1147,8 +1148,8 @@
                              <span class="s1">&#39;wrong value [&quot;all&quot;, &quot;+&quot;, &quot;-&quot;] allowed.&#39;</span><span class="p">)</span>
 
         <span class="c1"># We will always remove the zeroes and sort the indices... (they should be sorted anyways)</span>
-        <span class="n">J</span><span class="o">.</span><span class="n">sort_indices</span><span class="p">()</span>
         <span class="n">J</span><span class="o">.</span><span class="n">eliminate_zeros</span><span class="p">()</span>
+        <span class="n">J</span><span class="o">.</span><span class="n">sort_indices</span><span class="p">()</span>
 
         <span class="k">return</span> <span class="n">J</span></div>
 
@@ -1209,9 +1210,9 @@
                              <span class="s1">&#39;wrong value [&quot;+&quot;, &quot;-&quot;, &quot;all&quot;] allowed.&#39;</span><span class="p">)</span>
 
         <span class="c1"># Do in-place operations by removing all the things not required</span>
+        <span class="n">Jab</span><span class="o">.</span><span class="n">eliminate_zeros</span><span class="p">()</span>
         <span class="n">Jab</span><span class="o">.</span><span class="n">sort_indices</span><span class="p">()</span>
         <span class="n">Jab</span><span class="o">.</span><span class="n">sum_duplicates</span><span class="p">()</span>
-        <span class="n">Jab</span><span class="o">.</span><span class="n">eliminate_zeros</span><span class="p">()</span>
 
         <span class="k">return</span> <span class="n">Jab</span></div>
 
@@ -1461,6 +1462,93 @@
 
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">vector_current_from_bond</span><span class="p">(</span><span class="n">Jab</span><span class="p">)</span></div>
 
+<div class="viewcode-block" id="tbtncSileTBtrans.density_matrix"><a class="viewcode-back" href="../../../../api-generated/sisl.io.tbtrans.tbtncSileTBtrans.html#sisl.io.tbtrans.tbtncSileTBtrans.density_matrix">[docs]</a>    <span class="k">def</span> <span class="nf">density_matrix</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">E</span><span class="p">,</span> <span class="n">kavg</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">isc</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot; Density matrix from the Green function at energy `E`</span>
+
+<span class="sd">        The density matrix can be used to calculate the LDOS in real-space.</span>
+
+<span class="sd">        The :math:`\mathrm{LDOS}(E, \mathbf r)` may be calculated using the `~DensityMatrix.density`</span>
+<span class="sd">        routine. Basically the LDOS in real-space may be calculated as</span>
+
+<span class="sd">        .. math::</span>
+<span class="sd">            \rho_{\mathbf G}(E, \mathbf r) = -\frac{1}{\pi}\sum_{\nu\mu}\phi_\nu(\mathbf r)\phi_\mu(\mathbf r) \Im[\mathbf G_{\nu\mu}(E)]</span>
+
+<span class="sd">        where :math:`\phi` are the orbitals. Note that the broadening used in the TBtrans calculations</span>
+<span class="sd">        ensures the broadening of the density, i.e. it should not be necessary to perform energy</span>
+<span class="sd">        averages over the density matrices.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        E : float or int, optional</span>
+<span class="sd">           the energy or the energy index of density matrix. If an integer</span>
+<span class="sd">           is passed it is the index, otherwise the index corresponding to</span>
+<span class="sd">           ``Eindex(E)`` is used.</span>
+<span class="sd">        kavg: bool, int or array_like, optional</span>
+<span class="sd">           whether the returned density matrix is k-averaged, an explicit k-point</span>
+<span class="sd">           or a selection of k-points</span>
+<span class="sd">        isc: array_like, optional</span>
+<span class="sd">           the returned density matrix from unit-cell (``[None, None, None]``) to</span>
+<span class="sd">           the given supercell, the default is all density matrix elements for the supercell.</span>
+<span class="sd">           To only get unit cell orbital currents, pass ``[0, 0, 0]``.</span>
+
+<span class="sd">        See Also</span>
+<span class="sd">        --------</span>
+<span class="sd">        Adensity_matrix : spectral function density matrix</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        DensityMatrix: the object containing the Geometry and the density matrix elements</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">Adensity_matrix</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">E</span><span class="p">,</span> <span class="n">kavg</span><span class="p">,</span> <span class="n">isc</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="tbtncSileTBtrans.Adensity_matrix"><a class="viewcode-back" href="../../../../api-generated/sisl.io.tbtrans.tbtncSileTBtrans.html#sisl.io.tbtrans.tbtncSileTBtrans.Adensity_matrix">[docs]</a>    <span class="k">def</span> <span class="nf">Adensity_matrix</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">elec</span><span class="p">,</span> <span class="n">E</span><span class="p">,</span> <span class="n">kavg</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">isc</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot; Spectral function density matrix at energy `E`</span>
+
+<span class="sd">        The density matrix can be used to calculate the LDOS in real-space.</span>
+
+<span class="sd">        The :math:`\mathrm{LDOS}(E, \mathbf r)` may be calculated using the `~DensityMatrix.density`</span>
+<span class="sd">        routine. Basically the LDOS in real-space may be calculated as</span>
+
+<span class="sd">        .. math::</span>
+<span class="sd">            \rho_{\mathbf A_{\mathfrak{el}}}(E, \mathbf r) = \frac{1}{2\pi}\sum_{\nu\mu}\phi_\nu(\mathbf r)\phi_\mu(\mathbf r) \Re[\mathbf A_{\mathfrak{el}, \nu\mu}(E)]</span>
+
+<span class="sd">        where :math:`\phi` are the orbitals. Note that the broadening used in the TBtrans calculations</span>
+<span class="sd">        ensures the broadening of the density, i.e. it should not be necessary to perform energy</span>
+<span class="sd">        averages over the density matrices.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        elec: str or int</span>
+<span class="sd">           the electrode of originating electrons</span>
+<span class="sd">        E : float or int, optional</span>
+<span class="sd">           the energy or the energy index of density matrix. If an integer</span>
+<span class="sd">           is passed it is the index, otherwise the index corresponding to</span>
+<span class="sd">           ``Eindex(E)`` is used.</span>
+<span class="sd">        kavg: bool, int or array_like, optional</span>
+<span class="sd">           whether the returned density matrix is k-averaged, an explicit k-point</span>
+<span class="sd">           or a selection of k-points</span>
+<span class="sd">        isc: array_like, optional</span>
+<span class="sd">           the returned density matrix from unit-cell (``[None, None, None]``) to</span>
+<span class="sd">           the given supercell, the default is all density matrix elements for the supercell.</span>
+<span class="sd">           To only get unit cell orbital currents, pass ``[0, 0, 0]``.</span>
+
+<span class="sd">        See Also</span>
+<span class="sd">        --------</span>
+<span class="sd">        density_matrix : Green function density matrix</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        DensityMatrix: the object containing the Geometry and the density matrix elements</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">dm</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sparse_data</span><span class="p">(</span><span class="s1">&#39;DM&#39;</span><span class="p">,</span> <span class="n">elec</span><span class="p">,</span> <span class="n">E</span><span class="p">,</span> <span class="n">kavg</span><span class="p">,</span> <span class="n">isc</span><span class="p">)</span>
+        <span class="n">dm</span><span class="o">.</span><span class="n">eliminate_zeros</span><span class="p">()</span>
+        <span class="n">dm</span><span class="o">.</span><span class="n">sort_indices</span><span class="p">()</span>
+        <span class="c1"># Now create the density matrix object</span>
+        <span class="n">geom</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">read_geometry</span><span class="p">()</span>
+        <span class="n">DM</span> <span class="o">=</span> <span class="n">DensityMatrix</span><span class="p">(</span><span class="n">geom</span><span class="p">,</span> <span class="n">nnzpr</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">DM</span> <span class="o">+=</span> <span class="n">dm</span>
+        <span class="k">return</span> <span class="n">DM</span></div>
+
 <div class="viewcode-block" id="tbtncSileTBtrans.orbital_COOP"><a class="viewcode-back" href="../../../../api-generated/sisl.io.tbtrans.tbtncSileTBtrans.html#sisl.io.tbtrans.tbtncSileTBtrans.orbital_COOP">[docs]</a>    <span class="k">def</span> <span class="nf">orbital_COOP</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">E</span><span class="p">,</span> <span class="n">kavg</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">isc</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sa">r</span><span class="sd">&quot;&quot;&quot; Orbital COOP analysis of the Green function</span>
 
@@ -1565,8 +1653,8 @@
 <span class="sd">        atom_ACOHP : atomic COHP analysis of the spectral function</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">COOP</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sparse_data</span><span class="p">(</span><span class="s1">&#39;COOP&#39;</span><span class="p">,</span> <span class="n">elec</span><span class="p">,</span> <span class="n">E</span><span class="p">,</span> <span class="n">kavg</span><span class="p">,</span> <span class="n">isc</span><span class="p">)</span> <span class="o">*</span> <span class="n">eV2Ry</span>
-        <span class="n">COOP</span><span class="o">.</span><span class="n">sort_indices</span><span class="p">()</span>
         <span class="n">COOP</span><span class="o">.</span><span class="n">eliminate_zeros</span><span class="p">()</span>
+        <span class="n">COOP</span><span class="o">.</span><span class="n">sort_indices</span><span class="p">()</span>
         <span class="k">return</span> <span class="n">COOP</span></div>
 
 <div class="viewcode-block" id="tbtncSileTBtrans.atom_COOP_from_orbital"><a class="viewcode-back" href="../../../../api-generated/sisl.io.tbtrans.tbtncSileTBtrans.html#sisl.io.tbtrans.tbtncSileTBtrans.atom_COOP_from_orbital">[docs]</a>    <span class="k">def</span> <span class="nf">atom_COOP_from_orbital</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">COOP</span><span class="p">,</span> <span class="n">uc</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
@@ -1594,9 +1682,9 @@
 <span class="sd">        atom_COOP : atomic COOP analysis of the Green function</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">COOP</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sparse_data_orb_to_atom</span><span class="p">(</span><span class="n">COOP</span><span class="p">,</span> <span class="n">uc</span><span class="p">)</span>
+        <span class="n">COOP</span><span class="o">.</span><span class="n">eliminate_zeros</span><span class="p">()</span>
         <span class="n">COOP</span><span class="o">.</span><span class="n">sort_indices</span><span class="p">()</span>
         <span class="n">COOP</span><span class="o">.</span><span class="n">sum_duplicates</span><span class="p">()</span>
-        <span class="n">COOP</span><span class="o">.</span><span class="n">eliminate_zeros</span><span class="p">()</span>
         <span class="k">return</span> <span class="n">COOP</span></div>
 
 <div class="viewcode-block" id="tbtncSileTBtrans.atom_COOP"><a class="viewcode-back" href="../../../../api-generated/sisl.io.tbtrans.tbtncSileTBtrans.html#sisl.io.tbtrans.tbtncSileTBtrans.atom_COOP">[docs]</a>    <span class="k">def</span> <span class="nf">atom_COOP</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">E</span><span class="p">,</span> <span class="n">kavg</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">isc</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">uc</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
@@ -1752,8 +1840,8 @@
 <span class="sd">        atom_ACOOP : atomic COOP analysis of the spectral function</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">COHP</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sparse_data</span><span class="p">(</span><span class="s1">&#39;COHP&#39;</span><span class="p">,</span> <span class="n">elec</span><span class="p">,</span> <span class="n">E</span><span class="p">,</span> <span class="n">kavg</span><span class="p">,</span> <span class="n">isc</span><span class="p">)</span>
-        <span class="n">COHP</span><span class="o">.</span><span class="n">sort_indices</span><span class="p">()</span>
         <span class="n">COHP</span><span class="o">.</span><span class="n">eliminate_zeros</span><span class="p">()</span>
+        <span class="n">COHP</span><span class="o">.</span><span class="n">sort_indices</span><span class="p">()</span>
         <span class="k">return</span> <span class="n">COHP</span></div>
 
 <div class="viewcode-block" id="tbtncSileTBtrans.atom_COHP_from_orbital"><a class="viewcode-back" href="../../../../api-generated/sisl.io.tbtrans.tbtncSileTBtrans.html#sisl.io.tbtrans.tbtncSileTBtrans.atom_COHP_from_orbital">[docs]</a>    <span class="k">def</span> <span class="nf">atom_COHP_from_orbital</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">COHP</span><span class="p">,</span> <span class="n">uc</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
@@ -1936,8 +2024,9 @@
         <span class="n">prnt</span><span class="p">(</span><span class="s2">&quot;  - atoms with DOS (fortran indices):&quot;</span><span class="p">)</span>
         <span class="n">prnt</span><span class="p">(</span><span class="s2">&quot;     &quot;</span> <span class="o">+</span> <span class="n">list2str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">a_dev</span> <span class="o">+</span> <span class="mi">1</span><span class="p">))</span>
         <span class="n">truefalse</span><span class="p">(</span><span class="s1">&#39;DOS&#39;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">variables</span><span class="p">,</span> <span class="s2">&quot;DOS Green function&quot;</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;TBT.DOS.Gf&#39;</span><span class="p">])</span>
-        <span class="n">truefalse</span><span class="p">(</span><span class="s1">&#39;COOP&#39;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">variables</span><span class="p">,</span> <span class="s2">&quot;COOP Green function&quot;</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;TBT.COOP.Gf&#39;</span><span class="p">])</span>
-        <span class="n">truefalse</span><span class="p">(</span><span class="s1">&#39;COHP&#39;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">variables</span><span class="p">,</span> <span class="s2">&quot;COHP Green function&quot;</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;TBT.COHP.Gf&#39;</span><span class="p">])</span>
+        <span class="n">truefalse</span><span class="p">(</span><span class="s1">&#39;DM&#39;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">variables</span><span class="p">,</span> <span class="s2">&quot;Density matrix Green function&quot;</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;TBT.DOS.Gf&#39;</span><span class="p">,</span> <span class="s1">&#39;TBT.DM.Gf&#39;</span><span class="p">])</span>
+        <span class="n">truefalse</span><span class="p">(</span><span class="s1">&#39;COOP&#39;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">variables</span><span class="p">,</span> <span class="s2">&quot;COOP Green function&quot;</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;TBT.DOS.Gf&#39;</span><span class="p">,</span> <span class="s1">&#39;TBT.COOP.Gf&#39;</span><span class="p">])</span>
+        <span class="n">truefalse</span><span class="p">(</span><span class="s1">&#39;COHP&#39;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">variables</span><span class="p">,</span> <span class="s2">&quot;COHP Green function&quot;</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;TBT.DOS.Gf&#39;</span><span class="p">,</span> <span class="s1">&#39;TBT.COHP.Gf&#39;</span><span class="p">])</span>
         <span class="k">if</span> <span class="n">elec</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">elecs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">elecs</span>
         <span class="k">else</span><span class="p">:</span>
@@ -1960,8 +2049,9 @@
                 <span class="n">truefalse</span><span class="p">(</span><span class="s1">&#39;DOS&#39;</span> <span class="ow">in</span> <span class="n">gelec</span><span class="o">.</span><span class="n">variables</span><span class="p">,</span> <span class="s2">&quot;DOS bulk&quot;</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;TBT.DOS.Elecs&#39;</span><span class="p">])</span>
                 <span class="n">truefalse</span><span class="p">(</span><span class="s1">&#39;ADOS&#39;</span> <span class="ow">in</span> <span class="n">gelec</span><span class="o">.</span><span class="n">variables</span><span class="p">,</span> <span class="s2">&quot;DOS spectral&quot;</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;TBT.DOS.A&#39;</span><span class="p">])</span>
                 <span class="n">truefalse</span><span class="p">(</span><span class="s1">&#39;J&#39;</span> <span class="ow">in</span> <span class="n">gelec</span><span class="o">.</span><span class="n">variables</span><span class="p">,</span> <span class="s2">&quot;orbital-current&quot;</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;TBT.DOS.A&#39;</span><span class="p">,</span> <span class="s1">&#39;TBT.Current.Orb&#39;</span><span class="p">])</span>
-                <span class="n">truefalse</span><span class="p">(</span><span class="s1">&#39;COOP&#39;</span> <span class="ow">in</span> <span class="n">gelec</span><span class="o">.</span><span class="n">variables</span><span class="p">,</span> <span class="s2">&quot;COOP spectral&quot;</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;TBT.COOP.A&#39;</span><span class="p">])</span>
-                <span class="n">truefalse</span><span class="p">(</span><span class="s1">&#39;COHP&#39;</span> <span class="ow">in</span> <span class="n">gelec</span><span class="o">.</span><span class="n">variables</span><span class="p">,</span> <span class="s2">&quot;COHP spectral&quot;</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;TBT.COHP.A&#39;</span><span class="p">])</span>
+                <span class="n">truefalse</span><span class="p">(</span><span class="s1">&#39;DM&#39;</span> <span class="ow">in</span> <span class="n">gelec</span><span class="o">.</span><span class="n">variables</span><span class="p">,</span> <span class="s2">&quot;Density matrix spectral&quot;</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;TBT.DOS.A&#39;</span><span class="p">,</span> <span class="s1">&#39;TBT.DM.A&#39;</span><span class="p">])</span>
+                <span class="n">truefalse</span><span class="p">(</span><span class="s1">&#39;COOP&#39;</span> <span class="ow">in</span> <span class="n">gelec</span><span class="o">.</span><span class="n">variables</span><span class="p">,</span> <span class="s2">&quot;COOP spectral&quot;</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;TBT.DOS.A&#39;</span><span class="p">,</span> <span class="s1">&#39;TBT.COOP.A&#39;</span><span class="p">])</span>
+                <span class="n">truefalse</span><span class="p">(</span><span class="s1">&#39;COHP&#39;</span> <span class="ow">in</span> <span class="n">gelec</span><span class="o">.</span><span class="n">variables</span><span class="p">,</span> <span class="s2">&quot;COHP spectral&quot;</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;TBT.DOS.A&#39;</span><span class="p">,</span> <span class="s1">&#39;TBT.COHP.A&#39;</span><span class="p">])</span>
                 <span class="n">truefalse</span><span class="p">(</span><span class="s1">&#39;T&#39;</span> <span class="ow">in</span> <span class="n">gelec</span><span class="o">.</span><span class="n">variables</span><span class="p">,</span> <span class="s2">&quot;transmission bulk&quot;</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;TBT.T.Bulk&#39;</span><span class="p">])</span>
                 <span class="n">truefalse</span><span class="p">(</span><span class="n">elec</span> <span class="o">+</span> <span class="s1">&#39;.T&#39;</span> <span class="ow">in</span> <span class="n">gelec</span><span class="o">.</span><span class="n">variables</span><span class="p">,</span> <span class="s2">&quot;transmission out&quot;</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;TBT.T.Out&#39;</span><span class="p">])</span>
                 <span class="n">truefalse</span><span class="p">(</span><span class="n">elec</span> <span class="o">+</span> <span class="s1">&#39;.C&#39;</span> <span class="ow">in</span> <span class="n">gelec</span><span class="o">.</span><span class="n">variables</span><span class="p">,</span> <span class="s2">&quot;transmission out correction&quot;</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;TBT.T.Out&#39;</span><span class="p">])</span>
