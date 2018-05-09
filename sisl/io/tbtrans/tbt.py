@@ -204,6 +204,28 @@ class tbtncSileTBtrans(_devncSileTBtrans):
                     elecs.append(tvar)
         return elecs
 
+    def n_btd(self, elec=None):
+        """ Number of blocks in the BTD partioning
+
+        Parameters
+        ----------
+        elec : str or int, optional
+           if None the number of blocks in the device region BTD matrix. Else
+           the number of BTD blocks in the electrode down-folding.
+        """
+        return len(self._dimension('n_btd', self._elec(elec)))
+
+    def btd(self, elec=None):
+        """ Block-sizes for the BTD method
+
+        Parameters
+        ----------
+        elec : str or int, optional
+           if None the number of blocks in the device region BTD matrix. Else
+           the number of BTD blocks in the electrode down-folding.
+        """
+        return self._value('btd', self._elec(elec))
+
     def chemical_potential(self, elec):
         """ Return the chemical potential associated with the electrode `elec` """
         return self._value('mu', self._elec(elec))[0] * Ry2eV
@@ -217,12 +239,19 @@ class tbtncSileTBtrans(_devncSileTBtrans):
         """ Return temperature of the electrode electronic distribution in eV """
         return self._value('kT', self._elec(elec))[0] * Ry2eV
 
-    def eta(self, elec):
-        """ The imaginary part used when calculating the self-energies in eV """
+    def eta(self, elec=None):
+        """ The imaginary part used when calculating the self-energies in eV (or for the device
+
+        Parameters
+        ----------
+        elec : str, int, optional
+           electrode to extract the eta value from. If not specified (or None) the device
+           region eta will be returned.
+        """
         try:
             return self._value('eta', self._elec(elec))[0] * Ry2eV
         except:
-            return 0.
+            return 0. # unknown!
 
     def transmission(self, elec_from=0, elec_to=1, kavg=True):
         """ Transmission from `elec_from` to `elec_to`.
@@ -860,7 +889,7 @@ class tbtncSileTBtrans(_devncSileTBtrans):
            whether the returned data are only in the unit-cell.
            If ``True`` this will return a sparse matrix of ``shape = (self.na, self.na)``,
            else, it will return a sparse matrix of ``shape = (self.na, self.na * self.n_s)``.
-           One may figure out the connections via `Geometry.sc_index`.
+           One may figure out the connections via `~sisl.geometry.Geometry.sc_index`.
         """
         geom = self.geom
         na = geom.na
@@ -922,12 +951,24 @@ class tbtncSileTBtrans(_devncSileTBtrans):
         # I.e. sometimes we want to remove negative values, etc.
         return Dab
 
-    def orbital_current(self, elec, E, kavg=True, isc=None, take='all'):
-        """ Orbital current originating from `elec` as a sparse matrix
+    def orbital_current(self, elec, E, kavg=True, isc=None, only='all'):
+        r""" Orbital current originating from `elec` as a sparse matrix
 
         This will return a sparse matrix, see ``scipy.sparse.csr_matrix`` for details.
         Each matrix element of the sparse matrix corresponds to the orbital indices of the
         underlying geometry.
+
+        When requesting orbital-currents it is vital to consider how the data needs to be analysed
+        before extracting the data. For instance, if only local currents are interesting one should
+        use ``only='+'``. While if one is interested in the transmission between subset of orbitals,
+        ``only='all'`` is the correct method.
+
+        For inexperienced users it is adviced to try out all three values of ``only`` to ensure
+        the correct physics is obtained.
+
+        This becomes even more important when the orbital currents are calculated with magnetic
+        fields. With :math:`\mathbf B` fields local current loops may form and current does
+        not necessarily flow along the transport direction.
 
         Parameters
         ----------
@@ -944,7 +985,7 @@ class tbtncSileTBtrans(_devncSileTBtrans):
            the returned bond currents from the unit-cell (``[None, None, None]``) to
            the given supercell, the default is all orbital currents for the supercell.
            To only get unit cell orbital currents, pass ``[0, 0, 0]``.
-        take : {'all', '+', '-'}
+        only : {'all', '+', '-'}
            which orbital currents to return, all, positive or negative values only.
            Default to ``'all'`` because it can then be used in the subsequent default
            arguments for `bond_current_from_orbital` and `atom_current_from_orbital`.
@@ -964,12 +1005,12 @@ class tbtncSileTBtrans(_devncSileTBtrans):
         """
         J = self._sparse_data('J', elec, E, kavg, isc)
 
-        if take == '+':
-            J.data = np.where(J.data > 0, J.data, 0).astype(J.dtype, copy=False)
-        elif take == '-':
-            J.data = np.where(J.data > 0, 0, J.data).astype(J.dtype, copy=False)
-        elif take != 'all':
-            raise ValueError(self.__class__.__name__ + '.orbital_current "take" keyword has '
+        if only == '+':
+            J.data[J.data < 0] = 0
+        elif only == '-':
+            J.data[J.data > 0] = 0
+        elif only != 'all':
+            raise ValueError(self.__class__.__name__ + '.orbital_current "only" keyword has '
                              'wrong value ["all", "+", "-"] allowed.')
 
         # We will always remove the zeroes and sort the indices... (they should be sorted anyways)
@@ -978,7 +1019,7 @@ class tbtncSileTBtrans(_devncSileTBtrans):
 
         return J
 
-    def bond_current_from_orbital(self, Jij, sum='+', uc=False):
+    def bond_current_from_orbital(self, Jij, only='+', uc=False):
         r""" Bond-current between atoms (sum of orbital currents) from an external orbital current
 
         Conversion routine from orbital currents into bond currents.
@@ -990,18 +1031,18 @@ class tbtncSileTBtrans(_devncSileTBtrans):
 
         where if
 
-        * ``sum='+'``:
-          only :math:`J_{\nu\mu} > 0` are summed,
-        * ``sum='-'``:
-          only :math:`J_{\nu\mu} < 0` are summed,
-        * ``sum='all'``:
-          all :math:`J_{\nu\mu}` are summed.
+        * ``only='+'``:
+          only :math:`J_{\nu\mu} > 0` are summed onto the corresponding atom,
+        * ``only='-'``:
+          only :math:`J_{\nu\mu} < 0` are summed onto the corresponding atom,
+        * ``only='all'``:
+          all :math:`J_{\nu\mu}` are summed onto the corresponding atom.
 
         Parameters
         ----------
         Jij : scipy.sparse.csr_matrix
            the orbital currents as retrieved from `orbital_current`
-        sum : {'+', 'all', '-'}
+        only : {'+', '-', 'all'}
            If "+" is supplied only the positive orbital currents are used,
            for "-", only the negative orbital currents are used,
            else return both.
@@ -1009,7 +1050,7 @@ class tbtncSileTBtrans(_devncSileTBtrans):
            whether the returned bond-currents are only in the unit-cell.
            If ``True`` this will return a sparse matrix of ``shape = (self.na, self.na)``,
            else, it will return a sparse matrix of ``shape = (self.na, self.na * self.n_s)``.
-           One may figure out the connections via `Geometry.sc_index`.
+           One may figure out the connections via `~sisl.geometry.Geometry.sc_index`.
 
         Examples
         --------
@@ -1026,12 +1067,12 @@ class tbtncSileTBtrans(_devncSileTBtrans):
         """
         Jab = self._sparse_data_orb_to_atom(Jij, uc)
 
-        if sum == '+':
-            Jab.data = np.where(Jab.data > 0, Jab.data, 0).astype(Jab.dtype, copy=False)
-        elif sum == '-':
-            Jab.data = np.where(Jab.data > 0, 0, Jab.data).astype(Jab.dtype, copy=False)
-        elif sum != 'all':
-            raise ValueError(self.__class__.__name__ + '.bond_current_from_orbital "sum" keyword has '
+        if only == '+':
+            Jab.data[Jab.data < 0] = 0
+        elif only == '-':
+            Jab.data[Jab.data > 0] = 0
+        elif only != 'all':
+            raise ValueError(self.__class__.__name__ + '.bond_current_from_orbital "only" keyword has '
                              'wrong value ["+", "-", "all"] allowed.')
 
         # Do in-place operations by removing all the things not required
@@ -1041,7 +1082,7 @@ class tbtncSileTBtrans(_devncSileTBtrans):
 
         return Jab
 
-    def bond_current(self, elec, E, kavg=True, isc=None, sum='+', uc=False):
+    def bond_current(self, elec, E, kavg=True, isc=None, only='+', uc=False):
         """ Bond-current between atoms (sum of orbital currents)
 
         Short hand function for calling `orbital_current` and `bond_current_from_orbital`.
@@ -1061,19 +1102,19 @@ class tbtncSileTBtrans(_devncSileTBtrans):
            the returned bond currents from the unit-cell (``[None, None, None]``) (default) to
            the given supercell. If ``[None, None, None]`` is passed all
            bond currents are returned.
-        sum : {'+', 'all', '-'}
+        only : {'+', '-', 'all'}
            If "+" is supplied only the positive orbital currents are used,
            for "-", only the negative orbital currents are used,
-           else return the sum of both.
+           else return the sum of both. Please see discussion in `orbital_current`.
         uc : bool, optional
            whether the returned bond-currents are only in the unit-cell.
            If `True` this will return a sparse matrix of ``shape = (self.na, self.na)``,
            else, it will return a sparse matrix of ``shape = (self.na, self.na * self.n_s)``.
-           One may figure out the connections via `Geometry.sc_index`.
+           One may figure out the connections via `~sisl.geometry.Geometry.sc_index`.
 
         Examples
         --------
-        >>> Jij = tbt.orbital_current(0, -1.0) # orbital current @ E = -1 eV originating from electrode ``0`` # doctest: +SKIP
+        >>> Jij = tbt.orbital_current(0, -1.0, only='+') # orbital current @ E = -1 eV originating from electrode ``0`` # doctest: +SKIP
         >>> Jab1 = tbt.bond_current_from_orbital(Jij) # doctest: +SKIP
         >>> Jab2 = tbt.bond_current(0, -1.0) # doctest: +SKIP
         >>> Jab1 == Jab2 # doctest: +SKIP
@@ -1087,9 +1128,9 @@ class tbtncSileTBtrans(_devncSileTBtrans):
         vector_current : an atomic field current for each atom (Cartesian representation of bond-currents)
         """
         elec = self._elec(elec)
-        Jij = self.orbital_current(elec, E, kavg, isc)
+        Jij = self.orbital_current(elec, E, kavg, isc, only=only)
 
-        return self.bond_current_from_orbital(Jij, sum=sum, uc=uc)
+        return self.bond_current_from_orbital(Jij, uc=uc, only=only)
 
     def atom_current_from_orbital(self, Jij, activity=True):
         r""" Atomic current of atoms by passing the orbital current
@@ -1132,14 +1173,14 @@ class tbtncSileTBtrans(_devncSileTBtrans):
         >>> Ja = tbt.atom_current_from_orbital(Jij) # doctest: +SKIP
         """
         # Create the bond-currents with all summations
-        Jab = self.bond_current_from_orbital(Jij, sum='all')
+        Jab = self.bond_current_from_orbital(Jij, only='all')
         # We take the absolute and sum it over all connecting atoms
         Ja = np.asarray(abs(Jab).sum(1)).ravel()
 
         if activity:
             # Calculate the absolute summation of all orbital
             # currents and transfer it to a bond-current
-            Jab = self.bond_current_from_orbital(abs(Jij), sum='all')
+            Jab = self.bond_current_from_orbital(abs(Jij), only='all')
 
             # Sum to make it per atom, it is already the absolute
             Jo = np.asarray(Jab.sum(1)).ravel()
@@ -1239,7 +1280,7 @@ class tbtncSileTBtrans(_devncSileTBtrans):
 
         return Ja
 
-    def vector_current(self, elec, E, kavg=True, sum='+'):
+    def vector_current(self, elec, E, kavg=True, only='+'):
         """ Vector for each atom describing the *mean* path for the current travelling through the atom
 
         See `vector_current_from_bond` for details.
@@ -1255,7 +1296,7 @@ class tbtncSileTBtrans(_devncSileTBtrans):
         kavg: bool, int or array_like, optional
            whether the returned vector current is k-averaged, an explicit k-point
            or a selection of k-points
-        sum : {'+', '-', 'all'}
+        only : {'+', '-', 'all'}
            By default only sum *outgoing* vector currents (``'+'``).
            The *incoming* vector currents may be retrieved by ``'-'``, while the
            average incoming and outgoing direction can be obtained with ``'all'``.
@@ -1276,9 +1317,9 @@ class tbtncSileTBtrans(_devncSileTBtrans):
         elec = self._elec(elec)
         # Imperative that we use the entire supercell structure to
         # retain vectors crossing the boundaries
-        Jab = self.bond_current(elec, E, kavg, sum=sum)
+        Jab = self.bond_current(elec, E, kavg, only=only)
 
-        if sum == 'all':
+        if only == 'all':
             # When we divide by two one can *always* compare the bulk
             # vector currents using either of the sum-rules.
             # I.e. it will be much easier to distinguish differences
@@ -1287,12 +1328,12 @@ class tbtncSileTBtrans(_devncSileTBtrans):
 
         return self.vector_current_from_bond(Jab)
 
-    def density_matrix(self, E, kavg=True, isc=None):
-        r""" Density matrix from the Green function at energy `E`
+    def density_matrix(self, E, kavg=True, isc=None, geometry=None):
+        r""" Density matrix from the Green function at energy `E` (1/eV)
 
         The density matrix can be used to calculate the LDOS in real-space.
 
-        The :math:`\mathrm{LDOS}(E, \mathbf r)` may be calculated using the `~DensityMatrix.density`
+        The :math:`\mathrm{LDOS}(E, \mathbf r)` may be calculated using the `~sisl.physics.DensityMatrix.density`
         routine. Basically the LDOS in real-space may be calculated as
 
         .. math::
@@ -1304,7 +1345,7 @@ class tbtncSileTBtrans(_devncSileTBtrans):
 
         Parameters
         ----------
-        E : float or int, optional
+        E : float or int
            the energy or the energy index of density matrix. If an integer
            is passed it is the index, otherwise the index corresponding to
            ``Eindex(E)`` is used.
@@ -1315,6 +1356,12 @@ class tbtncSileTBtrans(_devncSileTBtrans):
            the returned density matrix from unit-cell (``[None, None, None]``) to
            the given supercell, the default is all density matrix elements for the supercell.
            To only get unit cell orbital currents, pass ``[0, 0, 0]``.
+        geometry: Geometry, optional
+           geometry that will be associated with the density matrix. By default the
+           geometry contained in this file will be used. However, then the
+           atomic species are probably incorrect, nor will the orbitals contain
+           the basis-set information required to generate the required density
+           in real-space.
 
         See Also
         --------
@@ -1324,14 +1371,14 @@ class tbtncSileTBtrans(_devncSileTBtrans):
         -------
         DensityMatrix: the object containing the Geometry and the density matrix elements
         """
-        return self.Adensity_matrix(None, E, kavg, isc)
+        return self.Adensity_matrix(None, E, kavg, isc, geometry=geometry)
 
-    def Adensity_matrix(self, elec, E, kavg=True, isc=None):
-        r""" Spectral function density matrix at energy `E`
+    def Adensity_matrix(self, elec, E, kavg=True, isc=None, geometry=None):
+        r""" Spectral function density matrix at energy `E` (1/eV)
 
         The density matrix can be used to calculate the LDOS in real-space.
 
-        The :math:`\mathrm{LDOS}(E, \mathbf r)` may be calculated using the `~DensityMatrix.density`
+        The :math:`\mathrm{LDOS}(E, \mathbf r)` may be calculated using the `~sisl.physics.DensityMatrix.density`
         routine. Basically the LDOS in real-space may be calculated as
 
         .. math::
@@ -1345,7 +1392,7 @@ class tbtncSileTBtrans(_devncSileTBtrans):
         ----------
         elec: str or int
            the electrode of originating electrons
-        E : float or int, optional
+        E : float or int
            the energy or the energy index of density matrix. If an integer
            is passed it is the index, otherwise the index corresponding to
            ``Eindex(E)`` is used.
@@ -1356,6 +1403,12 @@ class tbtncSileTBtrans(_devncSileTBtrans):
            the returned density matrix from unit-cell (``[None, None, None]``) to
            the given supercell, the default is all density matrix elements for the supercell.
            To only get unit cell orbital currents, pass ``[0, 0, 0]``.
+        geometry: Geometry, optional
+           geometry that will be associated with the density matrix. By default the
+           geometry contained in this file will be used. However, then the
+           atomic species are probably incorrect, nor will the orbitals contain
+           the basis-set information required to generate the required density
+           in real-space.
 
         See Also
         --------
@@ -1365,12 +1418,17 @@ class tbtncSileTBtrans(_devncSileTBtrans):
         -------
         DensityMatrix: the object containing the Geometry and the density matrix elements
         """
-        dm = self._sparse_data('DM', elec, E, kavg, isc)
+        dm = self._sparse_data('DM', elec, E, kavg, isc) * eV2Ry
         dm.eliminate_zeros()
         dm.sort_indices()
         # Now create the density matrix object
         geom = self.read_geometry()
-        DM = DensityMatrix(geom, nnzpr=1)
+        if geometry is None:
+            DM = DensityMatrix(geom, nnzpr=1)
+        else:
+            if geom.no != geometry.no:
+                raise ValueError(self.__class__.__name__ + '.density_matrix requires input geometry to contain the correct number of orbitals. Please correct input!')
+            DM = DensityMatrix(geometry, nnzpr=1)
         DM += dm
         return DM
 
@@ -1384,13 +1442,13 @@ class tbtncSileTBtrans(_devncSileTBtrans):
         The COOP analysis can be written as:
 
         .. math::
-            \mathrm{COOP}^{\mathbf G}_{\nu\mu} &= \frac{-1}{2\pi}
+            \mathrm{COOP}^{\mathbf G}_{\nu\mu} = \frac{-1}{2\pi}
               \Im\big[(\mathbf G - \mathbf G^\dagger)_{\nu\mu} \mathbf S_{\mu\nu} \big]
 
         The sum of the COOP DOS is equal to the DOS:
 
         .. math::
-            \mathrm{DOS}_{\nu} &= \sum_\mu \mathrm{COOP}^{\mathbf G}_{\nu\mu}
+            \mathrm{DOS}_{\nu} = \sum_\mu \mathrm{COOP}^{\mathbf G}_{\nu\mu}
 
         Parameters
         ----------
@@ -1436,12 +1494,12 @@ class tbtncSileTBtrans(_devncSileTBtrans):
         The COOP analysis can be written as:
 
         .. math::
-            \mathrm{COOP}^{\mathbf A}_{\nu\mu} &= \frac{1}{2\pi} \Re\big[\mathbf A_{\nu\mu} \mathbf S_{\mu\nu} \big]
+            \mathrm{COOP}^{\mathbf A}_{\nu\mu} = \frac{1}{2\pi} \Re\big[\mathbf A_{\nu\mu} \mathbf S_{\mu\nu} \big]
 
         The sum of the COOP DOS is equal to the DOS:
 
         .. math::
-            \mathrm{ADOS}_{\nu} &= \sum_\mu \mathrm{COOP}^{\mathbf A}_{\nu\mu}
+            \mathrm{ADOS}_{\nu} = \sum_\mu \mathrm{COOP}^{\mathbf A}_{\nu\mu}
 
         Parameters
         ----------
@@ -1498,7 +1556,7 @@ class tbtncSileTBtrans(_devncSileTBtrans):
            whether the returned COOP are only in the unit-cell.
            If ``True`` this will return a sparse matrix of ``shape = (self.na, self.na)``,
            else, it will return a sparse matrix of ``shape = (self.na, self.na * self.n_s)``.
-           One may figure out the connections via `Geometry.sc_index`.
+           One may figure out the connections via `~sisl.geometry.Geometry.sc_index`.
 
         See Also
         --------
@@ -1532,7 +1590,7 @@ class tbtncSileTBtrans(_devncSileTBtrans):
            whether the returned COOP are only in the unit-cell.
            If ``True`` this will return a sparse matrix of ``shape = (self.na, self.na)``,
            else, it will return a sparse matrix of ``shape = (self.na, self.na * self.n_s)``.
-           One may figure out the connections via `Geometry.sc_index`.
+           One may figure out the connections via `~sisl.geometry.Geometry.sc_index`.
 
         See Also
         --------
@@ -1565,7 +1623,7 @@ class tbtncSileTBtrans(_devncSileTBtrans):
            whether the returned COOP are only in the unit-cell.
            If ``True`` this will return a sparse matrix of ``shape = (self.na, self.na)``,
            else, it will return a sparse matrix of ``shape = (self.na, self.na * self.n_s)``.
-           One may figure out the connections via `Geometry.sc_index`.
+           One may figure out the connections via `~sisl.geometry.Geometry.sc_index`.
 
         See Also
         --------
@@ -1587,7 +1645,7 @@ class tbtncSileTBtrans(_devncSileTBtrans):
         The COHP analysis can be written as:
 
         .. math::
-            \mathrm{COHP}^{\mathbf G}_{\nu\mu} &= \frac{-1}{2\pi}
+            \mathrm{COHP}^{\mathbf G}_{\nu\mu} = \frac{-1}{2\pi}
               \Im\big[(\mathbf G - \mathbf G^\dagger)_{\nu\mu} \mathbf H_{\mu\nu} \big]
 
         Parameters
@@ -1633,7 +1691,7 @@ class tbtncSileTBtrans(_devncSileTBtrans):
         The COHP analysis can be written as:
 
         .. math::
-            \mathrm{COHP}^{\mathbf A}_{\nu\mu} &= \frac{1}{2\pi} \Re\big[\mathbf A_{\nu\mu}
+            \mathrm{COHP}^{\mathbf A}_{\nu\mu} = \frac{1}{2\pi} \Re\big[\mathbf A_{\nu\mu}
                 \mathbf H_{\nu\mu} \big]
 
         Parameters
@@ -1685,7 +1743,7 @@ class tbtncSileTBtrans(_devncSileTBtrans):
            whether the returned COHP are only in the unit-cell.
            If ``True`` this will return a sparse matrix of ``shape = (self.na, self.na)``,
            else, it will return a sparse matrix of ``shape = (self.na, self.na * self.n_s)``.
-           One may figure out the connections via `Geometry.sc_index`.
+           One may figure out the connections via `~sisl.geometry.Geometry.sc_index`.
 
         See Also
         --------
@@ -1715,7 +1773,7 @@ class tbtncSileTBtrans(_devncSileTBtrans):
            whether the returned COHP are only in the unit-cell.
            If ``True`` this will return a sparse matrix of ``shape = (self.na, self.na)``,
            else, it will return a sparse matrix of ``shape = (self.na, self.na * self.n_s)``.
-           One may figure out the connections via `Geometry.sc_index`.
+           One may figure out the connections via `~sisl.geometry.Geometry.sc_index`.
 
         See Also
         --------
@@ -1748,7 +1806,7 @@ class tbtncSileTBtrans(_devncSileTBtrans):
            whether the returned COHP are only in the unit-cell.
            If ``True`` this will return a sparse matrix of ``shape = (self.na, self.na)``,
            else, it will return a sparse matrix of ``shape = (self.na, self.na * self.n_s)``.
-           One may figure out the connections via `Geometry.sc_index`.
+           One may figure out the connections via `~sisl.geometry.Geometry.sc_index`.
 
         See Also
         --------
@@ -1846,8 +1904,10 @@ class tbtncSileTBtrans(_devncSileTBtrans):
             prnt("     {:.5f} -- {:.5f} eV  [{:.3f} meV]".format(Em, EM, dEm))
         else:
             prnt("     {:.5f} -- {:.5f} eV  [{:.3f} -- {:.3f} meV]".format(Em, EM, dEm, dEM))
+        prnt("  - imaginary part (eta): {:.4f} meV".format(self.eta() * 1e3))
         prnt("  - atoms with DOS (fortran indices):")
         prnt("     " + list2str(self.a_dev + 1))
+        prnt("  - number of BTD blocks: {}".format(self.n_btd()))
         truefalse('DOS' in self.variables, "DOS Green function", ['TBT.DOS.Gf'])
         truefalse('DM' in self.variables, "Density matrix Green function", ['TBT.DOS.Gf', 'TBT.DM.Gf'])
         truefalse('COOP' in self.variables, "COOP Green function", ['TBT.DOS.Gf', 'TBT.COOP.Gf'])
@@ -1866,11 +1926,12 @@ class tbtncSileTBtrans(_devncSileTBtrans):
                     bloch = [0] * 3
                 prnt()
                 prnt("Electrode: {}".format(elec))
+                prnt("  - number of BTD blocks: {}".format(self.n_btd(elec)))
                 prnt("  - Bloch: [{}, {}, {}]".format(*bloch))
                 gelec = self.groups[elec]
                 prnt("  - chemical potential: {:.4f} eV".format(self.chemical_potential(elec)))
                 prnt("  - electronic temperature: {:.2f} K".format(self.electronic_temperature(elec)))
-                prnt("  - imaginary part: {:.4f} meV".format(self.eta(elec) * 1e3))
+                prnt("  - imaginary part (eta): {:.4f} meV".format(self.eta(elec) * 1e3))
                 truefalse('DOS' in gelec.variables, "DOS bulk", ['TBT.DOS.Elecs'])
                 truefalse('ADOS' in gelec.variables, "DOS spectral", ['TBT.DOS.A'])
                 truefalse('J' in gelec.variables, "orbital-current", ['TBT.DOS.A', 'TBT.Current.Orb'])
@@ -2107,7 +2168,7 @@ class tbtncSileTBtrans(_devncSileTBtrans):
                 data = ns._tbt.transmission(e1, e2, kavg=ns._krng)[ns._Erng]
                 data.shape = (-1,)
                 ns._data.append(data)
-                ns._data_header.append('T:{}-{}[G]'.format(e1, e2))
+                ns._data_header.append('T:{}-{}[G0]'.format(e1, e2))
                 ns._data_description.append('Column {} is transmission from {} to {}'.format(len(ns._data), e1, e2))
         p.add_argument('-T', '--transmission', nargs=2, metavar=('ELEC1', 'ELEC2'),
                        action=DataT,
@@ -2133,7 +2194,7 @@ class tbtncSileTBtrans(_devncSileTBtrans):
                 data = ns._tbt.transmission_bulk(e, kavg=ns._krng)[ns._Erng]
                 data.shape = (-1,)
                 ns._data.append(data)
-                ns._data_header.append('BT:{}[G]'.format(e))
+                ns._data_header.append('BT:{}[G0]'.format(e))
                 ns._data_description.append('Column {} is bulk-transmission'.format(len(ns._data)))
         p.add_argument('-BT', '--transmission-bulk', nargs=1, metavar='ELEC',
                        action=DataBT,
@@ -2219,7 +2280,7 @@ class tbtncSileTBtrans(_devncSileTBtrans):
                 neig = data.shape[-1]
                 for eig in range(neig):
                     ns._data.append(data[ns._Erng, ..., eig].flatten())
-                    ns._data_header.append('Teig({}):{}-{}[G]'.format(eig+1, e1, e2))
+                    ns._data_header.append('Teig({}):{}-{}[G0]'.format(eig+1, e1, e2))
                     ns._data_description.append('Column {} is transmission eigenvalues from electrode {} to {}'.format(len(ns._data), e1, e2))
         p.add_argument('--transmission-eig', '-Teig', nargs=2, metavar=('ELEC1', 'ELEC2'),
                        action=DataTEig,
@@ -2279,8 +2340,11 @@ class tbtncSileTBtrans(_devncSileTBtrans):
         class AVOut(argparse.Action):
 
             def __call__(self, parser, ns, value, option_string=None):
-                ns._tbt.write_tbtav()
-        p.add_argument('--tbt-av', action=AVOut, nargs=0,
+                if value is None:
+                    ns._tbt.write_tbtav()
+                else:
+                    ns._tbt.write_tbtav(value)
+        p.add_argument('--tbt-av', action=AVOut, nargs='?', default=None,
                        help='Create "{0}" with the k-averaged quantities of this file.'.format(self.file.replace('TBT.nc', 'TBT.AV.nc')))
 
         class Plot(argparse.Action):
