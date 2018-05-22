@@ -144,11 +144,11 @@ def test_1_graphene_all_content(sisl_files):
         assert np.all(tbt.transmission(left, right, ik) + 1e-7 >= tbt.transmission_eig(left, right, ik).sum(-1))
         assert np.all(tbt.transmission(right, left, ik) + 1e-7 >= tbt.transmission_eig(right, left, ik).sum(-1))
         assert np.allclose(tbt.DOS(kavg=ik), tbt.ADOS(left, kavg=ik) + tbt.ADOS(right, kavg=ik))
-        assert np.allclose(tbt.DOS(E=0.2, kavg=ik), tbt.ADOS(left, E=0.2, kavg=ik) + tbt.ADOS(right, E=0.2, kavg=ik))
+        assert np.allclose(tbt.DOS(E=0.195, kavg=ik), tbt.ADOS(left, E=0.195, kavg=ik) + tbt.ADOS(right, E=0.195, kavg=ik))
 
     kavg = list(range(10))
     assert np.allclose(tbt.DOS(kavg=kavg), tbt.ADOS(left, kavg=kavg) + tbt.ADOS(right, kavg=kavg))
-    assert np.allclose(tbt.DOS(E=0.2, kavg=kavg), tbt.ADOS(left, E=0.2, kavg=kavg) + tbt.ADOS(right, E=0.2, kavg=kavg))
+    assert np.allclose(tbt.DOS(E=0.195, kavg=kavg), tbt.ADOS(left, E=0.195, kavg=kavg) + tbt.ADOS(right, E=0.195, kavg=kavg))
 
     # Check that norm returns correct values
     assert tbt.norm() == 1
@@ -255,9 +255,19 @@ def test_1_graphene_all_content(sisl_files):
     coop_r = tbt.orbital_ACOOP(right, E)
     assert np.allclose(coop.data, (coop_l + coop_r).data)
 
+    coop = tbt.orbital_COOP(E, isc=[0, 0, 0])
+    coop_l = tbt.orbital_ACOOP(left, E, isc=[0, 0, 0])
+    coop_r = tbt.orbital_ACOOP(right, E, isc=[0, 0, 0])
+    assert np.allclose(coop.data, (coop_l + coop_r).data)
+
     coop = tbt.atom_COOP(E)
     coop_l = tbt.atom_ACOOP(left, E)
     coop_r = tbt.atom_ACOOP(right, E)
+    assert np.allclose(coop.data, (coop_l + coop_r).data)
+
+    coop = tbt.atom_COOP(E, isc=[0, 0, 0])
+    coop_l = tbt.atom_ACOOP(left, E, isc=[0, 0, 0])
+    coop_r = tbt.atom_ACOOP(right, E, isc=[0, 0, 0])
     assert np.allclose(coop.data, (coop_l + coop_r).data)
 
     # Check COHP curves
@@ -312,7 +322,7 @@ def test_1_graphene_all_ArgumentParser(sisl_files, sisl_tmp):
     p, ns = tbt.ArgumentParser()
 
     p.parse_args([], namespace=copy(ns))
-    out = p.parse_args(['--energy', ' -2:2'], namespace=copy(ns))
+    out = p.parse_args(['--energy', ' -1.995:1.995'], namespace=copy(ns))
     assert not out._actions_run
     run(out)
 

@@ -1353,6 +1353,12 @@ class Atoms(object):
         umass = _a.arrayd([a.mass for a in self.atom])
         return umass[self.specie[:]]
 
+    @property
+    def Z(self):
+        """ Return an array of atomic numbers """
+        uZ = _a.arrayd([a.Z for a in self.atom])
+        return uZ[self.specie[:]]
+
     def scale(self, scale):
         """ Scale the atomic radii and return an equivalent atom.
 
@@ -1482,8 +1488,6 @@ class Atoms(object):
         """
         if not isinstance(other, Atoms):
             other = Atoms(other)
-        else:
-            other = other.copy()
 
         atoms = self.copy()
         spec = np.copy(other._specie)
