@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>DOS &mdash; sisl |release| documentation</title>
+  <title>velocity &mdash; sisl |release| documentation</title>
   
 
   
@@ -35,10 +35,7 @@
         <link rel="index" title="Index"
               href="../genindex.html"/>
         <link rel="search" title="Search" href="../search.html"/>
-    <link rel="top" title="sisl |release| documentation" href="../index.html"/>
-        <link rel="up" title="Physical objects (sisl.physics)" href="sisl.physics.html"/>
-        <link rel="next" title="PDOS" href="sisl.physics.electron.PDOS.html"/>
-        <link rel="prev" title="RecursiveSI" href="sisl.physics.RecursiveSI.html"/> 
+    <link rel="top" title="sisl |release| documentation" href="../index.html"/> 
 
   
   <script src="../_static/js/modernizr.min.js"></script>
@@ -155,17 +152,13 @@
     
       <li><a href="../index.html">Docs</a> &raquo;</li>
         
-          <li><a href="../api.html">API documentation</a> &raquo;</li>
-        
-          <li><a href="sisl.physics.html">Physical objects (<code class="docutils literal"><span class="pre">sisl.physics</span></code>)</a> &raquo;</li>
-        
-      <li>DOS</li>
+      <li>velocity</li>
     
     
       <li class="wy-breadcrumbs-aside">
         
             
-            <a href="../_sources/api-generated/sisl.physics.electron.DOS.rst.txt" rel="nofollow"> View page source</a>
+            <a href="../_sources/api-generated/sisl.physics.electron.velocity.rst.txt" rel="nofollow"> View page source</a>
           
         
       </li>
@@ -212,53 +205,57 @@
     margin-right: 4px;  /* make room for the exclamation icon */
 }
 </style>
-<div class="section" id="dos">
-<h1>DOS<a class="headerlink" href="#dos" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="velocity">
+<h1>velocity<a class="headerlink" href="#velocity" title="Permalink to this headline">¶</a></h1>
 <dl class="function">
-<dt id="sisl.physics.electron.DOS">
-<code class="descclassname">sisl.physics.electron.</code><code class="descname">DOS</code><span class="sig-paren">(</span><em>E</em>, <em>eig</em>, <em>distribution='gaussian'</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/sisl/physics/electron.html#DOS"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sisl.physics.electron.DOS" title="Permalink to this definition">¶</a></dt>
-<dd><p>Calculate the density of states (DOS) for a set of energies, <em class="xref py py-obj">E</em>, with a distribution function</p>
-<p>The <span class="math">\(\mathrm{DOS}(E)\)</span> is calculated as:</p>
+<dt id="sisl.physics.electron.velocity">
+<code class="descclassname">sisl.physics.electron.</code><code class="descname">velocity</code><span class="sig-paren">(</span><em>state</em>, <em>dHk</em>, <em>energy=None</em>, <em>dSk=None</em>, <em>degenerate=None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/sisl/physics/electron.html#velocity"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sisl.physics.electron.velocity" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate the velocity of a set of states</p>
+<p>These are calculated using the analytic expression (<span class="math">\(\alpha\)</span> corresponding to the Cartesian directions):</p>
 <div class="math">
-\[\mathrm{DOS}(E) = \sum_i D(E-\epsilon_i) \approx\delta(E-\epsilon_i)\]</div>
-<p>where <span class="math">\(D(\Delta E)\)</span> is the distribution function used. Note that the distribution function
-used may be a user-defined function. Alternatively a distribution function may
-be retrieved from <a class="reference internal" href="sisl.physics.distribution.html#module-sisl.physics.distribution" title="sisl.physics.distribution"><code class="xref py py-obj docutils literal"><span class="pre">distribution</span></code></a>.</p>
+\[\mathbf{v}_i^\alpha = \langle \psi_i | \frac{\delta\mathbf H(\mathbf k)}{\delta k_\alpha} | \psi_i \rangle\]</div>
+<p>In case of non-orthogonal basis the equations requires the energy corresponding to the state and the overlap matrix derivative</p>
+<div class="math">
+\[\mathbf{v}_i^\alpha = \langle \psi_i | \frac{\delta\mathbf H(\mathbf k)}{\delta k_\alpha} -\epsilon_i\frac{\delta\mathbf S(\mathbf k)}{\delta k_\alpha} | \psi_i \rangle\]</div>
+<p>where <span class="math">\(\psi_i\)</span> are now states in the non-orthogonal basis.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>E</strong> : array_like</p>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>state</strong> : array_like</p>
 <blockquote>
-<div><p>energies to calculate the DOS at</p>
+<div><p>vectors describing the electronic states, 2nd dimension contains the states</p>
 </div></blockquote>
-<p><strong>eig</strong> : array_like</p>
+<p><strong>dHk</strong> : array_like</p>
 <blockquote>
-<div><p>eigenvalues</p>
+<div><p>Hamiltonian derivative with respect to <span class="math">\(\mathbf k\)</span>. If it is a square matrix
+it is assumed to only be the velocity along a given direction. Otherwise it needs to be a
+3 x 1 matrix describing the derivative along each lattice vector.</p>
 </div></blockquote>
-<p><strong>distribution</strong> : func or str, optional</p>
+<p><strong>energy</strong> : array_like, optional</p>
 <blockquote>
-<div><p>a function that accepts <span class="math">\(E-\epsilon\)</span> as argument and calculates the
-distribution function.</p>
+<div><p>energies of the states. Required for non-orthogonal basis together with <em class="xref py py-obj">dSk</em>.</p>
+</div></blockquote>
+<p><strong>dSk</strong> : array_like, optional</p>
+<blockquote>
+<div><p><span class="math">\(\delta \mathbf S_k\)</span> matrix required for non-orthogonal basis. This and <em class="xref py py-obj">eig</em> <em>must</em> both be
+provided in a non-orthogonal basis (otherwise the results will be wrong).</p>
+</div></blockquote>
+<p><strong>degenerate: list of array_like, optional</strong></p>
+<blockquote>
+<div><p>a list containing the indices of degenerate states. In that case a subsequent diagonalization
+is required to decouple them.</p>
 </div></blockquote>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><strong>numpy.ndarray</strong> : DOS calculated at energies, has same length as <em class="xref py py-obj">E</em></p>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">numpy.ndarray</p>
+<blockquote class="last">
+<div><p>velocities per state with final dimension <code class="docutils literal"><span class="pre">(state.shape[0],</span> <span class="pre">3)</span></code>.</p>
+</div></blockquote>
 </td>
 </tr>
 </tbody>
 </table>
-<div class="admonition seealso">
-<p class="first admonition-title">See also</p>
-<dl class="last docutils">
-<dt><a class="reference internal" href="sisl.physics.distribution.html#module-sisl.physics.distribution" title="sisl.physics.distribution"><code class="xref py py-obj docutils literal"><span class="pre">sisl.physics.distribution</span></code></a></dt>
-<dd>a selected set of implemented distribution functions</dd>
-<dt><a class="reference internal" href="sisl.physics.electron.PDOS.html#sisl.physics.electron.PDOS" title="sisl.physics.electron.PDOS"><code class="xref py py-obj docutils literal"><span class="pre">PDOS</span></code></a></dt>
-<dd>projected DOS (same as this, but projected onto each orbital)</dd>
-<dt><a class="reference internal" href="sisl.physics.electron.spin_moment.html#sisl.physics.electron.spin_moment" title="sisl.physics.electron.spin_moment"><code class="xref py py-obj docutils literal"><span class="pre">spin_moment</span></code></a></dt>
-<dd>spin moment for states</dd>
-</dl>
-</div>
 </dd></dl>
 
 </div>
@@ -270,15 +267,6 @@ distribution function.</p>
            </div>
           </div>
           <footer>
-  
-    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
-      
-        <a href="sisl.physics.electron.PDOS.html" class="btn btn-neutral float-right" title="PDOS" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
-      
-      
-        <a href="sisl.physics.RecursiveSI.html" class="btn btn-neutral" title="RecursiveSI" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
-      
-    </div>
   
 
   <hr/>
