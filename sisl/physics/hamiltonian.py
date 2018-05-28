@@ -4,7 +4,6 @@ import numpy as np
 from numpy import dot
 from scipy.sparse import csr_matrix
 
-from sisl.selector import TimeSelector
 from sisl._help import _range as range
 import sisl._array as _a
 from .electron import EigenvalueElectron, EigenstateElectron
@@ -50,8 +49,7 @@ class Hamiltonian(SparseOrbitalBZSpin):
         super(Hamiltonian, self).__init__(geometry, dim, dtype, nnzpr, **kwargs)
 
         self.Hk = self.Pk
-        self.dHk = TimeSelector([self._dHk_accummulate], True)
-        self.dSk = TimeSelector([self._dSk_accummulate], True)
+        self.dHk = self.dPk
 
     def Hk(self, k=(0, 0, 0), dtype=None, gauge='R', format='csr', *args, **kwargs):
         r""" Setup the Hamiltonian for a given k-point
@@ -64,17 +62,17 @@ class Hamiltonian(SparseOrbitalBZSpin):
         Currently the implemented gauge for the k-point is the cell vector gauge:
 
         .. math::
-          \mathbf H(k) = \mathbf H_{\nu\mu} e^{i k R}
+           \mathbf H(k) = \mathbf H_{\nu\mu} e^{i k R}
 
         where :math:`R` is an integer times the cell vector and :math:`\nu`, :math:`\mu` are orbital indices.
 
         Another possible gauge is the orbital distance which can be written as
 
         .. math::
-          \mathbf H(k) = \mathbf H_{\nu\mu} e^{i k r}
+           \mathbf H(k) = \mathbf H_{\nu\mu} e^{i k r}
 
-        where :math:`r` is the distance between the orbitals :math:`\nu` and :math:`\mu`.
-        Currently the second gauge is not implemented (yet).
+        where :math:`r` is the distance between the orbitals.
+        Currently this gauge is not implemented (yet).
 
         Parameters
         ----------
@@ -98,127 +96,71 @@ class Hamiltonian(SparseOrbitalBZSpin):
 
         See Also
         --------
+        dHk : Hamiltonian derivative with respect to `k`
         Sk : Overlap matrix at `k`
+        dSk : Overlap matrix derivative with respect to `k`
 
         Returns
         -------
-        * : the Hamiltonian with size ``(no, no)``. The returned object depends on `format`.
+        object : the Hamiltonian matrix at :math:`k`. The returned object depends on `format`.
         """
         pass
 
-    def _dHk_accummulate(self, k=(0, 0, 0), dtype=None, gauge='R', format='csr', spin=0):
-        r""" Hamiltonian differentiated with respect to `k`
+    def dHk(self, k=(0, 0, 0), dtype=None, gauge='R', format='csr', *args, **kwargs):
+        r""" Setup the Hamiltonian derivative for a given k-point
+
+        Creation and return of the Hamiltonian derivative for a given k-point (default to Gamma).
+
+        Notes
+        -----
+
+        Currently the implemented gauge for the k-point is the cell vector gauge:
 
         .. math::
-           \delta \mathbf H(k) = i \mathbf R e^{i\mathbf k\dot\mathbf R} \mathbf H
+          \mathbf H_\alpha(k) = i R_\alpha \mathbf H_{\nu\mu} e^{i k R}
 
-        Since :math:`\mathbf R` is a vector the :math:`\delta\mathbf H(k)` matrix returned
-        has size ``(no * 3, no)`` where the first 3 rows correspond to the first orbital
-        :math:`x`, :math:`y` and :math:`z` components.
+        where :math:`R` is an integer times the cell vector and :math:`\nu`, :math:`\mu` are orbital indices.
+        And :math:`\alpha` is one of the Cartesian directions.
+
+        Another possible gauge is the orbital distance which can be written as
+
+        .. math::
+          \mathbf H_\alpha(k) = i r_\alpha \mathbf H_{\nu\mu} e^{i k r}
+
+        where :math:`r` is the distance between the orbitals.
+        Currently this gauge is not implemented (yet).
 
         Parameters
         ----------
-        k: array_like, optional
-           k-point (default is Gamma point)
-        dtype : numpy.dtype, optional
-           default to `numpy.complex128`
+        k : array_like
+           the k-point to setup the Hamiltonian at
+        dtype : numpy.dtype , optional
+           the data type of the returned matrix. Do NOT request non-complex
+           data-type for non-Gamma k.
+           The default data-type is `numpy.complex128`
         gauge : {'R', 'r'}
-           chosen gauge
+           the chosen gauge, `R` for cell vector gauge, and `r` for orbital distance
+           gauge.
+        format : {'csr', 'array', 'dense', 'coo', ...}
+           the returned format of the matrix, defaulting to the ``scipy.sparse.csr_matrix``,
+           however if one always requires operations on dense matrices, one can always
+           return in `numpy.ndarray` (`'array'`) or `numpy.matrix` (`'dense'`).
+        spin : int, optional
+           if the Hamiltonian is a spin polarized one can extract the specific spin direction
+           matrix by passing an integer (0 or 1). If the Hamiltonian is not `Spin.POLARIZED`
+           this keyword is ignored.
+
+        See Also
+        --------
+        Hk : Hamiltonian with respect to `k`
+        Sk : Overlap matrix at `k`
+        dSk : Overlap matrix derivative with respect to `k`
 
         Returns
         -------
-        csr_matrix : the dH matrix with size ``(no * 3, no)``.
+        tuple : for each of the Cartesian directions a :math:`\partial \mathbf H(k)/\partial k` is returned.
         """
-        if dtype is None:
-            dtype = np.complex128
-
-        if gauge != 'R':
-            raise ValueError('Only the cell vector gauge has been implemented')
-
-        k = np.asarray(k, np.float64)
-        k.shape = (-1,)
-
-        if not np.allclose(k, 0.):
-            if np.dtype(dtype).kind != 'c':
-                raise ValueError(self.__class__.__name__ + " setup at k different from Gamma requires a complex matrix")
-
-        no = self.no
-
-        # sparse matrix dimension (self.no)
-        V = csr_matrix((len(self) * 3, len(self)), dtype=dtype)
-
-        # Calculate all phases
-        iRs = -1j * dot(self.sc.sc_off, self.cell)
-        phases = np.exp(-1j * dot(dot(dot(self.rcell, k), self.cell), self.sc.sc_off.T))
-
-        v = self.tocsr(spin)
-
-        for si, (iR, phase) in enumerate(zip(iRs, phases)):
-            vv = v[:, si*no:(si+1)*no] * phase
-            V[0::3, :] += vv * iR[0]
-            V[1::3, :] += vv * iR[1]
-            V[2::3, :] += vv * iR[2]
-
-        del v
-
-        return V.asformat(format)
-
-    def _dSk_accummulate(self, k=(0, 0, 0), dtype=None, gauge='R', format='csr'):
-        r""" Overlap matrix differentiated with respect to `k`
-
-        .. math::
-           \delta \mathbf S(k) = i \mathbf R e^{i\mathbf k\dot\mathbf R} \mathbf S
-
-        Since :math:`\mathbf R` is a vector the :math:`\delta\mathbf S(k)` matrix returned
-        has size ``(no * 3, no)`` where the first 3 rows correspond to the first orbital
-        :math:`x`, :math:`y` and :math:`z` components.
-
-        Parameters
-        ----------
-        k: array_like, optional
-           k-point (default is Gamma point)
-        dtype : numpy.dtype, optional
-           default to `numpy.complex128`
-        gauge : {'R', 'r'}
-           chosen gauge
-
-        Returns
-        -------
-        csr_matrix : the dS matrix with size ``(no * 3, no)``.
-        """
-        if dtype is None:
-            dtype = np.complex128
-
-        if gauge != 'R':
-            raise ValueError('Only the cell vector gauge has been implemented')
-
-        k = np.asarray(k, np.float64)
-        k.shape = (-1,)
-
-        if not np.allclose(k, 0.):
-            if np.dtype(dtype).kind != 'c':
-                raise ValueError(self.__class__.__name__ + " setup at k different from Gamma requires a complex matrix")
-
-        no = self.no
-
-        # sparse matrix dimension (self.no)
-        V = csr_matrix((len(self) * 3, len(self)), dtype=dtype)
-
-        # Calculate all phases
-        iRs = -1j * dot(self.sc.sc_off, self.cell)
-        phases = np.exp(-1j * dot(dot(dot(self.rcell, k), self.cell), self.sc.sc_off.T))
-
-        v = self.tocsr(self.S_idx)
-
-        for si, (iR, phase) in enumerate(zip(iRs, phases)):
-            vv = v[:, si*no:(si+1)*no] * phase
-            V[0::3, :] += vv * iR[0]
-            V[1::3, :] += vv * iR[1]
-            V[2::3, :] += vv * iR[2]
-
-        del v
-
-        return V.asformat(format)
+        pass
 
     def _get_H(self):
         self._def_dim = self.UP
