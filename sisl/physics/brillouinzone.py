@@ -181,7 +181,7 @@ class BrillouinZone(object):
         def _call(self, *args, **kwargs):
             func = getattr(self.parent, self.__attr)
             wrap = kwargs.pop('wrap', _do_nothing)
-            eta = tqdm_eta(len(self), self.__class__.__name__ + '.asarray()',
+            eta = tqdm_eta(len(self), self.__class__.__name__ + '.asarray',
                            'k', kwargs.pop('eta', False))
             for i, k in enumerate(self):
                 if i == 0:
@@ -205,7 +205,8 @@ class BrillouinZone(object):
     def asnone(self):
         """ Return `self` with None, this may be done for instance when wrapping the function calls.
 
-        This forces the `__call__` routine to return ``None``
+        This forces the `__call__` routine to return ``None``. This usage is mainly intended when
+        creating custom `wrap` function calls.
 
         Notes
         -----
@@ -232,7 +233,7 @@ class BrillouinZone(object):
         def _call(self, *args, **kwargs):
             func = getattr(self.parent, self.__attr)
             wrap = kwargs.pop('wrap', _do_nothing)
-            eta = tqdm_eta(len(self), self.__class__.__name__ + '.asarray()',
+            eta = tqdm_eta(len(self), self.__class__.__name__ + '.asnone',
                            'k', kwargs.pop('eta', False))
             for i, k in enumerate(self):
                 wrap(func(*args, k=k, **kwargs))
@@ -274,7 +275,7 @@ class BrillouinZone(object):
         def _call(self, *args, **kwargs):
             func = getattr(self.parent, self.__attr)
             wrap = kwargs.pop('wrap', _do_nothing)
-            eta = tqdm_eta(len(self), self.__class__.__name__ + '.aslist()',
+            eta = tqdm_eta(len(self), self.__class__.__name__ + '.aslist',
                            'k', kwargs.pop('eta', False))
             a = [None] * len(self)
             for i, k in enumerate(self):
@@ -322,7 +323,7 @@ class BrillouinZone(object):
         def _call(self, *args, **kwargs):
             func = getattr(self.parent, self.__attr)
             wrap = kwargs.pop('wrap', _do_nothing)
-            eta = tqdm_eta(len(self), self.__class__.__name__ + '.asyield()',
+            eta = tqdm_eta(len(self), self.__class__.__name__ + '.asyield',
                            'k', kwargs.pop('eta', False))
             for k in self:
                 yield wrap(func(*args, k=k, **kwargs).astype(dtype, copy=False))
@@ -373,7 +374,7 @@ class BrillouinZone(object):
         def _call(self, *args, **kwargs):
             func = getattr(self.parent, self.__attr)
             wrap = kwargs.pop('wrap', _do_nothing)
-            eta = tqdm_eta(len(self), self.__class__.__name__ + '.asaverage()',
+            eta = tqdm_eta(len(self), self.__class__.__name__ + '.asaverage',
                            'k', kwargs.pop('eta', False))
             w = self.weight.view()
             for i, k in enumerate(self):
@@ -703,9 +704,9 @@ class MonkhorstPack(BrillouinZone):
         # on the boundary.
         # This does remove boundary points because we shift everything into the positive
         # plane.
-        idx = np.logical_and.reduce((self.k - k) % 1. <= dk, axis=1).nonzero()[0]
+        idx = np.logical_and.reduce(np.abs(self.k - k) <= dk, axis=1).nonzero()[0]
         if len(idx) == 0 and self._trs:
-            idx = np.logical_and.reduce((self.k - np.abs(k)) % 1. <= dk, axis=1).nonzero()[0]
+            idx = np.logical_and.reduce(np.abs(self.k + k) <= dk, axis=1).nonzero()[0]
         if len(idx) == 0:
             raise SislError(self.__class__.__name__ + '.reduce could not find any points to replace.')
 
