@@ -122,16 +122,19 @@ class BrillouinZone(object):
         -------
         k : all k-points moved into the primitive cell
         """
-        k = _a.arrayd(k).copy()
+        k = _a.arrayd(k) % 1.
+
         # Ensure that we are in the interval ]-0.5; 0.5]
-        idx = (k > 0.5).nonzero()[0]
+        idx = (k.ravel() > 0.5).nonzero()[0]
         while len(idx) > 0:
-            k[idx] -= 1.
-            idx = (k > 0.5).nonzero()[0]
-        idx = (k < -0.5).nonzero()[0]
+            k[np.unravel_index(idx, k.shape)] -= 1.
+            idx = (k.ravel() > 0.5).nonzero()[0]
+
+        idx = (k.ravel() < -0.5).nonzero()[0]
         while len(idx) > 0:
-            k[idx] += 1.
-            idx = (k < -0.5).nonzero()[0]
+            k[np.unravel_index(idx, k.shape)] += 1.
+            idx = (k.ravel() < -0.5).nonzero()[0]
+
         return k
 
     __attr = None
@@ -560,8 +563,8 @@ class MonkhorstPack(BrillouinZone):
         bz._w = self._w.copy()
         return bz
 
-    @staticmethod
-    def grid(n, displ=0., size=1., centered=True, trs=False):
+    @classmethod
+    def grid(cls, n, displ=0., size=1., centered=True, trs=False):
         r""" Create a grid of `n` points with an offset of `displ` and sampling `size` around `displ`
 
         The :math:`k`-points are :math:`\Gamma` centered.
@@ -590,56 +593,43 @@ class MonkhorstPack(BrillouinZone):
         displ = displ % 1.
         if displ > 0.5:
             displ -= 1.
+        if displ < -0.5:
+            displ += 1.
 
-        if trs and displ == 0.:
-            n_half = n // 2
-            if n % 2 == 1:
-                # Odd case, we have Gamma and remove all negative values
-                k = _a.aranged(n_half + 1) * size / n
-                # Weights are all twice (except Gamma)
-                w = _a.onesd(len(k)) / n * size
-                w[1:] *= 2
-            elif centered:
-                # Even case, we do not have Gamma, but we shift to Gamma
-                # All points except Gamma and edge have weights doubled
-                k = _a.aranged(n_half + 1) * size / n
-                # Weights are all twice (except Gamma and band-edge)
-                w = _a.onesd(len(k)) / n * size
-                w[1:-1] *= 2
-            else:
-                # Even case, we do not have Gamma, and we retain that choice
-                # All points except Gamma and edge have weights doubled
-                k = _a.aranged(n_half) * size / n + size / n * 0.5
-                # Weights are all twice (center and band-edge are not present)
-                w = _a.onesd(len(k)) / n * size * 2
+        # Centered _only_ has effect IFF
+        #  displ == 0. and size == 1
+        # Otherwise we resort to other schemes
+        if displ != 0. or size != 1.:
+            centered = False
+
+        # We create the full grid, then afterwards we figure out TRS
+        n_half = n // 2
+        if n % 2 == 1:
+            k = _a.aranged(-n_half, n_half + 1) * size / n + displ
         else:
-            # If requesting a specific displacement we force a centered
-            # array (otherwise the displacement does not make sense), or does it?
-            if displ != 0.:
-                centered = True
-            # Not TRS
-            if n % 2 == 0 and centered:
-                k = (_a.aranged(1, n + 1) * 2 - n) * size / (2 * n) + displ
-            elif n % 2 == 0:
-                k = (_a.aranged(n) * 2 - n + 1) * size / (2 * n) + displ
-            else:
-                k = (_a.aranged(n) * 2 - n + 1) * size / (2 * n) + displ
-            w = _a.onesd(n) * size / n
+            k = _a.aranged(-n_half, n_half) * size / n + displ
+            if not centered:
+                # Shift everything by halve the size each occupies
+                k += size / (2 * n)
 
-        # Ensure that we are in the interval ]-0.5; 0.5]
-        k = BrillouinZone.in_primitive(k)
+        # Move k to the primitive cell and generate weights
+        k = cls.in_primitive(k)
+        w = _a.onesd(n) * size / n
 
         # Check for TRS points
-        idx = (k < 0.).nonzero()[0]
-        if trs and len(idx) > 0:
-            k_pos = k.copy()
-            k_pos[idx] *= -1.
+        if trs and np.any(k < 0.):
+            # Make all positive to remove the double conting terms
+            k_pos = np.abs(k)
+
             # Sort k-points and weights
             idx = np.argsort(k_pos)
+
+            # Re-arange according to k value
             k_pos = k_pos[idx]
             w = w[idx]
 
             # Find indices of all equivalent k-points (tolerance of 1e-10 in reciprocal units)
+            #  1e-10 ~ 1e10 k-points (no body will do this!)
             idx_same = (np.diff(k_pos) < 1e-10).nonzero()[0]
 
             # The above algorithm should never create more than two duplicates.
@@ -659,7 +649,7 @@ class MonkhorstPack(BrillouinZone):
         return k, w
 
     def replace(self, k, mp):
-        """ Replace a k-point with a new set of k-points from a Monkhorst-Pack grid
+        r""" Replace a k-point with a new set of k-points from a Monkhorst-Pack grid
 
         This method tries to replace an area corresponding to `mp.size` around the k-point `k`
         such that the k-points are replaced.
@@ -671,6 +661,30 @@ class MonkhorstPack(BrillouinZone):
            k-point in this object to replace
         mp : MonkhorstPack
            object containing the replacement k-points.
+
+        Examples
+        --------
+
+        This example creates a zoomed-in view of the :math:`\Gamma`-point by replacing it with
+        a 3x3x3 Monkhorst-Pack grid.
+
+        >>> sc = SuperCell(1.)
+        >>> mp = MonkhorstPack(sc, [3, 3, 3])
+        >>> mp.replace([0, 0, 0], MonkhorstPack(sc, [3, 3, 3], size=1./3))
+
+        This example creates a zoomed-in view of the :math:`\Gamma`-point by replacing it with
+        a 4x4x4 Monkhorst-Pack grid.
+
+        >>> sc = SuperCell(1.)
+        >>> mp = MonkhorstPack(sc, [3, 3, 3])
+        >>> mp.replace([0, 0, 0], MonkhorstPack(sc, [4, 4, 4], size=1./3))
+
+        This example creates a zoomed-in view of the :math:`\Gamma`-point by replacing it with
+        a 4x4x1 Monkhorst-Pack grid.
+
+        >>> sc = SuperCell(1.)
+        >>> mp = MonkhorstPack(sc, [3, 3, 3])
+        >>> mp.replace([0, 0, 0], MonkhorstPack(sc, [4, 4, 1], size=1./3))
 
         Raises
         ------
@@ -697,16 +711,15 @@ class MonkhorstPack(BrillouinZone):
         k_int = np.rint(k_int)
 
         # 1. find all k-points
-        k = self.in_primitive(_a.arrayd(k)).reshape(1, 3)
+        k = self.in_primitive(k).reshape(1, 3)
         dk = (mp._size / 2).reshape(1, 3)
         # Find all points within [k - dk; k + dk]
         # Since the volume of each k-point is non-zero we know that no k-points will be located
         # on the boundary.
         # This does remove boundary points because we shift everything into the positive
         # plane.
-        idx = np.logical_and.reduce(np.abs(self.k - k) <= dk, axis=1).nonzero()[0]
-        if len(idx) == 0 and self._trs:
-            idx = np.logical_and.reduce(np.abs(self.k + k) <= dk, axis=1).nonzero()[0]
+        diff_k = self.in_primitive(self.k % 1. - k % 1.)
+        idx = np.logical_and.reduce(np.abs(diff_k) <= dk, axis=1).nonzero()[0]
         if len(idx) == 0:
             raise SislError(self.__class__.__name__ + '.reduce could not find any points to replace.')
 
@@ -721,6 +734,14 @@ class MonkhorstPack(BrillouinZone):
             if not self._trs:
                 info(self.__class__.__name__ + '.reduce assumes that the replaced k-point has double weights.')
         else:
+            print('k-point to replace:')
+            print(' ', k.ravel())
+            print('delta-k:')
+            print(' ', dk.ravel())
+            print('Found k-indices that will be replaced:')
+            print(' ', idx)
+            print('k-points replaced:')
+            print(self.k[idx, :])
             raise SislError(self.__class__.__name__ + '.reduce could not assert the weights are consistent during replacement.')
 
         self._k = np.delete(self._k, idx, axis=0)

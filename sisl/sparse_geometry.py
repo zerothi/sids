@@ -225,7 +225,7 @@ class _SparseGeometry(object):
         structure is completed.
         """
         R = self.Rij(what, dtype)
-        R._csr = (R._csr ** 2).sum(-1)
+        R._csr = (R._csr ** 2).sum(-1) ** 0.5
         return R
 
     def Rij(self, what=None, dtype=np.float64):
@@ -272,6 +272,7 @@ class _SparseGeometry(object):
             cls = SparseAtom
             if isinstance(self, SparseOrbital):
                 conv = geom.o2a
+                Rij = geom.Rij
 
         elif what in ['orbital', 'orb']:
             cls = SparseOrbital
