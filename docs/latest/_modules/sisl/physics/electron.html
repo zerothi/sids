@@ -194,6 +194,7 @@
 <span class="sd">   PDOS</span>
 <span class="sd">   velocity</span>
 <span class="sd">   wavefunction</span>
+<span class="sd">   inv_eff_mass_tensor</span>
 <span class="sd">   spin_moment</span>
 
 <span class="sd">Supporting classes</span>
@@ -240,7 +241,7 @@
 <span class="kn">from</span> <span class="nn">.state</span> <span class="k">import</span> <span class="n">Coefficient</span><span class="p">,</span> <span class="n">State</span><span class="p">,</span> <span class="n">StateC</span>
 
 
-<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;DOS&#39;</span><span class="p">,</span> <span class="s1">&#39;PDOS&#39;</span><span class="p">,</span> <span class="s1">&#39;spin_moment&#39;</span><span class="p">,</span> <span class="s1">&#39;wavefunction&#39;</span><span class="p">]</span>
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;DOS&#39;</span><span class="p">,</span> <span class="s1">&#39;PDOS&#39;</span><span class="p">,</span> <span class="s1">&#39;spin_moment&#39;</span><span class="p">,</span> <span class="s1">&#39;velocity&#39;</span><span class="p">,</span> <span class="s1">&#39;effective_mass&#39;</span><span class="p">,</span> <span class="s1">&#39;wavefunction&#39;</span><span class="p">]</span>
 <span class="n">__all__</span> <span class="o">+=</span> <span class="p">[</span><span class="s1">&#39;CoefficientElectron&#39;</span><span class="p">,</span> <span class="s1">&#39;StateElectron&#39;</span><span class="p">,</span> <span class="s1">&#39;StateCElectron&#39;</span><span class="p">]</span>
 <span class="n">__all__</span> <span class="o">+=</span> <span class="p">[</span><span class="s1">&#39;EigenvalueElectron&#39;</span><span class="p">,</span> <span class="s1">&#39;EigenvectorElectron&#39;</span><span class="p">,</span> <span class="s1">&#39;EigenstateElectron&#39;</span><span class="p">]</span>
 
@@ -501,13 +502,13 @@
 
 <span class="sd">    .. math::</span>
 
-<span class="sd">       \mathbf{v}_i^\alpha = \frac1\hbar \langle \psi_i | \frac{\delta\mathbf H(\mathbf k)}{\delta k_\alpha} | \psi_i \rangle</span>
+<span class="sd">       \mathbf{v}_i^\alpha = \frac1\hbar \langle \psi_i | \nabla_{\mathbf k} \mathbf H(\mathbf k) | \psi_i \rangle</span>
 
 <span class="sd">    In case of non-orthogonal basis the equations requires the energy corresponding to the state and the overlap matrix derivative</span>
 
 <span class="sd">    .. math::</span>
 
-<span class="sd">       \mathbf{v}_i^\alpha = \frac1\hbar\langle \psi_i | \frac{\delta\mathbf H(\mathbf k)}{\delta k_\alpha} -\epsilon_i\frac{\delta\mathbf S(\mathbf k)}{\delta k_\alpha} | \psi_i \rangle</span>
+<span class="sd">       \mathbf{v}_i^\alpha = \frac1\hbar\langle \psi_i | \nabla_{\mathbf k} \mathbf H(\mathbf k) -\epsilon_i\nabla_{\mathbf k}\mathbf S(\mathbf k) | \psi_i \rangle</span>
 
 <span class="sd">    where :math:`\psi_i` are now states in the non-orthogonal basis.</span>
 
@@ -536,12 +537,15 @@
     <span class="k">if</span> <span class="n">state</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">velocity</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">),</span> <span class="n">dHk</span><span class="p">,</span> <span class="n">energy</span><span class="p">,</span> <span class="n">dSk</span><span class="p">,</span> <span class="n">degenerate</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
 
-    <span class="k">if</span> <span class="ow">not</span> <span class="n">dSk</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="k">return</span> <span class="n">_velocity_non_ortho</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">dHk</span><span class="p">,</span> <span class="n">energy</span><span class="p">,</span> <span class="n">dSk</span><span class="p">,</span> <span class="n">degenerate</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">_velocity_ortho</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">dHk</span><span class="p">,</span> <span class="n">degenerate</span><span class="p">)</span></div>
+    <span class="k">if</span> <span class="n">dSk</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">_velocity_ortho</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">dHk</span><span class="p">,</span> <span class="n">degenerate</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">_velocity_non_ortho</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">dHk</span><span class="p">,</span> <span class="n">energy</span><span class="p">,</span> <span class="n">dSk</span><span class="p">,</span> <span class="n">degenerate</span><span class="p">)</span></div>
 
 
 <span class="c1"># We return velocity units in Ang/ps</span>
+<span class="c1">#   hbar in eV.s = 6.582119514e-16</span>
+<span class="c1"># and dHk is already in Ang * eV.</span>
+<span class="c1">#   1e-12 ps / s</span>
 <span class="n">_velocity_const</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">/</span> <span class="mf">6.582119514e-16</span> <span class="o">*</span> <span class="mf">1e-12</span>
 
 
@@ -612,6 +616,137 @@
             <span class="n">v</span><span class="p">[</span><span class="n">deg</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">conj</span><span class="p">(</span><span class="n">S</span><span class="o">.</span><span class="n">T</span><span class="p">)</span> <span class="o">*</span> <span class="n">dHk</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">S</span><span class="o">.</span><span class="n">T</span><span class="p">))</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">real</span>
 
     <span class="k">return</span> <span class="n">v</span> <span class="o">*</span> <span class="n">_velocity_const</span>
+
+
+<div class="viewcode-block" id="inv_eff_mass_tensor"><a class="viewcode-back" href="../../../api-generated/sisl.physics.electron.inv_eff_mass_tensor.html#sisl.physics.inv_eff_mass_tensor">[docs]</a><span class="k">def</span> <span class="nf">inv_eff_mass_tensor</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">ddHk</span><span class="p">,</span> <span class="n">energy</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">ddSk</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">degenerate</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sa">r</span><span class="sd">&quot;&quot;&quot; Calculate the effective mass tensor for a set of states</span>
+
+<span class="sd">    These are calculated using the analytic expression (:math:`\alpha` corresponding to the Cartesian directions):</span>
+
+<span class="sd">    .. math::</span>
+
+<span class="sd">        \mathbf M_i = \hbar^2 \langle \psi_i | \nabla^2_{\mathbf k} \mathbf H(\mathbf k) | \psi_i \rangle^{-1}</span>
+
+<span class="sd">    In case of non-orthogonal basis the equations requires the energy corresponding to the state and the overlap matrix derivative</span>
+
+<span class="sd">    .. math::</span>
+
+<span class="sd">        \mathbf M_i = \hbar^2 \langle \psi_i | \nabla^2_{\mathbf k} \mathbf H(\mathbf k) - </span>
+<span class="sd">                   \epsilon_i\nabla^2_{\mathbf k} \mathbf S(\mathbf k) | \psi_i \rangle^{-1}</span>
+
+<span class="sd">    where :math:`\psi_i` are now states in the non-orthogonal basis.</span>
+
+<span class="sd">    The matrix :math:`\mathbf M` is known as the effective mass tensor.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    state : array_like</span>
+<span class="sd">       vectors describing the electronic states, 2nd dimension contains the states</span>
+<span class="sd">    ddHk : (3, 3) of array_like</span>
+<span class="sd">       Hamiltonian double derivative with respect to :math:`\mathbf k`.</span>
+<span class="sd">    energy : array_like, optional</span>
+<span class="sd">       energies of the states. Required for non-orthogonal basis together with `dSk`.</span>
+<span class="sd">    ddSk : (3, 3) of array_like, optional</span>
+<span class="sd">       :math:`\nabla^2_k \mathbf S_k` matrix required for non-orthogonal basis. This and `energy` *must* both be</span>
+<span class="sd">       provided in a non-orthogonal basis (otherwise the results will be wrong).</span>
+<span class="sd">       Same derivative as `ddHk`</span>
+<span class="sd">    degenerate: list of array_like, optional</span>
+<span class="sd">       a list containing the indices of degenerate states. In that case a subsequent diagonalization</span>
+<span class="sd">       is required to decouple them.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    numpy.ndarray</span>
+<span class="sd">        effective mass of each state in units of electron mass</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">state</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">inv_eff_mass_tensor</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">),</span> <span class="n">ddHk</span><span class="p">,</span> <span class="n">energy</span><span class="p">,</span> <span class="n">ddSk</span><span class="p">,</span> <span class="n">degenerate</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
+
+    <span class="k">if</span> <span class="n">ddSk</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">_inv_eff_mass_tensor_ortho</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">ddHk</span><span class="p">,</span> <span class="n">degenerate</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">_inv_eff_mass_tensor_non_ortho</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">ddHk</span><span class="p">,</span> <span class="n">energy</span><span class="p">,</span> <span class="n">ddSk</span><span class="p">,</span> <span class="n">degenerate</span><span class="p">)</span></div>
+
+
+<span class="c1"># We return electron mass units in m_e</span>
+<span class="c1">#   hbar in eV.s = 6.582119514e-16</span>
+<span class="c1"># and ddHk is already in Ang ^ 2 * eV</span>
+<span class="c1"># So</span>
+<span class="c1">#  eV -&gt; J</span>
+<span class="c1">#  1/Ang -&gt; 1/m   (squared)</span>
+<span class="c1">#  kg -&gt; mass_e</span>
+<span class="n">_inv_eff_mass_const</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">/</span> <span class="mf">6.582119514e-16</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">/</span> <span class="mf">1.60217653e-19</span> <span class="o">*</span> <span class="mf">1e-10</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">*</span> <span class="mf">9.10938356e-31</span>
+
+
+<span class="k">def</span> <span class="nf">_inv_eff_mass_tensor_non_ortho</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">ddHk</span><span class="p">,</span> <span class="n">energy</span><span class="p">,</span> <span class="n">ddSk</span><span class="p">,</span> <span class="n">degenerate</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sa">r</span><span class="sd">&quot;&quot;&quot; For states in a non-orthogonal basis &quot;&quot;&quot;</span>
+    <span class="c1"># Along all directions</span>
+    <span class="n">M</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">([</span><span class="n">state</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype_complex_to_real</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">dtype</span><span class="p">))</span>
+
+    <span class="c1"># Since they depend on the state energies and dSk we have to loop them individually.</span>
+    <span class="k">for</span> <span class="n">s</span><span class="p">,</span> <span class="n">e</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">energy</span><span class="p">):</span>
+
+        <span class="c1"># Since dHk *may* be a csr_matrix or sparse, we have to do it like</span>
+        <span class="c1"># this. A sparse matrix cannot be re-shaped with an extra dimension.</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">3</span><span class="p">):</span>
+            <span class="n">M</span><span class="p">[</span><span class="n">s</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">conj</span><span class="p">(</span><span class="n">state</span><span class="p">[</span><span class="n">s</span><span class="p">])</span> <span class="o">*</span> <span class="p">(</span><span class="n">ddHk</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">e</span> <span class="o">*</span> <span class="n">ddSk</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">state</span><span class="p">[</span><span class="n">s</span><span class="p">]))</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span><span class="o">.</span><span class="n">real</span>
+            <span class="n">M</span><span class="p">[</span><span class="n">s</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">conj</span><span class="p">(</span><span class="n">state</span><span class="p">[</span><span class="n">s</span><span class="p">])</span> <span class="o">*</span> <span class="p">(</span><span class="n">ddHk</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">e</span> <span class="o">*</span> <span class="n">ddSk</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">1</span><span class="p">])</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">state</span><span class="p">[</span><span class="n">s</span><span class="p">]))</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span><span class="o">.</span><span class="n">real</span>
+            <span class="n">M</span><span class="p">[</span><span class="n">s</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">conj</span><span class="p">(</span><span class="n">state</span><span class="p">[</span><span class="n">s</span><span class="p">])</span> <span class="o">*</span> <span class="p">(</span><span class="n">ddHk</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">2</span><span class="p">]</span> <span class="o">-</span> <span class="n">e</span> <span class="o">*</span> <span class="n">ddSk</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">2</span><span class="p">])</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">state</span><span class="p">[</span><span class="n">s</span><span class="p">]))</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span><span class="o">.</span><span class="n">real</span>
+
+    <span class="c1"># Now decouple the degenerate states</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">degenerate</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">deg</span> <span class="ow">in</span> <span class="n">degenerate</span><span class="p">:</span>
+            <span class="n">e</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">average</span><span class="p">(</span><span class="n">energy</span><span class="p">[</span><span class="n">deg</span><span class="p">])</span>
+
+            <span class="c1"># Now diagonalize to find the contributions from individual states</span>
+            <span class="c1"># then re-construct the seperated degenerate states</span>
+            <span class="c1"># Since we do this for all directions we should decouple them all</span>
+            <span class="n">vv</span> <span class="o">=</span> <span class="n">conj</span><span class="p">(</span><span class="n">state</span><span class="p">[</span><span class="n">deg</span><span class="p">,</span> <span class="p">:])</span><span class="o">.</span><span class="n">dot</span><span class="p">((</span><span class="n">ddHk</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">e</span> <span class="o">*</span> <span class="n">ddSk</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">state</span><span class="p">[</span><span class="n">deg</span><span class="p">,</span> <span class="p">:]</span><span class="o">.</span><span class="n">T</span><span class="p">))</span>
+            <span class="n">S</span> <span class="o">=</span> <span class="n">eigh_destroy</span><span class="p">(</span><span class="n">vv</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">T</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">state</span><span class="p">[</span><span class="n">deg</span><span class="p">,</span> <span class="p">:])</span>
+            <span class="n">vv</span> <span class="o">=</span> <span class="n">conj</span><span class="p">(</span><span class="n">S</span><span class="p">)</span><span class="o">.</span><span class="n">dot</span><span class="p">((</span><span class="n">ddHk</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">e</span> <span class="o">*</span> <span class="n">ddSk</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">])</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">S</span><span class="o">.</span><span class="n">T</span><span class="p">))</span>
+            <span class="n">S</span> <span class="o">=</span> <span class="n">eigh_destroy</span><span class="p">(</span><span class="n">vv</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">T</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">S</span><span class="p">)</span>
+            <span class="n">vv</span> <span class="o">=</span> <span class="n">conj</span><span class="p">(</span><span class="n">S</span><span class="p">)</span><span class="o">.</span><span class="n">dot</span><span class="p">((</span><span class="n">ddHk</span><span class="p">[</span><span class="mi">2</span><span class="p">][</span><span class="mi">2</span><span class="p">]</span> <span class="o">-</span> <span class="n">e</span> <span class="o">*</span> <span class="n">ddSk</span><span class="p">[</span><span class="mi">2</span><span class="p">][</span><span class="mi">2</span><span class="p">])</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">S</span><span class="o">.</span><span class="n">T</span><span class="p">))</span>
+            <span class="n">S</span> <span class="o">=</span> <span class="n">eigh_destroy</span><span class="p">(</span><span class="n">vv</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">T</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">S</span><span class="p">)</span>
+
+            <span class="c1"># Calculate velocities</span>
+            <span class="k">for</span> <span class="n">s</span><span class="p">,</span> <span class="n">e</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">energy</span><span class="p">[</span><span class="n">deg</span><span class="p">]):</span>
+                <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">3</span><span class="p">):</span>
+                    <span class="n">M</span><span class="p">[</span><span class="n">s</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">conj</span><span class="p">(</span><span class="n">S</span><span class="p">[</span><span class="n">s</span><span class="p">])</span> <span class="o">*</span> <span class="p">(</span><span class="n">ddHk</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">e</span> <span class="o">*</span> <span class="n">ddSk</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">S</span><span class="p">[</span><span class="n">s</span><span class="p">]))</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span><span class="o">.</span><span class="n">real</span>
+                    <span class="n">M</span><span class="p">[</span><span class="n">s</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">conj</span><span class="p">(</span><span class="n">S</span><span class="p">[</span><span class="n">s</span><span class="p">])</span> <span class="o">*</span> <span class="p">(</span><span class="n">ddHk</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">e</span> <span class="o">*</span> <span class="n">ddSk</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">1</span><span class="p">])</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">S</span><span class="p">[</span><span class="n">s</span><span class="p">]))</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span><span class="o">.</span><span class="n">real</span>
+                    <span class="n">M</span><span class="p">[</span><span class="n">s</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">conj</span><span class="p">(</span><span class="n">S</span><span class="p">[</span><span class="n">s</span><span class="p">])</span> <span class="o">*</span> <span class="p">(</span><span class="n">ddHk</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">2</span><span class="p">]</span> <span class="o">-</span> <span class="n">e</span> <span class="o">*</span> <span class="n">ddSk</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">2</span><span class="p">])</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">S</span><span class="p">[</span><span class="n">s</span><span class="p">]))</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span><span class="o">.</span><span class="n">real</span>
+
+    <span class="k">return</span> <span class="n">M</span> <span class="o">*</span> <span class="n">_inv_eff_mass_const</span>
+
+
+<span class="k">def</span> <span class="nf">_inv_eff_mass_tensor_ortho</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">ddHk</span><span class="p">,</span> <span class="n">degenerate</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sa">r</span><span class="sd">&quot;&quot;&quot; For states in an orthogonal basis &quot;&quot;&quot;</span>
+
+    <span class="c1"># Along all directions</span>
+    <span class="n">M</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">([</span><span class="n">state</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype_complex_to_real</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">dtype</span><span class="p">))</span>
+
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">3</span><span class="p">):</span>
+        <span class="n">M</span><span class="p">[:,</span> <span class="n">i</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">conj</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">T</span><span class="p">)</span> <span class="o">*</span> <span class="n">ddHk</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">T</span><span class="p">))</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">real</span>
+        <span class="n">M</span><span class="p">[:,</span> <span class="n">i</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">conj</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">T</span><span class="p">)</span> <span class="o">*</span> <span class="n">ddHk</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">T</span><span class="p">))</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">real</span>
+        <span class="n">M</span><span class="p">[:,</span> <span class="n">i</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">conj</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">T</span><span class="p">)</span> <span class="o">*</span> <span class="n">ddHk</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">T</span><span class="p">))</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">real</span>
+
+    <span class="c1"># Now decouple the degenerate states</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">degenerate</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">deg</span> <span class="ow">in</span> <span class="n">degenerate</span><span class="p">:</span>
+            <span class="c1"># Now diagonalize to find the contributions from individual states</span>
+            <span class="c1"># then re-construct the seperated degenerate states</span>
+            <span class="c1"># Since we do this for all directions we should decouple them all</span>
+            <span class="n">vv</span> <span class="o">=</span> <span class="n">conj</span><span class="p">(</span><span class="n">state</span><span class="p">[</span><span class="n">deg</span><span class="p">,</span> <span class="p">:])</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">ddHk</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">state</span><span class="p">[</span><span class="n">deg</span><span class="p">,</span> <span class="p">:]</span><span class="o">.</span><span class="n">T</span><span class="p">))</span>
+            <span class="n">S</span> <span class="o">=</span> <span class="n">eigh_destroy</span><span class="p">(</span><span class="n">vv</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">T</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">state</span><span class="p">[</span><span class="n">deg</span><span class="p">,</span> <span class="p">:])</span>
+            <span class="n">vv</span> <span class="o">=</span> <span class="n">conj</span><span class="p">(</span><span class="n">S</span><span class="p">)</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">ddHk</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">S</span><span class="o">.</span><span class="n">T</span><span class="p">))</span>
+            <span class="n">S</span> <span class="o">=</span> <span class="n">eigh_destroy</span><span class="p">(</span><span class="n">vv</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">T</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">S</span><span class="p">)</span>
+            <span class="n">vv</span> <span class="o">=</span> <span class="n">conj</span><span class="p">(</span><span class="n">S</span><span class="p">)</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">ddHk</span><span class="p">[</span><span class="mi">2</span><span class="p">][</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">S</span><span class="o">.</span><span class="n">T</span><span class="p">))</span>
+            <span class="n">S</span> <span class="o">=</span> <span class="n">eigh_destroy</span><span class="p">(</span><span class="n">vv</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">T</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">S</span><span class="p">)</span>
+
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">3</span><span class="p">):</span>
+                <span class="n">M</span><span class="p">[</span><span class="n">deg</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">conj</span><span class="p">(</span><span class="n">S</span><span class="o">.</span><span class="n">T</span><span class="p">)</span> <span class="o">*</span> <span class="n">ddHk</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">S</span><span class="o">.</span><span class="n">T</span><span class="p">))</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">real</span>
+                <span class="n">M</span><span class="p">[</span><span class="n">deg</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">conj</span><span class="p">(</span><span class="n">S</span><span class="o">.</span><span class="n">T</span><span class="p">)</span> <span class="o">*</span> <span class="n">ddHk</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">S</span><span class="o">.</span><span class="n">T</span><span class="p">))</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">real</span>
+                <span class="n">M</span><span class="p">[</span><span class="n">deg</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">conj</span><span class="p">(</span><span class="n">S</span><span class="o">.</span><span class="n">T</span><span class="p">)</span> <span class="o">*</span> <span class="n">ddHk</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">S</span><span class="o">.</span><span class="n">T</span><span class="p">))</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">real</span>
+
+    <span class="k">return</span> <span class="n">M</span> <span class="o">*</span> <span class="n">_inv_eff_mass_const</span>
 
 
 <div class="viewcode-block" id="wavefunction"><a class="viewcode-back" href="../../../api-generated/sisl.physics.electron.wavefunction.html#sisl.physics.wavefunction">[docs]</a><span class="k">def</span> <span class="nf">wavefunction</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">grid</span><span class="p">,</span> <span class="n">geometry</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">spinor</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">spin</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">eta</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
@@ -1036,7 +1171,7 @@
         <span class="sa">r</span><span class="sd">&quot;&quot;&quot; Calculate velocity for the states</span>
 
 <span class="sd">        This routine calls `~sisl.physics.electron.velocity` with appropriate arguments</span>
-<span class="sd">        and returns the spin moment for the states. I.e. for non-orthogonal basis the overlap</span>
+<span class="sd">        and returns the velocity for the states. I.e. for non-orthogonal basis the overlap</span>
 <span class="sd">        matrix and energy values are also passed.</span>
 
 <span class="sd">        Note that the coefficients associated with the `StateCElectron` *must* correspond</span>
@@ -1067,6 +1202,42 @@
         <span class="k">except</span><span class="p">:</span>
             <span class="k">raise</span> <span class="n">SislError</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39;.velocity requires the parent to have a spin associated.&#39;</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">velocity</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">dHk</span><span class="p">(</span><span class="o">**</span><span class="n">opt</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">c</span><span class="p">,</span> <span class="n">dSk</span><span class="p">,</span> <span class="n">degenerate</span><span class="o">=</span><span class="n">deg</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">inv_eff_mass_tensor</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">eps</span><span class="o">=</span><span class="mf">1e-4</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot; Calculate inverse effective mass tensor for the states</span>
+
+<span class="sd">        This routine calls `~sisl.physics.electron.inv_eff_mass` with appropriate arguments</span>
+<span class="sd">        and returns the state inverse effective mass tensor. I.e. for non-orthogonal basis the overlap</span>
+<span class="sd">        matrix and energy values are also passed.</span>
+
+<span class="sd">        Note that the coefficients associated with the `StateCElectron` *must* correspond</span>
+<span class="sd">        to the energies of the states.</span>
+
+<span class="sd">        See `~sisl.physics.electron.inv_eff_mass_tensor` for details.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        eps : float, optional</span>
+<span class="sd">           precision used to find degenerate states.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">opt</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;k&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">info</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;k&#39;</span><span class="p">,</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">))}</span>
+            <span class="n">gauge</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">info</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;gauge&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">gauge</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">opt</span><span class="p">[</span><span class="s1">&#39;gauge&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">gauge</span>
+
+            <span class="c1"># Get dSk before spin</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">orthogonal</span><span class="p">:</span>
+                <span class="n">ddSk</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">ddSk</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">ddSk</span><span class="p">(</span><span class="o">**</span><span class="n">opt</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="s1">&#39;spin&#39;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">info</span><span class="p">:</span>
+                <span class="n">opt</span><span class="p">[</span><span class="s1">&#39;spin&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">info</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;spin&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+            <span class="n">deg</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">degenerate</span><span class="p">(</span><span class="n">eps</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">SislError</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39;.effective_mass requires the parent to have a spin associated.&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">inv_eff_mass_tensor</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">ddHk</span><span class="p">(</span><span class="o">**</span><span class="n">opt</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">c</span><span class="p">,</span> <span class="n">ddSk</span><span class="p">,</span> <span class="n">degenerate</span><span class="o">=</span><span class="n">deg</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">wavefunction</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">grid</span><span class="p">,</span> <span class="n">spinor</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">eta</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
         <span class="sa">r</span><span class="sd">&quot;&quot;&quot; Expand the coefficients as the wavefunction on `grid` *as-is*</span>
