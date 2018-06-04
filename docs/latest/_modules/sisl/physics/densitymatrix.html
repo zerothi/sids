@@ -468,10 +468,6 @@
         <span class="n">fxyz</span> <span class="o">=</span> <span class="n">geometry</span><span class="o">.</span><span class="n">fxyz</span>
         <span class="n">f_min</span> <span class="o">=</span> <span class="n">fxyz</span><span class="o">.</span><span class="n">min</span><span class="p">()</span>
         <span class="n">f_max</span> <span class="o">=</span> <span class="n">fxyz</span><span class="o">.</span><span class="n">max</span><span class="p">()</span>
-        <span class="k">if</span> <span class="n">f_min</span> <span class="o">&lt;</span> <span class="mi">0</span> <span class="ow">or</span> <span class="mf">1.</span> <span class="o">&lt;</span> <span class="n">f_max</span><span class="p">:</span>
-            <span class="n">warn</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39;.density has been passed a geometry where some coordinates are &#39;</span>
-                 <span class="s1">&#39;outside the primary unit-cell. This may potentially lead to problems! &#39;</span>
-                 <span class="s1">&#39;Double check the charge density!&#39;</span><span class="p">)</span>
         <span class="k">del</span> <span class="n">fxyz</span><span class="p">,</span> <span class="n">f_min</span><span class="p">,</span> <span class="n">f_max</span>
 
         <span class="c1"># Extract sub variables used throughout the loop</span>
@@ -595,12 +591,11 @@
         <span class="c1"># For extremely skewed lattices this will be way too much, hence we make</span>
         <span class="c1"># them square.</span>
         <span class="n">o</span> <span class="o">=</span> <span class="n">sc</span><span class="o">.</span><span class="n">toCuboid</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
-        <span class="n">sc</span> <span class="o">=</span> <span class="n">SuperCell</span><span class="p">(</span><span class="n">o</span><span class="o">.</span><span class="n">_v</span><span class="p">,</span> <span class="n">origo</span><span class="o">=</span><span class="n">o</span><span class="o">.</span><span class="n">origo</span><span class="p">)</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">add_R</span><span class="p">)</span>
-        <span class="n">sc</span><span class="o">.</span><span class="n">origo</span> <span class="o">-=</span> <span class="n">add_R</span>
+        <span class="n">sc</span> <span class="o">=</span> <span class="n">SuperCell</span><span class="p">(</span><span class="n">o</span><span class="o">.</span><span class="n">_v</span><span class="p">,</span> <span class="n">origo</span><span class="o">=</span><span class="n">o</span><span class="o">.</span><span class="n">origo</span> <span class="o">-</span> <span class="n">add_R</span><span class="p">)</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">add_R</span><span class="p">)</span>
 
         <span class="c1"># Retrieve all atoms within the grid supercell</span>
         <span class="c1"># (and the neighbours that connect into the cell)</span>
-        <span class="n">IA</span><span class="p">,</span> <span class="n">XYZ</span><span class="p">,</span> <span class="n">ISC</span> <span class="o">=</span> <span class="n">geometry</span><span class="o">.</span><span class="n">within_inf</span><span class="p">(</span><span class="n">sc</span><span class="p">,</span> <span class="n">periodic</span><span class="o">=</span><span class="n">pbc</span><span class="p">)</span>
+        <span class="n">IA</span><span class="p">,</span> <span class="n">XYZ</span><span class="p">,</span> <span class="n">ISC</span> <span class="o">=</span> <span class="n">geometry</span><span class="o">.</span><span class="n">within_inf</span><span class="p">(</span><span class="n">sc</span><span class="p">,</span> <span class="n">periodic</span><span class="o">=</span><span class="n">pbc</span><span class="p">,</span> <span class="n">origo</span><span class="o">=</span><span class="n">grid</span><span class="o">.</span><span class="n">origo</span><span class="p">)</span>
 
         <span class="c1"># Retrieve progressbar</span>
         <span class="n">eta</span> <span class="o">=</span> <span class="n">tqdm_eta</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">IA</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39;.density&#39;</span><span class="p">,</span> <span class="s1">&#39;atom&#39;</span><span class="p">,</span> <span class="n">eta</span><span class="p">)</span>
@@ -675,7 +670,7 @@
         <span class="c1">#      this would further decrease the loops required.</span>
 
         <span class="c1"># Loop over all atoms in the grid-cell</span>
-        <span class="k">for</span> <span class="n">ia</span><span class="p">,</span> <span class="n">ia_xyz</span><span class="p">,</span> <span class="n">isc</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">IA</span><span class="p">,</span> <span class="n">XYZ</span> <span class="o">-</span> <span class="n">origo</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span> <span class="n">ISC</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">ia</span><span class="p">,</span> <span class="n">ia_xyz</span><span class="p">,</span> <span class="n">isc</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">IA</span><span class="p">,</span> <span class="n">XYZ</span><span class="p">,</span> <span class="n">ISC</span><span class="p">):</span>
             <span class="c1"># Get current atom</span>
             <span class="n">ia_atom</span> <span class="o">=</span> <span class="n">atom</span><span class="p">[</span><span class="n">ia</span><span class="p">]</span>
             <span class="n">IO</span> <span class="o">=</span> <span class="n">a2o</span><span class="p">(</span><span class="n">ia</span><span class="p">)</span>
