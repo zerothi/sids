@@ -1050,13 +1050,12 @@ class Atom(object):
         ValueError : if the number of orbitals removed is too large or some indices are outside the allowed range
         """
         orbitals = _a.arrayi(orbitals)
-        if len(orbitals) >= self.no:
-            raise ValueError(self.__class__.__name__ + '.sub tries to remove all orbitals of an atom.')
+        if len(orbitals) > self.no:
+            raise ValueError(self.__class__.__name__ + '.sub tries to remove more than the number of orbitals on an atom.')
         if np.any(orbitals >= self.no):
             raise ValueError(self.__class__.__name__ + '.sub tries to remove a non-existing orbital io > no.')
 
-        # TODO fix copy for AtomicOrbital
-        orbs = [self.orbital[o] for o in orbitals]
+        orbs = [self.orbital[o].copy() for o in orbitals]
         return self.copy(orbital=orbs)
 
     def remove(self, orbitals):

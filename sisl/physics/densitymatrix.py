@@ -293,10 +293,6 @@ class DensityMatrix(SparseOrbitalBZSpin):
         fxyz = geometry.fxyz
         f_min = fxyz.min()
         f_max = fxyz.max()
-        if f_min < 0 or 1. < f_max:
-            warn(self.__class__.__name__ + '.density has been passed a geometry where some coordinates are '
-                 'outside the primary unit-cell. This may potentially lead to problems! '
-                 'Double check the charge density!')
         del fxyz, f_min, f_max
 
         # Extract sub variables used throughout the loop
@@ -420,12 +416,11 @@ class DensityMatrix(SparseOrbitalBZSpin):
         # For extremely skewed lattices this will be way too much, hence we make
         # them square.
         o = sc.toCuboid(True)
-        sc = SuperCell(o._v, origo=o.origo) + np.diag(2 * add_R)
-        sc.origo -= add_R
+        sc = SuperCell(o._v, origo=o.origo - add_R) + np.diag(2 * add_R)
 
         # Retrieve all atoms within the grid supercell
         # (and the neighbours that connect into the cell)
-        IA, XYZ, ISC = geometry.within_inf(sc, periodic=pbc)
+        IA, XYZ, ISC = geometry.within_inf(sc, periodic=pbc, origo=grid.origo)
 
         # Retrieve progressbar
         eta = tqdm_eta(len(IA), self.__class__.__name__ + '.density', 'atom', eta)
@@ -500,7 +495,7 @@ class DensityMatrix(SparseOrbitalBZSpin):
         #      this would further decrease the loops required.
 
         # Loop over all atoms in the grid-cell
-        for ia, ia_xyz, isc in zip(IA, XYZ - origo.reshape(1, 3), ISC):
+        for ia, ia_xyz, isc in zip(IA, XYZ, ISC):
             # Get current atom
             ia_atom = atom[ia]
             IO = a2o(ia)

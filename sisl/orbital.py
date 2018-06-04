@@ -251,7 +251,7 @@ class Orbital(object):
             axes.set_xlabel('Radius [Ang]')
             axes.set_ylabel(r'$f(r)$ [1/Ang$^{3/2}$]')
 
-    def toGrid(self, precision=0.05, c=1., R=None, dtype=np.float64):
+    def toGrid(self, precision=0.05, c=1., R=None, dtype=np.float64, Z=1):
         """ Create a Grid with *only* this orbital wavefunction on it
 
         Parameters
@@ -264,12 +264,14 @@ class Orbital(object):
             box size of the grid (default to the orbital range)
         dtype : numpy.dtype, optional
             the used separation in the `Grid` between voxels
+        Z : int, optional
+            atomic number associated with the grid
         """
         if R is None:
             R = self.R
         if R < 0:
-            raise ValueError(self.__class__.__name__ + " was unable to create "
-                             "the orbital grid for plotting, the orbital range is negative.")
+            raise ValueError(self.__class__.__name__ + ".toGrid was unable to create "
+                             "the orbital grid for plotting, the box size is negative.")
         # Since all these things depend on other elements
         # we will simply import them here.
         from .supercell import SuperCell
@@ -278,9 +280,8 @@ class Orbital(object):
         from .atom import Atom
         from .physics.electron import wavefunction
         sc = SuperCell(R*2, origo=[-R] * 3)
-        g = Geometry([0] * 3, Atom(1, self), sc=sc)
-        n = int(np.rint(2 * R / precision))
-        G = Grid([n] * 3, dtype=dtype, geometry=g)
+        g = Geometry([0] * 3, Atom(Z, self), sc=sc)
+        G = Grid(precision, dtype=dtype, geometry=g)
         wavefunction(np.ones(1), G, geometry=g)
         return G
 
@@ -875,6 +876,14 @@ class AtomicOrbital(Orbital):
             self.orb = Orbital(-1.)
 
         self.R = self.orb.R
+
+    @property
+    def f(self):
+        return self.orb.f
+
+    def copy(self):
+        """ Create an exact copy of this object """
+        return self.__class__(n=self.n, l=self.l, m=self.m, Z=self.Z, P=self.P, orb=self.orb.copy(), q0=self.q0, tag=self.tag)
 
     def equal(self, other, psi=False, radial=False):
         """ Compare two orbitals by comparing their radius, and possibly the radial and psi functions

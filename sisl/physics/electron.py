@@ -356,7 +356,8 @@ def velocity(state, dHk, energy=None, dSk=None, degenerate=None):
     Returns
     -------
     numpy.ndarray
-        velocities per state with final dimension ``(state.shape[0], 3)``, the velocity unit is Ang/ps.
+        velocities per state with final dimension ``(state.shape[0], 3)``, the velocity unit is Ang/ps
+        Units *may* change in future releases.
     """
     if state.ndim == 1:
         return velocity(state.reshape(1, -1), dHk, energy, dSk, degenerate).ravel()
@@ -693,7 +694,7 @@ def wavefunction(v, grid, geometry=None, k=None, spinor=0, spin=None, eta=False)
     kl = (k ** 2).sum() ** 0.5
     has_k = kl > 0.000001
     if has_k:
-        raise NotImplementedError('wavefunction for k != Gamma does not produce correct wavefunctions!')
+        info('wavefunction for k != Gamma is currently untested!')
 
     # Check that input/grid makes sense.
     # If the coefficients are complex valued, then the grid *has* to be
@@ -711,8 +712,8 @@ def wavefunction(v, grid, geometry=None, k=None, spinor=0, spin=None, eta=False)
     # Extract sub variables used throughout the loop
     shape = _a.asarrayi(grid.shape)
     dcell = grid.dcell
-    ic = grid.sc.icell * shape.reshape(1, -1)
-    geom_shape = dot(ic, geometry.cell.T).T
+    ic = grid.sc.icell
+    geom_shape = dot(ic, geometry.cell.T) * shape.reshape(1, -1)
 
     # In the following we don't care about division
     # So 1) save error state, 2) turn off divide by 0, 3) calculate, 4) turn on old error state
@@ -724,6 +725,7 @@ def wavefunction(v, grid, geometry=None, k=None, spinor=0, spin=None, eta=False)
         rx = addouter(addouter(ix * dc[0, 0], iy * dc[1, 0]), iz * dc[2, 0] - offset[0]).ravel()
         ry = addouter(addouter(ix * dc[0, 1], iy * dc[1, 1]), iz * dc[2, 1] - offset[1]).ravel()
         rz = addouter(addouter(ix * dc[0, 2], iy * dc[1, 2]), iz * dc[2, 2] - offset[2]).ravel()
+
         # Total size of the indices
         n = rx.shape[0]
         # Reduce our arrays to where the radius is "fine"
@@ -752,9 +754,9 @@ def wavefunction(v, grid, geometry=None, k=None, spinor=0, spin=None, eta=False)
     rxyz[..., 2] = cphi
     # Reshape
     rxyz.shape = (-1, 3)
-    idx = dot(ic, rxyz.T)
-    idxm = idx.min(1).reshape(1, 3)
-    idxM = idx.max(1).reshape(1, 3)
+    idx = dot(ic, rxyz.T).T * shape.reshape(1, -1)
+    idxm = idx.min(0).reshape(1, 3)
+    idxM = idx.max(0).reshape(1, 3)
     del ctheta_sphi, stheta_sphi, cphi, idx, rxyz, nrxyz
 
     origo = grid.sc.origo.reshape(1, -1)
@@ -768,7 +770,7 @@ def wavefunction(v, grid, geometry=None, k=None, spinor=0, spin=None, eta=False)
         # The coordinates are relative to origo, so we need to shift (when writing a grid
         # it is with respect to origo)
         xyz = geometry.xyz[ia, :] - origo
-        idx = dot(ic, xyz.T).T
+        idx = dot(ic, xyz.T).T * shape.reshape(1, -1)
 
         # Get min-max for all atoms
         idx_mm[ia, 0, :] = idxm * R + idx
@@ -781,7 +783,7 @@ def wavefunction(v, grid, geometry=None, k=None, spinor=0, spin=None, eta=False)
     # Before continuing, we can easily clean up the temporary arrays
     del origo, idx
 
-    aranged = _a.aranged
+    arangei = _a.arangei
 
     # In case this grid does not have a Geometry associated
     # We can *perhaps* easily attach a geometry with the given
@@ -803,12 +805,11 @@ def wavefunction(v, grid, geometry=None, k=None, spinor=0, spin=None, eta=False)
     # For extremely skewed lattices this will be way too much, hence we make
     # them square.
     o = sc.toCuboid(True)
-    sc = SuperCell(o._v, origo=o.origo) + np.diag(2 * add_R)
-    sc.origo -= add_R
+    sc = SuperCell(o._v, origo=o.origo - add_R) + np.diag(2 * add_R)
 
     # Retrieve all atoms within the grid supercell
     # (and the neighbours that connect into the cell)
-    IA, XYZ, ISC = geometry.within_inf(sc, periodic=pbc)
+    IA, XYZ, ISC = geometry.within_inf(sc, periodic=pbc, origo=grid.origo)
 
     r_k = dot(geometry.rcell, k)
     r_k_cell = dot(r_k, geometry.cell)
@@ -818,7 +819,7 @@ def wavefunction(v, grid, geometry=None, k=None, spinor=0, spin=None, eta=False)
     eta = tqdm_eta(len(IA), 'wavefunction', 'atom', eta)
 
     # Loop over all atoms in the grid-cell
-    for ia, xyz, isc in zip(IA, XYZ - grid.origo.reshape(1, 3), ISC):
+    for ia, xyz, isc in zip(IA, XYZ, ISC):
         # Get current atom
         atom = geometry.atom[ia]
 
@@ -856,19 +857,15 @@ def wavefunction(v, grid, geometry=None, k=None, spinor=0, spin=None, eta=False)
 
         # Now idxm/M contains min/max indices used
         # Convert to spherical coordinates
-        n, idx, r, theta, phi = idx2spherical(aranged(idxm[0], idxM[0]),
-                                              aranged(idxm[1], idxM[1]),
-                                              aranged(idxm[2], idxM[2]), xyz, dcell, R)
+        n, idx, r, theta, phi = idx2spherical(arangei(idxm[0], idxM[0]),
+                                              arangei(idxm[1], idxM[1]),
+                                              arangei(idxm[2], idxM[2]), xyz, dcell, R)
 
         # Get initial orbital
         io = geometry.a2o(ia)
 
         if has_k:
             phase = np.exp(-1j * (dot(r_k_cell, isc)))
-            # TODO
-            # Possibly the phase should be an additional
-            # array for the position in the unit-cell!
-            #   + np.exp(-1j * dot(r_k, spher2cart(r, theta, np.arccos(phi)).T) )
 
         # Allocate a temporary array where we add the psi elements
         psi = psi_init(n)
