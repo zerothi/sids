@@ -409,13 +409,19 @@ Download IPython notebook <a href="https://raw.githubusercontent.com/zerothi/sis
 </div>
 <div class="section" id="Siesta-----the-H2O-molecule">
 <h1>Siesta — the H2O molecule<a class="headerlink" href="#Siesta-----the-H2O-molecule" title="Permalink to this headline">¶</a></h1>
-<p>This tutorial will describe a complete walk-through of a large fraction
-of the <code class="docutils literal"><span class="pre">sisl</span></code> functionalities that may be related to the <a class="reference external" href="http://launchpad.net/siesta">Siesta
+<p>This tutorial will describe a complete walk-through of some of the
+<code class="docutils literal"><span class="pre">sisl</span></code> functionalities that may be related to the <a class="reference external" href="http://launchpad.net/siesta">Siesta
 code</a>.</p>
 <div class="section" id="Creating-the-geometry-to-investigate">
 <h2>Creating the geometry to investigate<a class="headerlink" href="#Creating-the-geometry-to-investigate" title="Permalink to this headline">¶</a></h2>
 <p>Our system of interest will be the <span class="math">\(\mathrm H_2\mathrm O\)</span> system.
-We will start by creating the geometry:</p>
+The first task will be to create the molecule geometry. This is done
+using lists of atomic coordinates and atomic species. Additionally one
+needs to define the supercell (or if you prefer: unit-cell) where the
+molecule resides in. Siesta is a periodic DFT code and thus all
+directions are periodic. I.e. when simulating molecules it is vital to
+have a large vacuum gap between periodic images. In this case we use a
+supercell of side-lengths <span class="math">\(10\mathrm{Ang}\)</span>.</p>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [2]:
@@ -475,8 +481,7 @@ only 1 orbital per atom.</div>
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="n">plt</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">h2o</span><span class="o">.</span><span class="n">xyz</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">h2o</span><span class="o">.</span><span class="n">xyz</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">s</span><span class="o">=</span><span class="n">h2o</span><span class="o">.</span><span class="n">atom</span><span class="o">.</span><span class="n">Z</span><span class="o">*</span><span class="mi">50</span><span class="p">);</span>
-<span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;$x$&#39;</span><span class="p">);</span> <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;$y$&#39;</span><span class="p">);</span>
+<span></span><span class="n">plot</span><span class="p">(</span><span class="n">h2o</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -494,10 +499,9 @@ only 1 orbital per atom.</div>
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s1">&#39;RUN.fdf&#39;</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
-    <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span><span class="si">%i</span><span class="s2">nclude STRUCT.fdf</span>
-<span class="s2">PAO.BasisSize SZP</span>
+<span></span><span class="nb">open</span><span class="p">(</span><span class="s1">&#39;RUN.fdf&#39;</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span><span class="si">%i</span><span class="s2">nclude STRUCT.fdf</span>
 <span class="s2">SystemLabel siesta_1</span>
+<span class="s2">PAO.BasisSize SZP</span>
 <span class="s2">MeshCutoff 250. Ry</span>
 <span class="s2">CDF.Save true</span>
 <span class="s2">CDF.Compress 9</span>
@@ -508,16 +512,25 @@ only 1 orbital per atom.</div>
 </pre></div>
 </div>
 </div>
-<p>The first block of code simply writes a text-file with the required
+<div class="line-block">
+<div class="line">The first block of code simply writes a text-file with the required
 input, the last line of code tells the geometry (<code class="docutils literal"><span class="pre">h2o</span></code>) to write its
-information to the file <code class="docutils literal"><span class="pre">STRUCT.fdf</span></code>. It automatically writes the
-species blocks etc. to the file.</p>
+information to the file <code class="docutils literal"><span class="pre">STRUCT.fdf</span></code>.</div>
+<div class="line">It automatically writes the following geometry information to the fdf
+file: - <code class="docutils literal"><span class="pre">LatticeConstant</span></code> - <code class="docutils literal"><span class="pre">LatticeVectors</span></code> - <code class="docutils literal"><span class="pre">NumberOfAtoms</span></code> -
+<code class="docutils literal"><span class="pre">AtomicCoordinatesFormat</span></code> - <code class="docutils literal"><span class="pre">AtomicCoordinatesAndAtomicSpecies</span></code> -
+<code class="docutils literal"><span class="pre">NumberOfSpecies</span></code> - <code class="docutils literal"><span class="pre">ChemicalSpeciesLabel</span></code></div>
+</div>
 </div>
 <div class="section" id="Creating-the-electronic-structure">
 <h2>Creating the electronic structure<a class="headerlink" href="#Creating-the-electronic-structure" title="Permalink to this headline">¶</a></h2>
-<p>Now run Siesta to obtain the electronic structure.</p>
-<p>After having completed the Siesta run we may read the Hamiltonian to
-manipulate and extract different informations.</p>
+<p>Before continuing we need to run Siesta to calculate the electronic
+structure.</p>
+<div class="highlight-bash"><div class="highlight"><pre><span></span>siesta RUN.fdf
+</pre></div>
+</div>
+<p>After having completed the Siesta run we may read the Siesta output to
+manipulate and extract different information.</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [6]:
@@ -526,7 +539,8 @@ manipulate and extract different informations.</p>
 <div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">fdf</span> <span class="o">=</span> <span class="n">get_sile</span><span class="p">(</span><span class="s1">&#39;RUN.fdf&#39;</span><span class="p">)</span>
 <span class="n">H</span> <span class="o">=</span> <span class="n">fdf</span><span class="o">.</span><span class="n">read_hamiltonian</span><span class="p">()</span>
-<span class="n">geom</span> <span class="o">=</span> <span class="n">H</span><span class="o">.</span><span class="n">geometry</span>
+<span class="c1"># Create a short-hand to handle the geometry</span>
+<span class="n">h2o</span> <span class="o">=</span> <span class="n">H</span><span class="o">.</span><span class="n">geometry</span>
 <span class="k">print</span><span class="p">(</span><span class="n">H</span><span class="p">)</span>
 </pre></div>
 </div>
@@ -563,21 +577,30 @@ Hamiltonian{non-zero: 289, orthogonal: False,
 }
 </pre></div></div>
 </div>
-<p>A lot of new information has appeared. First the Hamiltonian object
+<div class="line-block">
+<div class="line">A lot of new information has appeared. The Hamiltonian object
 describes the non-orthogonal basis and the “hopping” elements between
 the orbitals. We see it is a non-orthogonal basis via:
 <code class="docutils literal"><span class="pre">orthogonal:</span> <span class="pre">False</span></code>. Secondly, we see it was an un-polarized
-calculation. Lastly the geometry information is printed again. Contrary
-to the printing of the geometry higher up we now find additional
-information based on the orbitals on each of the atoms. The oxygen has 9
-orbitals while the hydrogens has 4 orbitals. For each orbital one can
-see its maximal radial part and how charges are initially distributed.</p>
+calculation (<code class="docutils literal"><span class="pre">Spin{unpolarized...</span></code>).</div>
+<div class="line">Lastly the geometry information is printed again. Contrary to the
+previous printing of the geometry we now find additional information
+based on the orbitals on each of the atoms. This information is read
+from the Siesta output and thus the basic information regarding the
+orbital symmetry and the basis functions are now handled by <code class="docutils literal"><span class="pre">sisl</span></code>.
+The oxygen has 9 orbitals (<span class="math">\(s+p+d\)</span> where the <span class="math">\(d\)</span> orbitals
+are <span class="math">\(p\)</span>-polarizations denoted by capital <code class="docutils literal"><span class="pre">P</span></code>). We also see
+that it is a single-<span class="math">\(\zeta\)</span> calculation <code class="docutils literal"><span class="pre">Z1</span></code> (for
+double-<span class="math">\(\zeta\)</span> <code class="docutils literal"><span class="pre">Z2</span></code> would also appear in the list). The
+hydrogens only has 4 orbitals <span class="math">\(s+p\)</span>. For each orbital one can
+see its maximal radial part and how initial charges are distributed.</div>
+</div>
 <div class="section" id="Plotting-orbitals">
 <h3>Plotting orbitals<a class="headerlink" href="#Plotting-orbitals" title="Permalink to this headline">¶</a></h3>
-<p>Often it may be educational (and fun) to plot the orbitals
-wavefunctions. To do this we use the intrinsic method in the <code class="docutils literal"><span class="pre">Orbital</span></code>
-class named <code class="docutils literal"><span class="pre">toGrid</span></code>. The below code is rather complicated, but that
-is simply because we want to show the orbitals in a rectangular grid of
+<p>Often it may be educational (and fun) to plot the orbital wavefunctions.
+To do this we use the intrinsic method in the <code class="docutils literal"><span class="pre">Orbital</span></code> class named
+<code class="docutils literal"><span class="pre">toGrid</span></code>. The below code is rather complicated, but the complexity is
+simply because we want to show the orbitals in a rectangular grid of
 plots.</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none"><div class="highlight"><pre>
@@ -620,8 +643,8 @@ plots.</p>
                 <span class="n">ax</span> <span class="o">=</span> <span class="n">axs</span><span class="p">[</span><span class="n">c</span><span class="p">][</span><span class="n">r</span><span class="p">]</span>
             <span class="n">fig</span><span class="o">.</span><span class="n">delaxes</span><span class="p">(</span><span class="n">ax</span><span class="p">)</span>
         <span class="n">plt</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span>
-<span class="n">plot_atom</span><span class="p">(</span><span class="n">geom</span><span class="o">.</span><span class="n">atom</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
-<span class="n">plot_atom</span><span class="p">(</span><span class="n">geom</span><span class="o">.</span><span class="n">atom</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+<span class="n">plot_atom</span><span class="p">(</span><span class="n">h2o</span><span class="o">.</span><span class="n">atom</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+<span class="n">plot_atom</span><span class="p">(</span><span class="n">h2o</span><span class="o">.</span><span class="n">atom</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
 </pre></div>
 </div>
 </div>
@@ -648,7 +671,10 @@ functions used in the Siesta calculation. This completes what is needed
 to calculate a great deal of physical quantities, e.g. eigenstates,
 density of states, projected density of states and wavefunctions.</p>
 <p>To begin with we calculate the <span class="math">\(\Gamma\)</span>-point eigenstates and plot
-a subset of the eigenstates’ norm on the geometry.</p>
+a subset of the eigenstates’ norm on the geometry. An important aspect
+of the electronic structure handled by Siesta is that it is shifted to
+<span class="math">\(E_F=0\)</span> meaning that the HOMO level is the smallest negative
+eigenvalue, while the LUMO is the smallest positive eigenvalue:</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [8]:
@@ -656,42 +682,32 @@ a subset of the eigenstates’ norm on the geometry.</p>
 </div>
 <div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">es</span> <span class="o">=</span> <span class="n">H</span><span class="o">.</span><span class="n">eigenstate</span><span class="p">()</span>
-<span class="n">h2o</span> <span class="o">=</span> <span class="n">H</span><span class="o">.</span><span class="n">geometry</span>
+
+<span class="c1"># We specify an origo to center the molecule in the grid</span>
 <span class="n">h2o</span><span class="o">.</span><span class="n">sc</span><span class="o">.</span><span class="n">origo</span> <span class="o">=</span> <span class="p">[</span><span class="o">-</span><span class="mi">4</span><span class="p">,</span> <span class="o">-</span><span class="mi">4</span><span class="p">,</span> <span class="o">-</span><span class="mi">4</span><span class="p">]</span>
-<span class="k">print</span><span class="p">(</span><span class="n">h2o</span><span class="o">.</span><span class="n">sc</span><span class="p">,</span> <span class="n">h2o</span><span class="o">.</span><span class="n">sc</span><span class="o">.</span><span class="n">origo</span><span class="p">)</span>
-<span class="n">O_idx</span> <span class="o">=</span> <span class="n">h2o</span><span class="o">.</span><span class="n">a2o</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="bp">True</span><span class="p">)</span>
-<span class="n">H1_idx</span> <span class="o">=</span> <span class="n">h2o</span><span class="o">.</span><span class="n">a2o</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="bp">True</span><span class="p">)</span>
-<span class="n">H2_idx</span> <span class="o">=</span> <span class="n">h2o</span><span class="o">.</span><span class="n">a2o</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="bp">True</span><span class="p">)</span>
+
 <span class="c1"># Reduce the contained eigenstates to only the HOMO and LUMO</span>
-<span class="n">idx_homo</span> <span class="o">=</span> <span class="p">(</span><span class="n">es</span><span class="o">.</span><span class="n">eig</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">nonzero</span><span class="p">()[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span>
-<span class="n">es</span> <span class="o">=</span> <span class="n">es</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">idx_homo</span><span class="p">,</span> <span class="n">idx_homo</span> <span class="o">+</span> <span class="mi">2</span><span class="p">))</span>
+<span class="c1"># Find the index of the smallest positive eigenvalue</span>
+<span class="n">idx_lumo</span> <span class="o">=</span> <span class="p">(</span><span class="n">es</span><span class="o">.</span><span class="n">eig</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">nonzero</span><span class="p">()[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+<span class="n">es</span> <span class="o">=</span> <span class="n">es</span><span class="o">.</span><span class="n">sub</span><span class="p">([</span><span class="n">idx_lumo</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="n">idx_lumo</span><span class="p">])</span>
 <span class="n">_</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">14</span><span class="p">,</span> <span class="mi">2</span><span class="p">));</span>
-<span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">c</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">es</span><span class="o">.</span><span class="n">norm2</span><span class="p">(</span><span class="nb">sum</span><span class="o">=</span><span class="bp">False</span><span class="p">),</span> <span class="s1">&#39;rbg&#39;</span><span class="p">)):</span>
-    <span class="n">ax</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">h2o</span><span class="o">.</span><span class="n">xyz</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">h2o</span><span class="o">.</span><span class="n">xyz</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="mi">600</span> <span class="o">*</span> <span class="n">n</span><span class="p">[</span><span class="n">O_idx</span><span class="p">]</span><span class="o">.</span><span class="n">sum</span><span class="p">(),</span> <span class="n">facecolor</span><span class="o">=</span><span class="n">c</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.5</span><span class="p">);</span>
-    <span class="n">ax</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">h2o</span><span class="o">.</span><span class="n">xyz</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">h2o</span><span class="o">.</span><span class="n">xyz</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="mi">600</span> <span class="o">*</span> <span class="n">n</span><span class="p">[</span><span class="n">H1_idx</span><span class="p">]</span><span class="o">.</span><span class="n">sum</span><span class="p">(),</span> <span class="n">facecolor</span><span class="o">=</span><span class="n">c</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.5</span><span class="p">);</span>
-    <span class="n">ax</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">h2o</span><span class="o">.</span><span class="n">xyz</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">h2o</span><span class="o">.</span><span class="n">xyz</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="mi">600</span> <span class="o">*</span> <span class="n">n</span><span class="p">[</span><span class="n">H2_idx</span><span class="p">]</span><span class="o">.</span><span class="n">sum</span><span class="p">(),</span> <span class="n">facecolor</span><span class="o">=</span><span class="n">c</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.5</span><span class="p">);</span>
+<span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="p">(</span><span class="n">norm2</span><span class="p">,</span> <span class="n">color</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">es</span><span class="o">.</span><span class="n">norm2</span><span class="p">(</span><span class="nb">sum</span><span class="o">=</span><span class="bp">False</span><span class="p">),</span> <span class="s1">&#39;rbg&#39;</span><span class="p">)):</span>
+    <span class="k">for</span> <span class="n">ia</span> <span class="ow">in</span> <span class="n">h2o</span><span class="p">:</span>
+        <span class="n">ax</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">h2o</span><span class="o">.</span><span class="n">xyz</span><span class="p">[</span><span class="n">ia</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">h2o</span><span class="o">.</span><span class="n">xyz</span><span class="p">[</span><span class="n">ia</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="mi">600</span> <span class="o">*</span> <span class="n">norm2</span><span class="p">[</span><span class="n">h2o</span><span class="o">.</span><span class="n">a2o</span><span class="p">(</span><span class="n">ia</span><span class="p">,</span> <span class="bp">True</span><span class="p">)]</span><span class="o">.</span><span class="n">sum</span><span class="p">(),</span> <span class="n">facecolor</span><span class="o">=</span><span class="n">color</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.5</span><span class="p">);</span>
 </pre></div>
 </div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-SuperCell{volume: 1.0000e+03, nsc: 1 1 1} [-4. -4. -4.]
-</pre></div></div>
 </div>
 <div class="nboutput nblast docutils container">
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="../_images/tutorials_tutorial_siesta_1_16_1.png" src="../_images/tutorials_tutorial_siesta_1_16_1.png" />
+<img alt="../_images/tutorials_tutorial_siesta_1_16_0.png" src="../_images/tutorials_tutorial_siesta_1_16_0.png" />
 </div>
 </div>
 <p>These are not that interesting. The projection of the HOMO and LUMO
 states show where the largest weight of the HOMO and LUMO states,
-however we can’t see the symmetry differences between the HOMO and LUMO
-states.</p>
+however we can’t see the orbital symmetry differences between the HOMO
+and LUMO states.</p>
 <p>Instead of plotting the weight on each orbital it is more interesting to
 plot the actual wavefunctions which contains the orbital symmetries,
 however, matplotlib is currently not capable of plotting real-space
@@ -706,43 +722,22 @@ software.</p>
 <span></span><span class="k">def</span> <span class="nf">integrate</span><span class="p">(</span><span class="n">g</span><span class="p">):</span>
     <span class="k">print</span><span class="p">(</span><span class="s1">&#39;Real space integrated wavefunction: {:.4f}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">((</span><span class="n">np</span><span class="o">.</span><span class="n">absolute</span><span class="p">(</span><span class="n">g</span><span class="o">.</span><span class="n">grid</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">*</span> <span class="n">g</span><span class="o">.</span><span class="n">dvolume</span><span class="p">))</span>
 <span class="n">g</span> <span class="o">=</span> <span class="n">Grid</span><span class="p">(</span><span class="mf">0.2</span><span class="p">,</span> <span class="n">sc</span><span class="o">=</span><span class="n">h2o</span><span class="o">.</span><span class="n">sc</span><span class="p">)</span>
-<span class="n">es</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">wavefunction</span><span class="p">(</span><span class="n">g</span><span class="p">,</span> <span class="n">eta</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+<span class="n">es</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">wavefunction</span><span class="p">(</span><span class="n">g</span><span class="p">)</span>
 <span class="n">integrate</span><span class="p">(</span><span class="n">g</span><span class="p">)</span>
 <span class="c1">#g.write(&#39;HOMO.cube&#39;)</span>
-<span class="n">g</span><span class="o">.</span><span class="n">fill</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
-<span class="n">es</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">wavefunction</span><span class="p">(</span><span class="n">g</span><span class="p">,</span> <span class="n">eta</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+<span class="n">g</span><span class="o">.</span><span class="n">fill</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span> <span class="c1"># reset the grid values to 0</span>
+<span class="n">es</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">wavefunction</span><span class="p">(</span><span class="n">g</span><span class="p">)</span>
 <span class="n">integrate</span><span class="p">(</span><span class="n">g</span><span class="p">)</span>
 <span class="c1">#g.write(&#39;LUMO.cube&#39;)</span>
 </pre></div>
 </div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<script type="application/vnd.jupyter.widget-view+json">{"version_major": 2, "version_minor": 0, "model_id": "7f8bcd84bdbd41038dccb28c5034c369"}</script></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-
-Real space integrated wavefunction: 1.0001
-</pre></div></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<script type="application/vnd.jupyter.widget-view+json">{"version_major": 2, "version_minor": 0, "model_id": "b009242d12f44c9ba9449ccaeb5ab592"}</script></div>
 </div>
 <div class="nboutput nblast docutils container">
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-
+Real space integrated wavefunction: 1.0001
 Real space integrated wavefunction: 1.0000
 </pre></div></div>
 </div>
@@ -751,9 +746,9 @@ Real space integrated wavefunction: 1.0000
 <h2>Real space charge<a class="headerlink" href="#Real-space-charge" title="Permalink to this headline">¶</a></h2>
 <p>Since we have the basis functions we can also plot the charge in the
 grid. We can do this via either reading the density matrix or read in
-the charge output from Siesta directly. Since both should yield the same
+the charge output directly from Siesta. Since both should yield the same
 value we can compare the output from Siesta with that calculated in
-sisl.</p>
+<code class="docutils literal"><span class="pre">sisl</span></code>.</p>
 <p>You will notice that re-creating the density on a real space grid in
 sisl is much slower than creating the wavefunction. This is because we
 need <em>orbital multiplications</em>.</p>
@@ -774,27 +769,19 @@ need <em>orbital multiplications</em>.</p>
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="c1"># Now calculate the density on the same grid using sisl and compare to Siesta output</span>
-<span class="n">DM_rho</span> <span class="o">=</span> <span class="n">rho</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+<span></span><span class="n">DM_rho</span> <span class="o">=</span> <span class="n">rho</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
 <span class="n">DM_rho</span><span class="o">.</span><span class="n">fill</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
-<span class="n">DM</span><span class="o">.</span><span class="n">density</span><span class="p">(</span><span class="n">DM_rho</span><span class="p">,</span> <span class="n">eta</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+<span class="n">DM</span><span class="o">.</span><span class="n">density</span><span class="p">(</span><span class="n">DM_rho</span><span class="p">)</span>
 <span class="n">diff</span> <span class="o">=</span> <span class="n">DM_rho</span> <span class="o">-</span> <span class="n">rho</span>
 <span class="k">print</span><span class="p">(</span><span class="s1">&#39;Real space integrated density difference: {:.3e}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">diff</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">*</span> <span class="n">diff</span><span class="o">.</span><span class="n">dvolume</span><span class="p">))</span>
 </pre></div>
 </div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<script type="application/vnd.jupyter.widget-view+json">{"version_major": 2, "version_minor": 0, "model_id": "3c499b1db4644404833f71cde9749968"}</script></div>
 </div>
 <div class="nboutput nblast docutils container">
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-
 Real space integrated density difference: 2.386e-09
 </pre></div></div>
 </div>

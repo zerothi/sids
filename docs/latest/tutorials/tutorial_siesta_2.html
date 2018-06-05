@@ -402,7 +402,6 @@ Download IPython notebook <a href="https://raw.githubusercontent.com/zerothi/sis
 <span class="n">os</span><span class="o">.</span><span class="n">chdir</span><span class="p">(</span><span class="s1">&#39;siesta_2&#39;</span><span class="p">)</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
 <span class="kn">from</span> <span class="nn">sisl</span> <span class="kn">import</span> <span class="o">*</span>
-<span class="n">sisl_plot</span> <span class="o">=</span> <span class="n">plot</span>
 <span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="kn">as</span> <span class="nn">plt</span>
 <span class="o">%</span><span class="k">matplotlib</span> inline
 </pre></div>
@@ -414,11 +413,14 @@ Download IPython notebook <a href="https://raw.githubusercontent.com/zerothi/sis
 of the <code class="docutils literal"><span class="pre">sisl</span></code> functionalities that may be related to the <a class="reference external" href="http://launchpad.net/siesta">Siesta
 code</a>.</p>
 <p>Contrary to the <span class="math">\(\mathrm H_2\mathrm O\)</span> system this tutorial will
-emphasize the usefullness of performing bandstructures etc. directly in
+emphasize the usefulness of performing bandstructures etc. directly in
 Python using sisl.</p>
 <div class="section" id="Creating-the-geometry-to-investigate">
 <h2>Creating the geometry to investigate<a class="headerlink" href="#Creating-the-geometry-to-investigate" title="Permalink to this headline">¶</a></h2>
-<p>Our system of interest will be the smallest graphene cell:</p>
+<p>Our system of interest will be the smallest graphene cell. Instead of
+defining the atomic positions, the carbon atoms and supercell for
+graphene, we use a default implementation of graphene in <code class="docutils literal"><span class="pre">sisl</span></code>. There
+are a small selection of the typical geometries, including graphene.</p>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [2]:
@@ -429,15 +431,14 @@ Python using sisl.</p>
 </pre></div>
 </div>
 </div>
-<p>Graphene is already implemented in the generic <code class="docutils literal"><span class="pre">geom</span></code> utilities. First
-we plot the geometry</p>
+<p>Let us plot the geometry.</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [3]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="n">sisl_plot</span><span class="p">(</span><span class="n">graphene</span><span class="p">)</span>
+<span></span><span class="n">plot</span><span class="p">(</span><span class="n">graphene</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -455,18 +456,17 @@ we plot the geometry</p>
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s1">&#39;RUN.fdf&#39;</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
-    <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span><span class="si">%i</span><span class="s2">nclude STRUCT.fdf</span>
-<span class="s2">PAO.BasisSize SZP</span>
+<span></span><span class="nb">open</span><span class="p">(</span><span class="s1">&#39;RUN.fdf&#39;</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span><span class="si">%i</span><span class="s2">nclude STRUCT.fdf</span>
 <span class="s2">SystemLabel siesta_2</span>
+<span class="s2">PAO.BasisSize SZP</span>
 <span class="s2">MeshCutoff 250. Ry</span>
 <span class="s2">CDF.Save true</span>
 <span class="s2">CDF.Compress 9</span>
 <span class="s2">SaveHS true</span>
 <span class="s2">SaveRho true</span>
 <span class="s2">%block kgrid.MonkhorstPack</span>
-<span class="s2">  60  1 1 0.</span>
-<span class="s2">   1 60 1 0.</span>
+<span class="s2">  61  1 1 0.</span>
+<span class="s2">   1 61 1 0.</span>
 <span class="s2">   0  0 1 0.</span>
 <span class="si">%e</span><span class="s2">ndblock</span>
 <span class="s2">&quot;&quot;&quot;</span><span class="p">)</span>
@@ -477,9 +477,12 @@ we plot the geometry</p>
 </div>
 <div class="section" id="Creating-the-electronic-structure">
 <h2>Creating the electronic structure<a class="headerlink" href="#Creating-the-electronic-structure" title="Permalink to this headline">¶</a></h2>
-<p>Now run Siesta to obtain the electronic structure.</p>
+<p>Before proceeding, run Siesta to calculate the ground state electronic
+structure.</p>
 <p>After having completed the Siesta run we may read the Hamiltonian to
-manipulate and extract different informations.</p>
+manipulate and extract different information. After reading the
+Hamiltonian it is obvious that a great deal of new data has been
+associated with the Hamiltonian.</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [5]:
@@ -488,7 +491,6 @@ manipulate and extract different informations.</p>
 <div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">fdf</span> <span class="o">=</span> <span class="n">get_sile</span><span class="p">(</span><span class="s1">&#39;RUN.fdf&#39;</span><span class="p">)</span>
 <span class="n">H</span> <span class="o">=</span> <span class="n">fdf</span><span class="o">.</span><span class="n">read_hamiltonian</span><span class="p">()</span>
-<span class="n">geom</span> <span class="o">=</span> <span class="n">H</span><span class="o">.</span><span class="n">geometry</span>
 <span class="k">print</span><span class="p">(</span><span class="n">H</span><span class="p">)</span>
 </pre></div>
 </div>
@@ -525,7 +527,8 @@ Hamiltonian{non-zero: 5994, orthogonal: False,
 <p>When we are dealing with periodic structures (such as graphene) it is
 imperative to calculate the density of states in a simple and efficient
 manner. Below we will calculate the DOS for a variety of Monkhorst-Pack
-grids to check the convergence of the DOS:</p>
+grids to check the convergence of the DOS (it shouldn’t take more than a
+minute):</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [6]:
@@ -535,7 +538,7 @@ grids to check the convergence of the DOS:</p>
 <span></span><span class="n">E</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="o">-</span><span class="mi">6</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">500</span><span class="p">)</span>
 <span class="k">for</span> <span class="n">nk</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">21</span><span class="p">,</span> <span class="mi">41</span><span class="p">,</span> <span class="mi">61</span><span class="p">,</span> <span class="mi">81</span><span class="p">]:</span>
     <span class="n">bz</span> <span class="o">=</span> <span class="n">MonkhorstPack</span><span class="p">(</span><span class="n">H</span><span class="p">,</span> <span class="p">[</span><span class="n">nk</span><span class="p">,</span> <span class="n">nk</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span><span class="o">.</span><span class="n">asaverage</span><span class="p">()</span>
-    <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">E</span><span class="p">,</span> <span class="n">bz</span><span class="o">.</span><span class="n">DOS</span><span class="p">(</span><span class="n">E</span><span class="p">,</span> <span class="n">eta</span><span class="o">=</span><span class="bp">True</span><span class="p">),</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;nk={}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">nk</span><span class="p">));</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">E</span><span class="p">,</span> <span class="n">bz</span><span class="o">.</span><span class="n">DOS</span><span class="p">(</span><span class="n">E</span><span class="p">),</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;nk={}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">nk</span><span class="p">));</span>
 <span class="n">plt</span><span class="o">.</span><span class="n">xlim</span><span class="p">(</span><span class="n">E</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">E</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]);</span> <span class="n">plt</span><span class="o">.</span><span class="n">ylim</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
 <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;$E - E_F$ [eV]&#39;</span><span class="p">)</span>
 <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;DOS [1/eV]&#39;</span><span class="p">)</span>
@@ -543,76 +546,20 @@ grids to check the convergence of the DOS:</p>
 </pre></div>
 </div>
 </div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<script type="application/vnd.jupyter.widget-view+json">{"version_major": 2, "version_minor": 0, "model_id": "77de32b3b0d343fb95857316283f0569"}</script></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-
-</pre></div></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<script type="application/vnd.jupyter.widget-view+json">{"version_major": 2, "version_minor": 0, "model_id": "7a31c6afc4ca45f7bb3d2bb767c1faa8"}</script></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-
-</pre></div></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<script type="application/vnd.jupyter.widget-view+json">{"version_major": 2, "version_minor": 0, "model_id": "c15bdaf9e3a240968a4595b226f7de2f"}</script></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-
-</pre></div></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<script type="application/vnd.jupyter.widget-view+json">{"version_major": 2, "version_minor": 0, "model_id": "edd9f5a7c20448efb1c47ec24a8265ed"}</script></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-
-</pre></div></div>
-</div>
 <div class="nboutput nblast docutils container">
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="../_images/tutorials_tutorial_siesta_2_10_8.png" src="../_images/tutorials_tutorial_siesta_2_10_8.png" />
+<img alt="../_images/tutorials_tutorial_siesta_2_10_0.png" src="../_images/tutorials_tutorial_siesta_2_10_0.png" />
 </div>
 </div>
-<p>We see that the k-points are converged for approximately 60 k-points
+<p>We see that the k-points are converged for approximately 61 k-points
 using the default smearing method. The default smearing method is the
 Gaussian smearing technique with <span class="math">\(\sigma=0.1\mathrm{eV}\)</span>. Note
 that intrinsically the <code class="docutils literal"><span class="pre">MonkhorstPack</span></code> grid assumes time-reversal
 symmetry. I.e. <span class="math">\(\mathbf k \equiv -\mathbf k\)</span>.</p>
 <p>Now we may use the Monkhorst-Pack grid for 81 points to find the
-projected DOS for the <span class="math">\(p_z\)</span> orbitals.</p>
+projected DOS for some of the orbitals.</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [7]:
@@ -633,6 +580,7 @@ projected DOS for the <span class="math">\(p_z\)</span> orbitals.</p>
 <span class="k">print</span><span class="p">(</span><span class="s1">&#39;Orbital index of s: {}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">idx_s</span><span class="p">))</span>
 <span class="k">print</span><span class="p">(</span><span class="s1">&#39;Orbital index of p_x and p_y: {}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">idx_pxy</span><span class="p">))</span>
 <span class="k">print</span><span class="p">(</span><span class="s1">&#39;Orbital index of p_z: {}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">idx_pz</span><span class="p">))</span>
+<span class="c1"># Get all orbitals</span>
 <span class="n">all_s</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">add</span><span class="o">.</span><span class="n">outer</span><span class="p">(</span><span class="n">H</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">a2o</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]),</span> <span class="n">idx_s</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
 <span class="n">all_pxy</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">add</span><span class="o">.</span><span class="n">outer</span><span class="p">(</span><span class="n">H</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">a2o</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]),</span> <span class="n">idx_pxy</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
 <span class="n">all_pz</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">add</span><span class="o">.</span><span class="n">outer</span><span class="p">(</span><span class="n">H</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">a2o</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]),</span> <span class="n">idx_pz</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
@@ -641,7 +589,7 @@ projected DOS for the <span class="math">\(p_z\)</span> orbitals.</p>
     <span class="n">pdos_pxy</span> <span class="o">=</span> <span class="n">PDOS</span><span class="p">[</span><span class="n">all_pxy</span><span class="p">,</span> <span class="p">:]</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
     <span class="n">pdos_pz</span> <span class="o">=</span> <span class="n">PDOS</span><span class="p">[</span><span class="n">all_pz</span><span class="p">,</span> <span class="p">:]</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">stack</span><span class="p">((</span><span class="n">pdos_s</span><span class="p">,</span> <span class="n">pdos_pxy</span><span class="p">,</span> <span class="n">pdos_pz</span><span class="p">))</span>
-<span class="n">pDOS</span> <span class="o">=</span> <span class="n">bz</span><span class="o">.</span><span class="n">PDOS</span><span class="p">(</span><span class="n">E</span><span class="p">,</span> <span class="n">eta</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">wrap</span><span class="o">=</span><span class="n">wrap</span><span class="p">)</span>
+<span class="n">pDOS</span> <span class="o">=</span> <span class="n">bz</span><span class="o">.</span><span class="n">PDOS</span><span class="p">(</span><span class="n">E</span><span class="p">,</span> <span class="n">wrap</span><span class="o">=</span><span class="n">wrap</span><span class="p">)</span>
 <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">E</span><span class="p">,</span> <span class="n">pDOS</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="p">:],</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;$s$&#39;</span><span class="p">);</span>
 <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">E</span><span class="p">,</span> <span class="n">pDOS</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="p">:],</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;$p_x+p_y$&#39;</span><span class="p">);</span>
 <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">E</span><span class="p">,</span> <span class="n">pDOS</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="p">:],</span> <span class="n">label</span><span class="o">=</span><span class="sa">r</span><span class="s1">&#39;$p_z$&#39;</span><span class="p">);</span>
@@ -662,33 +610,22 @@ Orbital index of p_x and p_y: [1, 3]
 Orbital index of p_z: [2]
 </pre></div></div>
 </div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<script type="application/vnd.jupyter.widget-view+json">{"version_major": 2, "version_minor": 0, "model_id": "b40afb64488547378746b197959fe466"}</script></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-
-</pre></div></div>
-</div>
 <div class="nboutput nblast docutils container">
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="../_images/tutorials_tutorial_siesta_2_12_3.png" src="../_images/tutorials_tutorial_siesta_2_12_3.png" />
+<img alt="../_images/tutorials_tutorial_siesta_2_12_1.png" src="../_images/tutorials_tutorial_siesta_2_12_1.png" />
 </div>
 </div>
+<p>As seen the <span class="math">\(p_z\)</span> orbitals are responsible for the DOS in a broad
+range of energies around the Fermi-level. This is one reason for the
+tight-binding models success with respect to graphene.</p>
 <p>Another way to gain information is via the so-called <em>fat-bands</em> which
 basically is the PDOS scaling (no broadening) on each band for the
 quantities we are interested in. To plot the fat-bands we need the
 band-structure and a projection of each state onto the requested
 orbitals.</p>
-<div class="nbinput docutils container">
+<div class="nbinput nblast docutils container">
 <div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [8]:
 </pre></div>
@@ -706,29 +643,21 @@ orbitals.</p>
     <span class="n">weight_pxy</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">norm2</span><span class="p">[:,</span> <span class="n">all_pxy</span><span class="p">]</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">))</span>
     <span class="n">weight_pz</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">norm2</span><span class="p">[:,</span> <span class="n">all_pz</span><span class="p">]</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">))</span>
     <span class="k">return</span> <span class="n">eigenstate</span><span class="o">.</span><span class="n">eig</span>
+<span class="c1"># Define the band-structure</span>
 <span class="n">bz</span> <span class="o">=</span> <span class="n">BandStructure</span><span class="p">(</span><span class="n">H</span><span class="p">,</span> <span class="p">[[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="mi">3</span><span class="p">,</span> <span class="p">[</span><span class="mf">2.</span><span class="o">/</span><span class="mi">3</span><span class="p">,</span> <span class="mf">1.</span><span class="o">/</span><span class="mi">3</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="mi">3</span><span class="p">],</span> <span class="mi">400</span><span class="p">,</span>
                    <span class="n">name</span><span class="o">=</span><span class="p">[</span><span class="sa">r</span><span class="s1">&#39;$\Gamma$&#39;</span><span class="p">,</span> <span class="sa">r</span><span class="s1">&#39;$K$&#39;</span><span class="p">,</span> <span class="sa">r</span><span class="s1">&#39;$M$&#39;</span><span class="p">,</span> <span class="sa">r</span><span class="s1">&#39;$\Gamma$&#39;</span><span class="p">])</span>
-<span class="n">eig</span> <span class="o">=</span> <span class="n">bz</span><span class="o">.</span><span class="n">eigenstate</span><span class="p">(</span><span class="n">eta</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">wrap</span><span class="o">=</span><span class="n">wrap_fatbands</span><span class="p">)</span><span class="o">.</span><span class="n">T</span>
+
+<span class="c1"># Calculate all eigenvalues</span>
+<span class="n">eig</span> <span class="o">=</span> <span class="n">bz</span><span class="o">.</span><span class="n">eigenstate</span><span class="p">(</span><span class="n">wrap</span><span class="o">=</span><span class="n">wrap_fatbands</span><span class="p">)</span><span class="o">.</span><span class="n">T</span>
 <span class="n">weight_s</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">weight_s</span><span class="p">)</span><span class="o">.</span><span class="n">T</span>
 <span class="n">weight_pxy</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">weight_pxy</span><span class="p">)</span><span class="o">.</span><span class="n">T</span>
 <span class="n">weight_pz</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">weight_pz</span><span class="p">)</span><span class="o">.</span><span class="n">T</span>
 </pre></div>
 </div>
 </div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<script type="application/vnd.jupyter.widget-view+json">{"version_major": 2, "version_minor": 0, "model_id": "0434694be34b4cafaf796da9b61dbe33"}</script></div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-
-</pre></div></div>
-</div>
+<p>Finally we plot the fat-bands. Our plots split each of the orbitals
+contributions into their separate fat band. Thus one can see details on
+multiple orbital contributions for each band.</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [9]:
@@ -742,6 +671,7 @@ orbitals.</p>
 <span class="c1"># The width of the fat-bands is dependent on the energy range and also on the variety</span>
 <span class="c1"># of contributions.</span>
 <span class="n">dE</span> <span class="o">=</span> <span class="p">(</span><span class="n">Emax</span> <span class="o">-</span> <span class="n">Emin</span><span class="p">)</span> <span class="o">/</span> <span class="mf">20.</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;$E-E_F$ [eV]&#39;</span><span class="p">)</span>
 <span class="n">plt</span><span class="o">.</span><span class="n">xlim</span><span class="p">(</span><span class="n">linear_k</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">linear_k</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]);</span>
 <span class="n">plt</span><span class="o">.</span><span class="n">xticks</span><span class="p">(</span><span class="n">k_tick</span><span class="p">,</span> <span class="n">k_label</span><span class="p">);</span>
 <span class="n">plt</span><span class="o">.</span><span class="n">ylim</span><span class="p">(</span><span class="n">Emin</span><span class="p">,</span> <span class="n">Emax</span><span class="p">);</span>
@@ -751,12 +681,16 @@ orbitals.</p>
     <span class="n">s</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">weight_s</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="p">:]</span> <span class="o">*</span> <span class="n">dE</span><span class="p">)</span>
     <span class="n">pxy</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">weight_pxy</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="p">:]</span> <span class="o">*</span> <span class="n">dE</span><span class="p">)</span>
     <span class="n">pz</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">weight_pz</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="p">:]</span> <span class="o">*</span> <span class="n">dE</span><span class="p">)</span>
-    <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">linear_k</span><span class="p">,</span> <span class="n">e</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;k&#39;</span><span class="p">);</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">linear_k</span><span class="p">,</span> <span class="n">e</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;k&#39;</span><span class="p">);</span> <span class="c1"># black-line (band-structure)</span>
+    <span class="c1"># Full fat-band</span>
     <span class="n">plt</span><span class="o">.</span><span class="n">fill_between</span><span class="p">(</span><span class="n">linear_k</span><span class="p">,</span> <span class="n">e</span> <span class="o">-</span> <span class="n">dE</span><span class="p">,</span> <span class="n">e</span> <span class="o">+</span> <span class="n">dE</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;k&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.1</span><span class="p">);</span>
+    <span class="c1"># pz</span>
     <span class="n">plt</span><span class="o">.</span><span class="n">fill_between</span><span class="p">(</span><span class="n">linear_k</span><span class="p">,</span> <span class="n">e</span> <span class="o">+</span> <span class="p">(</span><span class="n">s</span> <span class="o">+</span> <span class="n">pxy</span><span class="p">),</span> <span class="n">e</span> <span class="o">+</span> <span class="p">(</span><span class="n">s</span> <span class="o">+</span> <span class="n">pxy</span> <span class="o">+</span> <span class="n">pz</span><span class="p">),</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;g&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.5</span><span class="p">);</span>
     <span class="n">plt</span><span class="o">.</span><span class="n">fill_between</span><span class="p">(</span><span class="n">linear_k</span><span class="p">,</span> <span class="n">e</span> <span class="o">-</span> <span class="p">(</span><span class="n">s</span> <span class="o">+</span> <span class="n">pxy</span> <span class="o">+</span> <span class="n">pz</span><span class="p">),</span> <span class="n">e</span> <span class="o">-</span> <span class="p">(</span><span class="n">s</span> <span class="o">+</span> <span class="n">pxy</span><span class="p">),</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;g&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.5</span><span class="p">);</span>
+    <span class="c1"># pxy</span>
     <span class="n">plt</span><span class="o">.</span><span class="n">fill_between</span><span class="p">(</span><span class="n">linear_k</span><span class="p">,</span> <span class="n">e</span> <span class="o">+</span> <span class="p">(</span><span class="n">s</span><span class="p">),</span> <span class="n">e</span> <span class="o">+</span> <span class="p">(</span><span class="n">s</span> <span class="o">+</span> <span class="n">pxy</span><span class="p">),</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;b&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.5</span><span class="p">);</span>
     <span class="n">plt</span><span class="o">.</span><span class="n">fill_between</span><span class="p">(</span><span class="n">linear_k</span><span class="p">,</span> <span class="n">e</span> <span class="o">-</span> <span class="p">(</span><span class="n">s</span><span class="p">),</span> <span class="n">e</span> <span class="o">-</span> <span class="p">(</span><span class="n">s</span> <span class="o">+</span> <span class="n">pxy</span><span class="p">),</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;b&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.5</span><span class="p">);</span>
+    <span class="c1"># s</span>
     <span class="n">plt</span><span class="o">.</span><span class="n">fill_between</span><span class="p">(</span><span class="n">linear_k</span><span class="p">,</span> <span class="n">e</span> <span class="o">-</span> <span class="p">(</span><span class="n">s</span><span class="p">),</span> <span class="n">e</span> <span class="o">+</span> <span class="p">(</span><span class="n">s</span><span class="p">),</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.5</span><span class="p">);</span>
 </pre></div>
 </div>
@@ -765,22 +699,24 @@ orbitals.</p>
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="../_images/tutorials_tutorial_siesta_2_15_0.png" src="../_images/tutorials_tutorial_siesta_2_15_0.png" />
+<img alt="../_images/tutorials_tutorial_siesta_2_16_0.png" src="../_images/tutorials_tutorial_siesta_2_16_0.png" />
 </div>
 </div>
-<div class="line-block">
-<div class="line">Green: <span class="math">\(p_z\)</span></div>
-<div class="line">Red: <span class="math">\(s\)</span></div>
-<div class="line">Blue: <span class="math">\(p_x+p_y\)</span></div>
-<div class="line">Gray: total projection</div>
-</div>
+<ul class="simple">
+<li>all, gray</li>
+<li><span class="math">\(p_z\)</span>, green</li>
+<li><span class="math">\(s\)</span>, red</li>
+<li><span class="math">\(p_x+p_y\)</span>, blue</li>
+</ul>
 </div>
 <div class="section" id="Hamiltonian-eigenstates">
 <h2>Hamiltonian eigenstates<a class="headerlink" href="#Hamiltonian-eigenstates" title="Permalink to this headline">¶</a></h2>
 <p>At this point we have plotted the <span class="math">\(k\)</span>-averaged DOS, PDOS. We have
 also plotted the fat-bands (and thus the band-structure).</p>
 <p>In addition to these things we can plot the real-space eigenstates. We
-first plot the <span class="math">\(\Gamma\)</span>-point for the first 2x2 unit-cell.</p>
+first plot the <span class="math">\(\Gamma\)</span>-point for the first 2x2 unit-cell. This
+<span class="math">\(k\)</span>-point has complete unit-cell periodicity and thus the plotted
+wavefunction should be fully periodic along all directions.</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [10]:
@@ -789,11 +725,16 @@ first plot the <span class="math">\(\Gamma\)</span>-point for the first 2x2 unit
 <div class="input_area highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">es</span> <span class="o">=</span> <span class="n">H</span><span class="o">.</span><span class="n">eigenstate</span><span class="p">()</span>
 <span class="n">idx_valence</span> <span class="o">=</span> <span class="p">(</span><span class="n">es</span><span class="o">.</span><span class="n">eig</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">nonzero</span><span class="p">()[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span>
+<span class="c1"># Only select the valence band state</span>
 <span class="n">es</span> <span class="o">=</span> <span class="n">es</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="n">idx_valence</span><span class="p">)</span>
+
+<span class="c1"># Generate a grid encompassing a 2x2 graphene unit-cell</span>
 <span class="n">g</span> <span class="o">=</span> <span class="n">Grid</span><span class="p">(</span><span class="mf">0.2</span><span class="p">,</span> <span class="n">sc</span><span class="o">=</span><span class="n">H</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">sc</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
-<span class="n">es</span><span class="o">.</span><span class="n">wavefunction</span><span class="p">(</span><span class="n">g</span><span class="p">,</span> <span class="n">eta</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
-<span class="c1"># Plot the wavefunction a few Ang above the graphene plane</span>
-<span class="c1"># To do this we need to find the index of the z-plane</span>
+<span class="c1"># Calculate the real-space wavefunctions</span>
+<span class="n">es</span><span class="o">.</span><span class="n">wavefunction</span><span class="p">(</span><span class="n">g</span><span class="p">)</span>
+
+<span class="c1"># Extract the wavefunction a few Ang above the graphene plane</span>
+<span class="c1"># To do this we need to find the index of the corresponding z-plane.</span>
 <span class="c1"># The Grid.index method is useful in this regard.</span>
 <span class="n">xyz</span> <span class="o">=</span> <span class="n">H</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">xyz</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="p">:]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
 <span class="n">xyz</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">+=</span> <span class="mf">1.</span>
@@ -808,33 +749,20 @@ first plot the <span class="math">\(\Gamma\)</span>-point for the first 2x2 unit
 </pre></div>
 </div>
 </div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<script type="application/vnd.jupyter.widget-view+json">{"version_major": 2, "version_minor": 0, "model_id": "d15f5c18f0f34379916cefa67c519e55"}</script></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-
-</pre></div></div>
-</div>
 <div class="nboutput nblast docutils container">
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="../_images/tutorials_tutorial_siesta_2_18_2.png" src="../_images/tutorials_tutorial_siesta_2_18_2.png" />
+<img alt="../_images/tutorials_tutorial_siesta_2_19_0.png" src="../_images/tutorials_tutorial_siesta_2_19_0.png" />
 </div>
 </div>
 <p>We will now try and plot the real-space wavefunction for a finite
 <span class="math">\(k\)</span>. By choosing the <span class="math">\([1/2, 0, 0]\)</span> point we know it must
 have a periodicity of 2 along the first lattice vector (this lattice
-vector is pointing right-up). Since we have a finite <span class="math">\(k\)</span> the grid
-data-type <em>must</em> be complex because the eigenstates have complex
-components.</p>
+vector is pointing right-up), and full periodicity along the second
+lattice vector. Since we have a finite <span class="math">\(k\)</span> the grid data-type
+<em>must</em> be complex because the eigenstates have complex components. And
+thus we will plot both the real and imaginary part.</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none"><div class="highlight"><pre>
 <span></span>In [11]:
@@ -846,7 +774,7 @@ components.</p>
 <span class="n">idx_valence</span> <span class="o">=</span> <span class="p">(</span><span class="n">es</span><span class="o">.</span><span class="n">eig</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">nonzero</span><span class="p">()[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span>
 <span class="n">es</span> <span class="o">=</span> <span class="n">es</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="n">idx_valence</span><span class="p">)</span>
 <span class="n">g</span> <span class="o">=</span> <span class="n">Grid</span><span class="p">(</span><span class="mf">0.2</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">complex128</span><span class="p">,</span> <span class="n">sc</span><span class="o">=</span><span class="n">H</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">sc</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
-<span class="n">es</span><span class="o">.</span><span class="n">wavefunction</span><span class="p">(</span><span class="n">g</span><span class="p">,</span> <span class="n">eta</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+<span class="n">es</span><span class="o">.</span><span class="n">wavefunction</span><span class="p">(</span><span class="n">g</span><span class="p">)</span>
 <span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mgrid</span><span class="p">[:</span><span class="n">g</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="p">:</span><span class="n">g</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]]</span>
 <span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">x</span> <span class="o">*</span> <span class="n">g</span><span class="o">.</span><span class="n">dcell</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">y</span> <span class="o">*</span> <span class="n">g</span><span class="o">.</span><span class="n">dcell</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">x</span> <span class="o">*</span> <span class="n">g</span><span class="o">.</span><span class="n">dcell</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">y</span> <span class="o">*</span> <span class="n">g</span><span class="o">.</span><span class="n">dcell</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span>
 <span class="n">axs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">contourf</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">grid</span><span class="p">[:,</span> <span class="p">:,</span> <span class="n">z_idx</span><span class="p">]</span><span class="o">.</span><span class="n">real</span><span class="p">);</span>
@@ -867,25 +795,11 @@ components.</p>
 info:0: SislInfo: wavefunction for k != Gamma is currently untested!
 </pre></div></div>
 </div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<script type="application/vnd.jupyter.widget-view+json">{"version_major": 2, "version_minor": 0, "model_id": "b27d258a2358452bbb7dc15941bd8ba5"}</script></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-
-</pre></div></div>
-</div>
 <div class="nboutput nblast docutils container">
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="../_images/tutorials_tutorial_siesta_2_20_3.png" src="../_images/tutorials_tutorial_siesta_2_20_3.png" />
+<img alt="../_images/tutorials_tutorial_siesta_2_21_1.png" src="../_images/tutorials_tutorial_siesta_2_21_1.png" />
 </div>
 </div>
 </div>
