@@ -228,7 +228,15 @@ class Hamiltonian(SparseOrbitalBZSpin):
     H = property(_get_H, _set_H)
 
     def shift(self, E):
-        """ Shift the electronic structure by a constant energy
+        r""" Shift the electronic structure by a constant energy
+
+        This is equal to performing this operation:
+
+        .. math::
+           \mathbf H_\sigma = \mathbf H_\sigma + E \mathbf S
+
+        where :math:`\mathbf H_\sigma` correspond to the spin diagonal components of the
+        Hamiltonian.
 
         Parameters
         ----------
@@ -238,16 +246,21 @@ class Hamiltonian(SparseOrbitalBZSpin):
         """
         E = _a.asarrayd(E)
         if E.size == 1:
-            E = np.tile(_a.asarrayd(E), 2)
-        if not self.orthogonal:
+            E = np.tile(E, 2)
+
+        if np.abs(E).sum() == 0.:
+            # When the energy is zero, there is no shift
+            return
+
+        if self.orthogonal:
+            for i in range(self.shape[0]):
+                for j in range(min(self.spin.spins, 2)):
+                    self[i, i, j] = self[i, i, j] + E[j]
+        else:
             # For non-collinear and SO only the diagonal (real) components
             # should be shifted.
             for i in range(min(self.spin.spins, 2)):
                 self._csr._D[:, i] += self._csr._D[:, self.S_idx] * E[i]
-        else:
-            for i in range(self.shape[0]):
-                for j in range(min(self.spin.spins, 2)):
-                    self[i, i, j] = self[i, i, j] + E[i]
 
     def eigenvalue(self, k=(0, 0, 0), gauge='R', **kwargs):
         """ Calculate the eigenvalues at `k` and return an `EigenvalueElectron` object containing all eigenvalues for a given `k`
