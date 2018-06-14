@@ -176,8 +176,9 @@
 <span></span><span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">print_function</span><span class="p">,</span> <span class="n">division</span>
 
 <span class="kn">import</span> <span class="nn">os.path</span> <span class="k">as</span> <span class="nn">osp</span>
-<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="kn">import</span> <span class="nn">warnings</span>
+<span class="kn">from</span> <span class="nn">datetime</span> <span class="k">import</span> <span class="n">datetime</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 
 <span class="c1"># Import sile objects</span>
 <span class="kn">import</span> <span class="nn">sisl._array</span> <span class="k">as</span> <span class="nn">_a</span>
@@ -568,27 +569,26 @@
 <span class="sd">           the value of the string. If a `str` is passed a regular</span>
 <span class="sd">           fdf-key is used, if a `list` it will be a %block.</span>
 <span class="sd">        keep : bool, optional</span>
-<span class="sd">           whether old flags will be kept in the fdf file.</span>
+<span class="sd">           whether old flags will be kept in the fdf file. In this case</span>
+<span class="sd">           a time-stamp will be written to show when the key was overwritten.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="c1"># To set a key we first need to figure out if it is</span>
         <span class="c1"># already present, if so, we will add the new key, just above</span>
         <span class="c1"># the already present key.</span>
+        <span class="n">top_file</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">file</span>
 
         <span class="c1"># 1. find the old value, and thus the file in which it is found</span>
         <span class="k">with</span> <span class="bp">self</span><span class="p">:</span>
-            <span class="c1">#old_value = self.get(key)</span>
-            <span class="c1"># Get the file of the containing data</span>
-            <span class="n">top_file</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">file</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">old_value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+                <span class="c1"># Get the file of the containing data</span>
+                <span class="n">top_file</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fh</span><span class="o">.</span><span class="n">name</span>
+            <span class="k">except</span><span class="p">:</span>
+                <span class="k">pass</span>
 
-        <span class="k">try</span><span class="p">:</span>
-            <span class="k">while</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_parent_fh</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">fh</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">fh</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parent_fh</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">fh</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
-        <span class="k">except</span><span class="p">:</span>
-            <span class="c1"># Allowed pass due to pythonic reading</span>
-            <span class="k">pass</span>
+        <span class="c1"># Ensure that all files are closed</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_seek</span><span class="p">()</span>
 
         <span class="c1"># Now we should re-read and edit the file</span>
         <span class="n">lines</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">top_file</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">readlines</span><span class="p">()</span>
@@ -597,23 +597,23 @@
             <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
                 <span class="k">return</span>
             <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">_str</span><span class="p">):</span>
-                <span class="n">fh</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">]))</span>
+                <span class="n">fh</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">print</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">))</span>
                 <span class="k">if</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">value</span><span class="p">:</span>
                     <span class="n">fh</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
             <span class="k">else</span><span class="p">:</span>
-                <span class="n">fh</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;%block &#39;</span> <span class="o">+</span> <span class="n">key</span> <span class="o">+</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
-                <span class="n">fh</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">value</span><span class="p">))</span>
-                <span class="n">fh</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">%e</span><span class="s1">ndblock &#39;</span> <span class="o">+</span> <span class="n">key</span> <span class="o">+</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+                <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s1">&#39;Currently blocks are not implemented in set!&#39;</span><span class="p">)</span>
+                <span class="n">fh</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">print</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
 
         <span class="c1"># Now loop, write and edit</span>
         <span class="n">do_write</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="n">lkey</span> <span class="o">=</span> <span class="n">key</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
         <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">top_file</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">fh</span><span class="p">:</span>
             <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">lines</span><span class="p">:</span>
-                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">line_has_key</span><span class="p">(</span><span class="n">line</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">case</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="ow">and</span> <span class="n">do_write</span><span class="p">:</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">line_has_key</span><span class="p">(</span><span class="n">line</span><span class="p">,</span> <span class="n">lkey</span><span class="p">,</span> <span class="n">case</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="ow">and</span> <span class="n">do_write</span><span class="p">:</span>
                     <span class="n">write</span><span class="p">(</span><span class="n">fh</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
                     <span class="k">if</span> <span class="n">keep</span><span class="p">:</span>
-                        <span class="n">fh</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;# Old value</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
-                        <span class="n">fh</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">line</span><span class="p">)</span>
+                        <span class="n">fh</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;# Old value (</span><span class="si">{}</span><span class="s1">)</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">datetime</span><span class="o">.</span><span class="n">today</span><span class="p">()</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s1">&#39;%Y-%m-</span><span class="si">%d</span><span class="s1"> %H:%M&#39;</span><span class="p">)))</span>
+                        <span class="n">fh</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">line</span><span class="p">))</span>
                     <span class="n">do_write</span> <span class="o">=</span> <span class="kc">False</span>
                 <span class="k">else</span><span class="p">:</span>
                     <span class="n">fh</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">line</span><span class="p">)</span></div>
@@ -622,7 +622,7 @@
     <span class="k">def</span> <span class="nf">print</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Return a string which is pretty-printing the key+value &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
-            <span class="n">s</span> <span class="o">=</span> <span class="s1">&#39;%block &#39;</span> <span class="o">+</span> <span class="n">key</span>
+            <span class="n">s</span> <span class="o">=</span> <span class="s1">&#39;%block </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
             <span class="c1"># if the value has any new-values</span>
             <span class="n">has_nl</span> <span class="o">=</span> <span class="kc">False</span>
             <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">value</span><span class="p">:</span>
@@ -635,7 +635,7 @@
                 <span class="n">s</span> <span class="o">+=</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">value</span><span class="p">))</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="n">s</span> <span class="o">+=</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="si">{}</span><span class="s1"> </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">value</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">value</span><span class="p">[</span><span class="mi">1</span><span class="p">:]))</span>
-            <span class="n">s</span> <span class="o">+=</span> <span class="s1">&#39;</span><span class="si">%e</span><span class="s1">ndblock &#39;</span> <span class="o">+</span> <span class="n">key</span>
+            <span class="n">s</span> <span class="o">+=</span> <span class="s1">&#39;</span><span class="si">%e</span><span class="s1">ndblock </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">s</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="si">{}</span><span class="s1"> </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">s</span></div>
@@ -1011,6 +1011,80 @@
 
         <span class="c1"># Create and return geometry object</span>
         <span class="k">return</span> <span class="n">Geometry</span><span class="p">(</span><span class="n">xyz</span><span class="p">,</span> <span class="n">atom</span><span class="o">=</span><span class="n">atom</span><span class="p">,</span> <span class="n">sc</span><span class="o">=</span><span class="n">sc</span><span class="p">)</span>
+
+<div class="viewcode-block" id="fdfSileSiesta.read_grid"><a class="viewcode-back" href="../../../../api-generated/sisl.io.siesta.fdfSileSiesta.html#sisl.io.siesta.fdfSileSiesta.read_grid">[docs]</a>    <span class="k">def</span> <span class="nf">read_grid</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Read grid related information from any of the output files</span>
+
+<span class="sd">        The order of the readed data is shown below.</span>
+
+<span class="sd">        One can limit the tried files to only one file by passing</span>
+<span class="sd">        only a single file ending.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        name : str</span>
+<span class="sd">            name of data to read. The list of names correspond to the</span>
+<span class="sd">            Siesta output manual (Rho, TotalPotential, etc.), the strings are</span>
+<span class="sd">            case insensitive.</span>
+<span class="sd">        order: list of str, optional</span>
+<span class="sd">            the order of which to try and read the geometry.</span>
+<span class="sd">            By default this is ``[&#39;nc&#39;, &#39;grid.nc&#39;]``.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">order</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;order&#39;</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;nc&#39;</span><span class="p">,</span> <span class="s1">&#39;grid.nc&#39;</span><span class="p">])</span>
+        <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">order</span><span class="p">:</span>
+            <span class="n">v</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;_r_grid_</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">lower</span><span class="p">()))(</span><span class="n">name</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">v</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">v</span>
+        <span class="k">return</span> <span class="kc">None</span></div>
+
+    <span class="k">def</span> <span class="nf">_r_grid_nc</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="c1"># Read grid from the &lt;&gt;.nc file</span>
+        <span class="n">f</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tofile</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;SystemLabel&#39;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="s1">&#39;siesta&#39;</span><span class="p">))</span> <span class="o">+</span> <span class="s1">&#39;.nc&#39;</span>
+        <span class="k">if</span> <span class="n">isfile</span><span class="p">(</span><span class="n">f</span><span class="p">):</span>
+            <span class="c1"># Capitalize correctly</span>
+            <span class="n">name</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;rho&#39;</span><span class="p">:</span> <span class="s1">&#39;Rho&#39;</span><span class="p">,</span>
+                    <span class="s1">&#39;rhoinit&#39;</span><span class="p">:</span> <span class="s1">&#39;RhoInit&#39;</span><span class="p">,</span>
+                    <span class="s1">&#39;vna&#39;</span><span class="p">:</span> <span class="s1">&#39;Vna&#39;</span><span class="p">,</span>
+                    <span class="s1">&#39;chlocal&#39;</span><span class="p">:</span> <span class="s1">&#39;Chlocal&#39;</span><span class="p">,</span>
+                    <span class="s1">&#39;rhotot&#39;</span><span class="p">:</span> <span class="s1">&#39;RhoTot&#39;</span><span class="p">,</span>
+                    <span class="s1">&#39;totalcharge&#39;</span><span class="p">:</span> <span class="s1">&#39;RhoTot&#39;</span><span class="p">,</span>
+                    <span class="s1">&#39;deltarho&#39;</span><span class="p">:</span> <span class="s1">&#39;RhoDelta&#39;</span><span class="p">,</span>
+                    <span class="s1">&#39;rhodelta&#39;</span><span class="p">:</span> <span class="s1">&#39;RhoDelta&#39;</span><span class="p">,</span>
+                    <span class="s1">&#39;electrostaticpotential&#39;</span><span class="p">:</span> <span class="s1">&#39;Vh&#39;</span><span class="p">,</span>
+                    <span class="s1">&#39;vh&#39;</span><span class="p">:</span> <span class="s1">&#39;Vh&#39;</span><span class="p">,</span>
+                    <span class="s1">&#39;rhoxc&#39;</span><span class="p">:</span> <span class="s1">&#39;RhoXC&#39;</span><span class="p">,</span>
+                    <span class="s1">&#39;totalpotential&#39;</span><span class="p">:</span> <span class="s1">&#39;Vt&#39;</span><span class="p">,</span>
+                    <span class="s1">&#39;vt&#39;</span><span class="p">:</span> <span class="s1">&#39;Vt&#39;</span><span class="p">,</span>
+                    <span class="s1">&#39;baderrho&#39;</span><span class="p">:</span> <span class="s1">&#39;RhoBader&#39;</span><span class="p">,</span>
+                    <span class="s1">&#39;rhobader&#39;</span><span class="p">:</span> <span class="s1">&#39;RhoBader&#39;</span>
+            <span class="p">}</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">name</span><span class="o">.</span><span class="n">lower</span><span class="p">())</span>
+            <span class="k">return</span> <span class="n">ncSileSiesta</span><span class="p">(</span><span class="n">f</span><span class="p">)</span><span class="o">.</span><span class="n">read_grid</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+    <span class="k">def</span> <span class="nf">_r_grid_grid_nc</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="c1"># Read grid from the &lt;&gt;.nc file</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;rho&#39;</span><span class="p">:</span> <span class="s1">&#39;Rho&#39;</span><span class="p">,</span>
+                <span class="s1">&#39;rhoinit&#39;</span><span class="p">:</span> <span class="s1">&#39;RhoInit&#39;</span><span class="p">,</span>
+                <span class="s1">&#39;vna&#39;</span><span class="p">:</span> <span class="s1">&#39;Vna&#39;</span><span class="p">,</span>
+                <span class="s1">&#39;chlocal&#39;</span><span class="p">:</span> <span class="s1">&#39;Chlocal&#39;</span><span class="p">,</span>
+                <span class="s1">&#39;rhotot&#39;</span><span class="p">:</span> <span class="s1">&#39;TotalCharge&#39;</span><span class="p">,</span>
+                <span class="s1">&#39;totalcharge&#39;</span><span class="p">:</span> <span class="s1">&#39;TotalCharge&#39;</span><span class="p">,</span>
+                <span class="s1">&#39;deltarho&#39;</span><span class="p">:</span> <span class="s1">&#39;DeltaRho&#39;</span><span class="p">,</span>
+                <span class="s1">&#39;rhodelta&#39;</span><span class="p">:</span> <span class="s1">&#39;DeltaRho&#39;</span><span class="p">,</span>
+                <span class="s1">&#39;electrostaticpotential&#39;</span><span class="p">:</span> <span class="s1">&#39;ElectrostaticPotential&#39;</span><span class="p">,</span>
+                <span class="s1">&#39;vh&#39;</span><span class="p">:</span> <span class="s1">&#39;ElectrostaticPotential&#39;</span><span class="p">,</span>
+                <span class="s1">&#39;rhoxc&#39;</span><span class="p">:</span> <span class="s1">&#39;RhoXC&#39;</span><span class="p">,</span>
+                <span class="s1">&#39;totalpotential&#39;</span><span class="p">:</span> <span class="s1">&#39;TotalPotential&#39;</span><span class="p">,</span>
+                <span class="s1">&#39;vt&#39;</span><span class="p">:</span> <span class="s1">&#39;TotalPotential&#39;</span><span class="p">,</span>
+                <span class="s1">&#39;baderrho&#39;</span><span class="p">:</span> <span class="s1">&#39;BaderCharge&#39;</span><span class="p">,</span>
+                <span class="s1">&#39;rhobader&#39;</span><span class="p">:</span> <span class="s1">&#39;BaderCharge&#39;</span>
+        <span class="p">}</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">name</span><span class="o">.</span><span class="n">lower</span><span class="p">())</span> <span class="o">+</span> <span class="s1">&#39;.grid.nc&#39;</span>
+
+        <span class="n">f</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tofile</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">isfile</span><span class="p">(</span><span class="n">f</span><span class="p">):</span>
+            <span class="n">grid</span> <span class="o">=</span> <span class="n">gridncSileSiesta</span><span class="p">(</span><span class="n">f</span><span class="p">)</span><span class="o">.</span><span class="n">read_grid</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+            <span class="n">grid</span><span class="o">.</span><span class="n">set_geometry</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">read_geometry</span><span class="p">(</span><span class="kc">True</span><span class="p">))</span>
+        <span class="k">return</span> <span class="kc">None</span>
 
 <div class="viewcode-block" id="fdfSileSiesta.read_basis"><a class="viewcode-back" href="../../../../api-generated/sisl.io.siesta.fdfSileSiesta.html#sisl.io.siesta.fdfSileSiesta.read_basis">[docs]</a>    <span class="k">def</span> <span class="nf">read_basis</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Read the atomic species and figure out the number of atomic orbitals in their basis</span>
