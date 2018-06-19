@@ -203,6 +203,7 @@
 <span class="kn">from</span> <span class="nn">.atom</span> <span class="k">import</span> <span class="n">Atom</span><span class="p">,</span> <span class="n">Atoms</span>
 <span class="kn">from</span> <span class="nn">.shape</span> <span class="k">import</span> <span class="n">Shape</span><span class="p">,</span> <span class="n">Sphere</span><span class="p">,</span> <span class="n">Cube</span>
 <span class="kn">from</span> <span class="nn">.sparse_geometry</span> <span class="k">import</span> <span class="n">SparseAtom</span>
+<span class="kn">from</span> <span class="nn">._namedindex</span> <span class="k">import</span> <span class="n">NamedIndex</span>
 
 <span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;Geometry&#39;</span><span class="p">,</span> <span class="s1">&#39;sgeom&#39;</span><span class="p">]</span>
 
@@ -298,6 +299,9 @@
         <span class="c1"># Create the local Atoms object</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_atom</span> <span class="o">=</span> <span class="n">Atoms</span><span class="p">(</span><span class="n">atom</span><span class="p">,</span> <span class="n">na</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">na</span><span class="p">)</span>
 
+        <span class="c1"># Assign a group specifier</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_names</span> <span class="o">=</span> <span class="n">NamedIndex</span><span class="p">()</span>
+
         <span class="bp">self</span><span class="o">.</span><span class="n">__init_sc</span><span class="p">(</span><span class="n">sc</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">__init_sc</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sc</span><span class="p">):</span>
@@ -365,6 +369,11 @@
     <span class="n">atom</span> <span class="o">=</span> <span class="n">atoms</span>
 
     <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">names</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; The named index specifier &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_names</span>
+
+    <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">q0</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Total initial charge in this geometry (sum of q0 in all atoms) &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_atom</span><span class="o">.</span><span class="n">q0</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
@@ -414,6 +423,13 @@
 
     <span class="c1">## End size of geometry</span>
 
+    <span class="k">def</span> <span class="nf">__setitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">atom</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Specify geometry coordinates &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">atom</span><span class="p">,</span> <span class="n">_str</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">names</span><span class="o">.</span><span class="n">add_name</span><span class="p">(</span><span class="n">atom</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">_str</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">names</span><span class="o">.</span><span class="n">add_name</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">atom</span><span class="p">)</span>
+
     <span class="k">def</span> <span class="nf">__getitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">atom</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Geometry coordinates (allows supercell indices) &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">atom</span><span class="p">,</span> <span class="n">Integral</span><span class="p">):</span>
@@ -432,8 +448,8 @@
         <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">atom</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">):</span>
             <span class="k">return</span> <span class="bp">self</span><span class="p">[</span><span class="n">atom</span><span class="p">[</span><span class="mi">0</span><span class="p">]][</span><span class="o">...</span><span class="p">,</span> <span class="n">atom</span><span class="p">[</span><span class="mi">1</span><span class="p">]]</span>
 
-        <span class="k">elif</span> <span class="n">atom</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">axyz</span><span class="p">()[:,</span> <span class="n">atom</span><span class="p">[</span><span class="mi">1</span><span class="p">]]</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">atom</span><span class="p">,</span> <span class="n">_str</span><span class="p">):</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">axyz</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">names</span><span class="p">[</span><span class="n">atom</span><span class="p">])</span>
 
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">axyz</span><span class="p">(</span><span class="n">atom</span><span class="p">)</span>
 
@@ -588,7 +604,9 @@
         <span class="sd">&quot;&quot;&quot; Representation of the object &quot;&quot;&quot;</span>
         <span class="n">s</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39;{{na: </span><span class="si">{0}</span><span class="s1">, no: </span><span class="si">{1}</span><span class="s1">,</span><span class="se">\n</span><span class="s1"> &#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">na</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">no</span><span class="p">)</span>
         <span class="n">s</span> <span class="o">+=</span> <span class="nb">repr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">atom</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">,</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1"> &#39;</span><span class="p">)</span>
-        <span class="k">return</span> <span class="p">(</span><span class="n">s</span><span class="p">[:</span><span class="o">-</span><span class="mi">2</span><span class="p">]</span> <span class="o">+</span> <span class="s1">&#39;,</span><span class="se">\n</span><span class="s1"> nsc: [</span><span class="si">{1}</span><span class="s1">, </span><span class="si">{2}</span><span class="s1">, </span><span class="si">{3}</span><span class="s1">], maxR: </span><span class="si">{0}</span><span class="se">\n</span><span class="s1">}}</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">maxR</span><span class="p">(),</span> <span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">nsc</span><span class="p">))</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">names</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">s</span> <span class="o">+=</span> <span class="s1">&#39;,</span><span class="se">\n</span><span class="s1"> &#39;</span> <span class="o">+</span> <span class="nb">repr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">names</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">,</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1"> &#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">(</span><span class="n">s</span> <span class="o">+</span> <span class="s1">&#39;,</span><span class="se">\n</span><span class="s1"> nsc: [</span><span class="si">{1}</span><span class="s1">, </span><span class="si">{2}</span><span class="s1">, </span><span class="si">{3}</span><span class="s1">], maxR: </span><span class="si">{0}</span><span class="se">\n</span><span class="s1">}}</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">maxR</span><span class="p">(),</span> <span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">nsc</span><span class="p">))</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
 
 <div class="viewcode-block" id="Geometry.iter"><a class="viewcode-back" href="../../api-generated/sisl.Geometry.html#sisl.Geometry.iter">[docs]</a>    <span class="k">def</span> <span class="nf">iter</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; An iterator over all atomic indices</span>
@@ -967,8 +985,9 @@
 
 <div class="viewcode-block" id="Geometry.copy"><a class="viewcode-back" href="../../api-generated/sisl.Geometry.html#sisl.Geometry.copy">[docs]</a>    <span class="k">def</span> <span class="nf">copy</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; A copy of the object. &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">xyz</span><span class="p">),</span>
-                              <span class="n">atom</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">atoms</span><span class="o">.</span><span class="n">copy</span><span class="p">(),</span> <span class="n">sc</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">sc</span><span class="o">.</span><span class="n">copy</span><span class="p">())</span></div>
+        <span class="n">g</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">xyz</span><span class="p">),</span> <span class="n">atom</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">atoms</span><span class="o">.</span><span class="n">copy</span><span class="p">(),</span> <span class="n">sc</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">sc</span><span class="o">.</span><span class="n">copy</span><span class="p">())</span>
+        <span class="n">g</span><span class="o">.</span><span class="n">_names</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">names</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">g</span></div>
 
 <div class="viewcode-block" id="Geometry.optimize_nsc"><a class="viewcode-back" href="../../api-generated/sisl.Geometry.html#sisl.Geometry.optimize_nsc">[docs]</a>    <span class="k">def</span> <span class="nf">optimize_nsc</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">R</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Optimize the number of supercell connections based on ``self.maxR()``</span>
@@ -1968,6 +1987,9 @@
 <span class="sd">        [0.  0.  0.]</span>
 
 <span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">atom</span><span class="p">,</span> <span class="n">_str</span><span class="p">):</span>
+            <span class="n">atom</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">names</span><span class="p">[</span><span class="n">atom</span><span class="p">]</span>
+
         <span class="k">if</span> <span class="n">atom</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">isc</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">xyz</span>
 
