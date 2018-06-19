@@ -175,6 +175,8 @@
   <h1>Source code for sisl.utils.misc</h1><div class="highlight"><pre>
 <span></span><span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">division</span>
 
+<span class="kn">import</span> <span class="nn">inspect</span>
+<span class="kn">import</span> <span class="nn">functools</span>
 <span class="kn">import</span> <span class="nn">ast</span>
 <span class="kn">import</span> <span class="nn">operator</span> <span class="k">as</span> <span class="nn">op</span>
 <span class="kn">from</span> <span class="nn">numbers</span> <span class="k">import</span> <span class="n">Integral</span>
@@ -183,7 +185,7 @@
 <span class="kn">from</span> <span class="nn">sisl._help</span> <span class="k">import</span> <span class="n">_range</span> <span class="k">as</span> <span class="nb">range</span>
 
 <span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;merge_instances&#39;</span><span class="p">,</span> <span class="s1">&#39;str_spec&#39;</span><span class="p">,</span> <span class="s1">&#39;direction&#39;</span><span class="p">,</span> <span class="s1">&#39;angle&#39;</span><span class="p">]</span>
-<span class="n">__all__</span> <span class="o">+=</span> <span class="p">[</span><span class="s1">&#39;iter_shape&#39;</span><span class="p">,</span> <span class="s1">&#39;math_eval&#39;</span><span class="p">]</span>
+<span class="n">__all__</span> <span class="o">+=</span> <span class="p">[</span><span class="s1">&#39;iter_shape&#39;</span><span class="p">,</span> <span class="s1">&#39;math_eval&#39;</span><span class="p">,</span> <span class="s1">&#39;allow_kwargs&#39;</span><span class="p">]</span>
 
 
 <span class="c1"># supported operators</span>
@@ -437,6 +439,44 @@
     <span class="c1"># Both radians and in_radians are equivalent</span>
     <span class="c1"># so return as-is</span>
     <span class="k">return</span> <span class="n">ra</span></div>
+
+
+<span class="k">def</span> <span class="nf">allow_kwargs</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Decoractor for forcing `func` to have the named arguments as listed in `args`</span>
+
+<span class="sd">    This decorator merely removes any keyword argument from the called function</span>
+<span class="sd">    which is in the list of `args`.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    *args : str</span>
+<span class="sd">       required arguments in `func`, if already present nothing will be done.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">deco</span><span class="p">(</span><span class="n">func</span><span class="p">):</span>
+        <span class="c1"># Retrieve names</span>
+        <span class="n">arg_names</span> <span class="o">=</span> <span class="n">inspect</span><span class="o">.</span><span class="n">getargspec</span><span class="p">(</span><span class="n">func</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+    
+        <span class="c1"># First we figure out which arguments are already in the lists</span>
+        <span class="n">args_</span> <span class="o">=</span> <span class="p">[</span><span class="n">arg</span> <span class="k">for</span> <span class="n">arg</span> <span class="ow">in</span> <span class="n">args</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">arg</span> <span class="ow">in</span> <span class="n">arg_names</span><span class="p">]</span>
+
+        <span class="c1"># Now we have the compressed lists</span>
+        <span class="c1"># If there are no arguments required to be added, simply return the function</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">args_</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">func</span>
+
+        <span class="c1"># Basically any function that does not have a named argument</span>
+        <span class="c1"># cannot use it. So we simply need to create a function which by-passes</span>
+        <span class="c1"># the named arguments.</span>
+        <span class="nd">@functools</span><span class="o">.</span><span class="n">wraps</span><span class="p">(</span><span class="n">func</span><span class="p">)</span>
+        <span class="k">def</span> <span class="nf">dec_func</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+            <span class="c1"># Simply remove all the arguments that cannot be passed to the function</span>
+            <span class="k">for</span> <span class="n">arg</span> <span class="ow">in</span> <span class="n">args_</span><span class="p">:</span>
+                <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">arg</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">func</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+            
+        <span class="k">return</span> <span class="n">dec_func</span>
+
+    <span class="k">return</span> <span class="n">deco</span>
 </pre></div>
 
            </div>
