@@ -1464,7 +1464,7 @@ class Atoms(object):
 
         rem = []
         for i in range(len(self.atom)):
-            if len((specie == i).nonzero()[0]) == 0:
+            if np.all(specie != i):
                 rem.append(i)
 
         # Remove the atoms
@@ -1593,7 +1593,7 @@ class Atoms(object):
         s = self.__class__.__name__ + '{{species: {0},\n'.format(len(self._atom))
         for a, idx in self.iter(True):
             s += ' {1}: {0},\n'.format(len(idx), repr(a).replace('\n', '\n '))
-        return s + '}\n'
+        return s + '}'
 
     def __len__(self):
         """ Return number of atoms in the object """
@@ -1649,6 +1649,11 @@ class Atoms(object):
             key = _a.arangei(sl[0], sl[1], sl[2])
         else:
             key = _a.asarrayi(key).ravel()
+
+        if len(key) == 0:
+            if value not in self:
+                self._atom.append(atom)
+            return
 
         # Create new atoms object to iterate
         other = Atoms(value, na=len(key))

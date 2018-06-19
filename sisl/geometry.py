@@ -28,6 +28,7 @@ from .supercell import SuperCell, SuperCellChild
 from .atom import Atom, Atoms
 from .shape import Shape, Sphere, Cube
 from .sparse_geometry import SparseAtom
+from ._namedindex import NamedIndex
 
 __all__ = ['Geometry', 'sgeom']
 
@@ -123,6 +124,9 @@ class Geometry(SuperCellChild):
         # Create the local Atoms object
         self._atom = Atoms(atom, na=self.na)
 
+        # Assign a group specifier
+        self._names = NamedIndex()
+
         self.__init_sc(sc)
 
     def __init_sc(self, sc):
@@ -190,6 +194,11 @@ class Geometry(SuperCellChild):
     atom = atoms
 
     @property
+    def names(self):
+        """ The named index specifier """
+        return self._names
+
+    @property
     def q0(self):
         """ Total initial charge in this geometry (sum of q0 in all atoms) """
         return self._atom.q0.sum()
@@ -239,6 +248,13 @@ class Geometry(SuperCellChild):
 
     ## End size of geometry
 
+    def __setitem__(self, atom, value):
+        """ Specify geometry coordinates """
+        if isinstance(atom, _str):
+            self.names.add_name(atom, value)
+        elif isinstance(value, _str):
+            self.names.add_name(value, atom)
+
     def __getitem__(self, atom):
         """ Geometry coordinates (allows supercell indices) """
         if isinstance(atom, Integral):
@@ -257,8 +273,8 @@ class Geometry(SuperCellChild):
         elif isinstance(atom, tuple):
             return self[atom[0]][..., atom[1]]
 
-        elif atom[0] is None:
-            return self.axyz()[:, atom[1]]
+        elif isinstance(atom, _str):
+            return self.axyz(self.names[atom])
 
         return self.axyz(atom)
 
@@ -413,7 +429,9 @@ class Geometry(SuperCellChild):
         """ Representation of the object """
         s = self.__class__.__name__ + '{{na: {0}, no: {1},\n '.format(self.na, self.no)
         s += repr(self.atom).replace('\n', '\n ')
-        return (s[:-2] + ',\n nsc: [{1}, {2}, {3}], maxR: {0}\n}}\n'.format(self.maxR(), *self.nsc)).strip()
+        if len(self.names) > 0:
+            s += ',\n ' + repr(self.names).replace('\n', '\n ')
+        return (s + ',\n nsc: [{1}, {2}, {3}], maxR: {0}\n}}\n'.format(self.maxR(), *self.nsc)).strip()
 
     def iter(self):
         """ An iterator over all atomic indices
@@ -792,8 +810,9 @@ class Geometry(SuperCellChild):
 
     def copy(self):
         """ A copy of the object. """
-        return self.__class__(np.copy(self.xyz),
-                              atom=self.atoms.copy(), sc=self.sc.copy())
+        g = self.__class__(np.copy(self.xyz), atom=self.atoms.copy(), sc=self.sc.copy())
+        g._names = self.names.copy()
+        return g
 
     def optimize_nsc(self, axis=None, R=None):
         """ Optimize the number of supercell connections based on ``self.maxR()``
@@ -1793,6 +1812,9 @@ class Geometry(SuperCellChild):
         [0.  0.  0.]
 
         """
+        if isinstance(atom, _str):
+            atom = self.names[atom]
+
         if atom is None and isc is None:
             return self.xyz
 

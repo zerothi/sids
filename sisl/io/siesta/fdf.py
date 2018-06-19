@@ -8,6 +8,7 @@ import numpy as np
 # Import sile objects
 import sisl._array as _a
 from sisl._help import _str
+from sisl.utils.ranges import list2str
 from sisl.messages import info, warn
 from .sile import SileSiesta
 from ..sile import *
@@ -15,6 +16,7 @@ from sisl.io._help import *
 
 from .binaries import tshsSileSiesta, tsdeSileSiesta
 from .binaries import dmSileSiesta, hsxSileSiesta
+from .fc import fcSileSiesta
 from .fa import faSileSiesta
 from .pdos import pdosSileSiesta
 from .siesta_nc import ncSileSiesta
@@ -473,12 +475,19 @@ class fdfSileSiesta(SileSiesta):
 
         fmt_str = ' {{0:{0}}} {{1:{0}}} {{2:{0}}}\n'.format(fmt)
 
+        unit = kwargs.get('unit', 'Ang').capitalize()
+        conv = 1.
+        if unit in ['Ang', 'Bohr']:
+            conv = unit_convert('Ang', unit)
+        else:
+            unit = 'Ang'
+
         # Write out the cell
-        self._write('LatticeConstant 1. Ang\n')
+        self._write('LatticeConstant 1.0 {}\n'.format(unit))
         self._write('%block LatticeVectors\n')
-        self._write(fmt_str.format(*sc.cell[0, :]))
-        self._write(fmt_str.format(*sc.cell[1, :]))
-        self._write(fmt_str.format(*sc.cell[2, :]))
+        self._write(fmt_str.format(*sc.cell[0, :] * conv))
+        self._write(fmt_str.format(*sc.cell[1, :] * conv))
+        self._write(fmt_str.format(*sc.cell[2, :] * conv))
         self._write('%endblock LatticeVectors\n')
 
     @Sile_fh_open
@@ -491,13 +500,23 @@ class fdfSileSiesta(SileSiesta):
 
         self._write('\n')
         self._write('NumberOfAtoms {0}\n'.format(geom.na))
-        self._write('AtomicCoordinatesFormat Ang\n')
+        unit = kwargs.get('unit', 'Ang').capitalize()
+        is_fractional = unit in ['Frac', 'Fractional']
+        if is_fractional:
+            self._write('AtomicCoordinatesFormat Fractional\n')
+        else:
+            conv = unit_convert('Ang', unit)
+            self._write('AtomicCoordinatesFormat {}\n'.format(unit))
         self._write('%block AtomicCoordinatesAndAtomicSpecies\n')
 
         fmt_str = ' {{2:{0}}} {{3:{0}}} {{4:{0}}} {{0}} # {{1}}\n'.format(fmt)
         # Count for the species
+        if is_fractional:
+            xyz = geom.fxyz
+        else:
+            xyz = geom.xyz * conv
         for ia, a, isp in geom.iter_species():
-            self._write(fmt_str.format(isp + 1, ia + 1, *geom.xyz[ia, :]))
+            self._write(fmt_str.format(isp + 1, ia + 1, *xyz[ia, :]))
         self._write('%endblock AtomicCoordinatesAndAtomicSpecies\n\n')
 
         # Write out species
@@ -507,6 +526,27 @@ class fdfSileSiesta(SileSiesta):
         for i, a in enumerate(geom.atom.atom):
             self._write(' {0} {1} {2}\n'.format(i + 1, a.Z, a.tag))
         self._write('%endblock ChemicalSpeciesLabel\n')
+
+        _write_block = True
+        def write_block(atoms, append, write_block):
+            if write_block:
+                self._write('\n# Constrainst\n%block Geometry.Constraints\n')
+                write_block = False
+            self._write(' atom [{}]{}\n'.format(atoms, append))
+            return write_block
+
+        for d in range(4):
+            append = {0: '', 1: ' 1. 0. 0.', 2: ' 0. 1. 0.', 3: ' 0. 0. 1.'}.get(d)
+            n = 'CONSTRAIN' + {0: '', 1: '-x', 2: '-y', 3: '-z'}.get(d)
+            if n in geom.names:
+                idx = list2str(geom.names[n] + 1).replace('-', ' -- ')
+                if len(idx) > 200:
+                    info(repr(self) + '.write_geometry will not write the constraints for {} (too long line).'.format(n))
+                else:
+                    _write_block = write_block(idx, append, _write_block)
+
+        if not _write_block:
+            self._write('%endblock\n')
 
     @staticmethod
     def _SpGeom_replace_geom(spgeom, geom):
@@ -696,6 +736,45 @@ class fdfSileSiesta(SileSiesta):
         f = self._tofile(self.get('SystemLabel', default='siesta')) + '.nc'
         if isfile(f):
             return ncSileSiesta(f).read_force()
+        return None
+
+    def read_force_constant(self, *args, **kwargs):
+        """ Read force constant from the output of the calculation
+
+        Parameters
+        ----------
+        correct_fc : bool, optional
+            correct the FC-matrix by forcing the force on the moved atom to be
+            equal to the negative sum of all the others.
+
+        Returns
+        -------
+        (*, 6, *, 3) : vector with force constant element for each of the atomic displacements
+        """
+        order = kwargs.pop('order', ['FC'])
+        for f in order:
+            v = getattr(self, '_r_force_constant_{}'.format(f.lower()))(*args, **kwargs)
+            if v is not None:
+                return v
+        return None
+
+    def _r_force_constant_fc(self, *args, **kwargs):
+        f = self._tofile(self.get('SystemLabel', default='siesta')) + '.FC'
+        if isfile(f):
+            na = self.get('NumberOfAtoms', default=None)
+            fc = fcSileSiesta(f).read_force_constant(na=na)
+            # Figure out which atoms to correct
+            fc_first = self.get('MD.FCFirst', default=0)
+            fc_last = self.get('MD.FCLast', default=0)
+            if 0 == fc_first or 0 == fc_last:
+                raise SislError(repr(self) + '.read_force_constant(FC) requires FCFirst/FCLast to be set correctly.')
+            if fc_last - fc_first + 1 != fc.shape[0]:
+                raise SislError(repr(self) + '.read_force_constant(FC) has erroneous FC file compared to FCFirst/FCLast.')
+            if kwargs.get('correct_fc', True):
+                for i in range(fc_first - 1, fc_last):
+                    j = i - fc_first + 1
+                    fc[j, :, i, :] -= fc[j, :, :, :].sum(1)
+            return fc
         return None
 
     def read_geometry(self, output=False, *args, **kwargs):
