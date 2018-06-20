@@ -445,7 +445,8 @@
     <span class="sd">&quot;&quot;&quot; Decoractor for forcing `func` to have the named arguments as listed in `args`</span>
 
 <span class="sd">    This decorator merely removes any keyword argument from the called function</span>
-<span class="sd">    which is in the list of `args`.</span>
+<span class="sd">    which is in the list of `args` in case the function does not have the arguments</span>
+<span class="sd">    or a ``**kwargs`` equivalent.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -454,8 +455,10 @@
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="nf">deco</span><span class="p">(</span><span class="n">func</span><span class="p">):</span>
         <span class="c1"># Retrieve names</span>
-        <span class="n">arg_names</span> <span class="o">=</span> <span class="n">inspect</span><span class="o">.</span><span class="n">getargspec</span><span class="p">(</span><span class="n">func</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
-    
+        <span class="n">arg_names</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">kwargs_name</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">inspect</span><span class="o">.</span><span class="n">getargspec</span><span class="p">(</span><span class="n">func</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">kwargs_name</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">func</span>
+
         <span class="c1"># First we figure out which arguments are already in the lists</span>
         <span class="n">args_</span> <span class="o">=</span> <span class="p">[</span><span class="n">arg</span> <span class="k">for</span> <span class="n">arg</span> <span class="ow">in</span> <span class="n">args</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">arg</span> <span class="ow">in</span> <span class="n">arg_names</span><span class="p">]</span>
 
@@ -473,7 +476,7 @@
             <span class="k">for</span> <span class="n">arg</span> <span class="ow">in</span> <span class="n">args_</span><span class="p">:</span>
                 <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">arg</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
             <span class="k">return</span> <span class="n">func</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
-            
+
         <span class="k">return</span> <span class="n">dec_func</span>
 
     <span class="k">return</span> <span class="n">deco</span>
