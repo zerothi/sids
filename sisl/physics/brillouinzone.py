@@ -45,6 +45,23 @@ This will, calculate the Monkhorst pack k-averaged DOS split into 3 Cartesian
 directions based on the eigenstates velocity direction. This method of manipulating
 the result can be extremely powerful to calculate many quantities while running an
 efficient BrillouinZone average. The `eta` flag will print, to stdout, a progress-bar.
+The usage of the ``wrap`` method are also passed optional arguments, ``parent`` which is
+``H`` in the above example. ``k`` and ``weight`` are the current k-point and weight of the
+corresponding k-point. An example could be to manipulate the DOS depending on the k-point and
+weight:
+
+>>> H = Hamiltonian(...)
+>>> mp = MonkhorstPack(H, [10, 10, 10])
+>>> E = np.linspace(-2, 2, 100)
+>>> def wrap_DOS(eigenstate, k, weight):
+...    # Calculate the DOS for the eigenstates
+...    DOS = eigenstate.DOS(E)
+...    # Calculate the velocity for the eigenstates
+...    v = eigenstate.velocity()
+...    V = (v ** 2).sum(1) ** 0.5 * k[0]
+...    return DOS.reshape(-1, 1) * np.abs(v) / V.reshape(-1, 1) * weight
+>>> DOS = mp.assum().eigenstate(wrap=wrap_DOS, eta=True)
+
 
 .. autosummary::
    :toctree:
@@ -143,7 +160,7 @@ class BrillouinZone(object):
 
     def copy(self):
         """ Create a copy of this object """
-        bz = self.__class__(self.parent)
+        bz = self.__class__(self.parent, self._k, self.weight)
         bz._k = self._k.copy()
         bz._w = self._w.copy()
         return bz
@@ -255,27 +272,24 @@ class BrillouinZone(object):
         --------
         asyield : all output returned through an iterator
         asaverage : take the average (with k-weights) of the Brillouin zone
+        assum : return the sum of values in the Brillouin zone
         aslist : all output returned as a Python list
         """
 
         def _call(self, *args, **kwargs):
             func = getattr(self.parent, self.__attr)
-            wrap = allow_kwargs('weight')(kwargs.pop('wrap', _do_nothing))
+            wrap = allow_kwargs('parent', 'k', 'weight')(kwargs.pop('wrap', _do_nothing))
             eta = tqdm_eta(len(self), self.__class__.__name__ + '.asarray',
                            'k', kwargs.pop('eta', False))
+            parent = self.parent
+            k = self.k.view()
             w = self.weight.view()
-            for i, k in enumerate(self):
-                if i == 0:
-                    v = wrap(func(*args, k=k, **kwargs), weight=w[i])
-                    if len(self) == 1:
-                        return v
-                    shp = [len(self)]
-                    shp.extend(v.shape)
-                    a = np.empty(shp, dtype=dtype)
-                    a[i, :] = v[:]
-                    del v
-                else:
-                    a[i, :] = wrap(func(*args, k=k, **kwargs), weight=w[i])
+            v = wrap(func(*args, k=k[0], **kwargs), parent=parent, k=k[0], weight=w[0])
+            a = np.empty((len(self), ) + v.shape, dtype=dtype)
+            a[0, :] = v[:]
+            del v
+            for i in range(1, len(k)):
+                a[i, :] = wrap(func(*args, k=k[i], **kwargs), parent=parent, k=k[i], weight=w[i])
                 eta.update()
             eta.close()
             return a
@@ -308,17 +322,20 @@ class BrillouinZone(object):
         --------
         asyield : all output returned through an iterator
         asaverage : take the average (with k-weights) of the Brillouin zone
+        assum : return the sum of values in the Brillouin zone
         aslist : all output returned as a Python list
         """
 
         def _call(self, *args, **kwargs):
             func = getattr(self.parent, self.__attr)
-            wrap = allow_kwargs('weight')(kwargs.pop('wrap', _do_nothing))
+            wrap = allow_kwargs('parent', 'k', 'weight')(kwargs.pop('wrap', _do_nothing))
             eta = tqdm_eta(len(self), self.__class__.__name__ + '.asnone',
                            'k', kwargs.pop('eta', False))
+            parent = self.parent
+            k = self.k.view()
             w = self.weight.view()
-            for i, k in enumerate(self):
-                wrap(func(*args, k=k, **kwargs), weight=w[i])
+            for i in range(len(k)):
+                wrap(func(*args, k=k[i], **kwargs), parent=parent, k=k[i], weight=w[i])
                 eta.update()
             eta.close()
         # Set instance __call__
@@ -351,18 +368,21 @@ class BrillouinZone(object):
         --------
         asarray : all output as a single array
         asyield : all output returned through an iterator
+        assum : return the sum of values in the Brillouin zone
         asaverage : take the average (with k-weights) of the Brillouin zone
         """
 
         def _call(self, *args, **kwargs):
             func = getattr(self.parent, self.__attr)
-            wrap = allow_kwargs('weight')(kwargs.pop('wrap', _do_nothing))
+            wrap = allow_kwargs('parent', 'k', 'weight')(kwargs.pop('wrap', _do_nothing))
             eta = tqdm_eta(len(self), self.__class__.__name__ + '.aslist',
                            'k', kwargs.pop('eta', False))
             a = [None] * len(self)
+            parent = self.parent
+            k = self.k.view()
             w = self.weight.view()
-            for i, k in enumerate(self):
-                a[i] = wrap(func(*args, k=k, **kwargs), weight=w[i])
+            for i in range(len(k)):
+                a[i] = wrap(func(*args, k=k[i], **kwargs), parent=parent, k=k[i], weight=w[i])
                 eta.update()
             eta.close()
             return a
@@ -370,7 +390,7 @@ class BrillouinZone(object):
         setattr(self, '__call__', types.MethodType(_call, self))
         return self
 
-    def asyield(self, dtype=np.float64):
+    def asyield(self):
         """ Return `self` with yielded quantities
 
         This forces the `__call__` routine to return a an iterator which may
@@ -386,11 +406,6 @@ class BrillouinZone(object):
            a function that accepts the output of the given routine and post-process
            it. Defaults to ``lambda x: x``.
 
-        Parameters
-        ----------
-        dtype : numpy.dtype, optional
-            the data-type to cast the values to
-
         Examples
         --------
         >>> obj = BrillouinZone(Hamiltonian) # doctest: +SKIP
@@ -400,17 +415,20 @@ class BrillouinZone(object):
         --------
         asarray : all output as a single array
         asaverage : take the average (with k-weights) of the Brillouin zone
+        assum : return the sum of values in the Brillouin zone
         aslist : all output returned as a Python list
         """
 
         def _call(self, *args, **kwargs):
             func = getattr(self.parent, self.__attr)
-            wrap = allow_kwargs('weight')(kwargs.pop('wrap', _do_nothing))
+            wrap = allow_kwargs('parent', 'k', 'weight')(kwargs.pop('wrap', _do_nothing))
             eta = tqdm_eta(len(self), self.__class__.__name__ + '.asyield',
                            'k', kwargs.pop('eta', False))
+            parent = self.parent
+            k = self.k.view()
             w = self.weight.view()
-            for i, k in enumerate(self):
-                yield wrap(func(*args, k=k, **kwargs).astype(dtype, copy=False), weight=w[i])
+            for i in range(len(k)):
+                yield wrap(func(*args, k=k[i], **kwargs), parent=parent, k=k[i], weight=w[i])
                 eta.update()
             eta.close()
         # Set instance __call__
@@ -420,8 +438,7 @@ class BrillouinZone(object):
     def asaverage(self, dtype=np.float64):
         """ Return `self` with k-averaged quantities
 
-        This forces the `__call__` routine to return a an iterator which may
-        yield the quantities calculated.
+        This forces the `__call__` routine to return a single k-averaged value.
 
         Notes
         -----
@@ -436,7 +453,7 @@ class BrillouinZone(object):
         Parameters
         ----------
         dtype : numpy.dtype, optional
-            the data-type to cast the values to
+            the data-type to cast the returned values to
 
         Examples
         --------
@@ -452,20 +469,77 @@ class BrillouinZone(object):
         --------
         asarray : all output as a single array
         asyield : all output returned through an iterator
+        assum : return the sum of values in the Brillouin zone
         aslist : all output returned as a Python list
         """
 
         def _call(self, *args, **kwargs):
             func = getattr(self.parent, self.__attr)
-            wrap = allow_kwargs('weight')(kwargs.pop('wrap', _do_nothing))
+            wrap = allow_kwargs('parent', 'k', 'weight')(kwargs.pop('wrap', _do_nothing))
             eta = tqdm_eta(len(self), self.__class__.__name__ + '.asaverage',
                            'k', kwargs.pop('eta', False))
+            parent = self.parent
+            k = self.k.view()
             w = self.weight.view()
-            for i, k in enumerate(self):
-                if i == 0:
-                    v = wrap(func(*args, k=k, **kwargs), weight=w[i]) * w[i]
-                else:
-                    v += wrap(func(*args, k=k, **kwargs), weight=w[i]) * w[i]
+            v = wrap(func(*args, k=k[0], **kwargs), parent=parent, k=k[0], weight=w[0]).astype(dtype, copy=False) * w[0]
+            for i in range(1, len(k)):
+                v += wrap(func(*args, k=k[i], **kwargs), parent=parent, k=k[i], weight=w[i]) * w[i]
+                eta.update()
+            eta.close()
+            return v
+        # Set instance __call__
+        setattr(self, '__call__', types.MethodType(_call, self))
+        return self
+
+    def assum(self, dtype=np.float64):
+        """ Return `self` with summed quantities
+
+        This forces the `__call__` routine to return all k-point values summed.
+
+        Notes
+        -----
+        All invocations of sub-methods are added these keyword-only arguments:
+
+        eta : bool, optional
+           if true a progress-bar is created, default false.
+        wrap : callable, optional
+           a function that accepts the output of the given routine and post-process
+           it. Defaults to ``lambda x: x``.
+
+        Parameters
+        ----------
+        dtype : numpy.dtype, optional
+            the data-type to cast the returned values to
+
+        Examples
+        --------
+        >>> obj = BrillouinZone(Hamiltonian) # doctest: +SKIP
+        >>> obj.assum().DOS(np.linspace(-2, 2, 100)) # doctest: +SKIP
+
+        >>> obj = BrillouinZone(Hamiltonian) # doctest: +SKIP
+        >>> obj.assum() # doctest: +SKIP
+        >>> obj.DOS(np.linspace(-2, 2, 100)) # doctest: +SKIP
+        >>> obj.PDOS(np.linspace(-2, 2, 100), eta=True) # doctest: +SKIP
+
+        See Also
+        --------
+        asarray : all output as a single array
+        asyield : all output returned through an iterator
+        asaverage : take the average (with k-weights) of the Brillouin zone
+        aslist : all output returned as a Python list
+        """
+
+        def _call(self, *args, **kwargs):
+            func = getattr(self.parent, self.__attr)
+            wrap = allow_kwargs('parent', 'k', 'weight')(kwargs.pop('wrap', _do_nothing))
+            eta = tqdm_eta(len(self), self.__class__.__name__ + '.assum',
+                           'k', kwargs.pop('eta', False))
+            parent = self.parent
+            k = self.k.view()
+            w = self.weight.view()
+            v = wrap(func(*args, k=k[0], **kwargs), parent=parent, k=k[0], weight=w[0]).astype(dtype, copy=False)
+            for i in range(1, len(k)):
+                v += wrap(func(*args, k=k[i], **kwargs), parent=parent, k=k[i], weight=w[i])
                 eta.update()
             eta.close()
             return v
