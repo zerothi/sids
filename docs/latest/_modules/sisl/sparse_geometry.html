@@ -182,6 +182,7 @@
 <span class="kn">import</span> <span class="nn">sisl._array</span> <span class="k">as</span> <span class="nn">_a</span>
 <span class="kn">from</span> <span class="nn">.atom</span> <span class="k">import</span> <span class="n">Atom</span>
 <span class="kn">from</span> <span class="nn">.messages</span> <span class="k">import</span> <span class="n">warn</span><span class="p">,</span> <span class="n">SislError</span><span class="p">,</span> <span class="n">SislWarning</span><span class="p">,</span> <span class="n">tqdm_eta</span>
+<span class="kn">from</span> <span class="nn">._indices</span> <span class="k">import</span> <span class="n">index_sorted</span>
 <span class="kn">from</span> <span class="nn">._help</span> <span class="k">import</span> <span class="n">get_dtype</span>
 <span class="kn">from</span> <span class="nn">._help</span> <span class="k">import</span> <span class="n">_zip</span> <span class="k">as</span> <span class="nb">zip</span><span class="p">,</span> <span class="n">_range</span> <span class="k">as</span> <span class="nb">range</span><span class="p">,</span> <span class="n">_map</span> <span class="k">as</span> <span class="nb">map</span>
 <span class="kn">from</span> <span class="nn">.utils.ranges</span> <span class="k">import</span> <span class="n">array_arange</span>
@@ -590,12 +591,58 @@
         <span class="k">else</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">align</span><span class="p">(</span><span class="n">other</span><span class="o">.</span><span class="n">_csr</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">eliminate_zeros</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">make_hermitian</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Ensures the matrix is Hermitian by doing an *in-place* symmetrization &quot;&quot;&quot;</span>
+        <span class="n">geom</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">geometry</span>
+        <span class="n">na</span> <span class="o">=</span> <span class="n">geom</span><span class="o">.</span><span class="n">na</span>
+        <span class="n">sc</span> <span class="o">=</span> <span class="n">geom</span><span class="o">.</span><span class="n">sc</span>
+        <span class="n">arangei</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">arangei</span>
+
+        <span class="c1"># We finalize to make searching faster</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">finalize</span><span class="p">()</span>
+
+        <span class="c1"># Loop on all atoms</span>
+        <span class="n">ptr</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">ptr</span>
+        <span class="n">ncol</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">ncol</span>
+        <span class="n">col</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">col</span>
+        <span class="n">D</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">_D</span>
+
+        <span class="k">for</span> <span class="n">ia</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
+            <span class="k">if</span> <span class="n">ncol</span><span class="p">[</span><span class="n">ia</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">continue</span>
+
+            <span class="n">c</span> <span class="o">=</span> <span class="n">col</span><span class="p">[</span><span class="n">ptr</span><span class="p">[</span><span class="n">ia</span><span class="p">]:</span><span class="n">ptr</span><span class="p">[</span><span class="n">ia</span><span class="p">]</span> <span class="o">+</span> <span class="n">ncol</span><span class="p">[</span><span class="n">ia</span><span class="p">]]</span>
+            <span class="n">ja</span> <span class="o">=</span> <span class="n">c</span> <span class="o">%</span> <span class="n">na</span>
+            <span class="n">h_col</span> <span class="o">=</span> <span class="p">(</span><span class="n">sc</span><span class="o">.</span><span class="n">sc_index</span><span class="p">(</span><span class="o">-</span><span class="n">geom</span><span class="o">.</span><span class="n">a2isc</span><span class="p">(</span><span class="n">c</span><span class="p">))</span> <span class="o">*</span> <span class="n">na</span> <span class="o">+</span> <span class="n">ia</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+            <span class="n">h_idx</span> <span class="o">=</span> <span class="n">arangei</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">h_col</span><span class="p">))</span>
+            <span class="c1"># Now we have the Hermitian column indices</span>
+            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">ja</span><span class="p">):</span>
+                <span class="n">idx</span> <span class="o">=</span> <span class="n">index_sorted</span><span class="p">(</span><span class="n">col</span><span class="p">[</span><span class="n">ptr</span><span class="p">[</span><span class="n">j</span><span class="p">]:</span><span class="n">ptr</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="o">+</span><span class="n">ncol</span><span class="p">[</span><span class="n">j</span><span class="p">]],</span> <span class="n">h_col</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+                <span class="k">if</span> <span class="n">idx</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="p">[</span><span class="n">j</span><span class="p">,</span> <span class="n">h_col</span><span class="p">[</span><span class="n">i</span><span class="p">]]</span> <span class="o">=</span> <span class="mf">0.</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">finalize</span><span class="p">()</span>
+                    <span class="n">ptr</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">ptr</span>
+                    <span class="n">ncol</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">ncol</span>
+                    <span class="n">col</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">col</span>
+                    <span class="n">D</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">_D</span>
+                    <span class="n">idx</span> <span class="o">=</span> <span class="n">index_sorted</span><span class="p">(</span><span class="n">col</span><span class="p">[</span><span class="n">ptr</span><span class="p">[</span><span class="n">j</span><span class="p">]:</span><span class="n">ptr</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="o">+</span><span class="n">ncol</span><span class="p">[</span><span class="n">j</span><span class="p">]],</span> <span class="n">h_col</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+                <span class="n">h_idx</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">ptr</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">+</span> <span class="n">idx</span>
+            <span class="c1"># Now make it hermitian</span>
+            <span class="n">idx</span> <span class="o">=</span> <span class="nb">slice</span><span class="p">(</span><span class="n">ptr</span><span class="p">[</span><span class="n">ia</span><span class="p">],</span> <span class="n">ptr</span><span class="p">[</span><span class="n">ia</span><span class="p">]</span> <span class="o">+</span> <span class="n">ncol</span><span class="p">[</span><span class="n">ia</span><span class="p">])</span>
+            <span class="n">D</span><span class="p">[</span><span class="n">idx</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="p">(</span><span class="n">D</span><span class="p">[</span><span class="n">idx</span><span class="p">,</span> <span class="p">:]</span> <span class="o">+</span> <span class="n">D</span><span class="p">[</span><span class="n">h_idx</span><span class="p">,</span> <span class="p">:]</span><span class="o">.</span><span class="n">conj</span><span class="p">())</span> <span class="o">/</span> <span class="mi">2</span>
+            <span class="n">D</span><span class="p">[</span><span class="n">h_idx</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">D</span><span class="p">[</span><span class="n">idx</span><span class="p">,</span> <span class="p">:]</span>
+
+    <span class="k">def</span> <span class="nf">eliminate_zeros</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">atol</span><span class="o">=</span><span class="mf">0.</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Removes all zero elements from the sparse matrix</span>
 
 <span class="sd">        This is an *in-place* operation.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        atol : float, optional</span>
+<span class="sd">            absolute tolerance below this value will be considered 0.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">eliminate_zeros</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">eliminate_zeros</span><span class="p">(</span><span class="n">atol</span><span class="p">)</span>
 
     <span class="c1"># Create iterations on the non-zero elements</span>
     <span class="k">def</span> <span class="nf">iter_nnz</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -1491,6 +1538,48 @@
             <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">nonzero</span><span class="p">(</span><span class="n">only_col</span><span class="o">=</span><span class="n">only_col</span><span class="p">)</span>
         <span class="n">row</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">a2o</span><span class="p">(</span><span class="n">atom</span><span class="p">,</span> <span class="nb">all</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">nonzero</span><span class="p">(</span><span class="n">row</span><span class="o">=</span><span class="n">row</span><span class="p">,</span> <span class="n">only_col</span><span class="o">=</span><span class="n">only_col</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="SparseOrbital.make_hermitian"><a class="viewcode-back" href="../../api-generated/sisl.SparseOrbital.html#sisl.SparseOrbital.make_hermitian">[docs]</a>    <span class="k">def</span> <span class="nf">make_hermitian</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Ensures the matrix is Hermitian by doing an *in-place* symmetrization &quot;&quot;&quot;</span>
+        <span class="n">geom</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">geometry</span>
+        <span class="n">no</span> <span class="o">=</span> <span class="n">geom</span><span class="o">.</span><span class="n">no</span>
+        <span class="n">sc</span> <span class="o">=</span> <span class="n">geom</span><span class="o">.</span><span class="n">sc</span>
+        <span class="n">arangei</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">arangei</span>
+
+        <span class="c1"># We finalize to make searching faster</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">finalize</span><span class="p">()</span>
+
+        <span class="c1"># Loop on all orbitals</span>
+        <span class="n">ptr</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">ptr</span><span class="o">.</span><span class="n">view</span><span class="p">()</span>
+        <span class="n">ncol</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">ncol</span><span class="o">.</span><span class="n">view</span><span class="p">()</span>
+        <span class="n">col</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">col</span><span class="o">.</span><span class="n">view</span><span class="p">()</span>
+        <span class="n">D</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">_D</span><span class="o">.</span><span class="n">view</span><span class="p">()</span>
+
+        <span class="k">for</span> <span class="n">io</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
+            <span class="k">if</span> <span class="n">ncol</span><span class="p">[</span><span class="n">io</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">continue</span>
+
+            <span class="n">c</span> <span class="o">=</span> <span class="n">col</span><span class="p">[</span><span class="n">ptr</span><span class="p">[</span><span class="n">io</span><span class="p">]:</span><span class="n">ptr</span><span class="p">[</span><span class="n">io</span><span class="p">]</span> <span class="o">+</span> <span class="n">ncol</span><span class="p">[</span><span class="n">io</span><span class="p">]]</span>
+            <span class="n">jo</span> <span class="o">=</span> <span class="n">c</span> <span class="o">%</span> <span class="n">no</span>
+            <span class="n">h_col</span> <span class="o">=</span> <span class="p">(</span><span class="n">sc</span><span class="o">.</span><span class="n">sc_index</span><span class="p">(</span><span class="o">-</span><span class="n">geom</span><span class="o">.</span><span class="n">o2isc</span><span class="p">(</span><span class="n">c</span><span class="p">))</span> <span class="o">*</span> <span class="n">no</span> <span class="o">+</span> <span class="n">io</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+            <span class="n">h_idx</span> <span class="o">=</span> <span class="n">arangei</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">h_col</span><span class="p">))</span>
+            <span class="c1"># Now we have the Hermitian column indices</span>
+            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">jo</span><span class="p">):</span>
+                <span class="n">idx</span> <span class="o">=</span> <span class="n">index_sorted</span><span class="p">(</span><span class="n">col</span><span class="p">[</span><span class="n">ptr</span><span class="p">[</span><span class="n">j</span><span class="p">]:</span><span class="n">ptr</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="o">+</span><span class="n">ncol</span><span class="p">[</span><span class="n">j</span><span class="p">]],</span> <span class="n">h_col</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+                <span class="k">if</span> <span class="n">idx</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="c1"># Add a new element</span>
+                    <span class="bp">self</span><span class="p">[</span><span class="n">j</span><span class="p">,</span> <span class="n">h_col</span><span class="p">[</span><span class="n">i</span><span class="p">]]</span> <span class="o">=</span> <span class="mf">0.</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">finalize</span><span class="p">()</span>
+                    <span class="n">ptr</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">ptr</span><span class="o">.</span><span class="n">view</span><span class="p">()</span>
+                    <span class="n">ncol</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">ncol</span><span class="o">.</span><span class="n">view</span><span class="p">()</span>
+                    <span class="n">col</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">col</span><span class="o">.</span><span class="n">view</span><span class="p">()</span>
+                    <span class="n">D</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">_D</span><span class="o">.</span><span class="n">view</span><span class="p">()</span>
+                    <span class="n">idx</span> <span class="o">=</span> <span class="n">index_sorted</span><span class="p">(</span><span class="n">col</span><span class="p">[</span><span class="n">ptr</span><span class="p">[</span><span class="n">j</span><span class="p">]:</span><span class="n">ptr</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="o">+</span><span class="n">ncol</span><span class="p">[</span><span class="n">j</span><span class="p">]],</span> <span class="n">h_col</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+                <span class="n">h_idx</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">ptr</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">+</span> <span class="n">idx</span>
+            <span class="c1"># Now make it hermitian</span>
+            <span class="n">idx</span> <span class="o">=</span> <span class="nb">slice</span><span class="p">(</span><span class="n">ptr</span><span class="p">[</span><span class="n">io</span><span class="p">],</span> <span class="n">ptr</span><span class="p">[</span><span class="n">io</span><span class="p">]</span> <span class="o">+</span> <span class="n">ncol</span><span class="p">[</span><span class="n">io</span><span class="p">])</span>
+            <span class="n">D</span><span class="p">[</span><span class="n">idx</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="p">(</span><span class="n">D</span><span class="p">[</span><span class="n">idx</span><span class="p">,</span> <span class="p">:]</span> <span class="o">+</span> <span class="n">D</span><span class="p">[</span><span class="n">h_idx</span><span class="p">,</span> <span class="p">:]</span><span class="o">.</span><span class="n">conj</span><span class="p">())</span> <span class="o">/</span> <span class="mi">2</span>
+            <span class="n">D</span><span class="p">[</span><span class="n">h_idx</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">D</span><span class="p">[</span><span class="n">idx</span><span class="p">,</span> <span class="p">:]</span></div>
 
 <div class="viewcode-block" id="SparseOrbital.iter_nnz"><a class="viewcode-back" href="../../api-generated/sisl.SparseOrbital.html#sisl.SparseOrbital.iter_nnz">[docs]</a>    <span class="k">def</span> <span class="nf">iter_nnz</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">atom</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">orbital</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Iterations of the non-zero elements</span>

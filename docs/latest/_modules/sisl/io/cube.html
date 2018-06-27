@@ -192,6 +192,43 @@
 <div class="viewcode-block" id="cubeSile"><a class="viewcode-back" href="../../../api-generated/sisl.io.cube.cubeSile.html#sisl.io.cube.cubeSile">[docs]</a><span class="k">class</span> <span class="nc">cubeSile</span><span class="p">(</span><span class="n">Sile</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot; CUBE file object &quot;&quot;&quot;</span>
 
+<div class="viewcode-block" id="cubeSile.write_supercell"><a class="viewcode-back" href="../../../api-generated/sisl.io.cube.cubeSile.html#sisl.io.cube.cubeSile.write_supercell">[docs]</a>    <span class="nd">@Sile_fh_open</span>
+    <span class="k">def</span> <span class="nf">write_supercell</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sc</span><span class="p">,</span> <span class="n">fmt</span><span class="o">=</span><span class="s1">&#39;15.10e&#39;</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">origo</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                        <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Writes `SuperCell` object attached to this grid</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        sc : SuperCell</span>
+<span class="sd">            supercell to be written</span>
+<span class="sd">        fmt : str, optional</span>
+<span class="sd">            floating point format for stored values</span>
+<span class="sd">        size : (3, ), optional</span>
+<span class="sd">            shape of the stored grid (``[1, 1, 1]``)</span>
+<span class="sd">        origo : (3, ), optional</span>
+<span class="sd">            origo of the cell (``[0, 0, 0]``)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">sile_raise_write</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+
+        <span class="c1"># Write header</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_write</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_write</span><span class="p">(</span><span class="s1">&#39;sisl --- CUBE file</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">size</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">size</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">([</span><span class="mi">3</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">origo</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">origo</span> <span class="o">=</span> <span class="n">sc</span><span class="o">.</span><span class="n">origo</span><span class="p">[:]</span>
+
+        <span class="n">_fmt</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="si">{:d}</span><span class="s1"> </span><span class="si">{:15.10e}</span><span class="s1"> </span><span class="si">{:15.10e}</span><span class="s1"> </span><span class="si">{:15.10e}</span><span class="se">\n</span><span class="s1">&#39;</span>
+
+        <span class="c1"># Add #-of atoms and origo</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_write</span><span class="p">(</span><span class="n">_fmt</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="o">*</span><span class="p">(</span><span class="n">origo</span> <span class="o">*</span> <span class="n">Ang2Bohr</span><span class="p">)))</span>
+
+        <span class="c1"># Write the cell and voxels</span>
+        <span class="k">for</span> <span class="n">ix</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">3</span><span class="p">):</span>
+            <span class="n">dcell</span> <span class="o">=</span> <span class="n">sc</span><span class="o">.</span><span class="n">cell</span><span class="p">[</span><span class="n">ix</span><span class="p">,</span> <span class="p">:]</span> <span class="o">/</span> <span class="n">size</span><span class="p">[</span><span class="n">ix</span><span class="p">]</span> <span class="o">*</span> <span class="n">Ang2Bohr</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_write</span><span class="p">(</span><span class="n">_fmt</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">size</span><span class="p">[</span><span class="n">ix</span><span class="p">],</span> <span class="o">*</span><span class="n">dcell</span><span class="p">))</span></div>
+
 <div class="viewcode-block" id="cubeSile.write_geometry"><a class="viewcode-back" href="../../../api-generated/sisl.io.cube.cubeSile.html#sisl.io.cube.cubeSile.write_geometry">[docs]</a>    <span class="nd">@Sile_fh_open</span>
     <span class="k">def</span> <span class="nf">write_geometry</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">geometry</span><span class="p">,</span> <span class="n">fmt</span><span class="o">=</span><span class="s1">&#39;15.10e&#39;</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">origo</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
             <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
@@ -220,6 +257,9 @@
             <span class="n">origo</span> <span class="o">=</span> <span class="n">geometry</span><span class="o">.</span><span class="n">origo</span><span class="p">[:]</span>
 
         <span class="n">_fmt</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="si">{:d}</span><span class="s1"> </span><span class="si">{:15.10e}</span><span class="s1"> </span><span class="si">{:15.10e}</span><span class="s1"> </span><span class="si">{:15.10e}</span><span class="se">\n</span><span class="s1">&#39;</span>
+
+        <span class="n">valid_Z</span> <span class="o">=</span> <span class="p">(</span><span class="n">geometry</span><span class="o">.</span><span class="n">atoms</span><span class="o">.</span><span class="n">Z</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">nonzero</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">geometry</span> <span class="o">=</span> <span class="n">geometry</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="n">valid_Z</span><span class="p">)</span>
 
         <span class="c1"># Add #-of atoms and origo</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_write</span><span class="p">(</span><span class="n">_fmt</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">geometry</span><span class="p">),</span> <span class="o">*</span><span class="p">(</span><span class="n">origo</span> <span class="o">*</span> <span class="n">Ang2Bohr</span><span class="p">)))</span>
@@ -253,12 +293,10 @@
         <span class="c1"># Check that we can write to the file</span>
         <span class="n">sile_raise_write</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
 
-        <span class="n">geom</span> <span class="o">=</span> <span class="n">grid</span><span class="o">.</span><span class="n">geometry</span>
-        <span class="k">if</span> <span class="n">geom</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">geom</span> <span class="o">=</span> <span class="n">Geometry</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">Atom</span><span class="p">(</span><span class="o">-</span><span class="mi">999</span><span class="p">),</span> <span class="n">sc</span><span class="o">=</span><span class="n">grid</span><span class="o">.</span><span class="n">sc</span><span class="p">)</span>
-
-        <span class="c1"># Write the geometry</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">write_geometry</span><span class="p">(</span><span class="n">geom</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="n">grid</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">grid</span><span class="o">.</span><span class="n">geometry</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">write_supercell</span><span class="p">(</span><span class="n">grid</span><span class="o">.</span><span class="n">sc</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="n">grid</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">write_geometry</span><span class="p">(</span><span class="n">grid</span><span class="o">.</span><span class="n">geometry</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="n">grid</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 
         <span class="n">buffersize</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;buffersize&#39;</span><span class="p">,</span> <span class="nb">min</span><span class="p">(</span><span class="mi">6144</span><span class="p">,</span> <span class="n">grid</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">size</span><span class="p">))</span>
         <span class="n">buffersize</span> <span class="o">+=</span> <span class="n">buffersize</span> <span class="o">%</span> <span class="mi">6</span> <span class="c1"># ensure multiple of 6</span>
@@ -294,12 +332,15 @@
     <span class="k">def</span> <span class="nf">read_supercell</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">na</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Returns `SuperCell` object from the CUBE file</span>
 
-<span class="sd">        If ``na=True`` it will return a tuple (na,SuperCell)</span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        na : bool, optional</span>
+<span class="sd">           whether to also return the number of atoms in the geometry</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">readline</span><span class="p">()</span>  <span class="c1"># header 1</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">readline</span><span class="p">()</span>  <span class="c1"># header 2</span>
         <span class="n">origo</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">readline</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">()</span> <span class="c1"># origo</span>
-        <span class="n">na</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">origo</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="n">lna</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">origo</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
         <span class="n">origo</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="nb">float</span><span class="p">,</span> <span class="n">origo</span><span class="p">[</span><span class="mi">1</span><span class="p">:])),</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
 
         <span class="n">cell</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">([</span><span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
@@ -313,8 +354,8 @@
         <span class="n">cell</span> <span class="o">=</span> <span class="n">cell</span> <span class="o">/</span> <span class="n">Ang2Bohr</span>
         <span class="n">origo</span> <span class="o">=</span> <span class="n">origo</span> <span class="o">/</span> <span class="n">Ang2Bohr</span>
         <span class="k">if</span> <span class="n">na</span><span class="p">:</span>
-            <span class="k">return</span> <span class="n">na</span><span class="p">,</span> <span class="n">SuperCell</span><span class="p">(</span><span class="n">cell</span><span class="p">,</span> <span class="n">origo</span><span class="o">=</span><span class="n">origo</span><span class="p">)</span>
-        <span class="k">return</span> <span class="mi">0</span><span class="p">,</span> <span class="n">SuperCell</span><span class="p">(</span><span class="n">cell</span><span class="p">,</span> <span class="n">origo</span><span class="o">=</span><span class="n">origo</span><span class="p">)</span></div>
+            <span class="k">return</span> <span class="n">lna</span><span class="p">,</span> <span class="n">SuperCell</span><span class="p">(</span><span class="n">cell</span><span class="p">,</span> <span class="n">origo</span><span class="o">=</span><span class="n">origo</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">SuperCell</span><span class="p">(</span><span class="n">cell</span><span class="p">,</span> <span class="n">origo</span><span class="o">=</span><span class="n">origo</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="cubeSile.read_geometry"><a class="viewcode-back" href="../../../api-generated/sisl.io.cube.cubeSile.html#sisl.io.cube.cubeSile.read_geometry">[docs]</a>    <span class="nd">@Sile_fh_open</span>
     <span class="k">def</span> <span class="nf">read_geometry</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -322,7 +363,7 @@
         <span class="n">na</span><span class="p">,</span> <span class="n">sc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">read_supercell</span><span class="p">(</span><span class="n">na</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="n">na</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;There is no atoms in the CUBE file&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="kc">None</span>
 
         <span class="c1"># Start reading the geometry</span>
         <span class="n">xyz</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">([</span><span class="n">na</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
@@ -335,8 +376,6 @@
             <span class="n">xyz</span><span class="p">[</span><span class="n">ia</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">tmp</span><span class="p">[</span><span class="mi">4</span><span class="p">])</span>
 
         <span class="n">xyz</span> <span class="o">/=</span> <span class="n">Ang2Bohr</span>
-        <span class="k">if</span> <span class="n">na</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="n">atom</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">Z</span> <span class="o">==</span> <span class="o">-</span><span class="mi">999</span><span class="p">:</span>
-            <span class="k">return</span> <span class="kc">None</span>
         <span class="k">return</span> <span class="n">Geometry</span><span class="p">(</span><span class="n">xyz</span><span class="p">,</span> <span class="n">atom</span><span class="p">,</span> <span class="n">sc</span><span class="o">=</span><span class="n">sc</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="cubeSile.read_grid"><a class="viewcode-back" href="../../../api-generated/sisl.io.cube.cubeSile.html#sisl.io.cube.cubeSile.read_grid">[docs]</a>    <span class="nd">@Sile_fh_open</span>
@@ -353,6 +392,11 @@
             <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">imag</span><span class="p">,</span> <span class="n">Grid</span><span class="p">):</span>
                 <span class="n">imag</span> <span class="o">=</span> <span class="n">Grid</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">imag</span><span class="p">)</span>
         <span class="n">geom</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">read_geometry</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">geom</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">fh</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+            <span class="n">sc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">read_supercell</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">sc</span> <span class="o">=</span> <span class="n">geom</span><span class="o">.</span><span class="n">sc</span>
 
         <span class="c1"># Now seek behind to read grid sizes</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">fh</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
@@ -371,7 +415,10 @@
         <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">na</span><span class="p">):</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">readline</span><span class="p">()</span>
 
-        <span class="n">grid</span> <span class="o">=</span> <span class="n">Grid</span><span class="p">(</span><span class="n">ngrid</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">,</span> <span class="n">geometry</span><span class="o">=</span><span class="n">geom</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">geom</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">grid</span> <span class="o">=</span> <span class="n">Grid</span><span class="p">(</span><span class="n">ngrid</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">,</span> <span class="n">sc</span><span class="o">=</span><span class="n">sc</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">grid</span> <span class="o">=</span> <span class="n">Grid</span><span class="p">(</span><span class="n">ngrid</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">,</span> <span class="n">geometry</span><span class="o">=</span><span class="n">geom</span><span class="p">)</span>
         <span class="n">grid</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">shape</span> <span class="o">=</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,)</span>
 
         <span class="c1"># TODO check performance of this</span>
