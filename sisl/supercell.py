@@ -270,9 +270,6 @@ class SuperCell(object):
         """ Internal indexed supercell ``[ia, ib, ic] == i`` """
         return self._isc_off
 
-    # Aliases
-    set_supercell = set_nsc
-
     def __iter__(self):
         """ Iterate the supercells and the indices of the supercells """
         for i, sc in enumerate(self.sc_off):
@@ -572,6 +569,7 @@ class SuperCell(object):
             _assert(hsc[1], sc_off[:, 1])
             _assert(hsc[2], sc_off[:, 2])
             return self._isc_off[sc_off[:, 0], sc_off[:, 1], sc_off[:, 2]]
+
         elif isinstance(sc_off[0], (tuple, list)):
             # We are dealing with a list of lists
             sc_off = np.asarray(sc_off)
@@ -629,7 +627,10 @@ class SuperCell(object):
         cell[axis, :] *= reps
         # Only reduce the size if it is larger than 5
         if nsc[axis] > 3 and reps > 1:
-            nsc[axis] = max(1, nsc[axis] // 2 - (reps - 1)) * 2 + 1
+            # This is number of connections for the primary cell
+            h_nsc = nsc[axis] // 2
+            # The new number of supercells will then be
+            nsc[axis] = max(1, int(math.ceil(h_nsc / reps))) * 2 + 1
         return self.__class__(cell, nsc=nsc, origo=origo)
 
     def repeat(self, reps, axis):

@@ -7,12 +7,15 @@ import numpy as np
 
 # Import sile objects
 import sisl._array as _a
+from sisl._indices import indices_only
 from sisl._help import _str
 from sisl.utils.ranges import list2str
-from sisl.messages import info, warn
-from .sile import SileSiesta
+from sisl.messages import SislError, info, warn
+from sisl.utils.mathematics import fnorm
+
+from .._help import *
 from ..sile import *
-from sisl.io._help import *
+from .sile import SileSiesta
 
 from .binaries import tshsSileSiesta, tsdeSileSiesta
 from .binaries import dmSileSiesta, hsxSileSiesta
@@ -23,7 +26,7 @@ from .siesta_nc import ncSileSiesta
 from .basis import ionxmlSileSiesta, ionncSileSiesta
 from .orb_indx import orbindxSileSiesta
 from .xv import xvSileSiesta
-from sisl import Geometry, Atom, SuperCell
+from sisl import Geometry, Orbital, Atom, SuperCell, Hessian
 
 from sisl.utils.cmd import default_ArgumentParser, default_namespace
 from sisl.utils.misc import merge_instances, str_spec
@@ -94,8 +97,11 @@ class fdfSileSiesta(SileSiesta):
         return osp.join(self._directory, f)
 
     def _pushfile(self, f):
-        self._parent_fh.append(self.fh)
-        self.fh = open(self._tofile(f), self._mode)
+        if osp.isfile(self._tofile(f)):
+            self._parent_fh.append(self.fh)
+            self.fh = open(self._tofile(f), self._mode)
+        else:
+            warn(repr(self) + ' is trying to include file: {} but the file seems not to exist? Will disregard file!'.format(f))
 
     def _popfile(self):
         if len(self._parent_fh) > 0:
@@ -107,8 +113,8 @@ class fdfSileSiesta(SileSiesta):
     def _seek(self):
         """ Closes all files, and starts over from beginning """
         try:
-            while len(self._parent_fh) > 1:
-                self._popfile()
+            while self._popfile():
+                pass
             self.fh.seek(0)
         except:
             pass
@@ -509,19 +515,27 @@ class fdfSileSiesta(SileSiesta):
             self._write('AtomicCoordinatesFormat {}\n'.format(unit))
         self._write('%block AtomicCoordinatesAndAtomicSpecies\n')
 
-        fmt_str = ' {{2:{0}}} {{3:{0}}} {{4:{0}}} {{0}} # {{1}}\n'.format(fmt)
+        n_species = len(geom.atoms.atom)
+
         # Count for the species
         if is_fractional:
             xyz = geom.fxyz
         else:
             xyz = geom.xyz * conv
+            if fmt[0] == '.':
+                # Correct for a "same" length of all coordinates
+                c_max = len(str(('{{:{0}}}'.format(fmt)).format(xyz.max())))
+                c_min = len(str(('{{:{0}}}'.format(fmt)).format(xyz.min())))
+                fmt = str(max(c_min, c_max)) + fmt
+        fmt_str = ' {{3:{0}}} {{4:{0}}} {{5:{0}}} {{0}} # {{1:{1}d}}: {{2}}\n'.format(fmt, len(str(len(geom))))
+
         for ia, a, isp in geom.iter_species():
-            self._write(fmt_str.format(isp + 1, ia + 1, *xyz[ia, :]))
+            self._write(fmt_str.format(isp + 1, ia + 1, a.tag, *xyz[ia, :]))
         self._write('%endblock AtomicCoordinatesAndAtomicSpecies\n\n')
 
         # Write out species
         # First swap key and value
-        self._write('NumberOfSpecies {0}\n'.format(len(geom.atom.atom)))
+        self._write('NumberOfSpecies {0}\n'.format(n_species))
         self._write('%block ChemicalSpeciesLabel\n')
         for i, a in enumerate(geom.atom.atom):
             self._write(' {0} {1} {2}\n'.format(i + 1, a.Z, a.tag))
@@ -530,7 +544,7 @@ class fdfSileSiesta(SileSiesta):
         _write_block = True
         def write_block(atoms, append, write_block):
             if write_block:
-                self._write('\n# Constrainst\n%block Geometry.Constraints\n')
+                self._write('\n# Constraints\n%block Geometry.Constraints\n')
                 write_block = False
             self._write(' atom [{}]{}\n'.format(atoms, append))
             return write_block
@@ -745,11 +759,11 @@ class fdfSileSiesta(SileSiesta):
         ----------
         correct_fc : bool, optional
             correct the FC-matrix by forcing the force on the moved atom to be
-            equal to the negative sum of all the others.
+            equal to the negative sum of all the others. Default to true.
 
         Returns
         -------
-        (*, 6, *, 3) : vector with force constant element for each of the atomic displacements
+        (*, 3, 2, *, 3) : vector with force constant element for each of the atomic displacements
         """
         order = kwargs.pop('order', ['FC'])
         for f in order:
@@ -766,16 +780,291 @@ class fdfSileSiesta(SileSiesta):
             # Figure out which atoms to correct
             fc_first = self.get('MD.FCFirst', default=0)
             fc_last = self.get('MD.FCLast', default=0)
-            if 0 == fc_first or 0 == fc_last:
-                raise SislError(repr(self) + '.read_force_constant(FC) requires FCFirst/FCLast to be set correctly.')
+            if 0 in [fc_first, fc_last]:
+                raise SislError(repr(self) + '.read_force_constant(FC) requires FCFirst({})/FCLast({}) to be set correctly.'.format(fc_first, fc_last))
             if fc_last - fc_first + 1 != fc.shape[0]:
-                raise SislError(repr(self) + '.read_force_constant(FC) has erroneous FC file compared to FCFirst/FCLast.')
+                raise SislError(repr(self) + '.read_force_constant(FC) expected {} displaced atoms, '
+                                'only found {} displaced atoms!'.format(fc_last - fc_first + 1, fc.shape[0]))
+            # TODO check whether some of the atoms are "ghost" atoms
+            # TODO Most probably these should not be taken into account...?
             if kwargs.get('correct_fc', True):
-                for i in range(fc_first - 1, fc_last):
-                    j = i - fc_first + 1
-                    fc[j, :, i, :] -= fc[j, :, :, :].sum(1)
+                for j, i in enumerate(range(fc_first - 1, fc_last)):
+                    fc[j, :, :, i, :] -= fc[j, :, :, :, :].sum(2)
             return fc
         return None
+
+    def read_hessian(self, *args, **kwargs):
+        """ Read Hessian matrix from the force constant output of the calculation
+
+        Parameters
+        ----------
+        cutoff_dist : float, optional
+            cutoff value for the distance of the force-constants (everything farther than
+            `cutoff_dist` will be set to 0.
+        cutoff_fc : float, optional
+            cutoff value for the force-constants (absolute values below this value will be set
+            to 0).
+        correct_fc : bool, optional
+            correct the FC-matrix by forcing the force on the moved atom to be
+            equal to the negative sum of all the others. Default to true.
+
+        Returns
+        -------
+        Hessian : Hessian matrix with mass-scaled force constants
+        """
+        order = kwargs.pop('order', ['FC'])
+        for f in order:
+            v = getattr(self, '_r_hessian_{}'.format(f.lower()))(*args, **kwargs)
+            if v is not None:
+                return v
+        return None
+
+    def _r_hessian_fc(self, *args, **kwargs):
+        FC = self._r_force_constant_fc(*args, **kwargs)
+        if FC is None:
+            return None
+
+        # We have the force constant matrix.
+        # Now handle it...
+        #  FC(OLD) = (n_displ, 3, 2, na, 3)
+        #  FC(NEW) = (n_displ, 3, na, 3)
+        # Convert the hessian such that a diagonalization returns eV ^ 2
+        scale = 1.054571800e-34 / unit_convert('Ang', 'm') / (unit_convert('eV', 'J') * unit_convert('amu', 'kg')) ** 0.5
+        FC = np.average(FC, axis=2) * scale ** 2
+
+        # First we need to create the geometry (without the floating atoms)
+        geom = self.read_geometry()
+        # Figure out the "original" periodic directions
+        periodic = geom.nsc > 1
+
+        # Cut-off too small values
+        fc_cut = kwargs.get('cutoff_fc', 0.)
+        FC = np.where(np.abs(FC) > fc_cut, FC, 0.)
+
+        # Convert the geometry to contain 3 orbitals per atom
+        R = kwargs.get('cutoff_dist', -2.)
+        orbs = [Orbital(R / 2, tag=tag) for tag in 'xyz']
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            for atom in geom.atoms:
+                new_atom = Atom(atom.Z, orbs, tag=atom.tag)
+                geom.atoms.replace(atom, new_atom)
+
+        # Remove ghost-atoms or atoms with 0 mass!
+        idx = (geom.atoms.mass == 0.).nonzero()[0]
+        FC = np.delete(FC, idx, axis=3)
+        geom = geom.remove(idx)
+        geom.set_nsc([1] * 3)
+
+        # Now create mass array
+        if len(self.get('AtomicMass', default=[])) > 0:
+            warn(repr(self) + '.read_hessian(FC) does not implement reading atomic masses from fdf file.')
+
+        # Get list of FC atoms
+        fc_atoms = _a.arangei(self.get('MD.FCFirst', default=0) - 1, self.get('MD.FCLast', default=0))
+
+        # Now we can build the Hessian (it will always be real)
+        na = len(geom)
+        na_fc = len(fc_atoms)
+
+        # Flags for all nditer calls
+        nditer_kwargs = {'flags': ['buffered'], 'op_flags': ['readonly']}
+
+        # Populate it!
+        xyz_xyz = _a.arangei(3).reshape(-1, 1)
+        xyz_xyz = np.nditer([xyz_xyz, xyz_xyz.T], **nditer_kwargs)
+
+        supercell = _a.arrayi(kwargs.get('supercell', (1, 1, 1)))
+        # Ensure 0's gets translated to 1's
+        supercell = np.where(supercell > 0, supercell, 1)
+        if np.all(supercell == 1):
+            H = Hessian(geom)
+
+            # Instead of doing the sqrt in all H = FC (below) we do it here
+            m = 1 / geom.atoms.mass ** 0.5
+            FC *= m[fc_atoms].reshape(-1, 1, 1, 1)
+            FC *= m.reshape(1, 1, -1, 1)
+
+            j_fc_atoms = fc_atoms.view()
+            idx = _a.arangei(len(fc_atoms))
+            for ia, fia in enumerate(fc_atoms):
+
+                if R > 0:
+                    # find distances between the other atoms to cut-off the distance
+                    idx = geom.close(fia, R=R, idx=fc_atoms)
+                    idx = indices_only(fc_atoms, idx)
+                    j_fc_atoms = fc_atoms[idx]
+
+                for ja, fja in zip(idx, j_fc_atoms):
+                    for i, j in xyz_xyz:
+                        H[ia*3+i, ja*3+j] = FC[ia, i, fja, j]
+                    xyz_xyz.reset()
+
+        else:
+
+            # We have an actual supercell. Lets try and fix it.
+            # First lets recreate the smallest geometry
+            sc = geom.sc.cell.copy()
+            sc[0, :] /= supercell[0]
+            sc[1, :] /= supercell[1]
+            sc[2, :] /= supercell[2]
+
+            # Ensure nsc is at least an odd number, later down we will symmetrize the FC matrix
+            nsc = supercell + (supercell + 1) % 2
+            if R > 0:
+                # Correct for the optional radius
+                sc_norm = fnorm(sc)
+                # R is already "twice" the "orbital" range
+                nsc_R = 1 + 2 * np.ceil(R / sc_norm).astype(np.int32)
+                for i in range(3):
+                    nsc[i] = min(nsc[i], nsc_R[i])
+                del nsc_R
+            sc = SuperCell(sc, nsc=nsc)
+            geom_small = Geometry(geom.xyz[fc_atoms], geom.atoms[fc_atoms], sc)
+            H = Hessian(geom_small)
+
+            # Now we need to figure out how the atoms are laid out.
+            # It *MUST* either be repeated or tiled (preferentially tiled).
+
+            # Convert the big geometry's coordinates to fractional coordinates of the small unit-cell.
+            isc_xyz = np.dot(geom.xyz, geom_small.sc.icell.T) - np.tile(geom_small.fxyz, (np.product(supercell), 1))
+
+            if np.any(np.diff(fc_atoms) != 1):
+                raise SislError(repr(self) + '.read_hessian(FC) requires the FC atoms to be consecutive!')
+
+            # Now figure out the order of tiling
+            axis_tiling = []
+            offset = len(geom_small)
+            for _ in (supercell > 1).nonzero()[0]:
+                first_isc = (np.around(isc_xyz[fc_atoms + offset, :]) == 1.).sum(0)
+                axis_tiling.append(np.argmax(first_isc))
+                # Fix the offset
+                offset *= supercell[axis_tiling[-1]]
+
+            while len(axis_tiling) < 3:
+                for i in range(3):
+                    if not i in axis_tiling:
+                        axis_tiling.append(i)
+
+            # Now we have the tiling operation, check it sort of matches
+            geom_tile = geom_small.copy()
+            for axis in axis_tiling:
+                geom_tile = geom_tile.tile(supercell[axis], axis)
+
+            # Proximity check of 0.01 Ang (TODO add this as an argument)
+            if not np.allclose(geom_tile.xyz, geom.xyz, rtol=0, atol=0.01):
+                raise SislError(repr(self) + '.read_hessian(FC) could not figure out the tiling method for the supercell')
+
+            # Convert the FC matrix to a "rollable" matrix
+            # This will make it easier to symmetrize
+            #  0. displaced atoms
+            #  1. x, y, z (displacements)
+            #  2. tile-axis_tiling[0]
+            #  3. tile-axis_tiling[1]
+            #  4. tile-axis_tiling[2]
+            #  5. na
+            #  6. x, y, z (force components)
+            FC.shape = (na_fc, 3, supercell[axis_tiling[0]], supercell[axis_tiling[1]], supercell[axis_tiling[2]], na_fc, 3)
+
+            # After having done this we can easily mass scale all FC components
+            m = 1 / geom_small.atoms.mass ** 0.5
+            FC *= m.reshape(-1, 1, 1, 1, 1, 1, 1)
+            FC *= m.reshape(1, 1, 1, 1, 1, -1, 1)
+
+            if fc_atoms[0] != 0:
+                # TODO we could roll the axis such that the displaced atoms moves into the
+                # first elements
+                raise SislError(repr(self) + '.read_hessian(FC) requires the displaced atoms to start from 1!')
+
+            # Now swap the [2, 3, 4] dimensions so that we get in order of lattice vectors
+            sa = np.swapaxes
+            if axis_tiling[0] == 1:
+                if axis_tiling[1] == 2:
+                    # B, C, A
+                    FC = sa(sa(FC, 3, 4), 2, 3)
+                else:
+                    # B, A, C
+                    FC = sa(FC, 2, 3)
+            elif axis_tiling[0] == 2:
+                if axis_tiling[1] == 1:
+                    # C, B, A
+                    FC = sa(FC, 2, 4)
+                else:
+                    # C, A, B
+                    FC = sa(sa(FC, 2, 3), 3, 4)
+            else:
+                if axis_tiling[1] == 2:
+                    # A, C, B
+                    FC = sa(FC, 3, 4)
+
+            # Check whether we need to "halve" the equivalent supercell
+            # This will be present in calculations done on an even number of supercells.
+            # I.e. for 4 supercells
+            #  [0] [1] [2] [3]
+            # where in the supercell approach:
+            #  [2] [3] [0] [1] [2]
+            # I.e. since we are double counting [2] we will halve it.
+            # This is not *exactly* true because depending on the range one should do the symmetry operations.
+            # However the FC does not contain such symmetry considerations.
+            for i in range(3):
+                if supercell[i] % 2 == 1:
+                    # We don't need to do anything
+                    continue
+
+                # Figure out the supercell to halve
+                halve_idx = supercell[i] // 2
+                if i == 0:
+                    FC[:, :, halve_idx, :, :, :, :] *= 0.5
+                elif i == 1:
+                    FC[:, :, :, halve_idx, :, :, :] *= 0.5
+                else:
+                    FC[:, :, :, :, halve_idx, :, :] *= 0.5
+
+            # Now axis_tiling has no meaning since we know supercell represents the axis_tiling
+            del axis_tiling
+
+            # Now convert the FC matrix to the Hessian matrix
+            def arai(nsc):
+                return _a.arangei(-nsc, nsc + 1)
+
+            # Now take all positive supercell connections (including inner cell)
+            nsc = H.geometry.nsc // 2
+            iter_nsc = np.nditer([arai(nsc[0]).reshape(-1, 1, 1),
+                                  arai(nsc[1]).reshape(1, -1, 1),
+                                  arai(nsc[2]).reshape(1, 1, -1)], **nditer_kwargs)
+
+            iter_fc_atoms = _a.arangei(len(fc_atoms))
+            iter_j_fc_atoms = iter_fc_atoms.view()
+
+            # When x, y, z are negative we simply look-up from the back of the array
+            # which is exactly what is required
+            isc_off = H.geometry.sc.isc_off
+            nxyz = H.geometry.no
+            dist = H.geometry.rij
+            na = H.geometry.na
+            for x, y, z in iter_nsc:
+                aoff = isc_off[x, y, z] * na
+                joff = aoff / na * nxyz
+                for ia in iter_fc_atoms:
+
+                    # Reduce second loop based on radius cutoff
+                    if R > 0:
+                        iter_j_fc_atoms = iter_fc_atoms[dist(ia, aoff + iter_fc_atoms) <= R]
+
+                    for ja in iter_j_fc_atoms:
+                        for i, j in xyz_xyz:
+                            H[ia*3+i, joff+ja*3+j] = FC[ia, i, x, y, z, ja, j]
+                        xyz_xyz.reset()
+
+        # Remove all zeros
+        H.eliminate_zeros()
+        # Make Hermitian, this may "halve" some elements if the matrix is not
+        # symmetric.
+        H.make_hermitian()
+
+        # TODO, it may be advantegeous to apply Newtons 3rd law and then call make_hermitian again.
+
+        return H
 
     def read_geometry(self, output=False, *args, **kwargs):
         """ Returns Geometry object by reading fdf or Siesta output related files.
@@ -1113,9 +1402,10 @@ class fdfSileSiesta(SileSiesta):
         f = self._tofile(self.get('SystemLabel', default='siesta')) + '.TSDE'
         DM = None
         if isfile(f):
-            geom = self.read_geometry(True)
             DM = tsdeSileSiesta(f).read_density_matrix(*args, **kwargs)
-            self._SpGeom_replace_geom(DM, geom)
+            if 'geometry' not in kwargs:
+                if not self._SpGeom_replace_geom(DM, self.read_geometry(True)):
+                    warn(SileWarning('DM from {} will most likely have a wrong supercell specification.'.format(f)))
         return DM
 
     def _r_density_matrix_dm(self, *args, **kwargs):
@@ -1123,9 +1413,10 @@ class fdfSileSiesta(SileSiesta):
         f = self._tofile(self.get('SystemLabel', default='siesta')) + '.DM'
         DM = None
         if isfile(f):
-            if 'geometry' not in kwargs:
-                kwargs['geometry'] = self.read_geometry(True)
             DM = dmSileSiesta(f).read_density_matrix(*args, **kwargs)
+            if 'geometry' not in kwargs:
+                if not self._SpGeom_replace_geom(DM, self.read_geometry(True)):
+                    warn(SileWarning('DM from {} will most likely have a wrong supercell specification.'.format(f)))
         return DM
 
     def read_energy_density_matrix(self, *args, **kwargs):
@@ -1159,11 +1450,10 @@ class fdfSileSiesta(SileSiesta):
         f = self._tofile(self.get('SystemLabel', default='siesta')) + '.TSDE'
         EDM = None
         if isfile(f):
-            if 'geometry' not in kwargs:
-                kwargs['geometry'] = self.read_geometry(True)
             EDM = tsdeSileSiesta(f).read_energy_density_matrix(*args, **kwargs)
-            if not self._SpGeom_replace_geom(EDM, geom):
-                warn(SileWarning('EDM from {} will most likely have a wrong supercell specification.'.format(f)))
+            if 'geometry' not in kwargs:
+                if not self._SpGeom_replace_geom(EDM, self.read_geometry(True)):
+                    warn(SileWarning('EDM from {} will most likely have a wrong supercell specification.'.format(f)))
         return EDM
 
     def read_hamiltonian(self, *args, **kwargs):
@@ -1197,9 +1487,8 @@ class fdfSileSiesta(SileSiesta):
         f = self._tofile(self.get('SystemLabel', default='siesta')) + '.TSHS'
         H = None
         if isfile(f):
-            geom = self.read_geometry(True)
             H = tshsSileSiesta(f).read_hamiltonian(*args, **kwargs)
-            self._SpGeom_replace_geom(H, geom)
+            self._SpGeom_replace_geom(H, self.read_geometry(True))
         return H
 
     def _r_hamiltonian_hsx(self, *args, **kwargs):
@@ -1207,9 +1496,8 @@ class fdfSileSiesta(SileSiesta):
         f = self._tofile(self.get('SystemLabel', default='siesta')) + '.HSX'
         H = None
         if isfile(f):
-            geom = self.read_geometry(True)
             H = hsxSileSiesta(f).read_hamiltonian(*args, **kwargs)
-            if not self._SpGeom_replace_geom(H, geom):
+            if not self._SpGeom_replace_geom(H, self.read_geometry(True)):
                 warn(SileWarning('H from {} will most likely have a wrong supercell specification.'.format(f)))
         return H
 
