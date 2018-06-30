@@ -453,6 +453,110 @@
 
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">axyz</span><span class="p">(</span><span class="n">atom</span><span class="p">)</span>
 
+<div class="viewcode-block" id="Geometry.as_primary"><a class="viewcode-back" href="../../api-generated/sisl.Geometry.html#sisl.Geometry.as_primary">[docs]</a>    <span class="k">def</span> <span class="nf">as_primary</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">na_primary</span><span class="p">,</span> <span class="n">ret_super</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Try and reduce the geometry to the primary unit-cell comprising `na_primary` atoms</span>
+
+<span class="sd">        This will basically try and find the tiling/repetitions required for the geometry to only have</span>
+<span class="sd">        `na_primary` atoms in the unit cell.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        na_primary : int</span>
+<span class="sd">           number of atoms in the primary unit cell</span>
+<span class="sd">        ret_super : bool, optional</span>
+<span class="sd">           also return the number of supercells used in each direction</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        Geometry : the primary unit cell</span>
+<span class="sd">        supercell : the tiled supercell numbers used to find the primary unit cell</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        SislError : in case the algorithm fails.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">na</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">na</span> <span class="o">%</span> <span class="n">na_primary</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">SislError</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39;.as_primary requires the number of atoms to be divisable by the &#39;</span>
+                            <span class="s1">&#39;total number of atoms.&#39;</span><span class="p">)</span>
+
+        <span class="n">n_supercells</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">//</span> <span class="n">na_primary</span>
+        <span class="k">if</span> <span class="n">n_supercells</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="c1"># Return a copy of self</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+
+        <span class="c1"># Now figure out the repetitions along each direction</span>
+        <span class="n">fxyz</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fxyz</span>
+        <span class="c1"># Move to 0</span>
+        <span class="n">fxyz</span> <span class="o">-=</span> <span class="n">fxyz</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="c1"># Shift a little bit in to account for inaccuracies.</span>
+        <span class="n">fxyz</span> <span class="o">+=</span> <span class="p">(</span><span class="mf">0.5</span> <span class="o">-</span> <span class="p">(</span><span class="n">fxyz</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span> <span class="o">-</span> <span class="n">fxyz</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="mf">0.01</span>
+
+        <span class="c1"># Default guess to 1 along all directions</span>
+        <span class="n">supercell</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">onesi</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+
+        <span class="n">n_bin</span> <span class="o">=</span> <span class="n">n_supercells</span>
+        <span class="k">while</span> <span class="n">n_bin</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+
+            <span class="c1"># Create bins</span>
+            <span class="n">bins</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">n_bin</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+
+            <span class="c1"># Loop directions where we need to check</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="p">(</span><span class="n">supercell</span> <span class="o">==</span> <span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">nonzero</span><span class="p">()[</span><span class="mi">0</span><span class="p">]:</span>
+
+                <span class="c1"># A histogram should yield an equal splitting for each bins</span>
+                <span class="c1"># if the geometry is a n_bin repetition along the i&#39;th direction.</span>
+                <span class="c1"># Hence if diff == 0 for all elements we have a match.</span>
+                <span class="n">diff_bin</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">histogram</span><span class="p">(</span><span class="n">fxyz</span><span class="p">[:,</span> <span class="n">i</span><span class="p">],</span> <span class="n">bins</span><span class="p">)[</span><span class="mi">0</span><span class="p">])</span>
+
+                <span class="k">if</span> <span class="n">diff_bin</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="n">supercell</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">n_bin</span>
+                    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">product</span><span class="p">(</span><span class="n">supercell</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">n_supercells</span><span class="p">:</span>
+                        <span class="c1"># For geometries with more than 1 atom in the primary unit cell</span>
+                        <span class="c1"># we can get false positives (each layer can be split again)</span>
+                        <span class="c1"># We will search again the max-value supercell</span>
+                        <span class="n">i_max</span> <span class="o">=</span> <span class="n">supercell</span><span class="o">.</span><span class="n">argmax</span><span class="p">()</span>
+                        <span class="n">n_bin</span> <span class="o">=</span> <span class="n">supercell</span><span class="p">[</span><span class="n">i_max</span><span class="p">]</span>
+                        <span class="n">supercell</span><span class="p">[</span><span class="n">i_max</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+
+            <span class="c1"># Quick escape if hit the correct number of supercells</span>
+            <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">product</span><span class="p">(</span><span class="n">supercell</span><span class="p">)</span> <span class="o">==</span> <span class="n">n_supercells</span><span class="p">:</span>
+                <span class="k">break</span>
+
+            <span class="n">n_bin</span> <span class="o">-=</span> <span class="mi">1</span>
+
+        <span class="c1"># Check that the number of supercells match</span>
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">product</span><span class="p">(</span><span class="n">supercell</span><span class="p">)</span> <span class="o">!=</span> <span class="n">n_supercells</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">SislError</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39;.as_primary could not determine the optimal supercell.&#39;</span><span class="p">)</span>
+
+        <span class="c1"># Cut down the supercell (TODO this does not correct the number of supercell connections!)</span>
+        <span class="n">sc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sc</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">3</span><span class="p">):</span>
+            <span class="n">sc</span> <span class="o">=</span> <span class="n">sc</span><span class="o">.</span><span class="n">cut</span><span class="p">(</span><span class="n">supercell</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">i</span><span class="p">)</span>
+
+        <span class="c1"># Now we need to find the atoms that are in the primary cell</span>
+        <span class="c1"># We do this by finding all coordinates within the primary unit-cell</span>
+        <span class="n">fxyz</span> <span class="o">=</span> <span class="n">dot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">xyz</span><span class="p">,</span> <span class="n">sc</span><span class="o">.</span><span class="n">icell</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
+        <span class="c1"># Move to 0 and shift in 0.05 Ang in each direction</span>
+        <span class="n">fxyz</span> <span class="o">-=</span> <span class="n">fxyz</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+
+        <span class="c1"># Find minimal distance in each direction</span>
+        <span class="n">sc_idx</span> <span class="o">=</span> <span class="p">(</span><span class="n">supercell</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">nonzero</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">min_fxyz</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">zerosd</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">sc_idx</span><span class="p">:</span>
+            <span class="n">s_fxyz</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">fxyz</span><span class="p">[:,</span> <span class="n">i</span><span class="p">])</span>
+            <span class="n">min_fxyz</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">s_fxyz</span><span class="p">[(</span><span class="n">s_fxyz</span> <span class="o">&lt;</span> <span class="mf">1e-4</span><span class="p">)</span><span class="o">.</span><span class="n">nonzero</span><span class="p">()[</span><span class="mi">0</span><span class="p">][</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span>
+        <span class="n">fxyz</span> <span class="o">+=</span> <span class="n">min_fxyz</span> <span class="o">*</span> <span class="mf">0.05</span>
+
+        <span class="c1"># Find all fractional indices that are below 1</span>
+        <span class="n">ind</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">logical_and</span><span class="o">.</span><span class="n">reduce</span><span class="p">(</span><span class="n">fxyz</span> <span class="o">&lt;</span> <span class="mf">1.</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">nonzero</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="n">geom</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="n">ind</span><span class="p">)</span>
+        <span class="n">geom</span><span class="o">.</span><span class="n">set_supercell</span><span class="p">(</span><span class="n">sc</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">ret_super</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">geom</span><span class="p">,</span> <span class="n">supercell</span>
+        <span class="k">return</span> <span class="n">geom</span></div>
+
 <div class="viewcode-block" id="Geometry.reorder"><a class="viewcode-back" href="../../api-generated/sisl.Geometry.html#sisl.Geometry.reorder">[docs]</a>    <span class="k">def</span> <span class="nf">reorder</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Reorders atoms according to first occurence in the geometry</span>
 
