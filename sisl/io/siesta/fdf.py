@@ -26,7 +26,7 @@ from .siesta_nc import ncSileSiesta
 from .basis import ionxmlSileSiesta, ionncSileSiesta
 from .orb_indx import orbindxSileSiesta
 from .xv import xvSileSiesta
-from sisl import Geometry, Orbital, Atom, SuperCell, Hessian
+from sisl import Geometry, Orbital, Atom, SuperCell, DynamicalMatrix
 
 from sisl.utils.cmd import default_ArgumentParser, default_namespace
 from sisl.utils.misc import merge_instances, str_spec
@@ -307,17 +307,17 @@ class fdfSileSiesta(SileSiesta):
         return self._type(self._read_label(label))
 
     @Sile_fh_open
-    def get(self, label, unit=None, default=None, with_unit=False):
+    def get(self, label, default=None, unit=None, with_unit=False):
         """ Retrieve fdf-keyword from the file
 
         Parameters
         ----------
         label : str
             the fdf-label to search for
-        unit : str, optional
-            unit of the physical quantity to return
         default : optional
             if the label is not found, this will be the returned value (default to ``None``)
+        unit : str, optional
+            unit of the physical quantity to return
         with_unit : bool, optional
             whether the physical quantity gets returned with the found unit in the fdf file.
 
@@ -341,9 +341,9 @@ class fdfSileSiesta(SileSiesta):
         %endblock # doctest: +SKIP
         >>> fdf.get('LabeleV') == 1. # default unit is eV # doctest: +SKIP
         >>> fdf.get('LabelRy') == unit.siesta.unit_convert('Ry', 'eV') # doctest: +SKIP
-        >>> fdf.get('LabelRy', 'Ry') == 1. # doctest: +SKIP
+        >>> fdf.get('LabelRy', unit='Ry') == 1. # doctest: +SKIP
         >>> fdf.get('LabelRy', with_unit=True) == (1., 'Ry') # doctest: +SKIP
-        >>> fdf.get('FakeInt', default='0') == '1' # doctest: +SKIP
+        >>> fdf.get('FakeInt', '0') == '1' # doctest: +SKIP
         >>> fdf.get('LabeleV', with_unit=True) == (1., 'eV') # doctest: +SKIP
         >>> fdf.get('Label', with_unit=True) == 'name' # no unit present on line # doctest: +SKIP
         >>> fdf.get('Hello') == ['line 1', 'line2'] # doctest: +SKIP
@@ -793,33 +793,33 @@ class fdfSileSiesta(SileSiesta):
             return fc
         return None
 
-    def read_hessian(self, *args, **kwargs):
-        """ Read Hessian matrix from the force constant output of the calculation
+    def read_dynamical_matrix(self, *args, **kwargs):
+        """ Read dynamical matrix from output of the calculation
 
         Parameters
         ----------
         cutoff_dist : float, optional
             cutoff value for the distance of the force-constants (everything farther than
-            `cutoff_dist` will be set to 0.
-        cutoff_fc : float, optional
+            `cutoff_dist` will be set to 0, unit in Ang.
+        cutoff : float, optional
             cutoff value for the force-constants (absolute values below this value will be set
-            to 0).
+            to 0). Unit is eV/Ang**2.
         correct_fc : bool, optional
             correct the FC-matrix by forcing the force on the moved atom to be
             equal to the negative sum of all the others. Default to true.
 
         Returns
         -------
-        Hessian : Hessian matrix with mass-scaled force constants
+        DynamicalMatrix : Dynamical matrix
         """
         order = kwargs.pop('order', ['FC'])
         for f in order:
-            v = getattr(self, '_r_hessian_{}'.format(f.lower()))(*args, **kwargs)
+            v = getattr(self, '_r_dynamical_matrix_{}'.format(f.lower()))(*args, **kwargs)
             if v is not None:
                 return v
         return None
 
-    def _r_hessian_fc(self, *args, **kwargs):
+    def _r_dynamical_matrix_fc(self, *args, **kwargs):
         FC = self._r_force_constant_fc(*args, **kwargs)
         if FC is None:
             return None
@@ -828,9 +828,8 @@ class fdfSileSiesta(SileSiesta):
         # Now handle it...
         #  FC(OLD) = (n_displ, 3, 2, na, 3)
         #  FC(NEW) = (n_displ, 3, na, 3)
-        # Convert the hessian such that a diagonalization returns eV ^ 2
-        scale = 1.054571800e-34 / unit_convert('Ang', 'm') / (unit_convert('eV', 'J') * unit_convert('amu', 'kg')) ** 0.5
-        FC = np.average(FC, axis=2) * scale ** 2
+        # In fact, after averaging this becomes the Hessian
+        FC = np.average(FC, axis=2)
 
         # First we need to create the geometry (without the floating atoms)
         geom = self.read_geometry()
@@ -838,10 +837,14 @@ class fdfSileSiesta(SileSiesta):
         periodic = geom.nsc > 1
 
         # Cut-off too small values
-        fc_cut = kwargs.get('cutoff_fc', 0.)
+        fc_cut = kwargs.get('cutoff', 0.)
         FC = np.where(np.abs(FC) > fc_cut, FC, 0.)
 
-        # Convert the geometry to contain 3 orbitals per atom
+        # Convert the force constant such that a diagonalization returns eV ^ 2
+        scale = 1.054571800e-34 / unit_convert('Ang', 'm') / (unit_convert('eV', 'J') * unit_convert('amu', 'kg')) ** 0.5
+        FC *= scale ** 2
+
+        # Convert the geometry to contain 3 orbitals per atom (x, y, z)
         R = kwargs.get('cutoff_dist', -2.)
         orbs = [Orbital(R / 2, tag=tag) for tag in 'xyz']
         with warnings.catch_warnings():
@@ -858,12 +861,12 @@ class fdfSileSiesta(SileSiesta):
 
         # Now create mass array
         if len(self.get('AtomicMass', default=[])) > 0:
-            warn(repr(self) + '.read_hessian(FC) does not implement reading atomic masses from fdf file.')
+            warn(repr(self) + '.read_dynamical_matrix(FC) does not implement reading atomic masses from fdf file.')
 
         # Get list of FC atoms
         fc_atoms = _a.arangei(self.get('MD.FCFirst', default=0) - 1, self.get('MD.FCLast', default=0))
 
-        # Now we can build the Hessian (it will always be real)
+        # Now we can build the dynamical matrix (it will always be real)
         na = len(geom)
         na_fc = len(fc_atoms)
 
@@ -874,13 +877,24 @@ class fdfSileSiesta(SileSiesta):
         xyz_xyz = _a.arangei(3).reshape(-1, 1)
         xyz_xyz = np.nditer([xyz_xyz, xyz_xyz.T], **nditer_kwargs)
 
-        supercell = _a.arrayi(kwargs.get('supercell', (1, 1, 1)))
+        supercell = kwargs.get('supercell', [1, 1, 1])
+        if supercell is False:
+            supercell = [1] * 3
+
+        elif supercell is True:
+            _, supercell = geom.as_primary(FC.shape[0], ret_super=True)
+            info(repr(self) + '.read_dynamical_matrix(FC) guessed on a [{}, {}, {}] '
+                 'supercell calculation.'.format(*supercell))
+
+        # Convert to integer array
+        supercell = _a.arrayi(supercell)
+
         # Ensure 0's gets translated to 1's
         supercell = np.where(supercell > 0, supercell, 1)
         if np.all(supercell == 1):
-            H = Hessian(geom)
+            D = DynamicalMatrix(geom)
 
-            # Instead of doing the sqrt in all H = FC (below) we do it here
+            # Instead of doing the sqrt in all D = FC (below) we do it here
             m = 1 / geom.atoms.mass ** 0.5
             FC *= m[fc_atoms].reshape(-1, 1, 1, 1)
             FC *= m.reshape(1, 1, -1, 1)
@@ -897,7 +911,7 @@ class fdfSileSiesta(SileSiesta):
 
                 for ja, fja in zip(idx, j_fc_atoms):
                     for i, j in xyz_xyz:
-                        H[ia*3+i, ja*3+j] = FC[ia, i, fja, j]
+                        D[ia*3+i, ja*3+j] = FC[ia, i, fja, j]
                     xyz_xyz.reset()
 
         else:
@@ -921,7 +935,7 @@ class fdfSileSiesta(SileSiesta):
                 del nsc_R
             sc = SuperCell(sc, nsc=nsc)
             geom_small = Geometry(geom.xyz[fc_atoms], geom.atoms[fc_atoms], sc)
-            H = Hessian(geom_small)
+            D = DynamicalMatrix(geom_small)
 
             # Now we need to figure out how the atoms are laid out.
             # It *MUST* either be repeated or tiled (preferentially tiled).
@@ -930,7 +944,7 @@ class fdfSileSiesta(SileSiesta):
             isc_xyz = np.dot(geom.xyz, geom_small.sc.icell.T) - np.tile(geom_small.fxyz, (np.product(supercell), 1))
 
             if np.any(np.diff(fc_atoms) != 1):
-                raise SislError(repr(self) + '.read_hessian(FC) requires the FC atoms to be consecutive!')
+                raise SislError(repr(self) + '.read_dynamical_matrix(FC) requires the FC atoms to be consecutive!')
 
             # Now figure out the order of tiling
             axis_tiling = []
@@ -953,7 +967,7 @@ class fdfSileSiesta(SileSiesta):
 
             # Proximity check of 0.01 Ang (TODO add this as an argument)
             if not np.allclose(geom_tile.xyz, geom.xyz, rtol=0, atol=0.01):
-                raise SislError(repr(self) + '.read_hessian(FC) could not figure out the tiling method for the supercell')
+                raise SislError(repr(self) + '.read_dynamical_matrix(FC) could not figure out the tiling method for the supercell')
 
             # Convert the FC matrix to a "rollable" matrix
             # This will make it easier to symmetrize
@@ -974,7 +988,7 @@ class fdfSileSiesta(SileSiesta):
             if fc_atoms[0] != 0:
                 # TODO we could roll the axis such that the displaced atoms moves into the
                 # first elements
-                raise SislError(repr(self) + '.read_hessian(FC) requires the displaced atoms to start from 1!')
+                raise SislError(repr(self) + '.read_dynamical_matrix(FC) requires the displaced atoms to start from 1!')
 
             # Now swap the [2, 3, 4] dimensions so that we get in order of lattice vectors
             sa = np.swapaxes
@@ -1023,12 +1037,12 @@ class fdfSileSiesta(SileSiesta):
             # Now axis_tiling has no meaning since we know supercell represents the axis_tiling
             del axis_tiling
 
-            # Now convert the FC matrix to the Hessian matrix
+            # Now convert the FC matrix to the dynamical matrix
             def arai(nsc):
                 return _a.arangei(-nsc, nsc + 1)
 
             # Now take all positive supercell connections (including inner cell)
-            nsc = H.geometry.nsc // 2
+            nsc = D.geometry.nsc // 2
             iter_nsc = np.nditer([arai(nsc[0]).reshape(-1, 1, 1),
                                   arai(nsc[1]).reshape(1, -1, 1),
                                   arai(nsc[2]).reshape(1, 1, -1)], **nditer_kwargs)
@@ -1038,10 +1052,10 @@ class fdfSileSiesta(SileSiesta):
 
             # When x, y, z are negative we simply look-up from the back of the array
             # which is exactly what is required
-            isc_off = H.geometry.sc.isc_off
-            nxyz = H.geometry.no
-            dist = H.geometry.rij
-            na = H.geometry.na
+            isc_off = D.geometry.sc.isc_off
+            nxyz = D.geometry.no
+            dist = D.geometry.rij
+            na = D.geometry.na
             for x, y, z in iter_nsc:
                 aoff = isc_off[x, y, z] * na
                 joff = aoff / na * nxyz
@@ -1053,18 +1067,17 @@ class fdfSileSiesta(SileSiesta):
 
                     for ja in iter_j_fc_atoms:
                         for i, j in xyz_xyz:
-                            H[ia*3+i, joff+ja*3+j] = FC[ia, i, x, y, z, ja, j]
+                            D[ia*3+i, joff+ja*3+j] = FC[ia, i, x, y, z, ja, j]
                         xyz_xyz.reset()
 
         # Remove all zeros
-        H.eliminate_zeros()
-        # Make Hermitian, this may "halve" some elements if the matrix is not
-        # symmetric.
-        H.make_hermitian()
+        D.eliminate_zeros()
+        # Make Hermitian, this may "halve" some elements if the matrix is not symmetric.
+        D.make_hermitian()
 
         # TODO, it may be advantegeous to apply Newtons 3rd law and then call make_hermitian again.
 
-        return H
+        return D
 
     def read_geometry(self, output=False, *args, **kwargs):
         """ Returns Geometry object by reading fdf or Siesta output related files.

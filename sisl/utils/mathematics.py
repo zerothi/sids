@@ -1,14 +1,16 @@
 from __future__ import print_function, division
 
-from numpy import dot, asarray
+import numpy as np
+from numpy import dot, sqrt, square
 from numpy import cos, sin, arctan2, arccos
-from numpy import take, sqrt, square
+from numpy import asarray, take, delete, empty
 
 from sisl import _array as _a
 from sisl._indices import indices_le
 
 __all__ = ['fnorm', 'fnorm2', 'expand', 'orthogonalize']
 __all__ += ['spher2cart', 'cart2spher', 'spherical_harm']
+__all__ += ['curl']
 
 
 def fnorm(array):
@@ -200,3 +202,68 @@ def spherical_harm(m, l, theta, phi):
     #return (-1) ** m * ( (2*l+1)/(4*pi) * factorial(l-m) / factorial(l+m) ) ** 0.5 \
     #    * lpmv(m, l, np.cos(theta)) * np.exp(1j * m * phi)
     return sph_harm(m, l, theta, phi) * (-1) ** m
+
+
+def curl(m, axis=-2, axisv=-1):
+    r""" Determine the curl of a matrix `m` where `m` contains the differentiated quantites along `axisv`.
+
+    The curl is calculated as:
+
+    .. math::
+       \mathrm{curl} \mathbf M|_x &= \frac{\partial\mathbf M_z}{\partial y} - \frac{\partial\mathbf M_y}{\partial z}
+       \\
+       \mathrm{curl} \mathbf M|_y &= \frac{\partial\mathbf M_x}{\partial z} - \frac{\partial\mathbf M_z}{\partial x}
+       \\
+       \mathrm{curl} \mathbf M|_z &= \frac{\partial\mathbf M_y}{\partial x} - \frac{\partial\mathbf M_x}{\partial y}
+
+    where the `axis` are the :math:`\partial x` axis and `axisv` are the :math:`\partial M_x` axis.
+
+    Parameters
+    ----------
+    m : numpy.ndarray
+       matrix to calculate the curl of
+    axis : int, optional
+       axis that contains the direction vectors, this dimension is removed from the returned curl
+    axisv : int, optional
+       axis that contains the differentiated vectors
+
+    Returns
+    -------
+    curl : the curl of the matrix shape of `m` without axis `axis` 
+    """
+    if m.shape[axis] != 3:
+        raise ValueError('curl requires 3 vectors to calculate the curl of!')
+    elif m.shape[axisv] != 3:
+        raise ValueError('curl requires the vectors to have 3 components!')
+
+    # Check that no two axis are used for the same thing
+    axis %= m.ndim
+    axisv %= m.ndim
+    if axis == axisv:
+        raise ValueError('curl requires axis and axisv to be different axes')
+
+    # Create lists for correct slices
+    slx = [slice(None) for _ in m.shape]
+    sly = slx[:]
+    slz = slx[:]
+    vx = slx[:]
+    vy = slx[:]
+    vz = slx[:]
+    slx[axis] = 0
+    sly[axis] = 1
+    slz[axis] = 2
+
+    # Prepare the curl elements
+    vx[axisv] = 0
+    vy[axisv] = 1
+    vz[axisv] = 2
+    vx.pop(axis)
+    vy.pop(axis)
+    vz.pop(axis)
+
+    # Create curl by removing the v dimension
+    curl = empty(delete(m.shape, axis), dtype=m.dtype)
+    curl[vx] = m[sly][vz] - m[slz][vy]
+    curl[vy] = m[slz][vx] - m[slx][vz]
+    curl[vz] = m[slx][vy] - m[sly][vx]
+    return curl

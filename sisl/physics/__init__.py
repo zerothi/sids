@@ -43,7 +43,7 @@ Physical quantites
    EnergyDensityMatrix
    DensityMatrix
    Hamiltonian
-   Hessian
+   DynamicalMatrix
    SelfEnergy
    SemiInfinite
    RecursiveSI
@@ -64,6 +64,21 @@ Electrons (:mod:`sisl.physics.electron`)
    EigenvalueElectron
    EigenvectorElectron
    EigenstateElectron
+
+
+Phonons (:mod:`sisl.physics.phonon`)
+====================================
+
+.. autosummary::
+   :toctree:
+
+   ~phonon.DOS
+   ~phonon.PDOS
+   ~phonon.velocity
+   ~phonon.displacement
+   EigenvaluePhonon
+   EigenvectorPhonon
+   EigenmodePhonon
 
 
 Distribution functions (:mod:`sisl.physics.distribution`)
@@ -88,6 +103,7 @@ Distribution functions (:mod:`sisl.physics.distribution`)
    :hidden:
 
    sisl.physics.electron
+   sisl.physics.phonon
    sisl.physics.distribution
    sisl.physics.brillouinzone
 
@@ -132,10 +148,14 @@ from . import electron
 from .electron import CoefficientElectron, StateElectron, StateCElectron
 from .electron import EigenvalueElectron, EigenvectorElectron, EigenstateElectron
 
+from . import phonon
+from .phonon import CoefficientPhonon, ModePhonon, ModeCPhonon
+from .phonon import EigenvaluePhonon, EigenvectorPhonon, EigenmodePhonon
+
 from .energydensitymatrix import *
 from .densitymatrix import *
 from .hamiltonian import *
-from .hessian import *
+from .dynamicalmatrix import *
 from .self_energy import *
 
 __all__ = [s for s in dir() if not s.startswith('_')]
