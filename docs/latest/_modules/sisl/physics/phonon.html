@@ -218,7 +218,7 @@
 <span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">conj</span>
 
 <span class="kn">import</span> <span class="nn">sisl._array</span> <span class="k">as</span> <span class="nn">_a</span>
-<span class="kn">from</span> <span class="nn">sisl.unit</span> <span class="k">import</span> <span class="n">unit_convert</span>
+<span class="kn">from</span> <span class="nn">sisl</span> <span class="k">import</span> <span class="n">units</span><span class="p">,</span> <span class="n">constant</span>
 <span class="kn">from</span> <span class="nn">sisl.linalg</span> <span class="k">import</span> <span class="n">eig_destroy</span><span class="p">,</span> <span class="n">eigh_destroy</span>
 <span class="kn">from</span> <span class="nn">sisl.messages</span> <span class="k">import</span> <span class="n">info</span><span class="p">,</span> <span class="n">warn</span><span class="p">,</span> <span class="n">SislError</span><span class="p">,</span> <span class="n">tqdm_eta</span>
 <span class="kn">from</span> <span class="nn">sisl._help</span> <span class="k">import</span> <span class="n">dtype_complex_to_real</span>
@@ -345,11 +345,9 @@
     <span class="k">return</span> <span class="n">_velocity</span><span class="p">(</span><span class="n">mode</span><span class="p">,</span> <span class="n">hw</span><span class="p">,</span> <span class="n">dDk</span><span class="p">,</span> <span class="n">degenerate</span><span class="p">)</span></div>
 
 
-<span class="c1"># We return velocity units in Ang/ps</span>
-<span class="c1">#   hbar in eV.s = 6.582119514e-16</span>
-<span class="c1"># and dDk is already in Ang * eV ** 2.</span>
-<span class="c1">#   1e-12 ps / s</span>
-<span class="n">_velocity_const</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">/</span> <span class="mf">6.582119514e-16</span> <span class="o">*</span> <span class="mf">1e-12</span>
+<span class="c1"># dDk is in [Ang * eV ** 2]</span>
+<span class="c1"># velocity units in Ang/ps</span>
+<span class="n">_velocity_const</span> <span class="o">=</span> <span class="n">units</span><span class="p">(</span><span class="s1">&#39;ps&#39;</span><span class="p">,</span> <span class="s1">&#39;s&#39;</span><span class="p">)</span> <span class="o">/</span> <span class="n">constant</span><span class="o">.</span><span class="n">hbar</span><span class="p">(</span><span class="s1">&#39;eV s&#39;</span><span class="p">)</span>
 
 
 <span class="k">def</span> <span class="nf">_velocity</span><span class="p">(</span><span class="n">mode</span><span class="p">,</span> <span class="n">hw</span><span class="p">,</span> <span class="n">dDk</span><span class="p">,</span> <span class="n">degenerate</span><span class="p">):</span>
@@ -361,6 +359,9 @@
     <span class="c1"># Decouple the degenerate modes</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">degenerate</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">for</span> <span class="n">deg</span> <span class="ow">in</span> <span class="n">degenerate</span><span class="p">:</span>
+            <span class="c1"># Set the average frequency</span>
+            <span class="n">hw</span><span class="p">[</span><span class="n">deg</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">average</span><span class="p">(</span><span class="n">hw</span><span class="p">[</span><span class="n">deg</span><span class="p">])</span>
+
             <span class="c1"># Now diagonalize to find the contributions from individual modes</span>
             <span class="c1"># then re-construct the seperated degenerate modes</span>
             <span class="c1"># Since we do this for all directions we should decouple them all</span>
@@ -414,8 +415,7 @@
 
 
 <span class="c1"># Electron rest mass in units of proton mass (the units we use for the atoms)</span>
-<span class="n">_me_in_mp</span> <span class="o">=</span> <span class="mf">5.485799090e-4</span>
-<span class="n">_displacement_const</span> <span class="o">=</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">unit_convert</span><span class="p">(</span><span class="s1">&#39;Ry&#39;</span><span class="p">,</span> <span class="s1">&#39;eV&#39;</span><span class="p">)</span> <span class="o">*</span> <span class="n">_me_in_mp</span><span class="p">)</span> <span class="o">**</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">unit_convert</span><span class="p">(</span><span class="s1">&#39;Bohr&#39;</span><span class="p">,</span> <span class="s1">&#39;Ang&#39;</span><span class="p">)</span>
+<span class="n">_displacement_const</span> <span class="o">=</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">units</span><span class="p">(</span><span class="s1">&#39;Ry&#39;</span><span class="p">,</span> <span class="s1">&#39;eV&#39;</span><span class="p">)</span> <span class="o">*</span> <span class="n">constant</span><span class="o">.</span><span class="n">m_e</span><span class="p">(</span><span class="s1">&#39;amu&#39;</span><span class="p">))</span> <span class="o">**</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">units</span><span class="p">(</span><span class="s1">&#39;Bohr&#39;</span><span class="p">,</span> <span class="s1">&#39;Ang&#39;</span><span class="p">)</span>
 
 
 <span class="k">def</span> <span class="nf">_displacement</span><span class="p">(</span><span class="n">mode</span><span class="p">,</span> <span class="n">hw</span><span class="p">,</span> <span class="n">mass</span><span class="p">):</span>

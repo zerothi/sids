@@ -227,6 +227,7 @@
 <span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">cos</span><span class="p">,</span> <span class="n">sin</span><span class="p">,</span> <span class="n">pi</span><span class="p">,</span> <span class="n">int32</span>
 <span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">add</span>
 
+<span class="kn">from</span> <span class="nn">sisl</span> <span class="k">import</span> <span class="n">units</span><span class="p">,</span> <span class="n">constant</span>
 <span class="kn">from</span> <span class="nn">sisl.supercell</span> <span class="k">import</span> <span class="n">SuperCell</span>
 <span class="kn">from</span> <span class="nn">sisl.geometry</span> <span class="k">import</span> <span class="n">Geometry</span>
 <span class="kn">from</span> <span class="nn">sisl._indices</span> <span class="k">import</span> <span class="n">indices_le</span>
@@ -545,11 +546,9 @@
     <span class="k">return</span> <span class="n">_velocity_non_ortho</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">dHk</span><span class="p">,</span> <span class="n">energy</span><span class="p">,</span> <span class="n">dSk</span><span class="p">,</span> <span class="n">degenerate</span><span class="p">)</span></div>
 
 
-<span class="c1"># We return velocity units in Ang/ps</span>
-<span class="c1">#   hbar in eV.s = 6.582119514e-16</span>
-<span class="c1"># and dHk is already in Ang * eV.</span>
-<span class="c1">#   1e-12 ps / s</span>
-<span class="n">_velocity_const</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">/</span> <span class="mf">6.582119514e-16</span> <span class="o">*</span> <span class="mf">1e-12</span>
+<span class="c1"># dHk is in [Ang eV]</span>
+<span class="c1"># velocity units in [Ang/ps]</span>
+<span class="n">_velocity_const</span> <span class="o">=</span> <span class="n">units</span><span class="p">(</span><span class="s1">&#39;ps&#39;</span><span class="p">,</span> <span class="s1">&#39;s&#39;</span><span class="p">)</span> <span class="o">/</span> <span class="n">constant</span><span class="o">.</span><span class="n">hbar</span><span class="p">(</span><span class="s1">&#39;eV s&#39;</span><span class="p">)</span>
 
 
 <span class="k">def</span> <span class="nf">_velocity_non_ortho</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">dHk</span><span class="p">,</span> <span class="n">energy</span><span class="p">,</span> <span class="n">dSk</span><span class="p">,</span> <span class="n">degenerate</span><span class="p">):</span>
@@ -674,14 +673,9 @@
     <span class="k">return</span> <span class="n">_inv_eff_mass_tensor_non_ortho</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">ddHk</span><span class="p">,</span> <span class="n">energy</span><span class="p">,</span> <span class="n">ddSk</span><span class="p">,</span> <span class="n">degenerate</span><span class="p">,</span> <span class="n">as_matrix</span><span class="p">)</span>
 
 
-<span class="c1"># We return electron mass units in m_e</span>
-<span class="c1">#   hbar in eV.s = 6.582119514e-16</span>
-<span class="c1"># and ddHk is already in Ang ^ 2 * eV</span>
-<span class="c1"># So</span>
-<span class="c1">#  eV -&gt; J</span>
-<span class="c1">#  1/Ang -&gt; 1/m   (squared)</span>
-<span class="c1">#  kg -&gt; mass_e</span>
-<span class="n">_inv_eff_mass_const</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">/</span> <span class="mf">6.582119514e-16</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">/</span> <span class="mf">1.60217653e-19</span> <span class="o">*</span> <span class="mf">1e-10</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">*</span> <span class="mf">9.10938356e-31</span>
+<span class="c1"># inverse electron mass units in 1/m_e (atomic units)!</span>
+<span class="c1"># ddHk is in [Ang ^ 2 eV]</span>
+<span class="n">_inv_eff_mass_const</span> <span class="o">=</span> <span class="n">units</span><span class="p">(</span><span class="s1">&#39;Ang&#39;</span><span class="p">,</span> <span class="s1">&#39;Bohr&#39;</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">units</span><span class="p">(</span><span class="s1">&#39;eV&#39;</span><span class="p">,</span> <span class="s1">&#39;Ha&#39;</span><span class="p">)</span>
 
 
 <span class="k">def</span> <span class="nf">_inv_eff_mass_tensor_non_ortho</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">ddHk</span><span class="p">,</span> <span class="n">energy</span><span class="p">,</span> <span class="n">ddSk</span><span class="p">,</span> <span class="n">degenerate</span><span class="p">,</span> <span class="n">as_matrix</span><span class="p">):</span>
