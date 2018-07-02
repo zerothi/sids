@@ -1,7 +1,6 @@
 """
-===================================
 Unit conversion (:mod:`sisl.unit`)
-===================================
+==================================
 
 .. module:: sisl.unit
    :noindex:
@@ -23,20 +22,29 @@ Default unit conversion utilities
    unit_group - which group does the unit belong to
    unit_convert - conversion factor between to units
    unit_default - the default unit in a group
+   units - a class used to transfer complex units (eV/Ang -> Ry/Ang etc.)
 
-All subsequent subpackages also exposes the above 3 methods. If
+All subsequent subpackages also exposes the above 4 methods. If
 a subpackage method is used, the unit conversion corresponds to
 the units defined in the respective code.
 
 
 Siesta units (:mod:`sisl.unit.siesta`)
----------------------------------------
+--------------------------------------
 
 .. currentmodule:: sisl.unit.siesta
 
 This subpackage implements the unit conversions used in `Siesta`_.
+
+To use the unit conversion from `Siesta`_, simply import `unit_convert` as:
+
+>>> from sisl.unit import units
+>>> from sisl.unit.siesta import siesta_units
+
+in which case ``units`` will refer to default unit conversions and ``siesta_units``
+will use the unit definitions in `Siesta`_.
 """
-from .base import unit_group, unit_convert, unit_default
+from .base import unit_group, unit_convert, unit_default, units
 
 __all__ = [s for s in dir() if not s.startswith('_')]
 
