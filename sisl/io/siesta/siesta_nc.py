@@ -3,7 +3,6 @@ from __future__ import print_function
 from numbers import Integral
 import numpy as np
 
-# Import sile objects
 from .sile import SileCDFSiesta
 from ..sile import *
 
@@ -28,7 +27,7 @@ Ry2eV = unit_convert('Ry', 'eV')
 
 
 class ncSileSiesta(SileCDFSiesta):
-    """ Siesta file object """
+    """ Generic NetCDF output file containing a large variety of information """
 
     def read_supercell_nsc(self):
         """ Returns number of supercell connections """
@@ -249,6 +248,24 @@ class ncSileSiesta(SileCDFSiesta):
                 EDM._csr._D[:, i] -= sp.variables['DM'][i, :] * Ef[i]
 
         return EDM
+
+    def read_force_constant(self):
+        """ Reads the force-constant stored in the nc file
+
+        Returns
+        -------
+        force constants : numpy.ndarray with 5 dimensions containing all the forces. The 2nd dimensions contains
+                 contains the directions, and 3rd dimensions contains -/+ displacements.
+        """
+        if not 'FC' in self.groups:
+            raise SislError(str(self) + '.read_force_constant cannot find the FC group.')
+        fc = self.groups['FC']
+
+        disp = fc.variables['disp'][0] * Bohr2Ang
+        f0 = fc.variables['fa0'][:, :]
+        fc = (fc.variables['fa'][:, :, :, :, :] - f0.reshape(1, 1, 1, -1, 3)) / disp
+        fc[:, :, 1, :, :] *= -1
+        return fc * Ry2eV / Bohr2Ang
 
     def grids(self):
         """ Return a list of available grids in this file. """

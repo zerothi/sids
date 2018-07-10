@@ -5,7 +5,6 @@ import warnings
 from datetime import datetime
 import numpy as np
 
-# Import sile objects
 from sisl import constant
 from sisl.unit.siesta import units
 import sisl._array as _a
@@ -46,7 +45,7 @@ Bohr2Ang = unit_convert('Bohr', 'Ang')
 
 
 class fdfSileSiesta(SileSiesta):
-    """ Initialize an FDF file from the filename
+    """ FDF-input file
 
     By supplying base you can reference files in other directories.
     By default the ``base`` is the directory given in the file name.
@@ -767,11 +766,24 @@ class fdfSileSiesta(SileSiesta):
         -------
         (*, 3, 2, *, 3) : vector with force constant element for each of the atomic displacements
         """
-        order = kwargs.pop('order', ['FC'])
+        order = kwargs.pop('order', ['nc', 'FC'])
         for f in order:
             v = getattr(self, '_r_force_constant_{}'.format(f.lower()))(*args, **kwargs)
             if v is not None:
                 return v
+        return None
+
+    def _r_force_constant_nc(self, *args, **kwargs):
+        f = self._tofile(self.get('SystemLabel', default='siesta')) + '.nc'
+        if isfile(f):
+            if not 'FC' in ncSileSiesta(f).groups:
+                return None
+            fc = ncSileSiesta(f).read_force_constant()
+            if kwargs.get('correct_fc', True):
+                ia_fc = ncSileSiesta(f).groups['FC'].variables['ia_fc'][:] - 1
+                for j, i in enumerate(ia_fc):
+                    fc[j, :, :, i, :] -= fc[j, :, :, :, :].sum(2)
+            return fc
         return None
 
     def _r_force_constant_fc(self, *args, **kwargs):
