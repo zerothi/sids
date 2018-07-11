@@ -23,12 +23,6 @@ Basic IO methods/classes
 
    add_sile - add a file to the list of files that sisl can interact with
    get_sile - retrieve a file object via a file name by comparing the extension
-   get_siles - retrieve all files with specific attributes or methods
-   get_sile_class - retrieve class via a file name by comparing the extension
-   BaseSile - the base class for all sisl files
-   Sile - a base class for ASCII files
-   SileCDF - a base class for NetCDF files
-   SileBin - a base class for binary files
    SileError - sisl specific error
 
 
@@ -40,8 +34,10 @@ External code in/out put supported
 List the relevant codes that `sisl` can interact with. If there are files you think
 are missing, please create an issue `here <issue>`_.
 
+- :ref:`toc-io-generic`
 - :ref:`toc-io-bigdft`
 - :ref:`toc-io-gulp`
+- :ref:`toc-io-openmx`
 - :ref:`toc-io-scaleup`
 - :ref:`toc-io-siesta`
 - :ref:`toc-io-transiesta`
@@ -50,18 +46,20 @@ are missing, please create an issue `here <issue>`_.
 - :ref:`toc-io-wannier90`
 
 
-Generic files
--------------
+.. _toc-io-generic:
 
-These files are generic, in the sense that they are not specific to a
-given code.
+Generic files
+=============
+
+Files not specificly related to any code.
 
 .. autosummary::
    :toctree:
 
-   ~xyz.xyzSile - atomic coordinate file
-   ~cube.cubeSile - atomic coordinates *and* 3D grid values
    ~table.tableSile - data file in tabular form
+   ~xyz.xyzSile - atomic coordinate file
+   ~pdb.pdbSile - atomic coordinates and MD content
+   ~cube.cubeSile - atomic coordinates *and* 3D grid values
    ~molden.moldenSile - atomic coordinate file specific for Molden
    ~xsf.xsfSile - atomic coordinate file specific for XCrySDen
 
@@ -91,6 +89,19 @@ GULP (:mod:`~sisl.io.gulp`)
 
    gotSileGULP - the output from GULP
    fcSileGULP - force constant output from GULP
+
+
+.. _toc-io-openmx:
+
+OpenMX (:mod:`~sisl.io.openmx`)
+===============================
+
+.. currentmodule:: sisl.io.openmx
+
+.. autosummary::
+   :toctree:
+
+   omxSileOpenMX - input file
 
 
 .. _toc-io-scaleup:
@@ -214,12 +225,36 @@ Wannier90 (:mod:`~sisl.io.wannier90`)
    winSileWannier90 - input file
 
 
+.. #################################
+.. Switch back to the sisl.io module
+.. #################################
+
+.. currentmodule:: sisl.io
+
+
+Low level methods/classes
+=========================
+
+
+Classes and methods generically only used internally. If you wish to create
+your own `Sile` you should inherit either of `Sile` (ASCII), `SileCDF` (NetCDF)
+or `SileBin` (binary), then subsequently add it using `add_sile` which enables
+its generic use in all routines etc.
+
+.. autosummary::
+   :toctree:
+
+   get_siles - retrieve all files with specific attributes or methods
+   get_sile_class - retrieve class via a file name by comparing the extension
+   BaseSile - the base class for all sisl files
+   Sile - a base class for ASCII files
+   SileCDF - a base class for NetCDF files
+   SileBin - a base class for binary files
+
 
 .. ###############################################
 .. Add all io modules to the toc (to be reachable)
 .. ###############################################
-
-.. currentmodule:: sisl.io
 
 .. autosummary::
    :toctree:
@@ -227,6 +262,7 @@ Wannier90 (:mod:`~sisl.io.wannier90`)
 
    bigdft
    gulp
+   openmx
    scaleup
    siesta
    tbtrans
@@ -243,6 +279,7 @@ from .cube import *
 from .gulp import *
 from .ham import *
 from .molden import *
+from .openmx import *
 from .pdb import *
 from .scaleup import *
 from .siesta import *
