@@ -215,7 +215,7 @@
 <span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">print_function</span><span class="p">,</span> <span class="n">division</span>
 
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-<span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">conj</span>
+<span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">conj</span><span class="p">,</span> <span class="n">dot</span>
 
 <span class="kn">import</span> <span class="nn">sisl._array</span> <span class="k">as</span> <span class="nn">_a</span>
 <span class="kn">from</span> <span class="nn">sisl</span> <span class="k">import</span> <span class="n">units</span><span class="p">,</span> <span class="n">constant</span>
@@ -443,6 +443,46 @@
     <span class="k">def</span> <span class="nf">mode</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span>
 
+    <span class="k">def</span> <span class="nf">change_gauge</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">gauge</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot; In-place change of the gauge of the mode coefficients</span>
+
+<span class="sd">        The two gauges are related through:</span>
+
+<span class="sd">        .. math::</span>
+
+<span class="sd">            \tilde C_j = e^{-i\mathbf k\mathbf r_j} C_j</span>
+
+<span class="sd">        where :math:`C_j` belongs to the gauge ``R`` and :math:`\tilde C_j` is in the gauge</span>
+<span class="sd">        ``r``.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        gauge : {&#39;R&#39;, &#39;r&#39;}</span>
+<span class="sd">            specify the new gauge for the mode coefficients</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># These calls will fail if the gauge is not specified.</span>
+        <span class="c1"># In that case we simply don&#39;t care about the raised issues.</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">info</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;gauge&#39;</span><span class="p">)</span> <span class="o">==</span> <span class="n">gauge</span><span class="p">:</span>
+            <span class="c1"># Quick return</span>
+            <span class="k">return</span>
+
+        <span class="c1"># Update gauge value</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">info</span><span class="p">[</span><span class="s1">&#39;gauge&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">gauge</span>
+
+        <span class="c1"># Check that we can do a gauge transformation</span>
+        <span class="n">k</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">asarrayd</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">info</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;k&#39;</span><span class="p">))</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">k</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">**</span> <span class="mf">0.5</span> <span class="o">&lt;=</span> <span class="mf">0.000001</span><span class="p">:</span>
+            <span class="k">return</span>
+
+        <span class="n">g</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">geometry</span>
+        <span class="n">k</span> <span class="o">=</span> <span class="n">dot</span><span class="p">(</span><span class="n">g</span><span class="o">.</span><span class="n">rcell</span><span class="p">,</span> <span class="n">k</span><span class="p">)</span>
+        <span class="n">phase</span> <span class="o">=</span> <span class="n">dot</span><span class="p">(</span><span class="n">g</span><span class="o">.</span><span class="n">xyz</span><span class="p">[</span><span class="n">g</span><span class="o">.</span><span class="n">o2a</span><span class="p">(</span><span class="n">_a</span><span class="o">.</span><span class="n">arangei</span><span class="p">(</span><span class="n">g</span><span class="o">.</span><span class="n">no</span><span class="p">)),</span> <span class="p">:],</span> <span class="n">k</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">gauge</span> <span class="o">==</span> <span class="s1">&#39;r&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">state</span> <span class="o">*=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="n">j</span> <span class="o">*</span> <span class="n">phase</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">gauge</span> <span class="o">==</span> <span class="s1">&#39;R&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">state</span> <span class="o">*=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="mi">1</span><span class="n">j</span> <span class="o">*</span> <span class="n">phase</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+
 
 <div class="viewcode-block" id="CoefficientPhonon"><a class="viewcode-back" href="../../../api-generated/sisl.physics.phonon.CoefficientPhonon.html#sisl.physics.CoefficientPhonon">[docs]</a><span class="k">class</span> <span class="nc">CoefficientPhonon</span><span class="p">(</span><span class="n">Coefficient</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot; Coefficients describing some physical quantity related to phonons &quot;&quot;&quot;</span>
@@ -456,7 +496,37 @@
 
 <div class="viewcode-block" id="ModeCPhonon"><a class="viewcode-back" href="../../../api-generated/sisl.physics.phonon.ModeCPhonon.html#sisl.physics.ModeCPhonon">[docs]</a><span class="k">class</span> <span class="nc">ModeCPhonon</span><span class="p">(</span><span class="n">_phonon_Mode</span><span class="p">,</span> <span class="n">StateC</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot; A mode describing a physical quantity related to phonons, with associated coefficients of the mode &quot;&quot;&quot;</span>
-    <span class="vm">__slots__</span> <span class="o">=</span> <span class="p">[]</span></div>
+    <span class="vm">__slots__</span> <span class="o">=</span> <span class="p">[]</span>
+
+<div class="viewcode-block" id="ModeCPhonon.velocity"><a class="viewcode-back" href="../../../api-generated/sisl.physics.phonon.ModeCPhonon.html#sisl.physics.ModeCPhonon.velocity">[docs]</a>    <span class="k">def</span> <span class="nf">velocity</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">eps</span><span class="o">=</span><span class="mf">1e-7</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot; Calculate velocity for the modes</span>
+
+<span class="sd">        This routine calls `~sisl.physics.phonon.velocity` with appropriate arguments</span>
+<span class="sd">        and returns the velocity for the modes.</span>
+
+<span class="sd">        Note that the coefficients associated with the `ModeCPhonon` *must* correspond</span>
+<span class="sd">        to the energies of the modes.</span>
+
+<span class="sd">        See `~sisl.physics.phonon.velocity` for details.</span>
+
+<span class="sd">        Notes</span>
+<span class="sd">        -----</span>
+<span class="sd">        The eigenvectors for the modes *may* have changed after calling this routine.</span>
+<span class="sd">        This is because of the velocity un-folding for degenerate modes. I.e. calling</span>
+<span class="sd">        `displacement` and/or `PDOS` after this method *may* change the result.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        eps : float, optional</span>
+<span class="sd">           precision used to find degenerate modes.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">opt</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;k&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">info</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;k&#39;</span><span class="p">,</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">))}</span>
+        <span class="n">gauge</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">info</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;gauge&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">gauge</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">opt</span><span class="p">[</span><span class="s1">&#39;gauge&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">gauge</span>
+
+        <span class="n">deg</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">degenerate</span><span class="p">(</span><span class="n">eps</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">velocity</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mode</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">hw</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">dDk</span><span class="p">(</span><span class="o">**</span><span class="n">opt</span><span class="p">),</span> <span class="n">degenerate</span><span class="o">=</span><span class="n">deg</span><span class="p">)</span></div></div>
 
 
 <div class="viewcode-block" id="EigenvaluePhonon"><a class="viewcode-back" href="../../../api-generated/sisl.physics.phonon.EigenvaluePhonon.html#sisl.physics.EigenvaluePhonon">[docs]</a><span class="k">class</span> <span class="nc">EigenvaluePhonon</span><span class="p">(</span><span class="n">CoefficientPhonon</span><span class="p">):</span>
@@ -516,36 +586,6 @@
 <span class="sd">        See `~sisl.physics.phonon.PDOS` for argument details.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="n">PDOS</span><span class="p">(</span><span class="n">E</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">hw</span><span class="p">,</span> <span class="n">distribution</span><span class="p">)</span></div>
-
-<div class="viewcode-block" id="EigenmodePhonon.velocity"><a class="viewcode-back" href="../../../api-generated/sisl.physics.phonon.EigenmodePhonon.html#sisl.physics.EigenmodePhonon.velocity">[docs]</a>    <span class="k">def</span> <span class="nf">velocity</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">eps</span><span class="o">=</span><span class="mf">1e-7</span><span class="p">):</span>
-        <span class="sa">r</span><span class="sd">&quot;&quot;&quot; Calculate velocity for the modes</span>
-
-<span class="sd">        This routine calls `~sisl.physics.phonon.velocity` with appropriate arguments</span>
-<span class="sd">        and returns the velocity for the modes.</span>
-
-<span class="sd">        Note that the coefficients associated with the `ModeCPhonon` *must* correspond</span>
-<span class="sd">        to the energies of the modes.</span>
-
-<span class="sd">        See `~sisl.physics.phonon.velocity` for details.</span>
-
-<span class="sd">        Notes</span>
-<span class="sd">        -----</span>
-<span class="sd">        The eigenvectors for the modes *may* have changed after calling this routine.</span>
-<span class="sd">        This is because of the velocity un-folding for degenerate modes. I.e. calling</span>
-<span class="sd">        `displacement` and/or `PDOS` after this method *may* change the result.</span>
-
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        eps : float, optional</span>
-<span class="sd">           precision used to find degenerate modes.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">opt</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;k&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">info</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;k&#39;</span><span class="p">,</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">))}</span>
-        <span class="n">gauge</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">info</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;gauge&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">gauge</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">opt</span><span class="p">[</span><span class="s1">&#39;gauge&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">gauge</span>
-
-        <span class="n">deg</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">degenerate</span><span class="p">(</span><span class="n">eps</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">velocity</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mode</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">hw</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">dDk</span><span class="p">(</span><span class="o">**</span><span class="n">opt</span><span class="p">),</span> <span class="n">degenerate</span><span class="o">=</span><span class="n">deg</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="EigenmodePhonon.displacement"><a class="viewcode-back" href="../../../api-generated/sisl.physics.phonon.EigenmodePhonon.html#sisl.physics.EigenmodePhonon.displacement">[docs]</a>    <span class="k">def</span> <span class="nf">displacement</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sa">r</span><span class="sd">&quot;&quot;&quot; Calculate displacements for the modes</span>
