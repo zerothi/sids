@@ -176,11 +176,10 @@
 <span></span><span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">print_function</span><span class="p">,</span> <span class="n">division</span>
 
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-<span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">dot</span>
-<span class="kn">from</span> <span class="nn">scipy.sparse</span> <span class="k">import</span> <span class="n">csr_matrix</span>
 
 <span class="kn">from</span> <span class="nn">sisl._help</span> <span class="k">import</span> <span class="n">_range</span> <span class="k">as</span> <span class="nb">range</span>
 <span class="kn">import</span> <span class="nn">sisl._array</span> <span class="k">as</span> <span class="nn">_a</span>
+<span class="kn">from</span> <span class="nn">.distribution</span> <span class="k">import</span> <span class="n">get_distribution</span>
 <span class="kn">from</span> <span class="nn">.electron</span> <span class="k">import</span> <span class="n">EigenvalueElectron</span><span class="p">,</span> <span class="n">EigenstateElectron</span>
 <span class="kn">from</span> <span class="nn">.sparse</span> <span class="k">import</span> <span class="n">SparseOrbitalBZSpin</span>
 
@@ -600,7 +599,64 @@
 <span class="sd">        DOS : Calculate total DOS</span>
 <span class="sd">        EigenstateElectron.PDOS : Underlying method used to calculate the projected DOS</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">eigenstate</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span><span class="o">.</span><span class="n">PDOS</span><span class="p">(</span><span class="n">E</span><span class="p">,</span> <span class="n">distribution</span><span class="p">)</span></div></div>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">eigenstate</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span><span class="o">.</span><span class="n">PDOS</span><span class="p">(</span><span class="n">E</span><span class="p">,</span> <span class="n">distribution</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Hamiltonian.fermi_level"><a class="viewcode-back" href="../../../api-generated/sisl.physics.Hamiltonian.html#sisl.physics.Hamiltonian.fermi_level">[docs]</a>    <span class="k">def</span> <span class="nf">fermi_level</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">bz</span><span class="p">,</span> <span class="n">distribution</span><span class="o">=</span><span class="s1">&#39;fermi_dirac&#39;</span><span class="p">,</span> <span class="n">q</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">q_tol</span><span class="o">=</span><span class="mf">1e-10</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Calculate the Fermi-level using a Brillouinzone sampling and a target charge</span>
+
+<span class="sd">        The Fermi-level will be calculated using an iterative approach by first calculating all eigenvalues</span>
+<span class="sd">        and subsequently fitting the Fermi level to the final charge (`q`).</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        bz : Brillouinzone</span>
+<span class="sd">            sampled k-points and weights, the ``bz.parent`` will be equal to this object upon return</span>
+<span class="sd">        distribution : str, func</span>
+<span class="sd">            used distribution, must accept the keyword ``mu`` as parameter for the Fermi-level</span>
+<span class="sd">        q : float, optional</span>
+<span class="sd">            seeked charge, if not set will be equal to ``self.geometry.q0``.</span>
+<span class="sd">        q_tol : float, optional</span>
+<span class="sd">            tolerance of charge for finding the Fermi-level</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        fermi-level : the Fermi-level of the system.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Overwrite the parent in bz</span>
+        <span class="n">bz</span><span class="o">.</span><span class="n">set_parent</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">q</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">q</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">q0</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">distribution</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="n">distribution</span> <span class="o">=</span> <span class="n">get_distribution</span><span class="p">(</span><span class="n">distribution</span><span class="p">)</span>
+
+        <span class="c1"># We have two cases, either a spin-polarized calculation, or all others.</span>
+        <span class="n">spin</span> <span class="o">=</span> <span class="n">bz</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">spin</span>
+        <span class="k">if</span> <span class="n">spin</span><span class="o">.</span><span class="n">is_polarized</span><span class="p">:</span>
+            <span class="c1"># We need both spin eigenvalues</span>
+            <span class="n">eig</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">stack</span><span class="p">([</span><span class="n">bz</span><span class="o">.</span><span class="n">asarray</span><span class="p">()</span><span class="o">.</span><span class="n">eigh</span><span class="p">(</span><span class="n">spin</span><span class="o">=</span><span class="mi">0</span><span class="p">),</span>
+                            <span class="n">bz</span><span class="o">.</span><span class="n">asarray</span><span class="p">()</span><span class="o">.</span><span class="n">eigh</span><span class="p">(</span><span class="n">spin</span><span class="o">=</span><span class="mi">1</span><span class="p">)],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">eig</span> <span class="o">=</span> <span class="n">bz</span><span class="o">.</span><span class="n">asarray</span><span class="p">()</span><span class="o">.</span><span class="n">eigh</span><span class="p">()</span>
+        <span class="n">w</span> <span class="o">=</span> <span class="n">bz</span><span class="o">.</span><span class="n">weight</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+
+        <span class="c1"># Find Fermi-level</span>
+        <span class="n">E_min</span> <span class="o">=</span> <span class="n">eig</span><span class="o">.</span><span class="n">min</span><span class="p">()</span>
+        <span class="n">E_max</span> <span class="o">=</span> <span class="n">eig</span><span class="o">.</span><span class="n">max</span><span class="p">()</span>
+
+        <span class="c1"># We start by guessing on 10 (so we can faster move down)</span>
+        <span class="n">Ef</span> <span class="o">=</span> <span class="mf">10.</span>
+        <span class="n">qt</span> <span class="o">=</span> <span class="p">(</span><span class="n">distribution</span><span class="p">(</span><span class="n">eig</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="n">Ef</span><span class="p">)</span> <span class="o">*</span> <span class="n">w</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+        <span class="k">while</span> <span class="nb">abs</span><span class="p">(</span><span class="n">qt</span> <span class="o">-</span> <span class="n">q</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">q_tol</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">qt</span> <span class="o">&gt;</span> <span class="n">q</span><span class="p">:</span>
+                <span class="n">E_max</span> <span class="o">=</span> <span class="n">Ef</span>
+            <span class="k">elif</span> <span class="n">qt</span> <span class="o">&lt;</span> <span class="n">q</span><span class="p">:</span>
+                <span class="n">E_min</span> <span class="o">=</span> <span class="n">Ef</span>
+            <span class="n">Ef</span> <span class="o">=</span> <span class="p">(</span><span class="n">E_min</span> <span class="o">+</span> <span class="n">E_max</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span>
+            <span class="n">qt</span> <span class="o">=</span> <span class="p">(</span><span class="n">distribution</span><span class="p">(</span><span class="n">eig</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="n">Ef</span><span class="p">)</span> <span class="o">*</span> <span class="n">w</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="n">Ef</span></div></div>
 </pre></div>
 
            </div>
