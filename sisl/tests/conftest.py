@@ -1,9 +1,11 @@
 """ Global sisl fixtures """
 from __future__ import print_function
 
-import pytest
+import contextlib
 import os
 import numpy as np
+
+import pytest
 from sisl import Atom, Geometry, SuperCell, Hamiltonian
 
 
