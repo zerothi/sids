@@ -251,6 +251,8 @@
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="nb">sum</span><span class="p">,</span> <span class="n">dot</span>
 
+<span class="kn">from</span> <span class="nn">sisl.quaternion</span> <span class="k">import</span> <span class="n">Quaternion</span>
+<span class="kn">from</span> <span class="nn">sisl.utils.mathematics</span> <span class="k">import</span> <span class="n">cart2spher</span><span class="p">,</span> <span class="n">fnorm</span>
 <span class="kn">from</span> <span class="nn">sisl.utils.misc</span> <span class="k">import</span> <span class="n">allow_kwargs</span>
 <span class="kn">import</span> <span class="nn">sisl._array</span> <span class="k">as</span> <span class="nn">_a</span>
 <span class="kn">from</span> <span class="nn">sisl.messages</span> <span class="k">import</span> <span class="n">info</span><span class="p">,</span> <span class="n">SislError</span><span class="p">,</span> <span class="n">tqdm_eta</span>
@@ -316,6 +318,100 @@
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span> <span class="n">SuperCell</span><span class="p">):</span>
             <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39;{{nk: </span><span class="si">{}</span><span class="s1">,</span><span class="se">\n</span><span class="s1"> </span><span class="si">{}</span><span class="se">\n</span><span class="s1">}}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">),</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">,</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1"> &#39;</span><span class="p">))</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39;{{nk: </span><span class="si">{}</span><span class="s1">,</span><span class="se">\n</span><span class="s1"> </span><span class="si">{}</span><span class="se">\n</span><span class="s1">}}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">),</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">sc</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">,</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1"> &#39;</span><span class="p">))</span>
+
+<div class="viewcode-block" id="BrillouinZone.parameterize"><a class="viewcode-back" href="../../../api-generated/sisl.physics.brillouinzone.BrillouinZone.html#sisl.physics.BrillouinZone.parameterize">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">parameterize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sc</span><span class="p">,</span> <span class="n">func</span><span class="p">,</span> <span class="n">N</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Generate a new `BrillouinZone` object with k-points parameterized via the function `func` in `N` separations</span>
+
+<span class="sd">        Generator of a parameterized Brillouin zone object that contains a parameterized k-point</span>
+<span class="sd">        list.</span>
+
+<span class="sd">        Basically this generates a new BrillouinZone object as:</span>
+
+<span class="sd">        &gt;&gt;&gt; def func(sc, frac):</span>
+<span class="sd">        ...    return [frac, 0, 0]</span>
+<span class="sd">        &gt;&gt;&gt; bz = BrillouinZone([1]).gen_parametrization(func, 10)</span>
+<span class="sd">        &gt;&gt;&gt; len(bz) == 10</span>
+<span class="sd">        True</span>
+<span class="sd">        &gt;&gt;&gt; np.allclose(bz.k[-1, :], [9./10, 0, 0])</span>
+<span class="sd">        True</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        sc : SuperCell, or SuperCellChild</span>
+<span class="sd">           the supercell used to construct the k-points</span>
+<span class="sd">        func : callable</span>
+<span class="sd">           method that parameterizes the k-points, *must* at least accept two arguments, ``sc``</span>
+<span class="sd">           (super-cell object containing the unit-cell and reciprocal cell) and ``frac``</span>
+<span class="sd">           (current parametrization fraction, between 0 and ``(N-1)/N``. It must return</span>
+<span class="sd">           a k-point in 3 dimensions.</span>
+<span class="sd">        N : int</span>
+<span class="sd">           number of k-points generated using the parameterization</span>
+<span class="sd">        args: list of arguments</span>
+<span class="sd">           arguments passed directly to `func`</span>
+<span class="sd">        kwargs: dictionary of arguments</span>
+<span class="sd">           keyword arguments passed directly to `func`</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">k</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">([</span><span class="n">N</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">N</span><span class="p">):</span>
+            <span class="n">k</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">func</span><span class="p">(</span><span class="n">sc</span><span class="p">,</span> <span class="n">i</span> <span class="o">/</span> <span class="n">N</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">BrillouinZone</span><span class="p">(</span><span class="n">sc</span><span class="p">,</span> <span class="n">k</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="BrillouinZone.param_circle"><a class="viewcode-back" href="../../../api-generated/sisl.physics.brillouinzone.BrillouinZone.html#sisl.physics.BrillouinZone.param_circle">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">param_circle</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sc</span><span class="p">,</span> <span class="n">N</span><span class="p">,</span> <span class="n">kR</span><span class="p">,</span> <span class="n">normal</span><span class="p">,</span> <span class="n">origo</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Create a parameterized k-point list where the k-points are generated on a circle around an origo</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        sc : SuperCell, or SuperCellChild</span>
+<span class="sd">           the supercell used to construct the k-points</span>
+<span class="sd">        N : int</span>
+<span class="sd">           number of k-points generated using the parameterization</span>
+<span class="sd">        kR : float</span>
+<span class="sd">           radius of the k-point. In 1/Ang</span>
+<span class="sd">        normal : array_like of float</span>
+<span class="sd">           normal vector to determine the circle plane</span>
+<span class="sd">        origo : array_like of float</span>
+<span class="sd">           origo of the circle used to generate the circular parameterization</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        BrillouinZone : with the parameterized k-points.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Conversion object</span>
+        <span class="n">bz</span> <span class="o">=</span> <span class="n">BrillouinZone</span><span class="p">(</span><span class="n">sc</span><span class="p">)</span>
+
+        <span class="n">normal</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">arrayd</span><span class="p">(</span><span class="n">normal</span><span class="p">)</span>
+        <span class="n">origo</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">arrayd</span><span class="p">(</span><span class="n">origo</span><span class="p">)</span>
+        <span class="n">k_n</span> <span class="o">=</span> <span class="n">bz</span><span class="o">.</span><span class="n">tocartesian</span><span class="p">(</span><span class="n">normal</span><span class="p">)</span>
+        <span class="n">k_o</span> <span class="o">=</span> <span class="n">bz</span><span class="o">.</span><span class="n">tocartesian</span><span class="p">(</span><span class="n">origo</span><span class="p">)</span>
+
+        <span class="c1"># Generate a preset list of k-points on the unit-circle</span>
+        <span class="n">radians</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">aranged</span><span class="p">(</span><span class="n">N</span><span class="p">)</span> <span class="o">/</span> <span class="n">N</span> <span class="o">*</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span>
+        <span class="n">k</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">emptyd</span><span class="p">([</span><span class="n">N</span><span class="p">,</span> <span class="mi">3</span><span class="p">])</span>
+        <span class="n">k</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">radians</span><span class="p">)</span>
+        <span class="n">k</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">radians</span><span class="p">)</span>
+        <span class="n">k</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.</span>
+
+        <span class="c1"># Now generate the rotation</span>
+        <span class="n">_</span><span class="p">,</span> <span class="n">theta</span><span class="p">,</span> <span class="n">phi</span> <span class="o">=</span> <span class="n">cart2spher</span><span class="p">(</span><span class="n">k_n</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">theta</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">pv</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">arrayd</span><span class="p">([</span><span class="n">k_n</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">k_n</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="mi">0</span><span class="p">])</span>
+            <span class="n">pv</span> <span class="o">/=</span> <span class="n">fnorm</span><span class="p">(</span><span class="n">pv</span><span class="p">)</span>
+            <span class="n">q</span> <span class="o">=</span> <span class="n">Quaternion</span><span class="p">(</span><span class="n">phi</span><span class="p">,</span> <span class="n">pv</span><span class="p">,</span> <span class="n">rad</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="o">*</span> <span class="n">Quaternion</span><span class="p">(</span><span class="n">theta</span><span class="p">,</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">rad</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">q</span> <span class="o">=</span> <span class="n">Quaternion</span><span class="p">(</span><span class="mf">0.</span><span class="p">,</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">k_n</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">/</span> <span class="nb">abs</span><span class="p">(</span><span class="n">k_n</span><span class="p">[</span><span class="mi">2</span><span class="p">])],</span> <span class="n">rad</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+        <span class="c1"># Calculate k-points</span>
+        <span class="n">k</span> <span class="o">=</span> <span class="n">q</span><span class="o">.</span><span class="n">rotate</span><span class="p">(</span><span class="n">k</span><span class="p">)</span>
+        <span class="n">k</span> <span class="o">*=</span> <span class="n">kR</span> <span class="o">/</span> <span class="n">fnorm</span><span class="p">(</span><span class="n">k</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">k</span> <span class="o">=</span> <span class="n">bz</span><span class="o">.</span><span class="n">toreduced</span><span class="p">(</span><span class="n">k</span> <span class="o">+</span> <span class="n">k_o</span><span class="p">)</span>
+
+        <span class="c1"># The sum of weights is equal to the BZ area</span>
+        <span class="n">W</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="n">kR</span> <span class="o">**</span> <span class="mi">2</span>
+        <span class="n">w</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">([</span><span class="n">W</span> <span class="o">/</span> <span class="n">N</span><span class="p">],</span> <span class="n">N</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">BrillouinZone</span><span class="p">(</span><span class="n">sc</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">w</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="BrillouinZone.set_parent"><a class="viewcode-back" href="../../../api-generated/sisl.physics.brillouinzone.BrillouinZone.html#sisl.physics.BrillouinZone.set_parent">[docs]</a>    <span class="k">def</span> <span class="nf">set_parent</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Update the parent associated to this object</span>
