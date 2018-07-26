@@ -18,6 +18,8 @@ One may also plot real-space wavefunctions.
    DOS
    PDOS
    velocity
+   velocity_matrix
+   berry_phase
    wavefunction
    spin_moment
 
@@ -47,10 +49,11 @@ automatically passes the correct ``S`` because it knows the states :math:`k`-poi
 from __future__ import print_function, division
 
 import numpy as np
+from numpy import find_common_type
 from numpy import floor, ceil
 from numpy import conj, dot, ogrid
 from numpy import cos, sin, pi, int32
-from numpy import add
+from numpy import add, dot, angle, sort
 
 from sisl import units, constant
 from sisl.supercell import SuperCell
@@ -58,7 +61,8 @@ from sisl.geometry import Geometry
 from sisl._indices import indices_le
 from sisl._math_small import xyz_to_spherical_cos_phi
 import sisl._array as _a
-from sisl.linalg import eigh_destroy
+from sisl.linalg import eig_destroy, svd_destroy, eigvals_destroy
+from sisl.linalg import eigh_destroy, det_destroy
 from sisl.messages import info, warn, SislError, tqdm_eta
 from sisl._help import dtype_complex_to_real, _range as range
 from .distribution import get_distribution
@@ -69,7 +73,8 @@ from .state import Coefficient, State, StateC
 
 __all__ = ['DOS', 'PDOS']
 __all__ += ['velocity', 'velocity_matrix']
-__all__ += ['spin_moment', 'inv_eff_mass_tensor', 'wavefunction']
+__all__ += ['spin_moment', 'inv_eff_mass_tensor', 'berry_phase']
+__all__ += ['wavefunction']
 __all__ += ['CoefficientElectron', 'StateElectron', 'StateCElectron']
 __all__ += ['EigenvalueElectron', 'EigenvectorElectron', 'EigenstateElectron']
 
@@ -374,7 +379,7 @@ def velocity(state, dHk, energy=None, dSk=None, degenerate=None):
 
 # dHk is in [Ang eV]
 # velocity units in [Ang/ps]
-_velocity_const = units('ps', 's') / constant.hbar('eV s')
+_velocity_const = 1 / constant.hbar('eV ps')
 
 
 def _velocity_non_ortho(state, dHk, energy, dSk, degenerate):
@@ -485,17 +490,18 @@ def velocity_matrix(state, dHk, energy=None, dSk=None, degenerate=None):
     if state.ndim == 1:
         return velocity_matrix(state.reshape(1, -1), dHk, energy, dSk, degenerate).ravel()
 
+    dtype = np.find_common_type([state.dtype, dHk[0].dtype], [])
     if dSk is None:
-        return _velocity_matrix_ortho(state, dHk, degenerate)
-    return _velocity_matrix_non_ortho(state, dHk, energy, dSk, degenerate)
+        return _velocity_matrix_ortho(state, dHk, degenerate, dtype)
+    return _velocity_matrix_non_ortho(state, dHk, energy, dSk, degenerate, dtype)
 
 
-def _velocity_matrix_non_ortho(state, dHk, energy, dSk, degenerate):
+def _velocity_matrix_non_ortho(state, dHk, energy, dSk, degenerate, dtype):
     r""" For states in a non-orthogonal basis """
 
     # All matrix elements along the 3 directions
     n = state.shape[0]
-    v = np.empty([n, n, 3], dtype=state.dtype)
+    v = np.empty([n, n, 3], dtype=dtype)
 
     # Decouple the degenerate states
     if not degenerate is None:
@@ -526,12 +532,12 @@ def _velocity_matrix_non_ortho(state, dHk, energy, dSk, degenerate):
     return v * _velocity_const
 
 
-def _velocity_matrix_ortho(state, dHk, degenerate):
+def _velocity_matrix_ortho(state, dHk, degenerate, dtype):
     r""" For states in an orthogonal basis """
 
     # All matrix elements along the 3 directions
     n = state.shape[0]
-    v = np.empty([n, n, 3], dtype=state.dtype)
+    v = np.empty([n, n, 3], dtype=dtype)
 
     # Decouple the degenerate states
     if not degenerate is None:
@@ -703,6 +709,133 @@ def _inv_eff_mass_tensor_ortho(state, ddHk, degenerate, as_matrix):
         M.shape = (-1, 3, 3)
 
     return M * _inv_eff_mass_const
+
+
+def berry_phase(bz, sub=None, eigvals=False, _gauge='r'):
+    r""" Calculate the Berry-phase on a loop using a predefined path
+
+    The Berry phase for a single Bloch state is calculated using the discretized formula:
+
+    .. math::
+       \phi = - \Im\ln \prod_i^{N-1} \mathrm{det} \langle \psi_{k_i} | \psi_{k_{i+1}} \rangle
+
+    where :math:`\langle \psi_{k_i} | \psi_{k_{i+1}} \rangle` may be exchanged with an overlap matrix
+    of the investigated bands.
+
+    Parameters
+    ----------
+    bz : BrillouinZone
+       containing the closed contour and has the ``bz.parent`` as an instance of Hamiltonian. The
+       first and last k-point must not be the same.
+    sub : None or list of int, optional
+       selected bands to calculate the Berry phase of
+    eigvals : bool, optional
+       return the eigenvalues of the product of the overlap matrices
+
+    Notes
+    -----
+    The Brillouin zone object *must* contain a closed discretized contour without any double points.
+    It is the users responsibility to assert this.
+
+    The implementation is very similar to PythTB and refer to the details outlined in PythTB for
+    additional details.
+
+    This implementation does not work for band-crossings or degenerate states. It is thus important that
+    eigenstates are corresponding to the same states for the loop contained in `bz`.
+
+    Examples
+    --------
+
+    Calculate the multi-band Berry-phase
+    >>> N = 30
+    >>> kR = 0.01
+    >>> normal = [0, 0, 1]
+    >>> origo = [1/3, 2/3, 0]
+    >>> bz = BrillouinZone.param_circle(H, N, kR, normal, origo)
+    >>> phase = berry_phase(bz)
+
+    Calculate Berry-phase for first band
+    >>> N = 30
+    >>> kR = 0.01
+    >>> normal = [0, 0, 1]
+    >>> origo = [1/3, 2/3, 0]
+    >>> bz = BrillouinZone.param_circle(H, N, kR, normal, origo)
+    >>> phase = berry_phase(bz, sub=0)
+    """
+    from .hamiltonian import Hamiltonian
+    # Currently we require the Berry phase calculation to *only* accept Hamiltonians
+    if not isinstance(bz.parent, Hamiltonian):
+        raise SislError('berry_phase: requires the Brillouin zone object to contain a Hamiltonian!')
+
+    if np.allclose(bz.k[0, :], bz.k[-1, :]):
+        raise SislError('berry_phase: requires the Brillouin zone to not form a loop!')
+
+    # Check that the Gauge is correct.
+    # Since it *is* wrong to use a different gauge we warn the user.
+    # It may however, be instructive to check this
+    if _gauge != 'r':
+        warn('berry_phase: gauge *must* be "r" for correct results, only use for educational purposes!')
+
+    # Whether we should calculate the eigenvalues of the overlap matrix
+    if eigvals:
+        # We calculate the final eigenvalues
+        def _process(prd, ovr):
+            U, _, V = svd_destroy(ovr)
+            return dot(prd, dot(U, V))
+    else:
+        # We calculate the final angle from the determinant
+        def _process(prd, ovr):
+            return dot(prd, ovr)
+
+    if sub is None:
+        def _berry(eigenstates):
+            # Grab the first one to be able to form a loop
+            first = next(eigenstates)
+            first.change_gauge(_gauge)
+            first = first.state
+            # Create a variable to keep track of the previous state
+            prev = first
+
+            # Initialize the consecutive product
+            # Starting with the identity matrix!
+            prd = 1
+
+            # Loop remaining eigenstates
+            for second in eigenstates:
+                second.change_gauge(_gauge)
+                prd = _process(prd, prev.conj().dot(second.state.T))
+                prev = second.state
+
+            # Complete the loop
+            prd = _process(prd, prev.conj().dot(first.T))
+            return prd
+
+    else:
+        def _berry(eigenstates):
+            first = next(eigenstates)
+            first.change_gauge(_gauge)
+            first = first.sub(sub).state
+            prev = first
+            prd = 1
+            for second in eigenstates:
+                second.change_gauge(_gauge)
+                second = second.sub(sub)
+                prd = _process(prd, prev.conj().dot(second.state.T))
+                prev = second.state
+            prd = _process(prd, prev.conj().dot(first.T))
+            return prd
+
+    # Do the actual calculation of the final matrix
+    d = _berry(bz.asyield().eigenstate())
+
+    # Correct return values
+    if eigvals:
+        ret = -angle(eigvals_destroy(d))
+        ret = sort(ret)
+    else:
+        ret = -angle(det_destroy(d))
+
+    return ret
 
 
 def wavefunction(v, grid, geometry=None, k=None, spinor=0, spin=None, eta=False):
@@ -1204,7 +1337,7 @@ class _electron_State(object):
 
         .. math::
 
-            \tilde C_j = e^{-i\mathbf k\mathbf r_j} C_j
+            \tilde C_j = e^{i\mathbf k\mathbf r_j} C_j
 
         where :math:`C_j` belongs to the gauge ``R`` and :math:`\tilde C_j` is in the gauge
         ``r``.

@@ -145,7 +145,7 @@ class BrillouinZone(object):
         return self.__class__.__name__ + '{{nk: {},\n {}\n}}'.format(len(self), str(self.parent.sc).replace('\n', '\n '))
 
     @classmethod
-    def parameterize(self, sc, func, N, *args, **kwargs):
+    def parametrize(self, sc, func, N, *args, **kwargs):
         """ Generate a new `BrillouinZone` object with k-points parameterized via the function `func` in `N` separations
 
         Generator of a parameterized Brillouin zone object that contains a parameterized k-point
@@ -155,7 +155,7 @@ class BrillouinZone(object):
 
         >>> def func(sc, frac):
         ...    return [frac, 0, 0]
-        >>> bz = BrillouinZone([1]).gen_parametrization(func, 10)
+        >>> bz = BrillouinZone.parametrize(1, func, 10)
         >>> len(bz) == 10
         True
         >>> np.allclose(bz.k[-1, :], [9./10, 0, 0])
@@ -183,8 +183,13 @@ class BrillouinZone(object):
         return BrillouinZone(sc, k)
 
     @classmethod
-    def param_circle(self, sc, N, kR, normal, origo):
-        """ Create a parameterized k-point list where the k-points are generated on a circle around an origo
+    def param_circle(self, sc, N, kR, normal, origo, loop=False):
+        r""" Create a parameterized k-point list where the k-points are generated on a circle around an origo
+
+        The generated circle is a perfect circle in the reciprocal space (Cartesian coordinates).
+        To generate a perfect circle in units of the reciprocal lattice vectors one can
+        generate the circle for a diagonal supercell with side-length :math:`2\pi`, see
+        example below.
 
         Parameters
         ----------
@@ -198,6 +203,20 @@ class BrillouinZone(object):
            normal vector to determine the circle plane
         origo : array_like of float
            origo of the circle used to generate the circular parameterization
+        loop : bool, optional
+           whether the first and last point are equal
+
+        Examples
+        --------
+
+        >>> sc = SuperCell([1, 1, 10, 90, 90, 60])
+        >>> bz = BrillouinZone.param_circle(sc, 10, 0.05, [0, 0, 1], [1./3, 2./3, 0])
+
+        To generate a circular set of k-points in reduced coordinates (reciprocal
+        >>> sc = SuperCell([1, 1, 10, 90, 90, 60])
+        >>> bz = BrillouinZone.param_circle(sc, 10, 0.05, [0, 0, 1], [1./3, 2./3, 0])
+        >>> bz_rec = BrillouinZone.param_circle(2*np.pi, 10, 0.05, [0, 0, 1], [1./3, 2./3, 0])
+        >>> bz.k[:, :] = bz_rec.k[:, :]
 
         Returns
         -------
@@ -212,7 +231,10 @@ class BrillouinZone(object):
         k_o = bz.tocartesian(origo)
 
         # Generate a preset list of k-points on the unit-circle
-        radians = _a.aranged(N) / N * 2 * np.pi
+        if loop:
+            radians = _a.aranged(N) / (N-1) * 2 * np.pi
+        else:
+            radians = _a.aranged(N) / N * 2 * np.pi
         k = _a.emptyd([N, 3])
         k[:, 0] = np.cos(radians)
         k[:, 1] = np.sin(radians)
@@ -286,6 +308,10 @@ class BrillouinZone(object):
         ----------
         k : list of float
            k-point in reduced coordinates
+
+        Returns
+        -------
+        k : in units of 1/Ang
         """
         return dot(k, self.rcell)
 
@@ -296,6 +322,10 @@ class BrillouinZone(object):
         ----------
         k : list of float
            k-point in Cartesian coordinates
+
+        Returns
+        -------
+        k : in units of reciprocal lattice vectors ]-0.5 ; 0.5] (if k is in the primitive cell)
         """
         return dot(k, self.cell.T / (2 * pi))
 
@@ -339,7 +369,7 @@ class BrillouinZone(object):
                 attr, self.parent.__class__.__name__))
 
     # Implement wrapper calls
-    def asarray(self, dtype=np.float64):
+    def asarray(self):
         """ Return `self` with `numpy.ndarray` returned quantities
 
         This forces the `__call__` routine to return a single array.
@@ -353,11 +383,6 @@ class BrillouinZone(object):
         wrap : callable, optional
            a function that accepts the output of the given routine and post-process
            it. Defaults to ``lambda x: x``.
-
-        Parameters
-        ----------
-        dtype : numpy.dtype, optional
-            the data-type to cast the values to
 
         Examples
         --------
@@ -381,11 +406,14 @@ class BrillouinZone(object):
             k = self.k.view()
             w = self.weight.view()
             v = wrap(func(*args, k=k[0], **kwargs), parent=parent, k=k[0], weight=w[0])
-            a = np.empty((len(self), ) + v.shape, dtype=dtype)
-            a[0, :] = v[:]
+            if v.ndim == 0:
+                a = np.empty([len(self)], dtype=v.dtype)
+            else:
+                a = np.empty((len(self), ) + v.shape, dtype=v.dtype)
+            a[0] = v
             del v
             for i in range(1, len(k)):
-                a[i, :] = wrap(func(*args, k=k[i], **kwargs), parent=parent, k=k[i], weight=w[i])
+                a[i] = wrap(func(*args, k=k[i], **kwargs), parent=parent, k=k[i], weight=w[i])
                 eta.update()
             eta.close()
             return a
@@ -531,7 +559,7 @@ class BrillouinZone(object):
         setattr(self, '__call__', types.MethodType(_call, self))
         return self
 
-    def asaverage(self, dtype=np.float64):
+    def asaverage(self):
         """ Return `self` with k-averaged quantities
 
         This forces the `__call__` routine to return a single k-averaged value.
@@ -545,11 +573,6 @@ class BrillouinZone(object):
         wrap : callable, optional
            a function that accepts the output of the given routine and post-process
            it. Defaults to ``lambda x: x``.
-
-        Parameters
-        ----------
-        dtype : numpy.dtype, optional
-            the data-type to cast the returned values to
 
         Examples
         --------
@@ -577,7 +600,7 @@ class BrillouinZone(object):
             parent = self.parent
             k = self.k.view()
             w = self.weight.view()
-            v = wrap(func(*args, k=k[0], **kwargs), parent=parent, k=k[0], weight=w[0]).astype(dtype, copy=False) * w[0]
+            v = wrap(func(*args, k=k[0], **kwargs), parent=parent, k=k[0], weight=w[0]) * w[0]
             for i in range(1, len(k)):
                 v += wrap(func(*args, k=k[i], **kwargs), parent=parent, k=k[i], weight=w[i]) * w[i]
                 eta.update()
@@ -587,7 +610,7 @@ class BrillouinZone(object):
         setattr(self, '__call__', types.MethodType(_call, self))
         return self
 
-    def assum(self, dtype=np.float64):
+    def assum(self):
         """ Return `self` with summed quantities
 
         This forces the `__call__` routine to return all k-point values summed.
@@ -601,11 +624,6 @@ class BrillouinZone(object):
         wrap : callable, optional
            a function that accepts the output of the given routine and post-process
            it. Defaults to ``lambda x: x``.
-
-        Parameters
-        ----------
-        dtype : numpy.dtype, optional
-            the data-type to cast the returned values to
 
         Examples
         --------
@@ -633,7 +651,7 @@ class BrillouinZone(object):
             parent = self.parent
             k = self.k.view()
             w = self.weight.view()
-            v = wrap(func(*args, k=k[0], **kwargs), parent=parent, k=k[0], weight=w[0]).astype(dtype, copy=False)
+            v = wrap(func(*args, k=k[0], **kwargs), parent=parent, k=k[0], weight=w[0])
             for i in range(1, len(k)):
                 v += wrap(func(*args, k=k[i], **kwargs), parent=parent, k=k[i], weight=w[i])
                 eta.update()
