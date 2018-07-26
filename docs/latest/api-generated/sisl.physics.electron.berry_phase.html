@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>velocity &mdash; sisl |release| documentation</title>
+  <title>berry_phase &mdash; sisl |release| documentation</title>
   
 
   
@@ -37,8 +37,8 @@
         <link rel="search" title="Search" href="../search.html"/>
     <link rel="top" title="sisl |release| documentation" href="../index.html"/>
         <link rel="up" title="Physical objects (sisl.physics)" href="sisl.physics.html"/>
-        <link rel="next" title="velocity_matrix" href="sisl.physics.electron.velocity_matrix.html"/>
-        <link rel="prev" title="PDOS" href="sisl.physics.electron.PDOS.html"/> 
+        <link rel="next" title="wavefunction" href="sisl.physics.electron.wavefunction.html"/>
+        <link rel="prev" title="velocity_matrix" href="sisl.physics.electron.velocity_matrix.html"/> 
 
   
   <script src="../_static/js/modernizr.min.js"></script>
@@ -159,13 +159,13 @@
         
           <li><a href="sisl.physics.html">Physical objects (<code class="docutils literal"><span class="pre">sisl.physics</span></code>)</a> &raquo;</li>
         
-      <li>velocity</li>
+      <li>berry_phase</li>
     
     
       <li class="wy-breadcrumbs-aside">
         
             
-            <a href="../_sources/api-generated/sisl.physics.electron.velocity.rst.txt" rel="nofollow"> View page source</a>
+            <a href="../_sources/api-generated/sisl.physics.electron.berry_phase.rst.txt" rel="nofollow"> View page source</a>
           
         
       </li>
@@ -212,64 +212,63 @@
     margin-right: 4px;  /* make room for the exclamation icon */
 }
 </style>
-<div class="section" id="velocity">
-<h1>velocity<a class="headerlink" href="#velocity" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="berry-phase">
+<h1>berry_phase<a class="headerlink" href="#berry-phase" title="Permalink to this headline">¶</a></h1>
 <dl class="function">
-<dt id="sisl.physics.electron.velocity">
-<code class="descclassname">sisl.physics.electron.</code><code class="descname">velocity</code><span class="sig-paren">(</span><em>state</em>, <em>dHk</em>, <em>energy=None</em>, <em>dSk=None</em>, <em>degenerate=None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/sisl/physics/electron.html#velocity"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sisl.physics.electron.velocity" title="Permalink to this definition">¶</a></dt>
-<dd><p>Calculate the velocity of a set of states</p>
-<p>These are calculated using the analytic expression (<span class="math">\(\alpha\)</span> corresponding to the Cartesian directions):</p>
+<dt id="sisl.physics.electron.berry_phase">
+<code class="descclassname">sisl.physics.electron.</code><code class="descname">berry_phase</code><span class="sig-paren">(</span><em>bz</em>, <em>sub=None</em>, <em>eigvals=False</em>, <em>_gauge='r'</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/sisl/physics/electron.html#berry_phase"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sisl.physics.electron.berry_phase" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate the Berry-phase on a loop using a predefined path</p>
+<p>The Berry phase for a single Bloch state is calculated using the discretized formula:</p>
 <div class="math">
-\[\mathbf{v}_{i\alpha} = \frac1\hbar \langle \psi_i |
-         \frac{\partial}{\partial\mathbf k}_\alpha \mathbf H(\mathbf k) | \psi_i \rangle\]</div>
-<p>In case of non-orthogonal basis the equations substitutes <span class="math">\(\mathbf H(\mathbf k)\)</span> by
-<span class="math">\(\mathbf H(\mathbf k) - \epsilon_i\mathbf S(\mathbf k)\)</span>.</p>
+\[\phi = - \Im\ln \prod_i^{N-1} \mathrm{det} \langle \psi_{k_i} | \psi_{k_{i+1}} \rangle\]</div>
+<p>where <span class="math">\(\langle \psi_{k_i} | \psi_{k_{i+1}} \rangle\)</span> may be exchanged with an overlap matrix
+of the investigated bands.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>state</strong> : array_like</p>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>bz</strong> : BrillouinZone</p>
 <blockquote>
-<div><p>vectors describing the electronic states, 2nd dimension contains the states. In case of degenerate
-states the vectors <em>may</em> be rotated upon return.</p>
+<div><p>containing the closed contour and has the <code class="docutils literal"><span class="pre">bz.parent</span></code> as an instance of Hamiltonian. The
+first and last k-point must not be the same.</p>
 </div></blockquote>
-<p><strong>dHk</strong> : list of array_like</p>
+<p><strong>sub</strong> : None or list of int, optional</p>
 <blockquote>
-<div><p>Hamiltonian derivative with respect to <span class="math">\(\mathbf k\)</span>. This needs to be a tuple or
-list of the Hamiltonian derivative along the 3 Cartesian directions.</p>
+<div><p>selected bands to calculate the Berry phase of</p>
 </div></blockquote>
-<p><strong>energy</strong> : array_like, optional</p>
-<blockquote>
-<div><p>energies of the states. Required for non-orthogonal basis together with <em class="xref py py-obj">dSk</em>. In case of degenerate
-states the eigenvalues of the states will be averaged in the degenerate sub-space.</p>
-</div></blockquote>
-<p><strong>dSk</strong> : list of array_like, optional</p>
-<blockquote>
-<div><p><span class="math">\(\delta \mathbf S_k\)</span> matrix required for non-orthogonal basis. This and <em class="xref py py-obj">energy</em> <em>must</em> both be
-provided in a non-orthogonal basis (otherwise the results will be wrong).
-Same derivative as <em class="xref py py-obj">dHk</em></p>
-</div></blockquote>
-<p><strong>degenerate: list of array_like, optional</strong></p>
-<blockquote>
-<div><p>a list containing the indices of degenerate states. In that case a prior diagonalization
-is required to decouple them. This is done 3 times along each of the Cartesian directions.</p>
-</div></blockquote>
-</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">numpy.ndarray</p>
+<p><strong>eigvals</strong> : bool, optional</p>
 <blockquote class="last">
-<div><p>velocities per state with final dimension <code class="docutils literal"><span class="pre">(state.shape[0],</span> <span class="pre">3)</span></code>, the velocity unit is Ang/ps. Units <em>may</em> change in future releases.</p>
+<div><p>return the eigenvalues of the product of the overlap matrices</p>
 </div></blockquote>
 </td>
 </tr>
 </tbody>
 </table>
-<div class="admonition seealso">
-<p class="first admonition-title">See also</p>
-<dl class="last docutils">
-<dt><code class="xref py py-obj docutils literal"><span class="pre">inv_eff_mass_tensor</span></code></dt>
-<dd>inverse effective mass tensor</dd>
-</dl>
+<p class="rubric">Notes</p>
+<p>The Brillouin zone object <em>must</em> contain a closed discretized contour without any double points.
+It is the users responsibility to assert this.</p>
+<p>The implementation is very similar to PythTB and refer to the details outlined in PythTB for
+additional details.</p>
+<p>This implementation does not work for band-crossings or degenerate states. It is thus important that
+eigenstates are corresponding to the same states for the loop contained in <em class="xref py py-obj">bz</em>.</p>
+<p class="rubric">Examples</p>
+<p>Calculate the multi-band Berry-phase</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">N</span> <span class="o">=</span> <span class="mi">30</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">kR</span> <span class="o">=</span> <span class="mf">0.01</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">normal</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">origo</span> <span class="o">=</span> <span class="p">[</span><span class="mi">1</span><span class="o">/</span><span class="mi">3</span><span class="p">,</span> <span class="mi">2</span><span class="o">/</span><span class="mi">3</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">bz</span> <span class="o">=</span> <span class="n">BrillouinZone</span><span class="o">.</span><span class="n">param_circle</span><span class="p">(</span><span class="n">H</span><span class="p">,</span> <span class="n">N</span><span class="p">,</span> <span class="n">kR</span><span class="p">,</span> <span class="n">normal</span><span class="p">,</span> <span class="n">origo</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">phase</span> <span class="o">=</span> <span class="n">berry_phase</span><span class="p">(</span><span class="n">bz</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Calculate Berry-phase for first band</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">N</span> <span class="o">=</span> <span class="mi">30</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">kR</span> <span class="o">=</span> <span class="mf">0.01</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">normal</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">origo</span> <span class="o">=</span> <span class="p">[</span><span class="mi">1</span><span class="o">/</span><span class="mi">3</span><span class="p">,</span> <span class="mi">2</span><span class="o">/</span><span class="mi">3</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">bz</span> <span class="o">=</span> <span class="n">BrillouinZone</span><span class="o">.</span><span class="n">param_circle</span><span class="p">(</span><span class="n">H</span><span class="p">,</span> <span class="n">N</span><span class="p">,</span> <span class="n">kR</span><span class="p">,</span> <span class="n">normal</span><span class="p">,</span> <span class="n">origo</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">phase</span> <span class="o">=</span> <span class="n">berry_phase</span><span class="p">(</span><span class="n">bz</span><span class="p">,</span> <span class="n">sub</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+</pre></div>
 </div>
 </dd></dl>
 
@@ -285,10 +284,10 @@ is required to decouple them. This is done 3 times along each of the Cartesian d
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="sisl.physics.electron.velocity_matrix.html" class="btn btn-neutral float-right" title="velocity_matrix" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="sisl.physics.electron.wavefunction.html" class="btn btn-neutral float-right" title="wavefunction" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="sisl.physics.electron.PDOS.html" class="btn btn-neutral" title="PDOS" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="sisl.physics.electron.velocity_matrix.html" class="btn btn-neutral" title="velocity_matrix" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   
