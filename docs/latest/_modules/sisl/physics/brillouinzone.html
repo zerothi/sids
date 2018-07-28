@@ -249,14 +249,16 @@
 
 <span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">pi</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-<span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="nb">sum</span><span class="p">,</span> <span class="n">dot</span>
+<span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="nb">sum</span><span class="p">,</span> <span class="n">dot</span><span class="p">,</span> <span class="n">cross</span>
 
+<span class="kn">from</span> <span class="nn">sisl.unit</span> <span class="k">import</span> <span class="n">units</span>
 <span class="kn">from</span> <span class="nn">sisl.quaternion</span> <span class="k">import</span> <span class="n">Quaternion</span>
 <span class="kn">from</span> <span class="nn">sisl.utils.mathematics</span> <span class="k">import</span> <span class="n">cart2spher</span><span class="p">,</span> <span class="n">fnorm</span>
 <span class="kn">from</span> <span class="nn">sisl.utils.misc</span> <span class="k">import</span> <span class="n">allow_kwargs</span>
 <span class="kn">import</span> <span class="nn">sisl._array</span> <span class="k">as</span> <span class="nn">_a</span>
 <span class="kn">from</span> <span class="nn">sisl.messages</span> <span class="k">import</span> <span class="n">info</span><span class="p">,</span> <span class="n">SislError</span><span class="p">,</span> <span class="n">tqdm_eta</span>
 <span class="kn">from</span> <span class="nn">sisl.supercell</span> <span class="k">import</span> <span class="n">SuperCell</span>
+<span class="kn">from</span> <span class="nn">sisl.grid</span> <span class="k">import</span> <span class="n">Grid</span>
 
 
 <span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;BrillouinZone&#39;</span><span class="p">,</span> <span class="s1">&#39;MonkhorstPack&#39;</span><span class="p">,</span> <span class="s1">&#39;BandStructure&#39;</span><span class="p">]</span>
@@ -358,7 +360,7 @@
         <span class="k">return</span> <span class="n">BrillouinZone</span><span class="p">(</span><span class="n">sc</span><span class="p">,</span> <span class="n">k</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="BrillouinZone.param_circle"><a class="viewcode-back" href="../../../api-generated/sisl.physics.brillouinzone.BrillouinZone.html#sisl.physics.BrillouinZone.param_circle">[docs]</a>    <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">param_circle</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sc</span><span class="p">,</span> <span class="n">N</span><span class="p">,</span> <span class="n">kR</span><span class="p">,</span> <span class="n">normal</span><span class="p">,</span> <span class="n">origo</span><span class="p">,</span> <span class="n">loop</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">param_circle</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sc</span><span class="p">,</span> <span class="n">N_or_dk</span><span class="p">,</span> <span class="n">kR</span><span class="p">,</span> <span class="n">normal</span><span class="p">,</span> <span class="n">origo</span><span class="p">,</span> <span class="n">loop</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
         <span class="sa">r</span><span class="sd">&quot;&quot;&quot; Create a parameterized k-point list where the k-points are generated on a circle around an origo</span>
 
 <span class="sd">        The generated circle is a perfect circle in the reciprocal space (Cartesian coordinates).</span>
@@ -370,8 +372,11 @@
 <span class="sd">        ----------</span>
 <span class="sd">        sc : SuperCell, or SuperCellChild</span>
 <span class="sd">           the supercell used to construct the k-points</span>
-<span class="sd">        N : int</span>
-<span class="sd">           number of k-points generated using the parameterization</span>
+<span class="sd">        N_or_dk : int</span>
+<span class="sd">           number of k-points generated using the parameterization (if an integer),</span>
+<span class="sd">           otherwise it specifies the discretization length on the circle (in 1/Ang),</span>
+<span class="sd">           If the latter case will use less than 4 points a warning will be raised and</span>
+<span class="sd">           the number of points increased to 4.</span>
 <span class="sd">        kR : float</span>
 <span class="sd">           radius of the k-point. In 1/Ang</span>
 <span class="sd">        normal : array_like of float</span>
@@ -398,6 +403,15 @@
 <span class="sd">        -------</span>
 <span class="sd">        BrillouinZone : with the parameterized k-points.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">N_or_dk</span><span class="p">,</span> <span class="n">Integral</span><span class="p">):</span>
+            <span class="n">N</span> <span class="o">=</span> <span class="n">N_or_dk</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># Calculate the required number of points</span>
+            <span class="n">N</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">kR</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="n">N_or_dk</span> <span class="o">+</span> <span class="mf">0.5</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">N</span> <span class="o">&lt;</span> <span class="mi">4</span><span class="p">:</span>
+                <span class="n">N</span> <span class="o">=</span> <span class="mi">4</span>
+                <span class="n">info</span><span class="p">(</span><span class="s1">&#39;BrillouinZone.param_circle increased the number of circle points to 4.&#39;</span><span class="p">)</span>
+
         <span class="c1"># Conversion object</span>
         <span class="n">bz</span> <span class="o">=</span> <span class="n">BrillouinZone</span><span class="p">(</span><span class="n">sc</span><span class="p">)</span>
 
@@ -533,12 +547,12 @@
 
         <span class="k">return</span> <span class="n">k</span></div>
 
-    <span class="n">__attr</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">_bz_attr</span> <span class="o">=</span> <span class="kc">None</span>
 
     <span class="k">def</span> <span class="nf">__getattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">attr</span><span class="p">):</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span> <span class="n">attr</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">__attr</span> <span class="o">=</span> <span class="n">attr</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_bz_attr</span> <span class="o">=</span> <span class="n">attr</span>
             <span class="k">return</span> <span class="bp">self</span>
         <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">AttributeError</span><span class="p">(</span><span class="s2">&quot;&#39;</span><span class="si">{}</span><span class="s2">&#39; does not exist in class &#39;</span><span class="si">{}</span><span class="s2">&#39;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
@@ -574,7 +588,7 @@
 <span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="k">def</span> <span class="nf">_call</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-            <span class="n">func</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__attr</span><span class="p">)</span>
+            <span class="n">func</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_bz_attr</span><span class="p">)</span>
             <span class="n">wrap</span> <span class="o">=</span> <span class="n">allow_kwargs</span><span class="p">(</span><span class="s1">&#39;parent&#39;</span><span class="p">,</span> <span class="s1">&#39;k&#39;</span><span class="p">,</span> <span class="s1">&#39;weight&#39;</span><span class="p">)(</span><span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;wrap&#39;</span><span class="p">,</span> <span class="n">_do_nothing</span><span class="p">))</span>
             <span class="n">eta</span> <span class="o">=</span> <span class="n">tqdm_eta</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39;.asarray&#39;</span><span class="p">,</span>
                            <span class="s1">&#39;k&#39;</span><span class="p">,</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;eta&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">))</span>
@@ -593,8 +607,8 @@
                 <span class="n">eta</span><span class="o">.</span><span class="n">update</span><span class="p">()</span>
             <span class="n">eta</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
             <span class="k">return</span> <span class="n">a</span>
-        <span class="c1"># Set instance __call__</span>
-        <span class="nb">setattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;__call__&#39;</span><span class="p">,</span> <span class="n">types</span><span class="o">.</span><span class="n">MethodType</span><span class="p">(</span><span class="n">_call</span><span class="p">,</span> <span class="bp">self</span><span class="p">))</span>
+        <span class="c1"># Set instance __bz_call</span>
+        <span class="nb">setattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;_bz_call&#39;</span><span class="p">,</span> <span class="n">types</span><span class="o">.</span><span class="n">MethodType</span><span class="p">(</span><span class="n">_call</span><span class="p">,</span> <span class="bp">self</span><span class="p">))</span>
         <span class="k">return</span> <span class="bp">self</span></div>
 
 <div class="viewcode-block" id="BrillouinZone.asnone"><a class="viewcode-back" href="../../../api-generated/sisl.physics.brillouinzone.BrillouinZone.html#sisl.physics.BrillouinZone.asnone">[docs]</a>    <span class="k">def</span> <span class="nf">asnone</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -627,7 +641,7 @@
 <span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="k">def</span> <span class="nf">_call</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-            <span class="n">func</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__attr</span><span class="p">)</span>
+            <span class="n">func</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_bz_attr</span><span class="p">)</span>
             <span class="n">wrap</span> <span class="o">=</span> <span class="n">allow_kwargs</span><span class="p">(</span><span class="s1">&#39;parent&#39;</span><span class="p">,</span> <span class="s1">&#39;k&#39;</span><span class="p">,</span> <span class="s1">&#39;weight&#39;</span><span class="p">)(</span><span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;wrap&#39;</span><span class="p">,</span> <span class="n">_do_nothing</span><span class="p">))</span>
             <span class="n">eta</span> <span class="o">=</span> <span class="n">tqdm_eta</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39;.asnone&#39;</span><span class="p">,</span>
                            <span class="s1">&#39;k&#39;</span><span class="p">,</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;eta&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">))</span>
@@ -639,7 +653,7 @@
                 <span class="n">eta</span><span class="o">.</span><span class="n">update</span><span class="p">()</span>
             <span class="n">eta</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
         <span class="c1"># Set instance __call__</span>
-        <span class="nb">setattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;__call__&#39;</span><span class="p">,</span> <span class="n">types</span><span class="o">.</span><span class="n">MethodType</span><span class="p">(</span><span class="n">_call</span><span class="p">,</span> <span class="bp">self</span><span class="p">))</span>
+        <span class="nb">setattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;_bz_call&#39;</span><span class="p">,</span> <span class="n">types</span><span class="o">.</span><span class="n">MethodType</span><span class="p">(</span><span class="n">_call</span><span class="p">,</span> <span class="bp">self</span><span class="p">))</span>
         <span class="k">return</span> <span class="bp">self</span></div>
 
 <div class="viewcode-block" id="BrillouinZone.aslist"><a class="viewcode-back" href="../../../api-generated/sisl.physics.brillouinzone.BrillouinZone.html#sisl.physics.BrillouinZone.aslist">[docs]</a>    <span class="k">def</span> <span class="nf">aslist</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -673,7 +687,7 @@
 <span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="k">def</span> <span class="nf">_call</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-            <span class="n">func</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__attr</span><span class="p">)</span>
+            <span class="n">func</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_bz_attr</span><span class="p">)</span>
             <span class="n">wrap</span> <span class="o">=</span> <span class="n">allow_kwargs</span><span class="p">(</span><span class="s1">&#39;parent&#39;</span><span class="p">,</span> <span class="s1">&#39;k&#39;</span><span class="p">,</span> <span class="s1">&#39;weight&#39;</span><span class="p">)(</span><span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;wrap&#39;</span><span class="p">,</span> <span class="n">_do_nothing</span><span class="p">))</span>
             <span class="n">eta</span> <span class="o">=</span> <span class="n">tqdm_eta</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39;.aslist&#39;</span><span class="p">,</span>
                            <span class="s1">&#39;k&#39;</span><span class="p">,</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;eta&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">))</span>
@@ -687,7 +701,7 @@
             <span class="n">eta</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
             <span class="k">return</span> <span class="n">a</span>
         <span class="c1"># Set instance __call__</span>
-        <span class="nb">setattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;__call__&#39;</span><span class="p">,</span> <span class="n">types</span><span class="o">.</span><span class="n">MethodType</span><span class="p">(</span><span class="n">_call</span><span class="p">,</span> <span class="bp">self</span><span class="p">))</span>
+        <span class="nb">setattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;_bz_call&#39;</span><span class="p">,</span> <span class="n">types</span><span class="o">.</span><span class="n">MethodType</span><span class="p">(</span><span class="n">_call</span><span class="p">,</span> <span class="bp">self</span><span class="p">))</span>
         <span class="k">return</span> <span class="bp">self</span></div>
 
 <div class="viewcode-block" id="BrillouinZone.asyield"><a class="viewcode-back" href="../../../api-generated/sisl.physics.brillouinzone.BrillouinZone.html#sisl.physics.BrillouinZone.asyield">[docs]</a>    <span class="k">def</span> <span class="nf">asyield</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -720,7 +734,7 @@
 <span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="k">def</span> <span class="nf">_call</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-            <span class="n">func</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__attr</span><span class="p">)</span>
+            <span class="n">func</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_bz_attr</span><span class="p">)</span>
             <span class="n">wrap</span> <span class="o">=</span> <span class="n">allow_kwargs</span><span class="p">(</span><span class="s1">&#39;parent&#39;</span><span class="p">,</span> <span class="s1">&#39;k&#39;</span><span class="p">,</span> <span class="s1">&#39;weight&#39;</span><span class="p">)(</span><span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;wrap&#39;</span><span class="p">,</span> <span class="n">_do_nothing</span><span class="p">))</span>
             <span class="n">eta</span> <span class="o">=</span> <span class="n">tqdm_eta</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39;.asyield&#39;</span><span class="p">,</span>
                            <span class="s1">&#39;k&#39;</span><span class="p">,</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;eta&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">))</span>
@@ -732,7 +746,7 @@
                 <span class="n">eta</span><span class="o">.</span><span class="n">update</span><span class="p">()</span>
             <span class="n">eta</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
         <span class="c1"># Set instance __call__</span>
-        <span class="nb">setattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;__call__&#39;</span><span class="p">,</span> <span class="n">types</span><span class="o">.</span><span class="n">MethodType</span><span class="p">(</span><span class="n">_call</span><span class="p">,</span> <span class="bp">self</span><span class="p">))</span>
+        <span class="nb">setattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;_bz_call&#39;</span><span class="p">,</span> <span class="n">types</span><span class="o">.</span><span class="n">MethodType</span><span class="p">(</span><span class="n">_call</span><span class="p">,</span> <span class="bp">self</span><span class="p">))</span>
         <span class="k">return</span> <span class="bp">self</span></div>
 
 <div class="viewcode-block" id="BrillouinZone.asaverage"><a class="viewcode-back" href="../../../api-generated/sisl.physics.brillouinzone.BrillouinZone.html#sisl.physics.BrillouinZone.asaverage">[docs]</a>    <span class="k">def</span> <span class="nf">asaverage</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -769,7 +783,7 @@
 <span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="k">def</span> <span class="nf">_call</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-            <span class="n">func</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__attr</span><span class="p">)</span>
+            <span class="n">func</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_bz_attr</span><span class="p">)</span>
             <span class="n">wrap</span> <span class="o">=</span> <span class="n">allow_kwargs</span><span class="p">(</span><span class="s1">&#39;parent&#39;</span><span class="p">,</span> <span class="s1">&#39;k&#39;</span><span class="p">,</span> <span class="s1">&#39;weight&#39;</span><span class="p">)(</span><span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;wrap&#39;</span><span class="p">,</span> <span class="n">_do_nothing</span><span class="p">))</span>
             <span class="n">eta</span> <span class="o">=</span> <span class="n">tqdm_eta</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39;.asaverage&#39;</span><span class="p">,</span>
                            <span class="s1">&#39;k&#39;</span><span class="p">,</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;eta&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">))</span>
@@ -783,7 +797,7 @@
             <span class="n">eta</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
             <span class="k">return</span> <span class="n">v</span>
         <span class="c1"># Set instance __call__</span>
-        <span class="nb">setattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;__call__&#39;</span><span class="p">,</span> <span class="n">types</span><span class="o">.</span><span class="n">MethodType</span><span class="p">(</span><span class="n">_call</span><span class="p">,</span> <span class="bp">self</span><span class="p">))</span>
+        <span class="nb">setattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;_bz_call&#39;</span><span class="p">,</span> <span class="n">types</span><span class="o">.</span><span class="n">MethodType</span><span class="p">(</span><span class="n">_call</span><span class="p">,</span> <span class="bp">self</span><span class="p">))</span>
         <span class="k">return</span> <span class="bp">self</span></div>
 
 <div class="viewcode-block" id="BrillouinZone.assum"><a class="viewcode-back" href="../../../api-generated/sisl.physics.brillouinzone.BrillouinZone.html#sisl.physics.BrillouinZone.assum">[docs]</a>    <span class="k">def</span> <span class="nf">assum</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -820,7 +834,7 @@
 <span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="k">def</span> <span class="nf">_call</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-            <span class="n">func</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__attr</span><span class="p">)</span>
+            <span class="n">func</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_bz_attr</span><span class="p">)</span>
             <span class="n">wrap</span> <span class="o">=</span> <span class="n">allow_kwargs</span><span class="p">(</span><span class="s1">&#39;parent&#39;</span><span class="p">,</span> <span class="s1">&#39;k&#39;</span><span class="p">,</span> <span class="s1">&#39;weight&#39;</span><span class="p">)(</span><span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;wrap&#39;</span><span class="p">,</span> <span class="n">_do_nothing</span><span class="p">))</span>
             <span class="n">eta</span> <span class="o">=</span> <span class="n">tqdm_eta</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39;.assum&#39;</span><span class="p">,</span>
                            <span class="s1">&#39;k&#39;</span><span class="p">,</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;eta&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">))</span>
@@ -834,7 +848,7 @@
             <span class="n">eta</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
             <span class="k">return</span> <span class="n">v</span>
         <span class="c1"># Set instance __call__</span>
-        <span class="nb">setattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;__call__&#39;</span><span class="p">,</span> <span class="n">types</span><span class="o">.</span><span class="n">MethodType</span><span class="p">(</span><span class="n">_call</span><span class="p">,</span> <span class="bp">self</span><span class="p">))</span>
+        <span class="nb">setattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;_bz_call&#39;</span><span class="p">,</span> <span class="n">types</span><span class="o">.</span><span class="n">MethodType</span><span class="p">(</span><span class="n">_call</span><span class="p">,</span> <span class="bp">self</span><span class="p">))</span>
         <span class="k">return</span> <span class="bp">self</span></div>
 
     <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
@@ -854,7 +868,7 @@
 <span class="sd">        getattr(self, attr)(k, *args, **kwargs) : whatever this returns</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">try</span><span class="p">:</span>
-            <span class="n">call</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;__call__&#39;</span><span class="p">)</span>
+            <span class="n">call</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;_bz_call&#39;</span><span class="p">)</span>
         <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;Could not call the object it self&quot;</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">call</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
@@ -999,14 +1013,174 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_displ</span> <span class="o">=</span> <span class="n">displacement</span> <span class="c1"># vector</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_size</span> <span class="o">=</span> <span class="n">size</span> <span class="c1"># vector</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_centered</span> <span class="o">=</span> <span class="n">centered</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_trs</span> <span class="o">=</span> <span class="n">trs</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_trs</span> <span class="o">=</span> <span class="n">i_trs</span>
 
 <div class="viewcode-block" id="MonkhorstPack.copy"><a class="viewcode-back" href="../../../api-generated/sisl.physics.brillouinzone.MonkhorstPack.html#sisl.physics.MonkhorstPack.copy">[docs]</a>    <span class="k">def</span> <span class="nf">copy</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Create a copy of this object &quot;&quot;&quot;</span>
-        <span class="n">bz</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_diag</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_displ</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_size</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_centered</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_trs</span><span class="p">)</span>
+        <span class="n">bz</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_diag</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_displ</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_size</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_centered</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_trs</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">)</span>
         <span class="n">bz</span><span class="o">.</span><span class="n">_k</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_k</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
         <span class="n">bz</span><span class="o">.</span><span class="n">_w</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_w</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
         <span class="k">return</span> <span class="n">bz</span></div>
+
+<div class="viewcode-block" id="MonkhorstPack.asgrid"><a class="viewcode-back" href="../../../api-generated/sisl.physics.brillouinzone.MonkhorstPack.html#sisl.physics.MonkhorstPack.asgrid">[docs]</a>    <span class="k">def</span> <span class="nf">asgrid</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Return `self` with Grid quantities</span>
+
+<span class="sd">        This forces the `__call__` routine to return all k-point values in a regular grid.</span>
+
+<span class="sd">        The calculation of values on a grid requires some careful thought before</span>
+<span class="sd">        running the calculation as the returned grid may be somewhat difficult</span>
+<span class="sd">        to comprehend.</span>
+
+<span class="sd">        Notes</span>
+<span class="sd">        -----</span>
+<span class="sd">        All invocations of sub-methods are added these keyword-only arguments:</span>
+
+<span class="sd">        eta : bool, optional</span>
+<span class="sd">           if true a progress-bar is created, default false.</span>
+<span class="sd">        wrap : callable, optional</span>
+<span class="sd">           a function that accepts the output of the given routine and post-process</span>
+<span class="sd">           it. Defaults to ``lambda x: x``.</span>
+<span class="sd">        data_axis : int, optional</span>
+<span class="sd">           the Grid axis to put in the data values in. Has to be specified if the</span>
+<span class="sd">           subsequent routine calls return more than 1 data-point per k-point.</span>
+<span class="sd">        grid_unit : {&#39;b&#39;, &#39;Ang&#39;, &#39;Bohr&#39;}, optional</span>
+<span class="sd">           for &#39;b&#39; the returned grid will be a cube, otherwise the grid will be the reciprocal lattice</span>
+<span class="sd">           vectors (for any other value) and in the given reciprocal unit (&#39;Ang&#39; =&gt; 1/Ang)</span>
+
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
+<span class="sd">        &gt;&gt;&gt; obj = MonkhorstPack(Hamiltonian, [10, 1, 10]) # doctest: +SKIP</span>
+<span class="sd">        &gt;&gt;&gt; grid = obj.asgrid().eigh(data_axis=1) # doctest: +SKIP</span>
+
+<span class="sd">        See Also</span>
+<span class="sd">        --------</span>
+<span class="sd">        asarray : all output as a single array</span>
+<span class="sd">        asyield : all output returned through an iterator</span>
+<span class="sd">        asaverage : take the average (with k-weights) of the Brillouin zone</span>
+<span class="sd">        aslist : all output returned as a Python list</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">def</span> <span class="nf">_call</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+            <span class="n">data_axis</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;data_axis&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+            <span class="n">grid_unit</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;grid_unit&#39;</span><span class="p">,</span> <span class="s1">&#39;b&#39;</span><span class="p">)</span>
+
+            <span class="n">func</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_bz_attr</span><span class="p">)</span>
+            <span class="n">wrap</span> <span class="o">=</span> <span class="n">allow_kwargs</span><span class="p">(</span><span class="s1">&#39;parent&#39;</span><span class="p">,</span> <span class="s1">&#39;k&#39;</span><span class="p">,</span> <span class="s1">&#39;weight&#39;</span><span class="p">)(</span><span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;wrap&#39;</span><span class="p">,</span> <span class="n">_do_nothing</span><span class="p">))</span>
+            <span class="n">eta</span> <span class="o">=</span> <span class="n">tqdm_eta</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39;.asgrid&#39;</span><span class="p">,</span>
+                           <span class="s1">&#39;k&#39;</span><span class="p">,</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;eta&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">))</span>
+            <span class="n">parent</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span>
+            <span class="n">k</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">k</span><span class="o">.</span><span class="n">view</span><span class="p">()</span>
+            <span class="n">w</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">weight</span><span class="o">.</span><span class="n">view</span><span class="p">()</span>
+
+            <span class="c1"># Extract information from the MP grid, these values</span>
+            <span class="c1"># define the Grid size, etc.</span>
+            <span class="n">diag</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_diag</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_displ</span> <span class="o">==</span> <span class="mi">0</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="n">SislError</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39;.</span><span class="si">{}</span><span class="s1"> requires the displacement to be 0 for all k-points.&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_bz_attr</span><span class="p">))</span>
+            <span class="n">displ</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_displ</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+            <span class="n">size</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_size</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+            <span class="n">steps</span> <span class="o">=</span> <span class="n">size</span> <span class="o">/</span> <span class="n">diag</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_centered</span><span class="p">:</span>
+                <span class="n">offset</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">diag</span> <span class="o">%</span> <span class="mi">2</span> <span class="o">==</span> <span class="mi">0</span><span class="p">,</span> <span class="n">steps</span><span class="p">,</span> <span class="n">steps</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">offset</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">diag</span> <span class="o">%</span> <span class="mi">2</span> <span class="o">==</span> <span class="mi">0</span><span class="p">,</span> <span class="n">steps</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span> <span class="n">steps</span><span class="p">)</span>
+
+            <span class="c1"># Instead of doing</span>
+            <span class="c1">#    _in_primitive(k) + 0.5 - offset</span>
+            <span class="c1"># we can do it here</span>
+            <span class="c1">#    _in_primitive(k) + offset&#39;</span>
+            <span class="n">offset</span> <span class="o">-=</span> <span class="mf">0.5</span>
+
+            <span class="c1"># Check the TRS direction</span>
+            <span class="n">trs_axis</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_trs</span>
+            <span class="n">_in_primitive</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">in_primitive</span>
+            <span class="n">_rint</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">rint</span>
+            <span class="n">_int32</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span>
+            <span class="k">def</span> <span class="nf">k2idx</span><span class="p">(</span><span class="n">k</span><span class="p">):</span>
+                <span class="c1"># In case TRS is applied two indices may be returned</span>
+                <span class="k">return</span> <span class="n">_rint</span><span class="p">((</span><span class="n">_in_primitive</span><span class="p">(</span><span class="n">k</span><span class="p">)</span> <span class="o">-</span> <span class="n">offset</span><span class="p">)</span> <span class="o">/</span> <span class="n">steps</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">_int32</span><span class="p">)</span>
+                <span class="c1"># To find the opposite k-point, do this</span>
+                <span class="c1">#  idx[i] = [diag[i] - idx[i] - 1, idx[i]</span>
+                <span class="c1"># with i in [0, 1, 2]</span>
+
+            <span class="c1"># Create cell from the reciprocal cell.</span>
+            <span class="k">if</span> <span class="n">grid_unit</span> <span class="o">==</span> <span class="s1">&#39;b&#39;</span><span class="p">:</span>
+                <span class="n">cell</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_size</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">cell</span> <span class="o">=</span> <span class="n">parent</span><span class="o">.</span><span class="n">sc</span><span class="o">.</span><span class="n">rcell</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_size</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">/</span> <span class="n">units</span><span class="p">(</span><span class="s1">&#39;Ang&#39;</span><span class="p">,</span> <span class="n">grid_unit</span><span class="p">)</span>
+
+            <span class="c1"># Find the grid origo</span>
+            <span class="n">origo</span> <span class="o">=</span> <span class="o">-</span><span class="p">(</span><span class="n">cell</span> <span class="o">*</span> <span class="mf">0.5</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+
+            <span class="c1"># Calculate first k-point (to get size and dtype)</span>
+            <span class="n">v</span> <span class="o">=</span> <span class="n">wrap</span><span class="p">(</span><span class="n">func</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="n">k</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">),</span> <span class="n">parent</span><span class="o">=</span><span class="n">parent</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="n">k</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">weight</span><span class="o">=</span><span class="n">w</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+
+            <span class="k">if</span> <span class="n">data_axis</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">v</span><span class="o">.</span><span class="n">size</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="n">SislError</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39;.</span><span class="si">{}</span><span class="s1"> requires one value per-kpoint because of the 3D grid values&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_bz_attr</span><span class="p">))</span>
+
+            <span class="k">else</span><span class="p">:</span>
+
+                <span class="c1"># Check the weights</span>
+                <span class="n">weights</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="n">diag</span><span class="p">[</span><span class="n">data_axis</span><span class="p">],</span> <span class="n">displ</span><span class="p">[</span><span class="n">data_axis</span><span class="p">],</span> <span class="n">size</span><span class="p">[</span><span class="n">data_axis</span><span class="p">],</span>
+                                    <span class="n">centered</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_centered</span><span class="p">,</span> <span class="n">trs</span><span class="o">=</span><span class="n">trs_axis</span> <span class="o">==</span> <span class="n">data_axis</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span>
+
+                <span class="c1"># Correct the Grid size</span>
+                <span class="n">diag</span><span class="p">[</span><span class="n">data_axis</span><span class="p">]</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
+                <span class="c1"># Create the orthogonal cell direction to ensure it is orthogonal</span>
+                <span class="c1"># Since array axis is cyclic for negative numbers, we simply do this</span>
+                <span class="n">cell</span><span class="p">[</span><span class="n">data_axis</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">cross</span><span class="p">(</span><span class="n">cell</span><span class="p">[</span><span class="n">data_axis</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="p">:],</span> <span class="n">cell</span><span class="p">[</span><span class="n">data_axis</span><span class="o">-</span><span class="mi">2</span><span class="p">,</span> <span class="p">:])</span>
+                <span class="c1"># Check whether we should rotate it</span>
+                <span class="k">if</span> <span class="n">cart2spher</span><span class="p">(</span><span class="n">cell</span><span class="p">[</span><span class="n">data_axis</span><span class="p">,</span> <span class="p">:])[</span><span class="mi">2</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">pi</span> <span class="o">/</span> <span class="mi">4</span><span class="p">:</span>
+                    <span class="n">cell</span><span class="p">[</span><span class="n">data_axis</span><span class="p">,</span> <span class="p">:]</span> <span class="o">*=</span> <span class="o">-</span><span class="mi">1</span>
+
+            <span class="c1"># Correct cell for the grid</span>
+            <span class="k">if</span> <span class="n">trs_axis</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">origo</span><span class="p">[</span><span class="n">trs_axis</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.</span>
+                <span class="c1"># Correct offset since we only have the positive halve</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_diag</span><span class="p">[</span><span class="n">trs_axis</span><span class="p">]</span> <span class="o">%</span> <span class="mi">2</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_centered</span><span class="p">:</span>
+                    <span class="n">offset</span><span class="p">[</span><span class="n">trs_axis</span><span class="p">]</span> <span class="o">=</span> <span class="n">steps</span><span class="p">[</span><span class="n">trs_axis</span><span class="p">]</span> <span class="o">/</span> <span class="mi">2</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">offset</span><span class="p">[</span><span class="n">trs_axis</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.</span>
+
+                <span class="c1"># Find number of points</span>
+                <span class="k">if</span> <span class="n">trs_axis</span> <span class="o">!=</span> <span class="n">data_axis</span><span class="p">:</span>
+                    <span class="n">diag</span><span class="p">[</span><span class="n">trs_axis</span><span class="p">]</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="n">diag</span><span class="p">[</span><span class="n">trs_axis</span><span class="p">],</span> <span class="n">displ</span><span class="p">[</span><span class="n">trs_axis</span><span class="p">],</span> <span class="n">size</span><span class="p">[</span><span class="n">trs_axis</span><span class="p">],</span>
+                                                   <span class="n">centered</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_centered</span><span class="p">,</span> <span class="n">trs</span><span class="o">=</span><span class="kc">True</span><span class="p">)[</span><span class="mi">1</span><span class="p">])</span>
+
+            <span class="c1"># Create the grid in the reciprocal cell</span>
+            <span class="n">sc</span> <span class="o">=</span> <span class="n">SuperCell</span><span class="p">(</span><span class="n">cell</span><span class="p">,</span> <span class="n">origo</span><span class="o">=</span><span class="n">origo</span><span class="p">)</span>
+            <span class="n">grid</span> <span class="o">=</span> <span class="n">Grid</span><span class="p">(</span><span class="n">diag</span><span class="p">,</span> <span class="n">sc</span><span class="o">=</span><span class="n">sc</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">v</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">data_axis</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">grid</span><span class="p">[</span><span class="n">k2idx</span><span class="p">(</span><span class="n">k</span><span class="p">[</span><span class="mi">0</span><span class="p">])]</span> <span class="o">=</span> <span class="n">v</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">idx</span> <span class="o">=</span> <span class="n">k2idx</span><span class="p">(</span><span class="n">k</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+                <span class="n">weight</span> <span class="o">=</span> <span class="n">weights</span><span class="p">[</span><span class="n">idx</span><span class="p">[</span><span class="n">data_axis</span><span class="p">]]</span>
+                <span class="n">idx</span><span class="p">[</span><span class="n">data_axis</span><span class="p">]</span> <span class="o">=</span> <span class="nb">slice</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
+                <span class="n">grid</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">v</span> <span class="o">*</span> <span class="n">weight</span>
+
+            <span class="k">del</span> <span class="n">v</span>
+
+            <span class="c1"># Now perform calculation</span>
+            <span class="k">if</span> <span class="n">data_axis</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">k</span><span class="p">)):</span>
+                    <span class="n">grid</span><span class="p">[</span><span class="n">k2idx</span><span class="p">(</span><span class="n">k</span><span class="p">[</span><span class="n">i</span><span class="p">])]</span> <span class="o">=</span> <span class="n">wrap</span><span class="p">(</span><span class="n">func</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="n">k</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">),</span>
+                                             <span class="n">parent</span><span class="o">=</span><span class="n">parent</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="n">k</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">weight</span><span class="o">=</span><span class="n">w</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+                    <span class="n">eta</span><span class="o">.</span><span class="n">update</span><span class="p">()</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">k</span><span class="p">)):</span>
+                    <span class="n">idx</span> <span class="o">=</span> <span class="n">k2idx</span><span class="p">(</span><span class="n">k</span><span class="p">[</span><span class="n">i</span><span class="p">])</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+                    <span class="n">weight</span> <span class="o">=</span> <span class="n">weights</span><span class="p">[</span><span class="n">idx</span><span class="p">[</span><span class="n">data_axis</span><span class="p">]]</span>
+                    <span class="n">idx</span><span class="p">[</span><span class="n">data_axis</span><span class="p">]</span> <span class="o">=</span> <span class="nb">slice</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
+                    <span class="n">grid</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">wrap</span><span class="p">(</span><span class="n">func</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="n">k</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">),</span>
+                                     <span class="n">parent</span><span class="o">=</span><span class="n">parent</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="n">k</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">weight</span><span class="o">=</span><span class="n">w</span><span class="p">[</span><span class="n">i</span><span class="p">])</span> <span class="o">*</span> <span class="n">weight</span>
+                    <span class="n">eta</span><span class="o">.</span><span class="n">update</span><span class="p">()</span>
+            <span class="n">eta</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+            <span class="k">return</span> <span class="n">grid</span>
+
+        <span class="c1"># Set instance __call__</span>
+        <span class="nb">setattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;_bz_call&#39;</span><span class="p">,</span> <span class="n">types</span><span class="o">.</span><span class="n">MethodType</span><span class="p">(</span><span class="n">_call</span><span class="p">,</span> <span class="bp">self</span><span class="p">))</span>
+        <span class="k">return</span> <span class="bp">self</span></div>
 
 <div class="viewcode-block" id="MonkhorstPack.grid"><a class="viewcode-back" href="../../../api-generated/sisl.physics.brillouinzone.MonkhorstPack.html#sisl.physics.MonkhorstPack.grid">[docs]</a>    <span class="nd">@classmethod</span>
     <span class="k">def</span> <span class="nf">grid</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">displ</span><span class="o">=</span><span class="mf">0.</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="mf">1.</span><span class="p">,</span> <span class="n">centered</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">trs</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
@@ -1176,7 +1350,7 @@
             <span class="n">weight_factor</span> <span class="o">=</span> <span class="mf">1.</span>
         <span class="k">elif</span> <span class="nb">abs</span><span class="p">(</span><span class="n">total_weight</span> <span class="o">-</span> <span class="n">replace_weight</span> <span class="o">*</span> <span class="mi">2</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mf">1e-8</span><span class="p">:</span>
             <span class="n">weight_factor</span> <span class="o">=</span> <span class="mf">2.</span>
-            <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_trs</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_trs</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
                 <span class="n">info</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39;.reduce assumes that the replaced k-point has double weights.&#39;</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;k-point to replace:&#39;</span><span class="p">)</span>

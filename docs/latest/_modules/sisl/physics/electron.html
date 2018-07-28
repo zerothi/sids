@@ -886,7 +886,7 @@
     <span class="k">return</span> <span class="n">M</span> <span class="o">*</span> <span class="n">_inv_eff_mass_const</span>
 
 
-<div class="viewcode-block" id="berry_phase"><a class="viewcode-back" href="../../../api-generated/sisl.physics.electron.berry_phase.html#sisl.physics.berry_phase">[docs]</a><span class="k">def</span> <span class="nf">berry_phase</span><span class="p">(</span><span class="n">bz</span><span class="p">,</span> <span class="n">sub</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">eigvals</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">_gauge</span><span class="o">=</span><span class="s1">&#39;r&#39;</span><span class="p">):</span>
+<div class="viewcode-block" id="berry_phase"><a class="viewcode-back" href="../../../api-generated/sisl.physics.electron.berry_phase.html#sisl.physics.berry_phase">[docs]</a><span class="k">def</span> <span class="nf">berry_phase</span><span class="p">(</span><span class="n">bz_loop</span><span class="p">,</span> <span class="n">sub</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">eigvals</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">_gauge</span><span class="o">=</span><span class="s1">&#39;r&#39;</span><span class="p">):</span>
     <span class="sa">r</span><span class="sd">&quot;&quot;&quot; Calculate the Berry-phase on a loop using a predefined path</span>
 
 <span class="sd">    The Berry phase for a single Bloch state is calculated using the discretized formula:</span>
@@ -899,8 +899,8 @@
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    bz : BrillouinZone</span>
-<span class="sd">       containing the closed contour and has the ``bz.parent`` as an instance of Hamiltonian. The</span>
+<span class="sd">    bz_loop : BrillouinZone</span>
+<span class="sd">       containing the closed contour and has the ``bz_loop.parent`` as an instance of Hamiltonian. The</span>
 <span class="sd">       first and last k-point must not be the same.</span>
 <span class="sd">    sub : None or list of int, optional</span>
 <span class="sd">       selected bands to calculate the Berry phase of</span>
@@ -941,10 +941,13 @@
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="kn">from</span> <span class="nn">.hamiltonian</span> <span class="k">import</span> <span class="n">Hamiltonian</span>
     <span class="c1"># Currently we require the Berry phase calculation to *only* accept Hamiltonians</span>
-    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">bz</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span> <span class="n">Hamiltonian</span><span class="p">):</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">bz_loop</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span> <span class="n">Hamiltonian</span><span class="p">):</span>
         <span class="k">raise</span> <span class="n">SislError</span><span class="p">(</span><span class="s1">&#39;berry_phase: requires the Brillouin zone object to contain a Hamiltonian!&#39;</span><span class="p">)</span>
 
-    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">allclose</span><span class="p">(</span><span class="n">bz</span><span class="o">.</span><span class="n">k</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="p">:],</span> <span class="n">bz</span><span class="o">.</span><span class="n">k</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="p">:]):</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">bz_loop</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">orthogonal</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">SislError</span><span class="p">(</span><span class="s1">&#39;berry_phase: requires the Hamiltonian to use an orthogonal basis!&#39;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">allclose</span><span class="p">(</span><span class="n">bz_loop</span><span class="o">.</span><span class="n">k</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="p">:],</span> <span class="n">bz_loop</span><span class="o">.</span><span class="n">k</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="p">:]):</span>
         <span class="k">raise</span> <span class="n">SislError</span><span class="p">(</span><span class="s1">&#39;berry_phase: requires the Brillouin zone to not form a loop!&#39;</span><span class="p">)</span>
 
     <span class="c1"># Check that the Gauge is correct.</span>
@@ -1003,7 +1006,7 @@
             <span class="k">return</span> <span class="n">prd</span>
 
     <span class="c1"># Do the actual calculation of the final matrix</span>
-    <span class="n">d</span> <span class="o">=</span> <span class="n">_berry</span><span class="p">(</span><span class="n">bz</span><span class="o">.</span><span class="n">asyield</span><span class="p">()</span><span class="o">.</span><span class="n">eigenstate</span><span class="p">())</span>
+    <span class="n">d</span> <span class="o">=</span> <span class="n">_berry</span><span class="p">(</span><span class="n">bz_loop</span><span class="o">.</span><span class="n">asyield</span><span class="p">()</span><span class="o">.</span><span class="n">eigenstate</span><span class="p">())</span>
 
     <span class="c1"># Correct return values</span>
     <span class="k">if</span> <span class="n">eigvals</span><span class="p">:</span>
