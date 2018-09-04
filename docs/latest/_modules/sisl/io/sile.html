@@ -206,7 +206,7 @@
 <span class="c1"># Decorators or sile-specific functions</span>
 <span class="n">__all__</span> <span class="o">+=</span> <span class="p">[</span>
     <span class="s1">&#39;isfile&#39;</span><span class="p">,</span>
-    <span class="s1">&#39;Sile_fh_open&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;sile_fh_open&#39;</span><span class="p">,</span>
     <span class="s1">&#39;sile_raise_write&#39;</span><span class="p">,</span>
     <span class="s1">&#39;sile_raise_read&#39;</span><span class="p">]</span>
 
@@ -635,18 +635,35 @@
         <span class="k">return</span> <span class="s1">&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="p">,</span> <span class="s1">&#39;(&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">base_file</span><span class="p">,</span> <span class="s1">&#39;, base=&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_directory</span><span class="p">,</span> <span class="s1">&#39;)&#39;</span><span class="p">])</span></div>
 
 
-<span class="k">def</span> <span class="nf">Sile_fh_open</span><span class="p">(</span><span class="n">func</span><span class="p">):</span>
+<span class="k">def</span> <span class="nf">sile_fh_open</span><span class="p">(</span><span class="n">from_closed</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot; Method decorator for objects to directly implement opening of the</span>
 <span class="sd">    file-handle upon entry (if it isn&#39;t already).</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    from_closed : bool, optional</span>
+<span class="sd">       ensure the wrapped function *must* open the file, otherwise it will seek to 0.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="nd">@wraps</span><span class="p">(</span><span class="n">func</span><span class="p">)</span>
-    <span class="k">def</span> <span class="nf">pre_open</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;fh&quot;</span><span class="p">):</span>
-            <span class="k">return</span> <span class="n">func</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="k">with</span> <span class="bp">self</span><span class="p">:</span>
-                <span class="k">return</span> <span class="n">func</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">pre_open</span>
+    <span class="k">if</span> <span class="n">from_closed</span><span class="p">:</span>
+        <span class="k">def</span> <span class="nf">_wrapper</span><span class="p">(</span><span class="n">func</span><span class="p">):</span>
+            <span class="nd">@wraps</span><span class="p">(</span><span class="n">func</span><span class="p">)</span>
+            <span class="k">def</span> <span class="nf">pre_open</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+                <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;fh&quot;</span><span class="p">):</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">fh</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+                    <span class="k">return</span> <span class="n">func</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+                <span class="k">with</span> <span class="bp">self</span><span class="p">:</span>
+                    <span class="k">return</span> <span class="n">func</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">pre_open</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">def</span> <span class="nf">_wrapper</span><span class="p">(</span><span class="n">func</span><span class="p">):</span>
+            <span class="nd">@wraps</span><span class="p">(</span><span class="n">func</span><span class="p">)</span>
+            <span class="k">def</span> <span class="nf">pre_open</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+                <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;fh&quot;</span><span class="p">):</span>
+                    <span class="k">return</span> <span class="n">func</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+                <span class="k">with</span> <span class="bp">self</span><span class="p">:</span>
+                    <span class="k">return</span> <span class="n">func</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">pre_open</span>
+    <span class="k">return</span> <span class="n">_wrapper</span>
 
 
 <div class="viewcode-block" id="Sile"><a class="viewcode-back" href="../../../api-generated/sisl.io.Sile.html#sisl.io.Sile">[docs]</a><span class="k">class</span> <span class="nc">Sile</span><span class="p">(</span><span class="n">BaseSile</span><span class="p">):</span>

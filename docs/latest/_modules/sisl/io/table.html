@@ -180,7 +180,7 @@
 
 <span class="c1"># Import sile objects</span>
 <span class="kn">import</span> <span class="nn">sisl._array</span> <span class="k">as</span> <span class="nn">_a</span>
-<span class="kn">from</span> <span class="nn">.sile</span> <span class="k">import</span> <span class="n">Sile</span><span class="p">,</span> <span class="n">add_sile</span><span class="p">,</span> <span class="n">Sile_fh_open</span><span class="p">,</span> <span class="n">sile_raise_write</span>
+<span class="kn">from</span> <span class="nn">.sile</span> <span class="k">import</span> <span class="n">Sile</span><span class="p">,</span> <span class="n">add_sile</span><span class="p">,</span> <span class="n">sile_fh_open</span><span class="p">,</span> <span class="n">sile_raise_write</span>
 
 
 <span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;tableSile&#39;</span><span class="p">,</span> <span class="s1">&#39;TableSile&#39;</span><span class="p">]</span>
@@ -246,7 +246,7 @@
         <span class="sd">&quot;&quot;&quot; Setup the `tableSile` after initialization &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_comment</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;#&#39;</span><span class="p">]</span>
 
-<div class="viewcode-block" id="tableSile.write_data"><a class="viewcode-back" href="../../../api-generated/sisl.io.table.tableSile.html#sisl.io.table.tableSile.write_data">[docs]</a>    <span class="nd">@Sile_fh_open</span>
+<div class="viewcode-block" id="tableSile.write_data"><a class="viewcode-back" href="../../../api-generated/sisl.io.table.tableSile.html#sisl.io.table.tableSile.write_data">[docs]</a>    <span class="nd">@sile_fh_open</span><span class="p">()</span>
     <span class="k">def</span> <span class="nf">write_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Write tabular data to the file with optional header.</span>
 
@@ -323,10 +323,18 @@
         <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">footer</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)):</span>
             <span class="n">footer</span> <span class="o">=</span> <span class="n">newline</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">footer</span><span class="p">)</span>
 
+        <span class="c1"># Now we are ready to write</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">header</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_write</span><span class="p">(</span><span class="n">header</span><span class="p">)</span>
+
         <span class="c1"># Create a unified data table</span>
         <span class="c1"># This is rather difficult because we have to guess the</span>
         <span class="c1"># input size</span>
-        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">args</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">args</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="c1"># This may be used in cases where one wishes to accummulate content</span>
+            <span class="c1"># in a file.</span>
+            <span class="k">return</span>
+        <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">args</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
             <span class="n">dat</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">(</span><span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">dat</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">(</span><span class="n">args</span><span class="p">)</span>
@@ -336,9 +344,6 @@
         <span class="c1"># Reshape</span>
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">dat</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">2</span><span class="p">:</span>
             <span class="n">dat</span><span class="o">.</span><span class="n">shape</span> <span class="o">=</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">dat</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">],</span> <span class="n">dat</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
-
-        <span class="c1"># Now we are ready to write</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_write</span><span class="p">(</span><span class="n">header</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">dat</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">2</span><span class="p">:</span>
             <span class="n">_fmt</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;fmts&#39;</span><span class="p">,</span> <span class="p">(</span><span class="n">_fmt</span> <span class="o">+</span> <span class="n">delimiter</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">dat</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">+</span> <span class="n">_fmt</span> <span class="o">+</span> <span class="n">newline</span><span class="p">)</span>
@@ -354,7 +359,7 @@
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">footer</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_write</span><span class="p">(</span><span class="n">newline</span> <span class="o">*</span> <span class="mi">2</span> <span class="o">+</span> <span class="n">footer</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="tableSile.read_data"><a class="viewcode-back" href="../../../api-generated/sisl.io.table.tableSile.html#sisl.io.table.tableSile.read_data">[docs]</a>    <span class="nd">@Sile_fh_open</span>
+<div class="viewcode-block" id="tableSile.read_data"><a class="viewcode-back" href="../../../api-generated/sisl.io.table.tableSile.html#sisl.io.table.tableSile.read_data">[docs]</a>    <span class="nd">@sile_fh_open</span><span class="p">()</span>
     <span class="k">def</span> <span class="nf">read_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Read tabular data from the file.</span>
 
@@ -428,10 +433,14 @@
             <span class="n">dat</span><span class="o">.</span><span class="n">shape</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
 
         <span class="n">dat</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">swapaxes</span><span class="p">(</span><span class="n">dat</span><span class="p">,</span> <span class="o">-</span><span class="mi">2</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;ret_comment&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">):</span>
-            <span class="k">if</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;ret_header&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">):</span>
+        <span class="n">ret_comment</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;ret_comment&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+        <span class="n">ret_header</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;ret_header&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">ret_comment</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">ret_header</span><span class="p">:</span>
                 <span class="k">return</span> <span class="n">dat</span><span class="p">,</span> <span class="n">comment</span><span class="p">,</span> <span class="n">header</span>
             <span class="k">return</span> <span class="n">dat</span><span class="p">,</span> <span class="n">comment</span>
+        <span class="k">elif</span> <span class="n">ret_header</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">dat</span><span class="p">,</span> <span class="n">header</span>
         <span class="k">return</span> <span class="n">dat</span></div>
 
     <span class="c1"># Specify the default write function</span>
