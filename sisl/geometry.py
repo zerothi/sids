@@ -15,7 +15,7 @@ import sisl._array as _a
 
 from ._math_small import is_ascending
 from ._indices import indices_in_sphere_with_dist, indices_le, indices_gt_le
-from .messages import warn, SislError
+from .messages import info, warn, SislError
 from ._help import _str
 from ._help import _range as range
 from ._help import isndarray
@@ -65,7 +65,7 @@ class Geometry(SuperCellChild):
     na
     xyz : ndarray
         atomic coordinates
-    atom
+    atoms
     orbitals
     sc : SuperCell
         the supercell describing the periodicity of the
@@ -2332,7 +2332,7 @@ class Geometry(SuperCellChild):
         idcell = divisions * icell
 
         # Calculate mesh indices for atoms
-        xyz = self.xyz.view()
+        xyz = self.xyz
         mesh_a = dot(xyz, imcell.T) # dmx
         mesh_i = mesh_a.floor(dtype=int32)
         subtract(mesh_a, mesh_i, out=mesh_a)
@@ -2814,9 +2814,9 @@ class Geometry(SuperCellChild):
 
     def toASE(self):
         """ Returns the geometry as an ASE ``Atoms`` object """
-        from ase import Atoms
-        return Atoms(symbols=self.atoms.tolist(), positions=self.xyz.tolist(),
-                     cell=self.cell.tolist())
+        from ase import Atoms as ASE_Atoms
+        return ASE_Atoms(symbols=self.atoms.Z, positions=self.xyz.tolist(),
+                         cell=self.cell.tolist())
 
     @property
     def mass(self):
@@ -3233,7 +3233,7 @@ class Geometry(SuperCellChild):
 
         class MoveOrigin(argparse.Action):
 
-            def __call__(self, parser, ns, value, option_string=None):
+            def __call__(self, parser, ns, no_value, option_string=None):
                 ns._geometry.xyz[:, :] -= np.amin(ns._geometry.xyz, axis=0)[None, :]
         p.add_argument(*opts('--origin', '-O'), action=MoveOrigin, nargs=0,
                    help='Move all atoms such that one atom will be at the origin.')
@@ -3449,7 +3449,7 @@ class Geometry(SuperCellChild):
         # geometry (to stdout)
         class PrintInfo(argparse.Action):
 
-            def __call__(self, parser, ns, values, option_string=None):
+            def __call__(self, parser, ns, no_value, option_string=None):
                 # We fake that it has been stored...
                 ns._stored_geometry = True
                 print(ns._geometry)
@@ -3470,9 +3470,16 @@ class Geometry(SuperCellChild):
                     kwargs['fmt'] = ns._geom_fmt
                 if hasattr(ns, '_vector'):
                     v = getattr(ns, '_vector')
-                    if getattr(ns, '_vector_scale', True):
-                        v /= np.max(sqrt(square(v).sum(1)))
-                    kwargs['data'] = v
+                    vs = getattr(ns, '_vector_scale', True)
+                    if isinstance(vs, bool):
+                        if vs:
+                            vs = 1. / np.max(sqrt(square(v).sum(1)))
+                            info('Scaling vector by: {}'.format(vs))
+                        else:
+                            vs = 1.
+
+                    # Store the vectors with the scaling
+                    kwargs['data'] = v * vs
                 ns._geometry.write(value[0], **kwargs)
                 # Issue to the namespace that the geometry has been written, at least once.
                 ns._stored_geometry = True

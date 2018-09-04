@@ -53,6 +53,7 @@ class tbtsencSileTBtrans(_devncSileTBtrans):
     >>> Hdev[dpvt_unsorted, dpvt_unsorted.T] -= se_unsorted[:, :] # doctest: +SKIP
     >>> Hdev[dpvt_sorted, dpvt_sorted.T] -= se_sorted[:, :] # doctest: +SKIP
     """
+    _SE2eV = Ry2eV
 
     def o2p(self, orbital):
         """ Return the pivoting indices (0-based) for the orbitals
@@ -192,7 +193,7 @@ class tbtsencSileTBtrans(_devncSileTBtrans):
         """
         return in1d(self.pivot(elec=elec), orbital).nonzero()[0]
 
-    def self_energy(self, elec, E, k, sort=False):
+    def self_energy(self, elec, E, k=0, sort=False):
         """ Return the self-energy from the electrode `elec`
 
         Parameters
@@ -215,16 +216,55 @@ class tbtsencSileTBtrans(_devncSileTBtrans):
         re = self._variable('ReSelfEnergy', tree=tree)
         im = self._variable('ImSelfEnergy', tree=tree)
 
-        SE = (re[ik, iE, :, :] + 1j * im[ik, iE, :, :]) * Ry2eV
+        SE = (re[ik, iE, :, :] + 1j * im[ik, iE, :, :])
         if sort:
             pvt = self.pivot(elec)
             idx = argsort(pvt)
             idx.shape = (-1, 1)
 
             # pivot for sorted device region
-            return SE[idx, idx.T]
+            return SE[idx, idx.T] * self._SE2eV
 
-        return SE
+        return SE * self._SE2eV
+
+    def scattering_matrix(self, elec, E, k=0, sort=False):
+        r""" Return the scattering matrix from the electrode `elec`
+
+        The scattering matrix is calculated as:
+
+        .. math::
+            \Gamma(E) = i [\Sigma(E) - \Sigma^\dagger(E)]
+
+        Parameters
+        ----------
+        elec : str or int
+           the corresponding electrode to return the scattering matrix from
+        E : float or int
+           energy to retrieve the scattering matrix at, if a floating point the closest
+           energy value will be found and returned, if an integer it will correspond
+           to the exact index
+        k : array_like or int
+           k-point to retrieve, if an integer it is the k-index in the file
+        sort : bool, optional
+           if ``True`` the returned scattering matrix will be sorted (equivalent to pivoting the scattering matrix)
+        """
+        tree = self._elec(elec)
+        ik = self.kindex(k)
+        iE = self.Eindex(E)
+
+        re = self._variable('ReSelfEnergy', tree=tree)[ik, iE, :, :]
+        im = self._variable('ImSelfEnergy', tree=tree)[ik, iE, :, :]
+
+        G = - (im + im.T) + 1j * (re - re.T)
+        if sort:
+            pvt = self.pivot(elec)
+            idx = argsort(pvt)
+            idx.shape = (-1, 1)
+
+            # pivot for sorted device region
+            return G[idx, idx.T] * self._SE2eV
+
+        return G * self._SE2eV
 
     def self_energy_average(self, elec, E, sort=False):
         """ Return the k-averaged average self-energy from the electrode `elec`
@@ -247,16 +287,16 @@ class tbtsencSileTBtrans(_devncSileTBtrans):
         re = self._variable('ReSelfEnergyMean', tree=tree)
         im = self._variable('ImSelfEnergyMean', tree=tree)
 
-        SE = (re[ik, iE, :, :] + 1j * im[ik, iE, :, :]) * Ry2eV
+        SE = (re[ik, iE, :, :] + 1j * im[ik, iE, :, :])
         if sort:
             pvt = self.pivot(elec)
             idx = argsort(pvt)
             idx.shape = (-1, 1)
 
             # pivot for sorted device region
-            return SE[idx, idx.T]
+            return SE[idx, idx.T] * self._SE2eV
 
-        return SE
+        return SE * self._SE2eV
 
 
 add_sile('TBT.SE.nc', tbtsencSileTBtrans)
@@ -268,5 +308,6 @@ add_sile('TBT_DN.SE.nc', tbtsencSileTBtrans)
 class phtsencSileTBtrans(tbtsencSileTBtrans):
     """ PHtrans file object """
     _trans_type = 'PHT'
+    _SE2eV = Ry2eV ** 2
 
 add_sile('PHT.SE.nc', phtsencSileTBtrans)

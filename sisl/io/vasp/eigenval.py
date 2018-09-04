@@ -11,9 +11,9 @@ __all__ = ['eigenvalSileVASP']
 
 
 class eigenvalSileVASP(SileVASP):
-    """ VASP eigenvalue output """
+    """ Kohn-Sham eigenvalues """
 
-    @Sile_fh_open
+    @sile_fh_open()
     def read_data(self):
         r""" Read eigenvalues, as calculated and written by VASP
 

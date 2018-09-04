@@ -10,11 +10,12 @@ from ..sile import *
 from sisl.messages import warn
 from sisl import Geometry, PeriodicTable, Atom, SuperCell
 
-__all__ = ['carSileVASP', 'poscarSileVASP', 'contcarSileVASP']
+__all__ = ['carSileVASP']
 
 
 class carSileVASP(SileVASP):
-    """ CAR file object
+    """ Geometry informaation
+
     This file-object handles both POSCAR and CONTCAR files
     """
 
@@ -22,7 +23,7 @@ class carSileVASP(SileVASP):
         """ Setup the `poscarSile` after initialization """
         self._scale = 1.
 
-    @Sile_fh_open
+    @sile_fh_open()
     def write_geometry(self, geom):
         """ Writes the geometry to the contained file """
         # Check that we can write to the file
@@ -59,7 +60,7 @@ class carSileVASP(SileVASP):
         for ia in geom:
             self._write(fmt.format(*geom.xyz[ia, :]))
 
-    @Sile_fh_open
+    @sile_fh_open(True)
     def read_supercell(self):
         """ Returns `SuperCell` object from the CONTCAR/POSCAR file """
 
@@ -76,7 +77,7 @@ class carSileVASP(SileVASP):
 
         return SuperCell(cell)
 
-    @Sile_fh_open
+    @sile_fh_open()
     def read_geometry(self):
         """ Returns Geometry object from the CONTCAR/POSCAR file
         """
@@ -99,7 +100,7 @@ class carSileVASP(SileVASP):
                 "  <Specie-1> <Specie-2>",
                 "  <#Specie-1> <#Specie-2>",
                 "Format not found, the species are defaulted to the first elements of the periodic table."])
-            warn(SileWarning(err))
+            warn(err)
 
         # Create list of atoms to be used subsequently
         atom = [Atom[spec]
@@ -142,15 +143,6 @@ class carSileVASP(SileVASP):
         return self.read_geometry().ArgumentParser(p, *args, **newkw)
 
 
-# Equivalent classes
-class poscarSileVASP(carSileVASP):
-    pass
-
-
-class contcarSileVASP(carSileVASP):
-    pass
-
-
 add_sile('CAR', carSileVASP, gzip=True)
-add_sile('POSCAR', poscarSileVASP, gzip=True)
-add_sile('CONTCAR', contcarSileVASP, gzip=True)
+add_sile('POSCAR', carSileVASP, gzip=True)
+add_sile('CONTCAR', carSileVASP, gzip=True)

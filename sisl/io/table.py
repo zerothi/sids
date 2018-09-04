@@ -5,7 +5,7 @@ import numpy as np
 
 # Import sile objects
 import sisl._array as _a
-from .sile import Sile, add_sile, Sile_fh_open, sile_raise_write
+from .sile import Sile, add_sile, sile_fh_open, sile_raise_write
 
 
 __all__ = ['tableSile', 'TableSile']
@@ -71,7 +71,7 @@ class tableSile(Sile):
         """ Setup the `tableSile` after initialization """
         self._comment = ['#']
 
-    @Sile_fh_open
+    @sile_fh_open()
     def write_data(self, *args, **kwargs):
         """ Write tabular data to the file with optional header.
 
@@ -148,10 +148,18 @@ class tableSile(Sile):
         elif isinstance(footer, (list, tuple)):
             footer = newline.join(footer)
 
+        # Now we are ready to write
+        if len(header) > 0:
+            self._write(header)
+
         # Create a unified data table
         # This is rather difficult because we have to guess the
         # input size
-        if len(args) == 1:
+        if len(args) == 0:
+            # This may be used in cases where one wishes to accummulate content
+            # in a file.
+            return
+        elif len(args) == 1:
             dat = np.vstack(args[0])
         else:
             dat = np.vstack(args)
@@ -161,9 +169,6 @@ class tableSile(Sile):
         # Reshape
         if len(dat.shape) > 2:
             dat.shape = (-1, dat.shape[-2], dat.shape[-1])
-
-        # Now we are ready to write
-        self._write(header)
 
         if len(dat.shape) > 2:
             _fmt = kwargs.get('fmts', (_fmt + delimiter) * (dat.shape[1] - 1) + _fmt + newline)
@@ -179,7 +184,7 @@ class tableSile(Sile):
         if len(footer) > 0:
             self._write(newline * 2 + footer)
 
-    @Sile_fh_open
+    @sile_fh_open()
     def read_data(self, *args, **kwargs):
         """ Read tabular data from the file.
 
@@ -253,10 +258,14 @@ class tableSile(Sile):
             dat.shape = tuple(s)
 
         dat = np.swapaxes(dat, -2, -1)
-        if kwargs.get('ret_comment', False):
-            if kwargs.get('ret_header', False):
+        ret_comment = kwargs.get('ret_comment', False)
+        ret_header = kwargs.get('ret_header', False)
+        if ret_comment:
+            if ret_header:
                 return dat, comment, header
             return dat, comment
+        elif ret_header:
+            return dat, header
         return dat
 
     # Specify the default write function

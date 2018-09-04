@@ -32,10 +32,10 @@ Topic :: Utilities
 
 MAJOR = 0
 MINOR = 9
-MICRO = 2
+MICRO = 4
 ISRELEASED = False
 VERSION = '%d.%d.%d' % (MAJOR, MINOR, MICRO)
-GIT_REVISION = "1c929df0fb344c0256b15e2cfdc3f5c1eed4b4f7"
+GIT_REVISION = "56550eb5924245b9908963ba07a67d8f34108599"
 
 # The MANIFEST should be updated (which it only is
 # if it does not exist...)
@@ -44,7 +44,7 @@ if osp.exists('MANIFEST'):
     os.remove('MANIFEST')
 
 
-install_requires = ['setuptools', 'numpy>=1.9']
+install_requires = ['setuptools', 'numpy>=1.10']
 
 # Create list of all sub-directories with
 #   __init__.py files...
@@ -59,14 +59,7 @@ for subdir, dirs, files in os.walk('sisl'):
 def readme():
     if not osp.exists('README.md'):
         return ""
-    try:
-        import codecs
-        from markdown import markdown
-        md = codecs.open("README.md", mode="r", encoding="utf-8").read()
-        html = markdown(md, output_format='html4')
-        return html
-    except:
-        return open('README.md').read()
+    return open('README.md', 'r').read()
 
 metadata = dict(
     name='sisl',
@@ -74,6 +67,7 @@ metadata = dict(
     maintainer_email="nickpapior@gmail.com",
     description="Python interface for tight-binding model creation and analysis of DFT output. Input mechanism for large scale transport calculations using NEGF TBtrans (TranSiesta)",
     long_description=readme(),
+    long_description_content_type="text/markdown",
     url="http://github.com/zerothi/sisl",
     download_url="http://github.com/zerothi/sisl/releases",
     license='LGPLv3',
@@ -253,6 +247,10 @@ if __name__ == '__main__':
             metadata['version'] = VERSION
         else:
             metadata['version'] = VERSION + '-dev'
+
+    if 'sdist' in sys.argv:
+        from distutils.command.sdist import sdist
+        metadata['cmdclass'] = {'sdist': sdist}
 
     # Main setup of python modules
     setup(**metadata)

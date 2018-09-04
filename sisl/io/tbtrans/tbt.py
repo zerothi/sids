@@ -21,10 +21,11 @@ from sisl.utils import *
 import sisl._array as _a
 
 from sisl import Geometry, Atoms
+from sisl import units, constant
 from sisl.messages import warn, info, SislError
 from sisl._help import _range as range
 from sisl.unit.siesta import unit_convert
-from sisl.physics.distribution import fermi_dirac
+from sisl.physics.distribution import get_distribution, fermi_dirac
 from sisl.physics.densitymatrix import DensityMatrix
 
 
@@ -392,10 +393,10 @@ class tbtncSileTBtrans(_devncSileTBtrans):
 
         Parameters
         ----------
-        atom : array_like of int or bool, optional
+        atom : array_like of int, optional
            only return for a given set of atoms (default to all).
            *NOT* allowed with `orbital` keyword
-        orbital : array_like of int or bool, optional
+        orbital : array_like of int, optional
            only return for a given set of orbitals (default to all)
            *NOT* allowed with `atom` keyword
         sum : bool, optional
@@ -714,12 +715,13 @@ class tbtncSileTBtrans(_devncSileTBtrans):
                  "Increase the calculated energy-range.\n" + s)
 
         I = _a.sumd(T * dE * (fermi_dirac(E, kt_from, mu_from) - fermi_dirac(E, kt_to, mu_to)))
-        return I * 1.6021766208e-19 / 4.135667662e-15
+        return I * units('eV', 'J') / constant.h('eV s')
 
     def shot_noise(self, elec_from=0, elec_to=1, classical=False, kavg=True):
-        r""" Shot-noise term `from` to `to` using the k-weights and energy spacings in the file.
+        r""" Shot-noise term `from` to `to` using the k-weights
 
-        Calculates the shot-noise term according to `classical` (also known as the Poisson value). If `classical` is True the shot-noise calculated is:
+        Calculates the shot-noise term according to `classical` (also known as the Poisson value).
+        If `classical` is True the shot-noise calculated is:
 
         .. math::
            S_P(E, V) = \frac{2e^2}{h}|V|\sum_n T_n(E) = \frac{2e^3}{h}|V|T(E)
@@ -748,25 +750,87 @@ class tbtncSileTBtrans(_devncSileTBtrans):
         See Also
         --------
         fano : the ratio between the quantum mechanial and the classical shot noise.
+        noise_power : temperature dependent noise power
         """
         elec_from = self._elec(elec_from)
         elec_to = self._elec(elec_to)
         mu_f = self.chemical_potential(elec_from)
         mu_t = self.chemical_potential(elec_to)
         # The applied bias between the two electrodes
-        V = abs(mu_f - mu_t)
+        eV = abs(mu_f - mu_t)
         # Pre-factor
-        e2OVERhV = 2 * 1.6021766208e-19 ** 2 / 4.135667662e-15 * V
+        # 2 e ^ 3 V / h
+        # Note that h in eV units will cancel the units in the applied bias
+        _noise_const = 2 * units('eV', 'J') ** 2 * (eV / constant.h('eV s'))
         if classical:
-            # Calculate the Poisson shot-noise
-            return e2OVERhV * self.transmission(elec_from, elec_to, kavg=kavg)
+            # Calculate the Poisson shot-noise (equal to 2eI in the low T and zero kT limit)
+            return _noise_const * self.transmission(elec_from, elec_to, kavg=kavg)
         else:
             T = self.transmission_eig(elec_from, elec_to, kavg=kavg)
             # Check that at least one value is below the 0.001 limit
             if np.any(np.logical_and.reduce(T > 0.001, axis=-1)):
                 info(self.__class__.__name__ + ".shot_noise does possibly not have all relevant transmission eigenvalues in the "
                      "calculation. For some energy values all transmission eigenvalues are above 0.001!")
-            return e2OVERhV * (T * (1 - T)).sum(-1)
+            return _noise_const * (T * (1 - T)).sum(-1)
+
+    def noise_power(self, elec_from=0, elec_to=1, kavg=True):
+        r""" Noise power `from` to `to` using the k-weights and energy spacings in the file (temperature dependent)
+
+        Calculates the noise power as
+
+        .. math::
+           S(V) = \frac{2e^2}{h}\sum_n \int\mathrm d E
+                  \big\{T_n(E)[f_L(1-f_L)+f_R(1-f_R)] +
+                        T_n(E)[1 - T_n(E)](f_L - f_R)^2\big\}
+
+        Where :math:`f_i` are the Fermi-Dirac distributions for the electrodes.
+
+        Raises
+        ------
+        SislInfo: If *all* of the calculated :math:`T_n(E)` values in the file are above 0.001.
+
+        Parameters
+        ----------
+        elec_from: str, int, optional
+           the originating electrode
+        elec_to: str, int, optional
+           the absorbing electrode (different from `elec_from`)
+        kavg: bool, int or array_like, optional
+           whether the returned noise power is k-averaged, an explicit k-point
+           or a selection of k-points
+
+        See Also
+        --------
+        fano : the ratio between the quantum mechanial and the classical shot noise.
+        shot_noise : shot-noise term (zero temperature limit)
+        """
+        elec_from = self._elec(elec_from)
+        elec_to = self._elec(elec_to)
+        kT_f = self.kT(elec_from)
+        kT_t = self.kT(elec_to)
+        mu_f = self.chemical_potential(elec_from)
+        mu_t = self.chemical_potential(elec_to)
+        fd_f = get_distribution('fd', kT_f, mu_f)(self.E)
+        fd_t = get_distribution('fd', kT_t, mu_t)(self.E)
+
+        # Get the energy spacing (probably we should add a routine)
+        dE = self.E[1] - self.E[0]
+
+        # Pre-factor
+        # 2 e ^ 2 / h
+        # Note that h in eV units will cancel the units in the dE integration
+        _noise_const = 2 * units('eV', 'J') ** 2 / constant.h('eV s')
+        T = self.transmission_eig(elec_from, elec_to, kavg=kavg)
+        # Check that at least one value is below the 0.001 limit
+        if np.any(np.logical_and.reduce(T > 0.001, axis=-1)):
+            info(self.__class__.__name__ + ".shot_noise does possibly not have all relevant transmission eigenvalues in the "
+                 "calculation. For some energy values all transmission eigenvalues are above 0.001!")
+
+        # Separate the calculation into two terms (see Ya.M. Blanter, M. Buttiker, Physics Reports 336 2000)
+        eq = (T.sum(-1) * dE * (fd_f * (1 - fd_f) + fd_t * (1 - fd_t))).sum()
+        neq = ((T * (1 - T)).sum(-1) * dE * (fd_f - fd_t) ** 2).sum()
+
+        return _noise_const * (eq + neq)
 
     def fano(self, elec_from=0, elec_to=1, kavg=True):
         r""" The Fano-factor for the calculation (requires calculated transmission eigenvalues)
@@ -788,13 +852,14 @@ class tbtncSileTBtrans(_devncSileTBtrans):
 
         See Also
         --------
-        shot_noise : routine to calculate the shot-noise
+        shot_noise : shot-noise term (zero temperature limit)
+        noise_power : temperature dependent noise power
         """
         TE = self.transmission_eig(elec_from, elec_to, kavg=kavg)
         if np.any(np.logical_and.reduce(TE > 0.001, axis=-1)):
             info(self.__class__.__name__ + ".fano does possibly not have all relevant transmission eigenvalues in the "
                  "calculation. For some energy values all transmission eigenvalues are above 0.001!")
-        return (TE * (1 - TE)).sum(-1) / self.transmission(elec_from, elec_to, kavg=kavg)
+        return (TE * (1 - TE)).sum(-1) / TE.sum(-1)
 
     def _sparse_data(self, data, elec, E, kavg=True, isc=None):
         """ Internal routine for retrieving sparse data (orbital current, COOP) """
@@ -1897,15 +1962,17 @@ class tbtncSileTBtrans(_devncSileTBtrans):
         out = StringIO()
         # Create wrapper function
         def prnt(*args, **kwargs):
-            print(*args, file=out, **kwargs)
+            option = kwargs.pop('option', None)
+            if option is None:
+                print(*args, file=out)
+            else:
+                print('{:60s}[{}]'.format(' '.join(args), ', '.join(option)), file=out)
 
         def truefalse(bol, string, fdf=None):
             if bol:
                 prnt("  + " + string + ": true")
-            elif fdf is None:
-                prnt("  - " + string + ": false")
             else:
-                prnt("  - " + string + ": false\t\t["+', '.join(fdf) + ']')
+                prnt("  - " + string + ": false", option=fdf)
 
         # Retrieve the device atoms
         prnt("Device information:")
@@ -1936,9 +2003,9 @@ class tbtncSileTBtrans(_devncSileTBtrans):
         prnt("     " + list2str(self.a_dev + 1))
         prnt("  - number of BTD blocks: {}".format(self.n_btd()))
         truefalse('DOS' in self.variables, "DOS Green function", ['TBT.DOS.Gf'])
-        truefalse('DM' in self.variables, "Density matrix Green function", ['TBT.DOS.Gf', 'TBT.DM.Gf'])
-        truefalse('COOP' in self.variables, "COOP Green function", ['TBT.DOS.Gf', 'TBT.COOP.Gf'])
-        truefalse('COHP' in self.variables, "COHP Green function", ['TBT.DOS.Gf', 'TBT.COHP.Gf'])
+        truefalse('DM' in self.variables, "Density matrix Green function", ['TBT.DM.Gf'])
+        truefalse('COOP' in self.variables, "COOP Green function", ['TBT.COOP.Gf'])
+        truefalse('COHP' in self.variables, "COHP Green function", ['TBT.COHP.Gf'])
         if elec is None:
             elecs = self.elecs
         else:
@@ -1950,7 +2017,7 @@ class tbtncSileTBtrans(_devncSileTBtrans):
                 try:
                     bloch = self._value('bloch', elec)
                 except:
-                    bloch = [0] * 3
+                    bloch = [1] * 3
                 prnt()
                 prnt("Electrode: {}".format(elec))
                 prnt("  - number of BTD blocks: {}".format(self.n_btd(elec)))
@@ -1961,10 +2028,10 @@ class tbtncSileTBtrans(_devncSileTBtrans):
                 prnt("  - imaginary part (eta): {:.4f} meV".format(self.eta(elec) * 1e3))
                 truefalse('DOS' in gelec.variables, "DOS bulk", ['TBT.DOS.Elecs'])
                 truefalse('ADOS' in gelec.variables, "DOS spectral", ['TBT.DOS.A'])
-                truefalse('J' in gelec.variables, "orbital-current", ['TBT.DOS.A', 'TBT.Current.Orb'])
-                truefalse('DM' in gelec.variables, "Density matrix spectral", ['TBT.DOS.A', 'TBT.DM.A'])
-                truefalse('COOP' in gelec.variables, "COOP spectral", ['TBT.DOS.A', 'TBT.COOP.A'])
-                truefalse('COHP' in gelec.variables, "COHP spectral", ['TBT.DOS.A', 'TBT.COHP.A'])
+                truefalse('J' in gelec.variables, "orbital-current", ['TBT.Current.Orb'])
+                truefalse('DM' in gelec.variables, "Density matrix spectral", ['TBT.DM.A'])
+                truefalse('COOP' in gelec.variables, "COOP spectral", ['TBT.COOP.A'])
+                truefalse('COHP' in gelec.variables, "COHP spectral", ['TBT.COHP.A'])
                 truefalse('T' in gelec.variables, "transmission bulk", ['TBT.T.Bulk'])
                 truefalse(elec + '.T' in gelec.variables, "transmission out", ['TBT.T.Out'])
                 truefalse(elec + '.C' in gelec.variables, "transmission out correction", ['TBT.T.Out'])

@@ -1399,8 +1399,8 @@ class Atoms(object):
 
     @property
     def Z(self):
-        """ Return an array of atomic numbers """
-        uZ = _a.arrayd([a.Z for a in self.atom])
+        """ Return an array of atomic numbers (integers) """
+        uZ = _a.arrayi([a.Z for a in self.atom])
         return uZ[self.specie[:]]
 
     def scale(self, scale):
@@ -1652,7 +1652,7 @@ class Atoms(object):
 
         if len(key) == 0:
             if value not in self:
-                self._atom.append(atom)
+                self._atom.append(value)
             return
 
         # Create new atoms object to iterate
