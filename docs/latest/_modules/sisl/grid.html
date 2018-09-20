@@ -175,6 +175,7 @@
   <h1>Source code for sisl.grid</h1><div class="highlight"><pre>
 <span></span><span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">print_function</span><span class="p">,</span> <span class="n">division</span>
 
+<span class="kn">from</span> <span class="nn">functools</span> <span class="k">import</span> <span class="n">partial</span>
 <span class="kn">from</span> <span class="nn">numbers</span> <span class="k">import</span> <span class="n">Integral</span><span class="p">,</span> <span class="n">Real</span>
 <span class="kn">from</span> <span class="nn">math</span> <span class="k">import</span> <span class="n">pi</span>
 
@@ -318,33 +319,31 @@
 <span class="sd">            optional arguments passed to the interpolation algorithm</span>
 <span class="sd">            The interpolation routine is `scipy.interpolate.interpn`</span>
 <span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Interpolate function</span>
+        <span class="kn">from</span> <span class="nn">scipy.interpolate</span> <span class="k">import</span> <span class="n">RegularGridInterpolator</span>
+
         <span class="c1"># Get current grid spacing</span>
+        <span class="n">flinspace</span> <span class="o">=</span> <span class="n">partial</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
         <span class="n">dold</span> <span class="o">=</span> <span class="p">(</span>
-            <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span>
-            <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span>
-            <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
+            <span class="n">flinspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span>
+            <span class="n">flinspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span>
+            <span class="n">flinspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
         <span class="p">)</span>
 
-        <span class="c1"># Interpolate</span>
-        <span class="kn">from</span> <span class="nn">scipy.interpolate</span> <span class="k">import</span> <span class="n">interpn</span>
-
-        <span class="c1"># Create new grid</span>
-        <span class="n">grid</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="p">(</span><span class="n">shape</span><span class="p">,</span> <span class="n">bc</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">bc</span><span class="p">),</span> <span class="n">sc</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">sc</span><span class="o">.</span><span class="n">copy</span><span class="p">())</span>
-        <span class="c1"># Clean-up to reduce memory</span>
+        <span class="c1"># Create new grid and clean-up to reduce memory</span>
+        <span class="n">grid</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
         <span class="k">del</span> <span class="n">grid</span><span class="o">.</span><span class="n">grid</span>
 
-        <span class="c1"># Create new mesh-grid</span>
-        <span class="n">dnew</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">meshgrid</span><span class="p">(</span>
-            <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span>
-            <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span>
-            <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">])),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
-        <span class="n">dnew</span><span class="o">.</span><span class="n">shape</span> <span class="o">=</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+        <span class="c1"># Create new mesh-grid (this will sadly be 3 times the size of the new shape)</span>
+        <span class="c1"># There are ways around it, but perhaps this is fine for now?</span>
+        <span class="n">dnew</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mgrid</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="mi">1</span><span class="p">:</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="mi">1</span><span class="n">j</span><span class="p">,</span> <span class="mi">0</span><span class="p">:</span><span class="mi">1</span><span class="p">:</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="mi">1</span><span class="n">j</span><span class="p">,</span> <span class="mi">0</span><span class="p">:</span><span class="mi">1</span><span class="p">:</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">*</span> <span class="mi">1</span><span class="n">j</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">T</span>
 
-        <span class="n">grid</span><span class="o">.</span><span class="n">grid</span> <span class="o">=</span> <span class="n">interpn</span><span class="p">(</span><span class="n">dold</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">grid</span><span class="p">,</span> <span class="n">dnew</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="n">method</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="n">f</span> <span class="o">=</span> <span class="n">RegularGridInterpolator</span><span class="p">(</span><span class="n">dold</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">grid</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="n">method</span><span class="p">)</span>
+        <span class="k">del</span> <span class="n">dold</span>
+        <span class="n">grid</span><span class="o">.</span><span class="n">grid</span> <span class="o">=</span> <span class="n">f</span><span class="p">(</span><span class="n">dnew</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">shape</span><span class="p">)</span>
+
         <span class="c1"># immediately delete the dnew (which is VERY large)</span>
-        <span class="k">del</span> <span class="n">dold</span><span class="p">,</span> <span class="n">dnew</span>
-        <span class="c1"># Ensure that the grid has the correct shape</span>
-        <span class="n">grid</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">shape</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">shape</span><span class="p">)</span>
+        <span class="k">del</span> <span class="n">dnew</span>
 
         <span class="k">return</span> <span class="n">grid</span></div>
 

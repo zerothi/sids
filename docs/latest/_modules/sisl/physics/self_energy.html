@@ -224,19 +224,11 @@
 <span class="sd">       axis specification for the semi-infinite direction (`+A`/`-A`/`+B`/`-B`/`+C`/`-C`)</span>
 <span class="sd">    eta : float, optional</span>
 <span class="sd">       the default imaginary part of the self-energy calculation</span>
-<span class="sd">    bloch : array_like, optional</span>
-<span class="sd">       Bloch-expansion for each of the lattice vectors (`1` for no expansion)</span>
-<span class="sd">       The resulting self-energy will have dimension</span>
-<span class="sd">       equal to `len(obj) * np.product(bloch)`.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">spgeom</span><span class="p">,</span> <span class="n">infinite</span><span class="p">,</span> <span class="n">eta</span><span class="o">=</span><span class="mf">1e-6</span><span class="p">,</span> <span class="n">bloch</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">spgeom</span><span class="p">,</span> <span class="n">infinite</span><span class="p">,</span> <span class="n">eta</span><span class="o">=</span><span class="mf">1e-6</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Create a `SelfEnergy` object from any `SparseGeometry` &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">eta</span> <span class="o">=</span> <span class="n">eta</span>
-        <span class="k">if</span> <span class="n">bloch</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">bloch</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">onesi</span><span class="p">([</span><span class="mi">3</span><span class="p">])</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">bloch</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">arrayi</span><span class="p">(</span><span class="n">bloch</span><span class="p">)</span>
 
         <span class="c1"># Determine whether we are in plus/minus direction</span>
         <span class="k">if</span> <span class="n">infinite</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;+&#39;</span><span class="p">):</span>
@@ -262,6 +254,13 @@
         <span class="c1"># Finalize the setup by calling the class specific routine</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_setup</span><span class="p">(</span><span class="n">spgeom</span><span class="p">)</span>
 
+    <span class="k">def</span> <span class="nf">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; String representation of the SemiInfinite &quot;&quot;&quot;</span>
+        <span class="n">direction</span> <span class="o">=</span> <span class="p">{</span><span class="o">-</span><span class="mi">1</span><span class="p">:</span> <span class="s1">&#39;-&#39;</span><span class="p">,</span> <span class="mi">1</span><span class="p">:</span> <span class="s1">&#39;+&#39;</span><span class="p">}</span>
+        <span class="n">axis</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">:</span> <span class="s1">&#39;A&#39;</span><span class="p">,</span> <span class="mi">1</span><span class="p">:</span> <span class="s1">&#39;B&#39;</span><span class="p">,</span> <span class="mi">2</span><span class="p">:</span> <span class="s1">&#39;C&#39;</span><span class="p">}</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39;{{direction: </span><span class="si">{0}{1}</span><span class="se">\n</span><span class="s1">}}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+            <span class="n">direction</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">semi_inf_dir</span><span class="p">],</span> <span class="n">axis</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">semi_inf</span><span class="p">])</span>
+
     <span class="k">def</span> <span class="nf">_correct_k</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Return a corrected k-point</span>
 
@@ -285,6 +284,15 @@
     <span class="k">def</span> <span class="nf">__getattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">attr</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Overload attributes from the hosting object &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">spgeom0</span><span class="p">,</span> <span class="n">attr</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Representation of the RecursiveSI model &quot;&quot;&quot;</span>
+        <span class="n">direction</span> <span class="o">=</span> <span class="p">{</span><span class="o">-</span><span class="mi">1</span><span class="p">:</span> <span class="s1">&#39;-&#39;</span><span class="p">,</span> <span class="mi">1</span><span class="p">:</span> <span class="s1">&#39;+&#39;</span><span class="p">}</span>
+        <span class="n">axis</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">:</span> <span class="s1">&#39;A&#39;</span><span class="p">,</span> <span class="mi">1</span><span class="p">:</span> <span class="s1">&#39;B&#39;</span><span class="p">,</span> <span class="mi">2</span><span class="p">:</span> <span class="s1">&#39;C&#39;</span><span class="p">}</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39;{{direction: </span><span class="si">{0}{1}</span><span class="s1">,</span><span class="se">\n</span><span class="s1"> </span><span class="si">{2}</span><span class="se">\n</span><span class="s1">}}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+            <span class="n">direction</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">semi_inf_dir</span><span class="p">],</span> <span class="n">axis</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">semi_inf</span><span class="p">],</span>
+            <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">spgeom0</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">,</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1"> &#39;</span><span class="p">),</span>
+        <span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">_setup</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">spgeom</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Setup the Lopez-Sancho internals for easy axes &quot;&quot;&quot;</span>
@@ -341,6 +349,10 @@
 <span class="sd">        bulk : bool, optional</span>
 <span class="sd">          if true, :math:`E\cdot \mathbf S - \mathbf H -\boldsymbol\Sigma` is returned, else</span>
 <span class="sd">          :math:`\boldsymbol\Sigma` is returned (default).</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        self-energy : the self-energy corresponding to the semi-infinite direction</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">eta</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">eta</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">eta</span>
@@ -406,7 +418,110 @@
                     <span class="k">return</span> <span class="n">GS</span>
                 <span class="k">return</span> <span class="o">-</span> <span class="n">GS</span>
 
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="o">+</span><span class="s1">&#39;: could not converge self-energy calculation&#39;</span><span class="p">)</span></div></div>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="o">+</span><span class="s1">&#39;: could not converge self-energy calculation&#39;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="RecursiveSI.self_energy_lr"><a class="viewcode-back" href="../../../api-generated/sisl.physics.RecursiveSI.html#sisl.physics.RecursiveSI.self_energy_lr">[docs]</a>    <span class="k">def</span> <span class="nf">self_energy_lr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">E</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">eta</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">eps</span><span class="o">=</span><span class="mf">1e-14</span><span class="p">,</span> <span class="n">bulk</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot; Return two dense matrices with the left/right self-energy at energy `E` and k-point `k` (default Gamma).</span>
+
+<span class="sd">        Note calculating the LR self-energies simultaneously requires that their chemical potentials are the same.</span>
+<span class="sd">        I.e. only when the reference energy is equivalent in the left/right schemes does this make sense.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        E : float</span>
+<span class="sd">          energy at which the calculation will take place (should *not* be complex)</span>
+<span class="sd">        k : array_like, optional</span>
+<span class="sd">          k-point at which the self-energy should be evaluated.</span>
+<span class="sd">          the k-point should be in units of the reciprocal lattice vectors, and</span>
+<span class="sd">          the semi-infinite component will be automatically set to zero.</span>
+<span class="sd">        eta : float, optional</span>
+<span class="sd">          the imaginary value to evaluate the self-energy with. Defaults to the</span>
+<span class="sd">          value with which the object was created</span>
+<span class="sd">        dtype : numpy.dtype</span>
+<span class="sd">          the resulting data type</span>
+<span class="sd">        eps : float, optional</span>
+<span class="sd">          convergence criteria for the recursion</span>
+<span class="sd">        bulk : bool, optional</span>
+<span class="sd">          if true, :math:`E\cdot \mathbf S - \mathbf H -\boldsymbol\Sigma` is returned, else</span>
+<span class="sd">          :math:`\boldsymbol\Sigma` is returned (default).</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        left : the left self-energy</span>
+<span class="sd">        right : the right self-energy</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">eta</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">eta</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">eta</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">Z</span> <span class="o">=</span> <span class="n">E</span><span class="o">.</span><span class="n">real</span> <span class="o">+</span> <span class="mi">1</span><span class="n">j</span> <span class="o">*</span> <span class="n">eta</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">Z</span> <span class="o">=</span> <span class="n">E</span> <span class="o">+</span> <span class="mi">1</span><span class="n">j</span> <span class="o">*</span> <span class="n">eta</span>
+
+        <span class="c1"># Get k-point</span>
+        <span class="n">k</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_correct_k</span><span class="p">(</span><span class="n">k</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">dtype</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">dtype</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">complex128</span>
+
+        <span class="n">sp0</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">spgeom0</span>
+        <span class="n">sp1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">spgeom1</span>
+
+        <span class="c1"># As the SparseGeometry inherently works for</span>
+        <span class="c1"># orthogonal and non-orthogonal basis, there is no</span>
+        <span class="c1"># need to have two algorithms.</span>
+        <span class="n">SmH0</span> <span class="o">=</span> <span class="n">sp0</span><span class="o">.</span><span class="n">Sk</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span> <span class="o">*</span> <span class="n">Z</span> <span class="o">-</span> <span class="n">sp0</span><span class="o">.</span><span class="n">Pk</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span>
+        <span class="n">GB</span> <span class="o">=</span> <span class="n">SmH0</span><span class="o">.</span><span class="n">toarray</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="n">sp1</span><span class="o">.</span><span class="n">orthogonal</span><span class="p">:</span>
+            <span class="n">alpha</span> <span class="o">=</span> <span class="n">sp1</span><span class="o">.</span><span class="n">Pk</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s1">&#39;array&#39;</span><span class="p">)</span>
+            <span class="n">beta</span>  <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">conjugate</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="n">alpha</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">M</span> <span class="o">=</span> <span class="n">sp1</span><span class="o">.</span><span class="n">Pk</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span>
+            <span class="n">S</span> <span class="o">=</span> <span class="n">sp1</span><span class="o">.</span><span class="n">Sk</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span>
+            <span class="n">alpha</span> <span class="o">=</span> <span class="p">(</span><span class="n">M</span> <span class="o">-</span> <span class="n">S</span> <span class="o">*</span> <span class="n">Z</span><span class="p">)</span><span class="o">.</span><span class="n">toarray</span><span class="p">()</span>
+            <span class="n">beta</span>  <span class="o">=</span> <span class="p">(</span><span class="n">M</span><span class="o">.</span><span class="n">getH</span><span class="p">()</span> <span class="o">-</span> <span class="n">S</span><span class="o">.</span><span class="n">getH</span><span class="p">()</span> <span class="o">*</span> <span class="n">Z</span><span class="p">)</span><span class="o">.</span><span class="n">toarray</span><span class="p">()</span>
+            <span class="k">del</span> <span class="n">M</span><span class="p">,</span> <span class="n">S</span>
+
+        <span class="c1"># Surface Green function (self-energy)</span>
+        <span class="k">if</span> <span class="n">bulk</span><span class="p">:</span>
+            <span class="n">GS</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">GB</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">GS</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">GB</span><span class="p">)</span>
+
+        <span class="n">solve</span> <span class="o">=</span> <span class="n">lin</span><span class="o">.</span><span class="n">solve</span>
+
+        <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
+
+            <span class="n">tA</span> <span class="o">=</span> <span class="n">solve</span><span class="p">(</span><span class="n">GB</span><span class="p">,</span> <span class="n">alpha</span><span class="p">)</span>
+            <span class="n">tB</span> <span class="o">=</span> <span class="n">solve</span><span class="p">(</span><span class="n">GB</span><span class="p">,</span> <span class="n">beta</span><span class="p">)</span>
+
+            <span class="n">tmp</span> <span class="o">=</span> <span class="n">dot</span><span class="p">(</span><span class="n">alpha</span><span class="p">,</span> <span class="n">tB</span><span class="p">)</span>
+            <span class="c1"># Update bulk Green function</span>
+            <span class="n">GB</span> <span class="o">-=</span> <span class="n">tmp</span> <span class="o">+</span> <span class="n">dot</span><span class="p">(</span><span class="n">beta</span><span class="p">,</span> <span class="n">tA</span><span class="p">)</span>
+            <span class="c1"># Update surface self-energy</span>
+            <span class="n">GS</span> <span class="o">-=</span> <span class="n">tmp</span>
+
+            <span class="c1"># Update forward/backward</span>
+            <span class="n">alpha</span> <span class="o">=</span> <span class="n">dot</span><span class="p">(</span><span class="n">alpha</span><span class="p">,</span> <span class="n">tA</span><span class="p">)</span>
+            <span class="n">beta</span> <span class="o">=</span> <span class="n">dot</span><span class="p">(</span><span class="n">beta</span><span class="p">,</span> <span class="n">tB</span><span class="p">)</span>
+
+            <span class="c1"># Convergence criteria, it could be stricter</span>
+            <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">amax</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">tmp</span><span class="p">))</span> <span class="o">&lt;</span> <span class="n">eps</span><span class="p">:</span>
+                <span class="c1"># Return the pristine Green function</span>
+                <span class="k">del</span> <span class="n">tA</span><span class="p">,</span> <span class="n">tB</span><span class="p">,</span> <span class="n">alpha</span><span class="p">,</span> <span class="n">beta</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">semi_inf_dir</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                    <span class="c1"># GS is the &quot;right&quot; self-energy</span>
+                    <span class="k">if</span> <span class="n">bulk</span><span class="p">:</span>
+                        <span class="k">return</span> <span class="n">GB</span> <span class="o">-</span> <span class="n">GS</span> <span class="o">+</span> <span class="n">SmH0</span><span class="o">.</span><span class="n">toarray</span><span class="p">(),</span> <span class="n">GS</span>
+                    <span class="k">return</span> <span class="n">GS</span> <span class="o">-</span> <span class="n">GB</span> <span class="o">+</span> <span class="n">SmH0</span><span class="o">.</span><span class="n">toarray</span><span class="p">(),</span> <span class="o">-</span> <span class="n">GS</span>
+                <span class="c1"># GS is the &quot;left&quot; self-energy</span>
+                <span class="k">if</span> <span class="n">bulk</span><span class="p">:</span>
+                    <span class="k">return</span> <span class="n">GS</span><span class="p">,</span> <span class="n">GB</span> <span class="o">-</span> <span class="n">GS</span> <span class="o">+</span> <span class="n">SmH0</span><span class="o">.</span><span class="n">toarray</span><span class="p">()</span>
+                <span class="k">return</span> <span class="o">-</span> <span class="n">GS</span><span class="p">,</span> <span class="n">GS</span> <span class="o">-</span> <span class="n">GB</span> <span class="o">+</span> <span class="n">SmH0</span><span class="o">.</span><span class="n">toarray</span><span class="p">()</span>
+
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="o">+</span><span class="s1">&#39;: could not converge self-energy (LR) calculation&#39;</span><span class="p">)</span></div></div>
 </pre></div>
 
            </div>
