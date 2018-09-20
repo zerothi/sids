@@ -1492,12 +1492,11 @@ class tbtncSileTBtrans(_devncSileTBtrans):
         # Now create the density matrix object
         geom = self.read_geometry()
         if geometry is None:
-            DM = DensityMatrix(geom, nnzpr=1)
+            DM = DensityMatrix.fromsp(geom, dm)
         else:
             if geom.no != geometry.no:
                 raise ValueError(self.__class__.__name__ + '.density_matrix requires input geometry to contain the correct number of orbitals. Please correct input!')
-            DM = DensityMatrix(geometry, nnzpr=1)
-        DM += dm
+            DM = DensityMatrix.fromsp(geometry, dm)
         return DM
 
     def orbital_COOP(self, E, kavg=True, isc=None):
@@ -2063,7 +2062,7 @@ class tbtncSileTBtrans(_devncSileTBtrans):
                                       _geometry=self.geom,
                                       _data=[], _data_description=[],
                                       _data_header=[],
-                                      _norm='atom',
+                                      _norm='none',
                                       _Ovalue='',
                                       _Orng=None, _Erng=None,
                                       _krng=True)
@@ -2146,9 +2145,9 @@ class tbtncSileTBtrans(_devncSileTBtrans):
             def __call__(self, parser, ns, value, option_string=None):
                 ns._norm = value
         p.add_argument('--norm', '-N', action=NormAction, default='atom',
-                       choices=['atom', 'all', 'none', 'orbital'],
-                       help="""Specify the normalization method; "atom") total orbitals in selected atoms,
-                       "all") total orbitals in the device region, "none") no normalization or "orbital") selected orbitals.
+                       choices=['none', 'atom', 'orbital', 'all'],
+                       help="""Specify the normalization method; "none") no normalization, "atom") total orbitals in selected atoms,
+                       "orbital") selected orbitals or "all") total orbitals in the device region.
 
                        This flag only takes effect on --dos and --ados and is reset whenever --plot or --out is called""")
 
@@ -2423,7 +2422,7 @@ class tbtncSileTBtrans(_devncSileTBtrans):
                 ns._data_header = []
                 ns._data = []
                 # These are expert options
-                ns._norm = 'atom'
+                ns._norm = 'none'
                 ns._Ovalue = ''
                 ns._Orng = None
                 ns._Erng = None
@@ -2454,8 +2453,18 @@ class tbtncSileTBtrans(_devncSileTBtrans):
                 from matplotlib import pyplot as plt
                 plt.figure()
 
+                is_DOS = True
+                is_T = True
                 for i in range(1, len(ns._data)):
-                    plt.plot(ns._data[0], ns._data[i], label=ns._data_header[i])
+                    plt.plot(ns._data[0], ns._data[i], label=ns._data_header[i].split('[')[0])
+                    is_DOS &= 'DOS' in ns._data_header[i]
+                    is_T &= 'T' in ns._data_header[i]
+
+                if is_DOS:
+                    plt.ylabel('DOS [1/eV]')
+                elif is_T:
+                    plt.ylabel('Transmission [G0]')
+                plt.xlabel('E - E_F [eV]')
 
                 plt.legend(loc=8, ncol=3, bbox_to_anchor=(0.5, 1.0))
                 if value is None:
@@ -2468,7 +2477,7 @@ class tbtncSileTBtrans(_devncSileTBtrans):
                 ns._data_header = []
                 ns._data = []
                 # These are expert options
-                ns._norm = 'atom'
+                ns._norm = 'none'
                 ns._Ovalue = ''
                 ns._Orng = None
                 ns._Erng = None
