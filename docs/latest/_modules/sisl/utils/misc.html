@@ -173,8 +173,9 @@
            <div itemprop="articleBody">
             
   <h1>Source code for sisl.utils.misc</h1><div class="highlight"><pre>
-<span></span><span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">division</span>
+<span></span><span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">print_function</span><span class="p">,</span> <span class="n">division</span>
 
+<span class="kn">import</span> <span class="nn">sys</span>
 <span class="kn">import</span> <span class="nn">inspect</span>
 <span class="kn">import</span> <span class="nn">functools</span>
 <span class="kn">import</span> <span class="nn">ast</span>
@@ -441,6 +442,9 @@
     <span class="k">return</span> <span class="n">ra</span></div>
 
 
+<span class="n">_ispy3</span> <span class="o">=</span> <span class="n">sys</span><span class="o">.</span><span class="n">version</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;3&#39;</span>
+
+
 <span class="k">def</span> <span class="nf">allow_kwargs</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot; Decoractor for forcing `func` to have the named arguments as listed in `args`</span>
 
@@ -455,7 +459,20 @@
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="nf">deco</span><span class="p">(</span><span class="n">func</span><span class="p">):</span>
         <span class="c1"># Retrieve names</span>
-        <span class="n">arg_names</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">kwargs_name</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">inspect</span><span class="o">.</span><span class="n">getargspec</span><span class="p">(</span><span class="n">func</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">_ispy3</span><span class="p">:</span>
+            <span class="c1"># Build list of arguments and keyword arguments</span>
+            <span class="n">sig</span> <span class="o">=</span> <span class="n">inspect</span><span class="o">.</span><span class="n">signature</span><span class="p">(</span><span class="n">func</span><span class="p">)</span>
+            <span class="n">arg_names</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="n">kwargs_name</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">sig</span><span class="o">.</span><span class="n">parameters</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="k">if</span> <span class="n">p</span><span class="o">.</span><span class="n">kind</span> <span class="o">==</span> <span class="n">p</span><span class="o">.</span><span class="n">POSITIONAL_ONLY</span> <span class="ow">or</span> <span class="n">p</span><span class="o">.</span><span class="n">kind</span> <span class="o">==</span> <span class="n">p</span><span class="o">.</span><span class="n">POSITIONAL_OR_KEYWORD</span> \
+                   <span class="ow">or</span> <span class="n">p</span><span class="o">.</span><span class="n">kind</span> <span class="o">==</span> <span class="n">p</span><span class="o">.</span><span class="n">KEYWORD_ONLY</span><span class="p">:</span>
+                    <span class="n">arg_names</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+                <span class="k">elif</span> <span class="n">p</span><span class="o">.</span><span class="n">kind</span> <span class="o">==</span> <span class="n">p</span><span class="o">.</span><span class="n">VAR_KEYWORD</span><span class="p">:</span>
+                    <span class="n">kwargs_name</span> <span class="o">=</span> <span class="n">name</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">arg_names</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">kwargs_name</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">inspect</span><span class="o">.</span><span class="n">getargspec</span><span class="p">(</span><span class="n">func</span><span class="p">)</span>
+
         <span class="k">if</span> <span class="ow">not</span> <span class="n">kwargs_name</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">func</span>
 
@@ -474,7 +491,7 @@
         <span class="k">def</span> <span class="nf">dec_func</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
             <span class="c1"># Simply remove all the arguments that cannot be passed to the function</span>
             <span class="k">for</span> <span class="n">arg</span> <span class="ow">in</span> <span class="n">args_</span><span class="p">:</span>
-                <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">arg</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+                <span class="k">del</span> <span class="n">kwargs</span><span class="p">[</span><span class="n">arg</span><span class="p">]</span>
             <span class="k">return</span> <span class="n">func</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 
         <span class="k">return</span> <span class="n">dec_func</span>

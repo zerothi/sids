@@ -175,14 +175,17 @@
   <h1>Source code for sisl.physics.self_energy</h1><div class="highlight"><pre>
 <span></span><span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">print_function</span><span class="p">,</span> <span class="n">division</span>
 
-
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-<span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">dot</span>
+<span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">dot</span><span class="p">,</span> <span class="n">amax</span><span class="p">,</span> <span class="n">conjugate</span>
+<span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">subtract</span>
+<span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">empty</span><span class="p">,</span> <span class="n">zeros_like</span><span class="p">,</span> <span class="n">empty_like</span><span class="p">,</span> <span class="n">complex128</span>
+<span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="nb">abs</span> <span class="k">as</span> <span class="n">_abs</span>
 
 <span class="kn">from</span> <span class="nn">sisl.messages</span> <span class="k">import</span> <span class="n">warn</span>
 <span class="kn">from</span> <span class="nn">sisl.utils.ranges</span> <span class="k">import</span> <span class="n">array_arange</span>
 <span class="kn">import</span> <span class="nn">sisl._array</span> <span class="k">as</span> <span class="nn">_a</span>
 <span class="kn">import</span> <span class="nn">sisl.linalg</span> <span class="k">as</span> <span class="nn">lin</span>
+<span class="kn">from</span> <span class="nn">sisl.linalg</span> <span class="k">import</span> <span class="n">solve</span>
 
 <span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;SelfEnergy&#39;</span><span class="p">,</span> <span class="s1">&#39;SemiInfinite&#39;</span><span class="p">]</span>
 <span class="n">__all__</span> <span class="o">+=</span> <span class="p">[</span><span class="s1">&#39;RecursiveSI&#39;</span><span class="p">]</span>
@@ -328,20 +331,17 @@
         <span class="c1"># Delete all values in columns, but keep them to retain the supercell information</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">spgeom1</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">delete_columns</span><span class="p">(</span><span class="n">cols</span><span class="p">,</span> <span class="n">keep_shape</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
-<div class="viewcode-block" id="RecursiveSI.self_energy"><a class="viewcode-back" href="../../../api-generated/sisl.physics.RecursiveSI.html#sisl.physics.RecursiveSI.self_energy">[docs]</a>    <span class="k">def</span> <span class="nf">self_energy</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">E</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">eta</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">eps</span><span class="o">=</span><span class="mf">1e-14</span><span class="p">,</span> <span class="n">bulk</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+<div class="viewcode-block" id="RecursiveSI.self_energy"><a class="viewcode-back" href="../../../api-generated/sisl.physics.RecursiveSI.html#sisl.physics.RecursiveSI.self_energy">[docs]</a>    <span class="k">def</span> <span class="nf">self_energy</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">E</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">eps</span><span class="o">=</span><span class="mf">1e-14</span><span class="p">,</span> <span class="n">bulk</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
         <span class="sa">r</span><span class="sd">&quot;&quot;&quot; Return a dense matrix with the self-energy at energy `E` and k-point `k` (default Gamma).</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
-<span class="sd">        E : float</span>
-<span class="sd">          energy at which the calculation will take place (should *not* be complex)</span>
+<span class="sd">        E : float/complex</span>
+<span class="sd">          energy at which the calculation will take place</span>
 <span class="sd">        k : array_like, optional</span>
 <span class="sd">          k-point at which the self-energy should be evaluated.</span>
 <span class="sd">          the k-point should be in units of the reciprocal lattice vectors, and</span>
 <span class="sd">          the semi-infinite component will be automatically set to zero.</span>
-<span class="sd">        eta : float, optional</span>
-<span class="sd">          the imaginary value to evaluate the self-energy with. Defaults to the</span>
-<span class="sd">          value with which the object was created</span>
 <span class="sd">        dtype : numpy.dtype</span>
 <span class="sd">          the resulting data type</span>
 <span class="sd">        eps : float, optional</span>
@@ -354,18 +354,14 @@
 <span class="sd">        -------</span>
 <span class="sd">        self-energy : the self-energy corresponding to the semi-infinite direction</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="n">eta</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">eta</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">eta</span>
-        <span class="k">try</span><span class="p">:</span>
-            <span class="n">Z</span> <span class="o">=</span> <span class="n">E</span><span class="o">.</span><span class="n">real</span> <span class="o">+</span> <span class="mi">1</span><span class="n">j</span> <span class="o">*</span> <span class="n">eta</span>
-        <span class="k">except</span><span class="p">:</span>
-            <span class="n">Z</span> <span class="o">=</span> <span class="n">E</span> <span class="o">+</span> <span class="mi">1</span><span class="n">j</span> <span class="o">*</span> <span class="n">eta</span>
+        <span class="k">if</span> <span class="n">E</span><span class="o">.</span><span class="n">imag</span> <span class="o">==</span> <span class="mf">0.</span><span class="p">:</span>
+            <span class="n">E</span> <span class="o">=</span> <span class="n">E</span><span class="o">.</span><span class="n">real</span> <span class="o">+</span> <span class="mi">1</span><span class="n">j</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">eta</span>
 
         <span class="c1"># Get k-point</span>
         <span class="n">k</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_correct_k</span><span class="p">(</span><span class="n">k</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="n">dtype</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">dtype</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">complex128</span>
+            <span class="n">dtype</span> <span class="o">=</span> <span class="n">complex128</span>
 
         <span class="n">sp0</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">spgeom0</span>
         <span class="n">sp1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">spgeom1</span>
@@ -373,54 +369,63 @@
         <span class="c1"># As the SparseGeometry inherently works for</span>
         <span class="c1"># orthogonal and non-orthogonal basis, there is no</span>
         <span class="c1"># need to have two algorithms.</span>
-        <span class="n">GB</span> <span class="o">=</span> <span class="p">(</span><span class="n">sp0</span><span class="o">.</span><span class="n">Sk</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span> <span class="o">*</span> <span class="n">Z</span> <span class="o">-</span> <span class="n">sp0</span><span class="o">.</span><span class="n">Pk</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">))</span><span class="o">.</span><span class="n">toarray</span><span class="p">()</span>
+        <span class="n">GB</span> <span class="o">=</span> <span class="n">sp0</span><span class="o">.</span><span class="n">Sk</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s1">&#39;array&#39;</span><span class="p">)</span> <span class="o">*</span> <span class="n">E</span> <span class="o">-</span> <span class="n">sp0</span><span class="o">.</span><span class="n">Pk</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s1">&#39;array&#39;</span><span class="p">)</span>
+        <span class="n">n</span> <span class="o">=</span> <span class="n">GB</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="n">ab</span> <span class="o">=</span> <span class="n">empty</span><span class="p">([</span><span class="n">n</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">n</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span>
+        <span class="n">shape</span> <span class="o">=</span> <span class="n">ab</span><span class="o">.</span><span class="n">shape</span>
+
+        <span class="c1"># Get direct arrays</span>
+        <span class="n">alpha</span> <span class="o">=</span> <span class="n">ab</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">,</span> <span class="p">:]</span><span class="o">.</span><span class="n">view</span><span class="p">()</span>
+        <span class="n">beta</span> <span class="o">=</span> <span class="n">ab</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">,</span> <span class="p">:]</span><span class="o">.</span><span class="n">view</span><span class="p">()</span>
+
+        <span class="c1"># Get solve step arary</span>
+        <span class="n">ab2</span> <span class="o">=</span> <span class="n">ab</span><span class="o">.</span><span class="n">view</span><span class="p">()</span>
+        <span class="n">ab2</span><span class="o">.</span><span class="n">shape</span> <span class="o">=</span> <span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">n</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="n">sp1</span><span class="o">.</span><span class="n">orthogonal</span><span class="p">:</span>
-            <span class="n">alpha</span> <span class="o">=</span> <span class="n">sp1</span><span class="o">.</span><span class="n">Pk</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s1">&#39;array&#39;</span><span class="p">)</span>
-            <span class="n">beta</span>  <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">conjugate</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="n">alpha</span><span class="p">))</span>
+            <span class="n">alpha</span><span class="p">[:,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">sp1</span><span class="o">.</span><span class="n">Pk</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s1">&#39;array&#39;</span><span class="p">)</span>
+            <span class="n">beta</span><span class="p">[:,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">conjugate</span><span class="p">(</span><span class="n">alpha</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="n">M</span> <span class="o">=</span> <span class="n">sp1</span><span class="o">.</span><span class="n">Pk</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span>
-            <span class="n">S</span> <span class="o">=</span> <span class="n">sp1</span><span class="o">.</span><span class="n">Sk</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span>
-            <span class="n">alpha</span> <span class="o">=</span> <span class="p">(</span><span class="n">M</span> <span class="o">-</span> <span class="n">S</span> <span class="o">*</span> <span class="n">Z</span><span class="p">)</span><span class="o">.</span><span class="n">toarray</span><span class="p">()</span>
-            <span class="n">beta</span>  <span class="o">=</span> <span class="p">(</span><span class="n">M</span><span class="o">.</span><span class="n">getH</span><span class="p">()</span> <span class="o">-</span> <span class="n">S</span><span class="o">.</span><span class="n">getH</span><span class="p">()</span> <span class="o">*</span> <span class="n">Z</span><span class="p">)</span><span class="o">.</span><span class="n">toarray</span><span class="p">()</span>
-            <span class="k">del</span> <span class="n">M</span><span class="p">,</span> <span class="n">S</span>
+            <span class="n">P</span> <span class="o">=</span> <span class="n">sp1</span><span class="o">.</span><span class="n">Pk</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s1">&#39;array&#39;</span><span class="p">)</span>
+            <span class="n">S</span> <span class="o">=</span> <span class="n">sp1</span><span class="o">.</span><span class="n">Sk</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s1">&#39;array&#39;</span><span class="p">)</span>
+            <span class="n">alpha</span><span class="p">[:,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">P</span> <span class="o">-</span> <span class="n">S</span> <span class="o">*</span> <span class="n">E</span>
+            <span class="n">beta</span><span class="p">[:,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">conjugate</span><span class="p">(</span><span class="n">P</span><span class="o">.</span><span class="n">T</span><span class="p">)</span> <span class="o">-</span> <span class="n">conjugate</span><span class="p">(</span><span class="n">S</span><span class="o">.</span><span class="n">T</span><span class="p">)</span> <span class="o">*</span> <span class="n">E</span>
+            <span class="k">del</span> <span class="n">P</span><span class="p">,</span> <span class="n">S</span>
 
         <span class="c1"># Surface Green function (self-energy)</span>
         <span class="k">if</span> <span class="n">bulk</span><span class="p">:</span>
-            <span class="n">GS</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">GB</span><span class="p">)</span>
+            <span class="n">GS</span> <span class="o">=</span> <span class="n">GB</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="n">GS</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">GB</span><span class="p">)</span>
+            <span class="n">GS</span> <span class="o">=</span> <span class="n">zeros_like</span><span class="p">(</span><span class="n">GB</span><span class="p">)</span>
 
-        <span class="n">solve</span> <span class="o">=</span> <span class="n">lin</span><span class="o">.</span><span class="n">solve</span>
-
-        <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="c1"># Specifying dot with &#39;out&#39; argument should be faster</span>
+        <span class="n">tmp</span> <span class="o">=</span> <span class="n">empty_like</span><span class="p">(</span><span class="n">GS</span><span class="p">)</span>
         <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
-            <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="n">tab</span> <span class="o">=</span> <span class="n">solve</span><span class="p">(</span><span class="n">GB</span><span class="p">,</span> <span class="n">ab2</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">shape</span><span class="p">)</span>
 
-            <span class="n">tA</span> <span class="o">=</span> <span class="n">solve</span><span class="p">(</span><span class="n">GB</span><span class="p">,</span> <span class="n">alpha</span><span class="p">)</span>
-            <span class="n">tB</span> <span class="o">=</span> <span class="n">solve</span><span class="p">(</span><span class="n">GB</span><span class="p">,</span> <span class="n">beta</span><span class="p">)</span>
-
-            <span class="n">tmp</span> <span class="o">=</span> <span class="n">dot</span><span class="p">(</span><span class="n">alpha</span><span class="p">,</span> <span class="n">tB</span><span class="p">)</span>
+            <span class="n">dot</span><span class="p">(</span><span class="n">alpha</span><span class="p">,</span> <span class="n">tab</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">,</span> <span class="p">:],</span> <span class="n">tmp</span><span class="p">)</span>
             <span class="c1"># Update bulk Green function</span>
-            <span class="n">GB</span> <span class="o">-=</span> <span class="n">tmp</span> <span class="o">+</span> <span class="n">dot</span><span class="p">(</span><span class="n">beta</span><span class="p">,</span> <span class="n">tA</span><span class="p">)</span>
+            <span class="n">subtract</span><span class="p">(</span><span class="n">GB</span><span class="p">,</span> <span class="n">tmp</span><span class="p">,</span> <span class="n">out</span><span class="o">=</span><span class="n">GB</span><span class="p">)</span>
+            <span class="n">subtract</span><span class="p">(</span><span class="n">GB</span><span class="p">,</span> <span class="n">dot</span><span class="p">(</span><span class="n">beta</span><span class="p">,</span> <span class="n">tab</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">,</span> <span class="p">:]),</span> <span class="n">out</span><span class="o">=</span><span class="n">GB</span><span class="p">)</span>
             <span class="c1"># Update surface self-energy</span>
             <span class="n">GS</span> <span class="o">-=</span> <span class="n">tmp</span>
 
             <span class="c1"># Update forward/backward</span>
-            <span class="n">alpha</span> <span class="o">=</span> <span class="n">dot</span><span class="p">(</span><span class="n">alpha</span><span class="p">,</span> <span class="n">tA</span><span class="p">)</span>
-            <span class="n">beta</span> <span class="o">=</span> <span class="n">dot</span><span class="p">(</span><span class="n">beta</span><span class="p">,</span> <span class="n">tB</span><span class="p">)</span>
+            <span class="n">alpha</span><span class="p">[:,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">dot</span><span class="p">(</span><span class="n">alpha</span><span class="p">,</span> <span class="n">tab</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">,</span> <span class="p">:])</span>
+            <span class="n">beta</span><span class="p">[:,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">dot</span><span class="p">(</span><span class="n">beta</span><span class="p">,</span> <span class="n">tab</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">,</span> <span class="p">:])</span>
 
             <span class="c1"># Convergence criteria, it could be stricter</span>
-            <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">amax</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">tmp</span><span class="p">))</span> <span class="o">&lt;</span> <span class="n">eps</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">_abs</span><span class="p">(</span><span class="n">alpha</span><span class="p">)</span><span class="o">.</span><span class="n">max</span><span class="p">()</span> <span class="o">&lt;</span> <span class="n">eps</span><span class="p">:</span>
                 <span class="c1"># Return the pristine Green function</span>
-                <span class="k">del</span> <span class="n">tA</span><span class="p">,</span> <span class="n">tB</span><span class="p">,</span> <span class="n">alpha</span><span class="p">,</span> <span class="n">beta</span><span class="p">,</span> <span class="n">GB</span>
+                <span class="k">del</span> <span class="n">ab</span><span class="p">,</span> <span class="n">alpha</span><span class="p">,</span> <span class="n">beta</span><span class="p">,</span> <span class="n">ab2</span><span class="p">,</span> <span class="n">tab</span><span class="p">,</span> <span class="n">GB</span>
                 <span class="k">if</span> <span class="n">bulk</span><span class="p">:</span>
                     <span class="k">return</span> <span class="n">GS</span>
                 <span class="k">return</span> <span class="o">-</span> <span class="n">GS</span>
 
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="o">+</span><span class="s1">&#39;: could not converge self-energy calculation&#39;</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="RecursiveSI.self_energy_lr"><a class="viewcode-back" href="../../../api-generated/sisl.physics.RecursiveSI.html#sisl.physics.RecursiveSI.self_energy_lr">[docs]</a>    <span class="k">def</span> <span class="nf">self_energy_lr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">E</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">eta</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">eps</span><span class="o">=</span><span class="mf">1e-14</span><span class="p">,</span> <span class="n">bulk</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+<div class="viewcode-block" id="RecursiveSI.self_energy_lr"><a class="viewcode-back" href="../../../api-generated/sisl.physics.RecursiveSI.html#sisl.physics.RecursiveSI.self_energy_lr">[docs]</a>    <span class="k">def</span> <span class="nf">self_energy_lr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">E</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">eps</span><span class="o">=</span><span class="mf">1e-14</span><span class="p">,</span> <span class="n">bulk</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
         <span class="sa">r</span><span class="sd">&quot;&quot;&quot; Return two dense matrices with the left/right self-energy at energy `E` and k-point `k` (default Gamma).</span>
 
 <span class="sd">        Note calculating the LR self-energies simultaneously requires that their chemical potentials are the same.</span>
@@ -428,15 +433,12 @@
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
-<span class="sd">        E : float</span>
-<span class="sd">          energy at which the calculation will take place (should *not* be complex)</span>
+<span class="sd">        E : float/complex</span>
+<span class="sd">          energy at which the calculation will take place, if complex, the hosting ``eta`` won&#39;t be used.</span>
 <span class="sd">        k : array_like, optional</span>
 <span class="sd">          k-point at which the self-energy should be evaluated.</span>
 <span class="sd">          the k-point should be in units of the reciprocal lattice vectors, and</span>
 <span class="sd">          the semi-infinite component will be automatically set to zero.</span>
-<span class="sd">        eta : float, optional</span>
-<span class="sd">          the imaginary value to evaluate the self-energy with. Defaults to the</span>
-<span class="sd">          value with which the object was created</span>
 <span class="sd">        dtype : numpy.dtype</span>
 <span class="sd">          the resulting data type</span>
 <span class="sd">        eps : float, optional</span>
@@ -450,18 +452,14 @@
 <span class="sd">        left : the left self-energy</span>
 <span class="sd">        right : the right self-energy</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="n">eta</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">eta</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">eta</span>
-        <span class="k">try</span><span class="p">:</span>
-            <span class="n">Z</span> <span class="o">=</span> <span class="n">E</span><span class="o">.</span><span class="n">real</span> <span class="o">+</span> <span class="mi">1</span><span class="n">j</span> <span class="o">*</span> <span class="n">eta</span>
-        <span class="k">except</span><span class="p">:</span>
-            <span class="n">Z</span> <span class="o">=</span> <span class="n">E</span> <span class="o">+</span> <span class="mi">1</span><span class="n">j</span> <span class="o">*</span> <span class="n">eta</span>
+        <span class="k">if</span> <span class="n">E</span><span class="o">.</span><span class="n">imag</span> <span class="o">==</span> <span class="mf">0.</span><span class="p">:</span>
+            <span class="n">E</span> <span class="o">=</span> <span class="n">E</span><span class="o">.</span><span class="n">real</span> <span class="o">+</span> <span class="mi">1</span><span class="n">j</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">eta</span>
 
         <span class="c1"># Get k-point</span>
         <span class="n">k</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_correct_k</span><span class="p">(</span><span class="n">k</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="n">dtype</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">dtype</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">complex128</span>
+            <span class="n">dtype</span> <span class="o">=</span> <span class="n">complex128</span>
 
         <span class="n">sp0</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">spgeom0</span>
         <span class="n">sp1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">spgeom1</span>
@@ -469,57 +467,66 @@
         <span class="c1"># As the SparseGeometry inherently works for</span>
         <span class="c1"># orthogonal and non-orthogonal basis, there is no</span>
         <span class="c1"># need to have two algorithms.</span>
-        <span class="n">SmH0</span> <span class="o">=</span> <span class="n">sp0</span><span class="o">.</span><span class="n">Sk</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span> <span class="o">*</span> <span class="n">Z</span> <span class="o">-</span> <span class="n">sp0</span><span class="o">.</span><span class="n">Pk</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span>
-        <span class="n">GB</span> <span class="o">=</span> <span class="n">SmH0</span><span class="o">.</span><span class="n">toarray</span><span class="p">()</span>
+        <span class="n">SmH0</span> <span class="o">=</span> <span class="n">sp0</span><span class="o">.</span><span class="n">Sk</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s1">&#39;array&#39;</span><span class="p">)</span> <span class="o">*</span> <span class="n">E</span> <span class="o">-</span> <span class="n">sp0</span><span class="o">.</span><span class="n">Pk</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s1">&#39;array&#39;</span><span class="p">)</span>
+        <span class="n">GB</span> <span class="o">=</span> <span class="n">SmH0</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">n</span> <span class="o">=</span> <span class="n">GB</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="n">ab</span> <span class="o">=</span> <span class="n">empty</span><span class="p">([</span><span class="n">n</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">n</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span>
+        <span class="n">shape</span> <span class="o">=</span> <span class="n">ab</span><span class="o">.</span><span class="n">shape</span>
+
+        <span class="c1"># Get direct arrays</span>
+        <span class="n">alpha</span> <span class="o">=</span> <span class="n">ab</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">,</span> <span class="p">:]</span><span class="o">.</span><span class="n">view</span><span class="p">()</span>
+        <span class="n">beta</span> <span class="o">=</span> <span class="n">ab</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">,</span> <span class="p">:]</span><span class="o">.</span><span class="n">view</span><span class="p">()</span>
+
+        <span class="c1"># Get solve step arary</span>
+        <span class="n">ab2</span> <span class="o">=</span> <span class="n">ab</span><span class="o">.</span><span class="n">view</span><span class="p">()</span>
+        <span class="n">ab2</span><span class="o">.</span><span class="n">shape</span> <span class="o">=</span> <span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">n</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="n">sp1</span><span class="o">.</span><span class="n">orthogonal</span><span class="p">:</span>
-            <span class="n">alpha</span> <span class="o">=</span> <span class="n">sp1</span><span class="o">.</span><span class="n">Pk</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s1">&#39;array&#39;</span><span class="p">)</span>
-            <span class="n">beta</span>  <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">conjugate</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="n">alpha</span><span class="p">))</span>
+            <span class="n">alpha</span><span class="p">[:,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">sp1</span><span class="o">.</span><span class="n">Pk</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s1">&#39;array&#39;</span><span class="p">)</span>
+            <span class="n">beta</span><span class="p">[:,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">conjugate</span><span class="p">(</span><span class="n">alpha</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="n">M</span> <span class="o">=</span> <span class="n">sp1</span><span class="o">.</span><span class="n">Pk</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span>
-            <span class="n">S</span> <span class="o">=</span> <span class="n">sp1</span><span class="o">.</span><span class="n">Sk</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span>
-            <span class="n">alpha</span> <span class="o">=</span> <span class="p">(</span><span class="n">M</span> <span class="o">-</span> <span class="n">S</span> <span class="o">*</span> <span class="n">Z</span><span class="p">)</span><span class="o">.</span><span class="n">toarray</span><span class="p">()</span>
-            <span class="n">beta</span>  <span class="o">=</span> <span class="p">(</span><span class="n">M</span><span class="o">.</span><span class="n">getH</span><span class="p">()</span> <span class="o">-</span> <span class="n">S</span><span class="o">.</span><span class="n">getH</span><span class="p">()</span> <span class="o">*</span> <span class="n">Z</span><span class="p">)</span><span class="o">.</span><span class="n">toarray</span><span class="p">()</span>
-            <span class="k">del</span> <span class="n">M</span><span class="p">,</span> <span class="n">S</span>
+            <span class="n">P</span> <span class="o">=</span> <span class="n">sp1</span><span class="o">.</span><span class="n">Pk</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s1">&#39;array&#39;</span><span class="p">)</span>
+            <span class="n">S</span> <span class="o">=</span> <span class="n">sp1</span><span class="o">.</span><span class="n">Sk</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s1">&#39;array&#39;</span><span class="p">)</span>
+            <span class="n">alpha</span><span class="p">[:,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">P</span> <span class="o">-</span> <span class="n">S</span> <span class="o">*</span> <span class="n">E</span>
+            <span class="n">beta</span><span class="p">[:,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">conjugate</span><span class="p">(</span><span class="n">P</span><span class="o">.</span><span class="n">T</span><span class="p">)</span> <span class="o">-</span> <span class="n">conjugate</span><span class="p">(</span><span class="n">S</span><span class="o">.</span><span class="n">T</span><span class="p">)</span> <span class="o">*</span> <span class="n">E</span>
+            <span class="k">del</span> <span class="n">P</span><span class="p">,</span> <span class="n">S</span>
 
         <span class="c1"># Surface Green function (self-energy)</span>
         <span class="k">if</span> <span class="n">bulk</span><span class="p">:</span>
-            <span class="n">GS</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">GB</span><span class="p">)</span>
+            <span class="n">GS</span> <span class="o">=</span> <span class="n">GB</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="n">GS</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">GB</span><span class="p">)</span>
+            <span class="n">GS</span> <span class="o">=</span> <span class="n">zeros_like</span><span class="p">(</span><span class="n">GB</span><span class="p">)</span>
 
-        <span class="n">solve</span> <span class="o">=</span> <span class="n">lin</span><span class="o">.</span><span class="n">solve</span>
-
-        <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="c1"># Specifying dot with &#39;out&#39; argument should be faster</span>
+        <span class="n">tmp</span> <span class="o">=</span> <span class="n">empty_like</span><span class="p">(</span><span class="n">GS</span><span class="p">)</span>
         <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
-            <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="n">tab</span> <span class="o">=</span> <span class="n">solve</span><span class="p">(</span><span class="n">GB</span><span class="p">,</span> <span class="n">ab2</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">shape</span><span class="p">)</span>
 
-            <span class="n">tA</span> <span class="o">=</span> <span class="n">solve</span><span class="p">(</span><span class="n">GB</span><span class="p">,</span> <span class="n">alpha</span><span class="p">)</span>
-            <span class="n">tB</span> <span class="o">=</span> <span class="n">solve</span><span class="p">(</span><span class="n">GB</span><span class="p">,</span> <span class="n">beta</span><span class="p">)</span>
-
-            <span class="n">tmp</span> <span class="o">=</span> <span class="n">dot</span><span class="p">(</span><span class="n">alpha</span><span class="p">,</span> <span class="n">tB</span><span class="p">)</span>
+            <span class="n">dot</span><span class="p">(</span><span class="n">alpha</span><span class="p">,</span> <span class="n">tab</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">,</span> <span class="p">:],</span> <span class="n">tmp</span><span class="p">)</span>
             <span class="c1"># Update bulk Green function</span>
-            <span class="n">GB</span> <span class="o">-=</span> <span class="n">tmp</span> <span class="o">+</span> <span class="n">dot</span><span class="p">(</span><span class="n">beta</span><span class="p">,</span> <span class="n">tA</span><span class="p">)</span>
+            <span class="n">subtract</span><span class="p">(</span><span class="n">GB</span><span class="p">,</span> <span class="n">tmp</span><span class="p">,</span> <span class="n">out</span><span class="o">=</span><span class="n">GB</span><span class="p">)</span>
+            <span class="n">subtract</span><span class="p">(</span><span class="n">GB</span><span class="p">,</span> <span class="n">dot</span><span class="p">(</span><span class="n">beta</span><span class="p">,</span> <span class="n">tab</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">,</span> <span class="p">:]),</span> <span class="n">out</span><span class="o">=</span><span class="n">GB</span><span class="p">)</span>
             <span class="c1"># Update surface self-energy</span>
             <span class="n">GS</span> <span class="o">-=</span> <span class="n">tmp</span>
 
             <span class="c1"># Update forward/backward</span>
-            <span class="n">alpha</span> <span class="o">=</span> <span class="n">dot</span><span class="p">(</span><span class="n">alpha</span><span class="p">,</span> <span class="n">tA</span><span class="p">)</span>
-            <span class="n">beta</span> <span class="o">=</span> <span class="n">dot</span><span class="p">(</span><span class="n">beta</span><span class="p">,</span> <span class="n">tB</span><span class="p">)</span>
+            <span class="n">alpha</span><span class="p">[:,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">dot</span><span class="p">(</span><span class="n">alpha</span><span class="p">,</span> <span class="n">tab</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">,</span> <span class="p">:])</span>
+            <span class="n">beta</span><span class="p">[:,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">dot</span><span class="p">(</span><span class="n">beta</span><span class="p">,</span> <span class="n">tab</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">,</span> <span class="p">:])</span>
 
             <span class="c1"># Convergence criteria, it could be stricter</span>
-            <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">amax</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">tmp</span><span class="p">))</span> <span class="o">&lt;</span> <span class="n">eps</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">_abs</span><span class="p">(</span><span class="n">alpha</span><span class="p">)</span><span class="o">.</span><span class="n">max</span><span class="p">()</span> <span class="o">&lt;</span> <span class="n">eps</span><span class="p">:</span>
                 <span class="c1"># Return the pristine Green function</span>
-                <span class="k">del</span> <span class="n">tA</span><span class="p">,</span> <span class="n">tB</span><span class="p">,</span> <span class="n">alpha</span><span class="p">,</span> <span class="n">beta</span>
+                <span class="k">del</span> <span class="n">ab</span><span class="p">,</span> <span class="n">alpha</span><span class="p">,</span> <span class="n">beta</span><span class="p">,</span> <span class="n">ab2</span><span class="p">,</span> <span class="n">tab</span>
                 <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">semi_inf_dir</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
                     <span class="c1"># GS is the &quot;right&quot; self-energy</span>
                     <span class="k">if</span> <span class="n">bulk</span><span class="p">:</span>
-                        <span class="k">return</span> <span class="n">GB</span> <span class="o">-</span> <span class="n">GS</span> <span class="o">+</span> <span class="n">SmH0</span><span class="o">.</span><span class="n">toarray</span><span class="p">(),</span> <span class="n">GS</span>
-                    <span class="k">return</span> <span class="n">GS</span> <span class="o">-</span> <span class="n">GB</span> <span class="o">+</span> <span class="n">SmH0</span><span class="o">.</span><span class="n">toarray</span><span class="p">(),</span> <span class="o">-</span> <span class="n">GS</span>
+                        <span class="k">return</span> <span class="n">GB</span> <span class="o">-</span> <span class="n">GS</span> <span class="o">+</span> <span class="n">SmH0</span><span class="p">,</span> <span class="n">GS</span>
+                    <span class="k">return</span> <span class="n">GS</span> <span class="o">-</span> <span class="n">GB</span> <span class="o">+</span> <span class="n">SmH0</span><span class="p">,</span> <span class="o">-</span> <span class="n">GS</span>
                 <span class="c1"># GS is the &quot;left&quot; self-energy</span>
                 <span class="k">if</span> <span class="n">bulk</span><span class="p">:</span>
-                    <span class="k">return</span> <span class="n">GS</span><span class="p">,</span> <span class="n">GB</span> <span class="o">-</span> <span class="n">GS</span> <span class="o">+</span> <span class="n">SmH0</span><span class="o">.</span><span class="n">toarray</span><span class="p">()</span>
-                <span class="k">return</span> <span class="o">-</span> <span class="n">GS</span><span class="p">,</span> <span class="n">GS</span> <span class="o">-</span> <span class="n">GB</span> <span class="o">+</span> <span class="n">SmH0</span><span class="o">.</span><span class="n">toarray</span><span class="p">()</span>
+                    <span class="k">return</span> <span class="n">GS</span><span class="p">,</span> <span class="n">GB</span> <span class="o">-</span> <span class="n">GS</span> <span class="o">+</span> <span class="n">SmH0</span>
+                <span class="k">return</span> <span class="o">-</span> <span class="n">GS</span><span class="p">,</span> <span class="n">GS</span> <span class="o">-</span> <span class="n">GB</span> <span class="o">+</span> <span class="n">SmH0</span>
 
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="o">+</span><span class="s1">&#39;: could not converge self-energy (LR) calculation&#39;</span><span class="p">)</span></div></div>
 </pre></div>

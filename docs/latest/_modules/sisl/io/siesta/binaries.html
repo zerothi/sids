@@ -173,7 +173,7 @@
            <div itemprop="articleBody">
             
   <h1>Source code for sisl.io.siesta.binaries</h1><div class="highlight"><pre>
-<span></span><span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">print_function</span>
+<span></span><span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">print_function</span><span class="p">,</span> <span class="n">division</span>
 
 <span class="kn">from</span> <span class="nn">numbers</span> <span class="k">import</span> <span class="n">Integral</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
@@ -719,7 +719,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_no_u</span> <span class="o">=</span> <span class="n">no_u</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_E</span> <span class="o">=</span> <span class="n">E</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_k</span> <span class="o">=</span> <span class="n">k</span>
-        <span class="k">return</span> <span class="n">no_u</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">E</span> <span class="o">/</span> <span class="n">eV2Ry</span>
+        <span class="k">return</span> <span class="n">no_u</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">E</span> <span class="o">*</span> <span class="n">Ry2eV</span>
 
     <span class="k">def</span> <span class="nf">read_hamiltonian</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Return current Hamiltonian and overlap matrix from the GF file</span>
@@ -734,7 +734,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_ie</span> <span class="o">=</span> <span class="mi">1</span>
 
         <span class="n">H</span><span class="p">,</span> <span class="n">S</span> <span class="o">=</span> <span class="n">_siesta</span><span class="o">.</span><span class="n">read_gf_hs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_iu</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_no_u</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">H</span> <span class="o">/</span> <span class="n">eV2Ry</span><span class="p">,</span> <span class="n">S</span>
+        <span class="k">return</span> <span class="n">H</span> <span class="o">*</span> <span class="n">Ry2eV</span><span class="p">,</span> <span class="n">S</span>
 
     <span class="k">def</span> <span class="nf">read_self_energy</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Return current self-energy</span>
@@ -746,7 +746,7 @@
         <span class="c1"># Step E</span>
         <span class="n">SE</span> <span class="o">=</span> <span class="n">_siesta</span><span class="o">.</span><span class="n">read_gf_se</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_iu</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_no_u</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ie</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_ie</span> <span class="o">+=</span> <span class="mi">1</span>
-        <span class="k">return</span> <span class="n">SE</span> <span class="o">/</span> <span class="n">eV2Ry</span>
+        <span class="k">return</span> <span class="n">SE</span> <span class="o">*</span> <span class="n">Ry2eV</span>
 
     <span class="k">def</span> <span class="nf">write_header</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">E</span><span class="p">,</span> <span class="n">bz</span><span class="p">,</span> <span class="n">obj</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="mf">0.</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Write to the binary file the header of the file</span>
@@ -819,7 +819,12 @@
                             <span class="n">S</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">complex128</span><span class="p">,</span> <span class="s1">&#39;C&#39;</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">no_u</span><span class="o">=</span><span class="n">no</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">write_self_energy</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">SE</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot; Write the current energy, k-point and H and S to the file</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot; Write the current self energy, k-point and H and S to the file</span>
+
+<span class="sd">        The self-energy must correspond to the *bulk* self-energy</span>
+
+<span class="sd">        .. math::</span>
+<span class="sd">            \boldsymbol \Sigma_{\mathrm{bulk}}(E) = \mathbf S E - \mathbf H - \boldsymbol \Sigma(E)</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
