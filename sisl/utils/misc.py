@@ -1,5 +1,6 @@
-from __future__ import division
+from __future__ import print_function, division
 
+import sys
 import inspect
 import functools
 import ast
@@ -266,6 +267,9 @@ def angle(s, rad=True, in_rad=True):
     return ra
 
 
+_ispy3 = sys.version[0] == '3'
+
+
 def allow_kwargs(*args):
     """ Decoractor for forcing `func` to have the named arguments as listed in `args`
 
@@ -280,7 +284,20 @@ def allow_kwargs(*args):
     """
     def deco(func):
         # Retrieve names
-        arg_names, _, kwargs_name, _ = inspect.getargspec(func)
+        if _ispy3:
+            # Build list of arguments and keyword arguments
+            sig = inspect.signature(func)
+            arg_names = []
+            kwargs_name = None
+            for name, p in sig.parameters.items():
+                if p.kind == p.POSITIONAL_ONLY or p.kind == p.POSITIONAL_OR_KEYWORD \
+                   or p.kind == p.KEYWORD_ONLY:
+                    arg_names.append(name)
+                elif p.kind == p.VAR_KEYWORD:
+                    kwargs_name = name
+        else:
+            arg_names, _, kwargs_name, _ = inspect.getargspec(func)
+
         if not kwargs_name is None:
             return func
 
@@ -299,7 +316,7 @@ def allow_kwargs(*args):
         def dec_func(*args, **kwargs):
             # Simply remove all the arguments that cannot be passed to the function
             for arg in args_:
-                kwargs.pop(arg, None)
+                del kwargs[arg]
             return func(*args, **kwargs)
 
         return dec_func

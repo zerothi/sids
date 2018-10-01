@@ -1,4 +1,4 @@
-from __future__ import print_function
+from __future__ import print_function, division
 
 from numbers import Integral
 import numpy as np
@@ -544,7 +544,7 @@ class _gfSileSiesta(SileBinSiesta):
         self._no_u = no_u
         self._E = E
         self._k = k
-        return no_u, k, E / eV2Ry
+        return no_u, k, E * Ry2eV
 
     def read_hamiltonian(self):
         """ Return current Hamiltonian and overlap matrix from the GF file
@@ -559,7 +559,7 @@ class _gfSileSiesta(SileBinSiesta):
         self._ie = 1
 
         H, S = _siesta.read_gf_hs(self._iu, self._no_u)
-        return H / eV2Ry, S
+        return H * Ry2eV, S
 
     def read_self_energy(self):
         """ Return current self-energy
@@ -571,7 +571,7 @@ class _gfSileSiesta(SileBinSiesta):
         # Step E
         SE = _siesta.read_gf_se(self._iu, self._no_u, self._ie)
         self._ie += 1
-        return SE / eV2Ry
+        return SE * Ry2eV
 
     def write_header(self, E, bz, obj, mu=0.):
         """ Write to the binary file the header of the file
@@ -644,7 +644,12 @@ class _gfSileSiesta(SileBinSiesta):
                             S.astype(np.complex128, 'C', copy=False).T, no_u=no)
 
     def write_self_energy(self, SE):
-        """ Write the current energy, k-point and H and S to the file
+        r""" Write the current self energy, k-point and H and S to the file
+
+        The self-energy must correspond to the *bulk* self-energy
+
+        .. math::
+            \boldsymbol \Sigma_{\mathrm{bulk}}(E) = \mathbf S E - \mathbf H - \boldsymbol \Sigma(E)
 
         Parameters
         ----------

@@ -9,8 +9,12 @@ publications below.
 Please help maintaining the list complete via a `pull request <pr_>`_ or
 by writing an email to `nickpapior@gmail.com <mailto:nickpapior@gmail.com>`_.
 
+#. Z. Nourbakhsh and R. Asgari,
+   *Phosphorene as nanoelectromechanical material*,
+   Physical Review B **98**, `125427 (2018) <https://journals.aps.org/prb/abstract/10.1103/PhysRevB.98.125427>`_
+
 #. G. Calogero, N. Papior, P. Bøggild and M. Brandbyge,
-   *CLarge-scale tight-binding simulations of quantum transport in ballistic graphene*,
+   *Large-scale tight-binding simulations of quantum transport in ballistic graphene*,
    Journal of Physics: Condensed Matter, `(2018) <http://iopscience.iop.org/article/10.1088/1361-648X/aad6f1>`_
 
 #. Z. Nourbakhsh and R. Asgari,

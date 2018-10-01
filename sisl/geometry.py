@@ -709,9 +709,9 @@ class Geometry(SuperCellChild):
             # get all elements within two radii
             all_idx = self.close(idx, R=R)
             # Get unit-cell atoms
-            all_idx[0] = self.sc2uc(all_idx[0], uniq=True)
+            all_idx[0] = self.sc2uc(all_idx[0], unique=True)
             # First extend the search-space (before reducing)
-            all_idx[1] = self.sc2uc(append(all_idx[1], all_idx[0]), uniq=True)
+            all_idx[1] = self.sc2uc(append(all_idx[1], all_idx[0]), unique=True)
 
             # Only select those who have not been runned yet
             all_idx[0] = all_idx[0][not_passed[all_idx[0]].nonzero()[0]]
@@ -829,9 +829,9 @@ class Geometry(SuperCellChild):
             all_idx = self.within(dS)
 
             # Get unit-cell atoms
-            all_idx[0] = self.sc2uc(all_idx[0], uniq=True)
+            all_idx[0] = self.sc2uc(all_idx[0], unique=True)
             # First extend the search-space (before reducing)
-            all_idx[1] = self.sc2uc(append(all_idx[1], all_idx[0]), uniq=True)
+            all_idx[1] = self.sc2uc(append(all_idx[1], all_idx[0]), unique=True)
 
             # Only select those who have not been runned yet
             all_idx[0] = all_idx[0][not_passed[all_idx[0]].nonzero()[0]]
@@ -917,6 +917,27 @@ class Geometry(SuperCellChild):
         g = self.__class__(np.copy(self.xyz), atom=self.atoms.copy(), sc=self.sc.copy())
         g._names = self.names.copy()
         return g
+
+    def sort(self, axes=(2, 1, 0)):
+        """ Return an equivalent geometry by sorting the coordinates according to the axis orders
+
+        This is equivalent to:
+
+        >>> idx = np.lexsort((self.xyz[:, i] for i in axis))
+        >>> new = self.sub(idx)
+
+        Parameters
+        ----------
+        axes : (*,)
+           sorting axes (note the last element has highest precedence)
+
+        Returns
+        -------
+        Geometry : the sorted geometry
+        """
+        axes = _a.arrayi(axes).ravel()
+        idx = np.lexsort(tuple((self.xyz[:, i] for i in axes)))
+        return self.sub(idx)
 
     def optimize_nsc(self, axis=None, R=None):
         """ Optimize the number of supercell connections based on ``self.maxR()``
@@ -1426,7 +1447,7 @@ class Geometry(SuperCellChild):
 
         if not atom is None:
             # Only rotate the unique values
-            atom = self.sc2uc(atom, uniq=True)
+            atom = self.sc2uc(atom, unique=True)
 
         # Ensure the normal vector is normalized... (flatten == copy)
         vn = _a.asarrayd(v).flatten()
@@ -2649,7 +2670,7 @@ class Geometry(SuperCellChild):
 
         return array_arange(ob, oe)
 
-    def o2a(self, io, uniq=False):
+    def o2a(self, io, unique=False):
         """ Atomic index corresponding to the orbital indicies.
 
         This is a particurlaly slow algorithm due to for-loops.
@@ -2664,7 +2685,7 @@ class Geometry(SuperCellChild):
              If True only return the unique atoms.
         """
         if isinstance(io, Integral):
-            if uniq:
+            if unique:
                 return np.unique(np.argmax(io % self.no <= self.lasto) + (io // self.no) * self.na)
             return np.argmax(io % self.no <= self.lasto) + (io // self.no) * self.na
 
@@ -2672,11 +2693,11 @@ class Geometry(SuperCellChild):
         # Use b-casting rules
         a.shape = (-1, 1)
         a = np.argmax(a <= self.lasto, axis=1)
-        if uniq:
+        if unique:
             return np.unique(a + (io // self.no) * self.na)
         return a + (io // self.no) * self.na
 
-    def sc2uc(self, atom, uniq=False):
+    def sc2uc(self, atom, unique=False):
         """ Returns atom from super-cell indices to unit-cell indices, possibly removing dublicates
 
         Parameters
@@ -2687,12 +2708,12 @@ class Geometry(SuperCellChild):
            If True the returned indices are unique and sorted.
         """
         atom = _a.asarrayi(atom) % self.na
-        if uniq:
+        if unique:
             return np.unique(atom)
         return atom
     asc2uc = sc2uc
 
-    def osc2uc(self, orb, uniq=False):
+    def osc2uc(self, orb, unique=False):
         """ Returns orbitals from super-cell indices to unit-cell indices, possibly removing dublicates
 
         Parameters
@@ -2703,7 +2724,7 @@ class Geometry(SuperCellChild):
            If True the returned indices are unique and sorted.
         """
         orb = _a.asarrayi(orb) % self.no
-        if uniq:
+        if unique:
             return np.unique(orb)
         return orb
 

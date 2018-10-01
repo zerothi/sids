@@ -1,13 +1,16 @@
 from __future__ import print_function, division
 
-
 import numpy as np
-from numpy import dot
+from numpy import dot, amax, conjugate
+from numpy import subtract
+from numpy import empty, zeros_like, empty_like, complex128
+from numpy import abs as _abs
 
 from sisl.messages import warn
 from sisl.utils.ranges import array_arange
 import sisl._array as _a
 import sisl.linalg as lin
+from sisl.linalg import solve
 
 __all__ = ['SelfEnergy', 'SemiInfinite']
 __all__ += ['RecursiveSI']
@@ -153,20 +156,17 @@ class RecursiveSI(SemiInfinite):
         # Delete all values in columns, but keep them to retain the supercell information
         self.spgeom1._csr.delete_columns(cols, keep_shape=True)
 
-    def self_energy(self, E, k=None, eta=None, dtype=None, eps=1e-14, bulk=False):
+    def self_energy(self, E, k=None, dtype=None, eps=1e-14, bulk=False):
         r""" Return a dense matrix with the self-energy at energy `E` and k-point `k` (default Gamma).
 
         Parameters
         ----------
-        E : float
-          energy at which the calculation will take place (should *not* be complex)
+        E : float/complex
+          energy at which the calculation will take place
         k : array_like, optional
           k-point at which the self-energy should be evaluated.
           the k-point should be in units of the reciprocal lattice vectors, and
           the semi-infinite component will be automatically set to zero.
-        eta : float, optional
-          the imaginary value to evaluate the self-energy with. Defaults to the
-          value with which the object was created
         dtype : numpy.dtype
           the resulting data type
         eps : float, optional
@@ -179,18 +179,14 @@ class RecursiveSI(SemiInfinite):
         -------
         self-energy : the self-energy corresponding to the semi-infinite direction
         """
-        if eta is None:
-            eta = self.eta
-        try:
-            Z = E.real + 1j * eta
-        except:
-            Z = E + 1j * eta
+        if E.imag == 0.:
+            E = E.real + 1j * self.eta
 
         # Get k-point
         k = self._correct_k(k)
 
         if dtype is None:
-            dtype = np.complex128
+            dtype = complex128
 
         sp0 = self.spgeom0
         sp1 = self.spgeom1
@@ -198,54 +194,63 @@ class RecursiveSI(SemiInfinite):
         # As the SparseGeometry inherently works for
         # orthogonal and non-orthogonal basis, there is no
         # need to have two algorithms.
-        GB = (sp0.Sk(k, dtype=dtype) * Z - sp0.Pk(k, dtype=dtype)).toarray()
+        GB = sp0.Sk(k, dtype=dtype, format='array') * E - sp0.Pk(k, dtype=dtype, format='array')
+        n = GB.shape[0]
+
+        ab = empty([n, 2, n], dtype=dtype)
+        shape = ab.shape
+
+        # Get direct arrays
+        alpha = ab[:, 0, :].view()
+        beta = ab[:, 1, :].view()
+
+        # Get solve step arary
+        ab2 = ab.view()
+        ab2.shape = (n, 2 * n)
 
         if sp1.orthogonal:
-            alpha = sp1.Pk(k, dtype=dtype, format='array')
-            beta  = np.conjugate(np.transpose(alpha))
+            alpha[:, :] = sp1.Pk(k, dtype=dtype, format='array')
+            beta[:, :] = conjugate(alpha.T)
         else:
-            M = sp1.Pk(k, dtype=dtype)
-            S = sp1.Sk(k, dtype=dtype)
-            alpha = (M - S * Z).toarray()
-            beta  = (M.getH() - S.getH() * Z).toarray()
-            del M, S
+            P = sp1.Pk(k, dtype=dtype, format='array')
+            S = sp1.Sk(k, dtype=dtype, format='array')
+            alpha[:, :] = P - S * E
+            beta[:, :] = conjugate(P.T) - conjugate(S.T) * E
+            del P, S
 
         # Surface Green function (self-energy)
         if bulk:
-            GS = np.copy(GB)
+            GS = GB.copy()
         else:
-            GS = np.zeros_like(GB)
+            GS = zeros_like(GB)
 
-        solve = lin.solve
-
-        i = 0
+        # Specifying dot with 'out' argument should be faster
+        tmp = empty_like(GS)
         while True:
-            i += 1
+            tab = solve(GB, ab2).reshape(shape)
 
-            tA = solve(GB, alpha)
-            tB = solve(GB, beta)
-
-            tmp = dot(alpha, tB)
+            dot(alpha, tab[:, 1, :], tmp)
             # Update bulk Green function
-            GB -= tmp + dot(beta, tA)
+            subtract(GB, tmp, out=GB)
+            subtract(GB, dot(beta, tab[:, 0, :]), out=GB)
             # Update surface self-energy
             GS -= tmp
 
             # Update forward/backward
-            alpha = dot(alpha, tA)
-            beta = dot(beta, tB)
+            alpha[:, :] = dot(alpha, tab[:, 0, :])
+            beta[:, :] = dot(beta, tab[:, 1, :])
 
             # Convergence criteria, it could be stricter
-            if np.amax(np.abs(tmp)) < eps:
+            if _abs(alpha).max() < eps:
                 # Return the pristine Green function
-                del tA, tB, alpha, beta, GB
+                del ab, alpha, beta, ab2, tab, GB
                 if bulk:
                     return GS
                 return - GS
 
         raise ValueError(self.__class__.__name__+': could not converge self-energy calculation')
 
-    def self_energy_lr(self, E, k=None, eta=None, dtype=None, eps=1e-14, bulk=False):
+    def self_energy_lr(self, E, k=None, dtype=None, eps=1e-14, bulk=False):
         r""" Return two dense matrices with the left/right self-energy at energy `E` and k-point `k` (default Gamma).
 
         Note calculating the LR self-energies simultaneously requires that their chemical potentials are the same.
@@ -253,15 +258,12 @@ class RecursiveSI(SemiInfinite):
 
         Parameters
         ----------
-        E : float
-          energy at which the calculation will take place (should *not* be complex)
+        E : float/complex
+          energy at which the calculation will take place, if complex, the hosting ``eta`` won't be used.
         k : array_like, optional
           k-point at which the self-energy should be evaluated.
           the k-point should be in units of the reciprocal lattice vectors, and
           the semi-infinite component will be automatically set to zero.
-        eta : float, optional
-          the imaginary value to evaluate the self-energy with. Defaults to the
-          value with which the object was created
         dtype : numpy.dtype
           the resulting data type
         eps : float, optional
@@ -275,18 +277,14 @@ class RecursiveSI(SemiInfinite):
         left : the left self-energy
         right : the right self-energy
         """
-        if eta is None:
-            eta = self.eta
-        try:
-            Z = E.real + 1j * eta
-        except:
-            Z = E + 1j * eta
+        if E.imag == 0.:
+            E = E.real + 1j * self.eta
 
         # Get k-point
         k = self._correct_k(k)
 
         if dtype is None:
-            dtype = np.complex128
+            dtype = complex128
 
         sp0 = self.spgeom0
         sp1 = self.spgeom1
@@ -294,56 +292,65 @@ class RecursiveSI(SemiInfinite):
         # As the SparseGeometry inherently works for
         # orthogonal and non-orthogonal basis, there is no
         # need to have two algorithms.
-        SmH0 = sp0.Sk(k, dtype=dtype) * Z - sp0.Pk(k, dtype=dtype)
-        GB = SmH0.toarray()
+        SmH0 = sp0.Sk(k, dtype=dtype, format='array') * E - sp0.Pk(k, dtype=dtype, format='array')
+        GB = SmH0.copy()
+        n = GB.shape[0]
+
+        ab = empty([n, 2, n], dtype=dtype)
+        shape = ab.shape
+
+        # Get direct arrays
+        alpha = ab[:, 0, :].view()
+        beta = ab[:, 1, :].view()
+
+        # Get solve step arary
+        ab2 = ab.view()
+        ab2.shape = (n, 2 * n)
 
         if sp1.orthogonal:
-            alpha = sp1.Pk(k, dtype=dtype, format='array')
-            beta  = np.conjugate(np.transpose(alpha))
+            alpha[:, :] = sp1.Pk(k, dtype=dtype, format='array')
+            beta[:, :] = conjugate(alpha.T)
         else:
-            M = sp1.Pk(k, dtype=dtype)
-            S = sp1.Sk(k, dtype=dtype)
-            alpha = (M - S * Z).toarray()
-            beta  = (M.getH() - S.getH() * Z).toarray()
-            del M, S
+            P = sp1.Pk(k, dtype=dtype, format='array')
+            S = sp1.Sk(k, dtype=dtype, format='array')
+            alpha[:, :] = P - S * E
+            beta[:, :] = conjugate(P.T) - conjugate(S.T) * E
+            del P, S
 
         # Surface Green function (self-energy)
         if bulk:
-            GS = np.copy(GB)
+            GS = GB.copy()
         else:
-            GS = np.zeros_like(GB)
+            GS = zeros_like(GB)
 
-        solve = lin.solve
-
-        i = 0
+        # Specifying dot with 'out' argument should be faster
+        tmp = empty_like(GS)
         while True:
-            i += 1
+            tab = solve(GB, ab2).reshape(shape)
 
-            tA = solve(GB, alpha)
-            tB = solve(GB, beta)
-
-            tmp = dot(alpha, tB)
+            dot(alpha, tab[:, 1, :], tmp)
             # Update bulk Green function
-            GB -= tmp + dot(beta, tA)
+            subtract(GB, tmp, out=GB)
+            subtract(GB, dot(beta, tab[:, 0, :]), out=GB)
             # Update surface self-energy
             GS -= tmp
 
             # Update forward/backward
-            alpha = dot(alpha, tA)
-            beta = dot(beta, tB)
+            alpha[:, :] = dot(alpha, tab[:, 0, :])
+            beta[:, :] = dot(beta, tab[:, 1, :])
 
             # Convergence criteria, it could be stricter
-            if np.amax(np.abs(tmp)) < eps:
+            if _abs(alpha).max() < eps:
                 # Return the pristine Green function
-                del tA, tB, alpha, beta
+                del ab, alpha, beta, ab2, tab
                 if self.semi_inf_dir == 1:
                     # GS is the "right" self-energy
                     if bulk:
-                        return GB - GS + SmH0.toarray(), GS
-                    return GS - GB + SmH0.toarray(), - GS
+                        return GB - GS + SmH0, GS
+                    return GS - GB + SmH0, - GS
                 # GS is the "left" self-energy
                 if bulk:
-                    return GS, GB - GS + SmH0.toarray()
-                return - GS, GS - GB + SmH0.toarray()
+                    return GS, GB - GS + SmH0
+                return - GS, GS - GB + SmH0
 
         raise ValueError(self.__class__.__name__+': could not converge self-energy (LR) calculation')

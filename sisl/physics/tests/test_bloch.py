@@ -42,7 +42,7 @@ def test_bloch_method():
 def test_bloch_fail_repeat():
     b = Bloch([2] * 3, tile=False)
     k = b.unfold_points([0] * 3)
-    M = np.zeros([2, 2])
+    M = [np.zeros([2, 2])] * len(k)
     m = b.unfold(M, k)
 
 
@@ -67,13 +67,14 @@ def test_bloch_one_direction(nx, ny, nz):
     HB = H.tile(nx, 0).tile(ny, 1).tile(nz, 2)
 
     KX = [0, 0.1, 0.4358923]
-    KY = [0, 0.128359, 0.340925]
+    KY = [0, 0.128359, -0.340925]
     KZ = [0, 0.445]
     for kx, ky, kz in product(KX, KY, KZ):
-        k_unfold = b.unfold_points([kx, ky, kz])
+        K = [kx, ky, kz]
+        k_unfold = b.unfold_points(K)
 
         HK = [H.Hk(k, format='array') for k in k_unfold]
         H_unfold = b.unfold(HK, k_unfold)
-        H_big = HB.Hk([kx * nx, ky * ny, kz * nz], format='array')
+        H_big = HB.Hk(K, format='array')
 
         assert np.allclose(H_unfold, H_big)

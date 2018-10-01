@@ -365,10 +365,10 @@ class BrillouinZone(object):
             k[np.unravel_index(idx, k.shape)] -= 1.
             idx = (k.ravel() > 0.5).nonzero()[0]
 
-        idx = (k.ravel() < -0.5).nonzero()[0]
+        idx = (k.ravel() <= -0.5).nonzero()[0]
         while len(idx) > 0:
             k[np.unravel_index(idx, k.shape)] += 1.
-            idx = (k.ravel() < -0.5).nonzero()[0]
+            idx = (k.ravel() <= -0.5).nonzero()[0]
 
         return k
 
@@ -382,6 +382,38 @@ class BrillouinZone(object):
         except AttributeError:
             raise AttributeError("'{}' does not exist in class '{}'".format(
                 attr, self.parent.__class__.__name__))
+
+    def _bz_get_func(self):
+        """ Internal method to retrieve the actual function to be called """
+        if callable(self._bz_attr):
+            return self._bz_attr
+        return getattr(self.parent, self._bz_attr)
+
+    def call(self, func, *args, **kwargs):
+        """ Call the function `func` and run as though the function has been called
+
+        This is a wrapper to call user-defined functions not attached to the parent
+        object.
+
+        The below example shows that the equivalence of the call.
+
+        Examples
+        --------
+        >>> H = Hamiltonian(...)
+        >>> bz = BrillouinZone(H)
+        >>> bz.eigh() == bz.call(H.eigh)
+
+        Parameters
+        ----------
+        func : callable
+           method used
+        *args :
+           arguments passed to func in the call sequence
+        **kwargs :
+           keyword arguments passed to func in the call sequence
+        """
+        self._bz_attr = func
+        return self(*args, **kwargs)
 
     # Implement wrapper calls
     def asarray(self):
@@ -413,7 +445,7 @@ class BrillouinZone(object):
         """
 
         def _call(self, *args, **kwargs):
-            func = getattr(self.parent, self._bz_attr)
+            func = self._bz_get_func()
             wrap = allow_kwargs('parent', 'k', 'weight')(kwargs.pop('wrap', _do_nothing))
             eta = tqdm_eta(len(self), self.__class__.__name__ + '.asarray',
                            'k', kwargs.pop('eta', False))
@@ -427,6 +459,7 @@ class BrillouinZone(object):
                 a = np.empty((len(self), ) + v.shape, dtype=v.dtype)
             a[0] = v
             del v
+            eta.update()
             for i in range(1, len(k)):
                 a[i] = wrap(func(*args, k=k[i], **kwargs), parent=parent, k=k[i], weight=w[i])
                 eta.update()
@@ -466,7 +499,7 @@ class BrillouinZone(object):
         """
 
         def _call(self, *args, **kwargs):
-            func = getattr(self.parent, self._bz_attr)
+            func = self._bz_get_func()
             wrap = allow_kwargs('parent', 'k', 'weight')(kwargs.pop('wrap', _do_nothing))
             eta = tqdm_eta(len(self), self.__class__.__name__ + '.asnone',
                            'k', kwargs.pop('eta', False))
@@ -512,7 +545,7 @@ class BrillouinZone(object):
         """
 
         def _call(self, *args, **kwargs):
-            func = getattr(self.parent, self._bz_attr)
+            func = self._bz_get_func()
             wrap = allow_kwargs('parent', 'k', 'weight')(kwargs.pop('wrap', _do_nothing))
             eta = tqdm_eta(len(self), self.__class__.__name__ + '.aslist',
                            'k', kwargs.pop('eta', False))
@@ -559,7 +592,7 @@ class BrillouinZone(object):
         """
 
         def _call(self, *args, **kwargs):
-            func = getattr(self.parent, self._bz_attr)
+            func = self._bz_get_func()
             wrap = allow_kwargs('parent', 'k', 'weight')(kwargs.pop('wrap', _do_nothing))
             eta = tqdm_eta(len(self), self.__class__.__name__ + '.asyield',
                            'k', kwargs.pop('eta', False))
@@ -608,7 +641,7 @@ class BrillouinZone(object):
         """
 
         def _call(self, *args, **kwargs):
-            func = getattr(self.parent, self._bz_attr)
+            func = self._bz_get_func()
             wrap = allow_kwargs('parent', 'k', 'weight')(kwargs.pop('wrap', _do_nothing))
             eta = tqdm_eta(len(self), self.__class__.__name__ + '.asaverage',
                            'k', kwargs.pop('eta', False))
@@ -616,6 +649,7 @@ class BrillouinZone(object):
             k = self.k
             w = self.weight
             v = wrap(func(*args, k=k[0], **kwargs), parent=parent, k=k[0], weight=w[0]) * w[0]
+            eta.update()
             for i in range(1, len(k)):
                 v += wrap(func(*args, k=k[i], **kwargs), parent=parent, k=k[i], weight=w[i]) * w[i]
                 eta.update()
@@ -659,7 +693,7 @@ class BrillouinZone(object):
         """
 
         def _call(self, *args, **kwargs):
-            func = getattr(self.parent, self._bz_attr)
+            func = self._bz_get_func()
             wrap = allow_kwargs('parent', 'k', 'weight')(kwargs.pop('wrap', _do_nothing))
             eta = tqdm_eta(len(self), self.__class__.__name__ + '.assum',
                            'k', kwargs.pop('eta', False))
@@ -667,6 +701,7 @@ class BrillouinZone(object):
             k = self.k
             w = self.weight
             v = wrap(func(*args, k=k[0], **kwargs), parent=parent, k=k[0], weight=w[0])
+            eta.update()
             for i in range(1, len(k)):
                 v += wrap(func(*args, k=k[i], **kwargs), parent=parent, k=k[i], weight=w[i])
                 eta.update()
@@ -889,7 +924,7 @@ class MonkhorstPack(BrillouinZone):
             data_axis = kwargs.pop('data_axis', None)
             grid_unit = kwargs.pop('grid_unit', 'b')
 
-            func = getattr(self.parent, self._bz_attr)
+            func = self._bz_get_func()
             wrap = allow_kwargs('parent', 'k', 'weight')(kwargs.pop('wrap', _do_nothing))
             eta = tqdm_eta(len(self), self.__class__.__name__ + '.asgrid',
                            'k', kwargs.pop('eta', False))
@@ -987,6 +1022,7 @@ class MonkhorstPack(BrillouinZone):
             del v
 
             # Now perform calculation
+            eta.update()
             if data_axis is None:
                 for i in range(1, len(k)):
                     grid[k2idx(k[i])] = wrap(func(*args, k=k[i], **kwargs),
