@@ -227,7 +227,8 @@
 <span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">find_common_type</span>
 <span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">floor</span><span class="p">,</span> <span class="n">ceil</span>
 <span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">conj</span><span class="p">,</span> <span class="n">dot</span><span class="p">,</span> <span class="n">ogrid</span>
-<span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">cos</span><span class="p">,</span> <span class="n">sin</span><span class="p">,</span> <span class="n">pi</span><span class="p">,</span> <span class="n">int32</span>
+<span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">cos</span><span class="p">,</span> <span class="n">sin</span><span class="p">,</span> <span class="n">pi</span>
+<span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">int32</span><span class="p">,</span> <span class="n">complex128</span>
 <span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">add</span><span class="p">,</span> <span class="n">angle</span><span class="p">,</span> <span class="n">sort</span>
 
 <span class="kn">from</span> <span class="nn">sisl</span> <span class="k">import</span> <span class="n">units</span><span class="p">,</span> <span class="n">constant</span>
@@ -888,31 +889,32 @@
     <span class="k">return</span> <span class="n">M</span> <span class="o">*</span> <span class="n">_inv_eff_mass_const</span>
 
 
-<div class="viewcode-block" id="berry_phase"><a class="viewcode-back" href="../../../api-generated/sisl.physics.electron.berry_phase.html#sisl.physics.berry_phase">[docs]</a><span class="k">def</span> <span class="nf">berry_phase</span><span class="p">(</span><span class="n">bz_loop</span><span class="p">,</span> <span class="n">sub</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">eigvals</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">_gauge</span><span class="o">=</span><span class="s1">&#39;r&#39;</span><span class="p">):</span>
+<div class="viewcode-block" id="berry_phase"><a class="viewcode-back" href="../../../api-generated/sisl.physics.electron.berry_phase.html#sisl.physics.berry_phase">[docs]</a><span class="k">def</span> <span class="nf">berry_phase</span><span class="p">(</span><span class="n">contour</span><span class="p">,</span> <span class="n">sub</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">eigvals</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">closed</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
     <span class="sa">r</span><span class="sd">&quot;&quot;&quot; Calculate the Berry-phase on a loop using a predefined path</span>
 
 <span class="sd">    The Berry phase for a single Bloch state is calculated using the discretized formula:</span>
 
 <span class="sd">    .. math::</span>
-<span class="sd">       \phi = - \Im\ln \prod_i^{N-1} \mathrm{det} \langle \psi_{k_i} | \psi_{k_{i+1}} \rangle</span>
+<span class="sd">       \phi = - \Im\ln \mathrm{det} \prod_i^{N-1} \langle \psi_{k_i} | \psi_{k_{i+1}} \rangle</span>
 
 <span class="sd">    where :math:`\langle \psi_{k_i} | \psi_{k_{i+1}} \rangle` may be exchanged with an overlap matrix</span>
 <span class="sd">    of the investigated bands.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    bz_loop : BrillouinZone</span>
-<span class="sd">       containing the closed contour and has the ``bz_loop.parent`` as an instance of Hamiltonian. The</span>
+<span class="sd">    contour : BrillouinZone</span>
+<span class="sd">       containing the closed contour and has the ``contour.parent`` as an instance of Hamiltonian. The</span>
 <span class="sd">       first and last k-point must not be the same.</span>
 <span class="sd">    sub : None or list of int, optional</span>
 <span class="sd">       selected bands to calculate the Berry phase of</span>
 <span class="sd">    eigvals : bool, optional</span>
 <span class="sd">       return the eigenvalues of the product of the overlap matrices</span>
+<span class="sd">    closed : bool, optional</span>
+<span class="sd">       whether or not to include the connection of the last and first points in the loop (unwanted for the Zak phase)</span>
 
 <span class="sd">    Notes</span>
 <span class="sd">    -----</span>
-<span class="sd">    The Brillouin zone object *must* contain a closed discretized contour without any double points.</span>
-<span class="sd">    It is the users responsibility to assert this.</span>
+<span class="sd">    The Brillouin zone object *need* not contain a closed discretized contour by doubling the first point.</span>
 
 <span class="sd">    The implementation is very similar to PythTB and refer to the details outlined in PythTB for</span>
 <span class="sd">    additional details.</span>
@@ -943,20 +945,15 @@
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="kn">from</span> <span class="nn">.hamiltonian</span> <span class="k">import</span> <span class="n">Hamiltonian</span>
     <span class="c1"># Currently we require the Berry phase calculation to *only* accept Hamiltonians</span>
-    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">bz_loop</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span> <span class="n">Hamiltonian</span><span class="p">):</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">contour</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span> <span class="n">Hamiltonian</span><span class="p">):</span>
         <span class="k">raise</span> <span class="n">SislError</span><span class="p">(</span><span class="s1">&#39;berry_phase: requires the Brillouin zone object to contain a Hamiltonian!&#39;</span><span class="p">)</span>
 
-    <span class="k">if</span> <span class="ow">not</span> <span class="n">bz_loop</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">orthogonal</span><span class="p">:</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">contour</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">orthogonal</span><span class="p">:</span>
         <span class="k">raise</span> <span class="n">SislError</span><span class="p">(</span><span class="s1">&#39;berry_phase: requires the Hamiltonian to use an orthogonal basis!&#39;</span><span class="p">)</span>
 
-    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">allclose</span><span class="p">(</span><span class="n">bz_loop</span><span class="o">.</span><span class="n">k</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="p">:],</span> <span class="n">bz_loop</span><span class="o">.</span><span class="n">k</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="p">:]):</span>
-        <span class="k">raise</span> <span class="n">SislError</span><span class="p">(</span><span class="s1">&#39;berry_phase: requires the Brillouin zone to not form a loop!&#39;</span><span class="p">)</span>
-
-    <span class="c1"># Check that the Gauge is correct.</span>
-    <span class="c1"># Since it *is* wrong to use a different gauge we warn the user.</span>
-    <span class="c1"># It may however, be instructive to check this</span>
-    <span class="k">if</span> <span class="n">_gauge</span> <span class="o">!=</span> <span class="s1">&#39;r&#39;</span><span class="p">:</span>
-        <span class="n">warn</span><span class="p">(</span><span class="s1">&#39;berry_phase: gauge *must* be &quot;r&quot; for correct results, only use for educational purposes!&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">allclose</span><span class="p">(</span><span class="n">contour</span><span class="o">.</span><span class="n">k</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="p">:],</span> <span class="n">contour</span><span class="o">.</span><span class="n">k</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="p">:]):</span>
+        <span class="c1"># When the user has the contour points closed, we don&#39;t need to do this in the below loop</span>
+        <span class="n">closed</span> <span class="o">=</span> <span class="kc">False</span>
 
     <span class="c1"># Whether we should calculate the eigenvalues of the overlap matrix</span>
     <span class="k">if</span> <span class="n">eigvals</span><span class="p">:</span>
@@ -966,15 +963,13 @@
             <span class="k">return</span> <span class="n">dot</span><span class="p">(</span><span class="n">prd</span><span class="p">,</span> <span class="n">dot</span><span class="p">(</span><span class="n">U</span><span class="p">,</span> <span class="n">V</span><span class="p">))</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="c1"># We calculate the final angle from the determinant</span>
-        <span class="k">def</span> <span class="nf">_process</span><span class="p">(</span><span class="n">prd</span><span class="p">,</span> <span class="n">ovr</span><span class="p">):</span>
-            <span class="k">return</span> <span class="n">dot</span><span class="p">(</span><span class="n">prd</span><span class="p">,</span> <span class="n">ovr</span><span class="p">)</span>
+        <span class="n">_process</span> <span class="o">=</span> <span class="n">dot</span>
 
     <span class="k">if</span> <span class="n">sub</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">def</span> <span class="nf">_berry</span><span class="p">(</span><span class="n">eigenstates</span><span class="p">):</span>
             <span class="c1"># Grab the first one to be able to form a loop</span>
             <span class="n">first</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="n">eigenstates</span><span class="p">)</span>
-            <span class="n">first</span><span class="o">.</span><span class="n">change_gauge</span><span class="p">(</span><span class="n">_gauge</span><span class="p">)</span>
-            <span class="n">first</span> <span class="o">=</span> <span class="n">first</span><span class="o">.</span><span class="n">state</span>
+            <span class="n">first</span><span class="o">.</span><span class="n">change_gauge</span><span class="p">(</span><span class="s1">&#39;r&#39;</span><span class="p">)</span>
             <span class="c1"># Create a variable to keep track of the previous state</span>
             <span class="n">prev</span> <span class="o">=</span> <span class="n">first</span>
 
@@ -984,31 +979,34 @@
 
             <span class="c1"># Loop remaining eigenstates</span>
             <span class="k">for</span> <span class="n">second</span> <span class="ow">in</span> <span class="n">eigenstates</span><span class="p">:</span>
-                <span class="n">second</span><span class="o">.</span><span class="n">change_gauge</span><span class="p">(</span><span class="n">_gauge</span><span class="p">)</span>
-                <span class="n">prd</span> <span class="o">=</span> <span class="n">_process</span><span class="p">(</span><span class="n">prd</span><span class="p">,</span> <span class="n">prev</span><span class="o">.</span><span class="n">conj</span><span class="p">()</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">second</span><span class="o">.</span><span class="n">state</span><span class="o">.</span><span class="n">T</span><span class="p">))</span>
-                <span class="n">prev</span> <span class="o">=</span> <span class="n">second</span><span class="o">.</span><span class="n">state</span>
+                <span class="n">second</span><span class="o">.</span><span class="n">change_gauge</span><span class="p">(</span><span class="s1">&#39;r&#39;</span><span class="p">)</span>
+                <span class="n">prd</span> <span class="o">=</span> <span class="n">_process</span><span class="p">(</span><span class="n">prd</span><span class="p">,</span> <span class="n">prev</span><span class="o">.</span><span class="n">inner</span><span class="p">(</span><span class="n">second</span><span class="p">,</span> <span class="kc">False</span><span class="p">))</span>
+                <span class="n">prev</span> <span class="o">=</span> <span class="n">second</span>
 
             <span class="c1"># Complete the loop</span>
-            <span class="n">prd</span> <span class="o">=</span> <span class="n">_process</span><span class="p">(</span><span class="n">prd</span><span class="p">,</span> <span class="n">prev</span><span class="o">.</span><span class="n">conj</span><span class="p">()</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">first</span><span class="o">.</span><span class="n">T</span><span class="p">))</span>
+            <span class="k">if</span> <span class="n">closed</span><span class="p">:</span>
+                <span class="c1"># Include last-to-first segment</span>
+                <span class="n">prd</span> <span class="o">=</span> <span class="n">_process</span><span class="p">(</span><span class="n">prd</span><span class="p">,</span> <span class="n">prev</span><span class="o">.</span><span class="n">inner</span><span class="p">(</span><span class="n">first</span><span class="p">,</span> <span class="kc">False</span><span class="p">))</span>
             <span class="k">return</span> <span class="n">prd</span>
 
     <span class="k">else</span><span class="p">:</span>
         <span class="k">def</span> <span class="nf">_berry</span><span class="p">(</span><span class="n">eigenstates</span><span class="p">):</span>
-            <span class="n">first</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="n">eigenstates</span><span class="p">)</span>
-            <span class="n">first</span><span class="o">.</span><span class="n">change_gauge</span><span class="p">(</span><span class="n">_gauge</span><span class="p">)</span>
-            <span class="n">first</span> <span class="o">=</span> <span class="n">first</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="n">sub</span><span class="p">)</span><span class="o">.</span><span class="n">state</span>
+            <span class="n">first</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="n">eigenstates</span><span class="p">)</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="n">sub</span><span class="p">)</span>
+            <span class="n">first</span><span class="o">.</span><span class="n">change_gauge</span><span class="p">(</span><span class="s1">&#39;r&#39;</span><span class="p">)</span>
             <span class="n">prev</span> <span class="o">=</span> <span class="n">first</span>
             <span class="n">prd</span> <span class="o">=</span> <span class="mi">1</span>
             <span class="k">for</span> <span class="n">second</span> <span class="ow">in</span> <span class="n">eigenstates</span><span class="p">:</span>
-                <span class="n">second</span><span class="o">.</span><span class="n">change_gauge</span><span class="p">(</span><span class="n">_gauge</span><span class="p">)</span>
                 <span class="n">second</span> <span class="o">=</span> <span class="n">second</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="n">sub</span><span class="p">)</span>
-                <span class="n">prd</span> <span class="o">=</span> <span class="n">_process</span><span class="p">(</span><span class="n">prd</span><span class="p">,</span> <span class="n">prev</span><span class="o">.</span><span class="n">conj</span><span class="p">()</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">second</span><span class="o">.</span><span class="n">state</span><span class="o">.</span><span class="n">T</span><span class="p">))</span>
-                <span class="n">prev</span> <span class="o">=</span> <span class="n">second</span><span class="o">.</span><span class="n">state</span>
-            <span class="n">prd</span> <span class="o">=</span> <span class="n">_process</span><span class="p">(</span><span class="n">prd</span><span class="p">,</span> <span class="n">prev</span><span class="o">.</span><span class="n">conj</span><span class="p">()</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">first</span><span class="o">.</span><span class="n">T</span><span class="p">))</span>
+                <span class="n">second</span><span class="o">.</span><span class="n">change_gauge</span><span class="p">(</span><span class="s1">&#39;r&#39;</span><span class="p">)</span>
+                <span class="n">prd</span> <span class="o">=</span> <span class="n">_process</span><span class="p">(</span><span class="n">prd</span><span class="p">,</span> <span class="n">prev</span><span class="o">.</span><span class="n">inner</span><span class="p">(</span><span class="n">second</span><span class="p">,</span> <span class="kc">False</span><span class="p">))</span>
+                <span class="n">prev</span> <span class="o">=</span> <span class="n">second</span>
+            <span class="k">if</span> <span class="n">closed</span><span class="p">:</span>
+                <span class="c1"># Include last-to-first segment</span>
+                <span class="n">prd</span> <span class="o">=</span> <span class="n">_process</span><span class="p">(</span><span class="n">prd</span><span class="p">,</span> <span class="n">prev</span><span class="o">.</span><span class="n">inner</span><span class="p">(</span><span class="n">first</span><span class="p">,</span> <span class="kc">False</span><span class="p">))</span>
             <span class="k">return</span> <span class="n">prd</span>
 
     <span class="c1"># Do the actual calculation of the final matrix</span>
-    <span class="n">d</span> <span class="o">=</span> <span class="n">_berry</span><span class="p">(</span><span class="n">bz_loop</span><span class="o">.</span><span class="n">asyield</span><span class="p">()</span><span class="o">.</span><span class="n">eigenstate</span><span class="p">())</span>
+    <span class="n">d</span> <span class="o">=</span> <span class="n">_berry</span><span class="p">(</span><span class="n">contour</span><span class="o">.</span><span class="n">asyield</span><span class="p">()</span><span class="o">.</span><span class="n">eigenstate</span><span class="p">())</span>
 
     <span class="c1"># Correct return values</span>
     <span class="k">if</span> <span class="n">eigvals</span><span class="p">:</span>
@@ -1540,7 +1538,7 @@
 
         <span class="c1"># Check that we can do a gauge transformation</span>
         <span class="n">k</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">asarrayd</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">info</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;k&#39;</span><span class="p">))</span>
-        <span class="k">if</span> <span class="p">(</span><span class="n">k</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">**</span> <span class="mf">0.5</span> <span class="o">&lt;=</span> <span class="mf">0.000001</span><span class="p">:</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">k</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">&lt;=</span> <span class="mf">0.000000001</span><span class="p">:</span>
             <span class="k">return</span>
 
         <span class="n">g</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">geometry</span>
