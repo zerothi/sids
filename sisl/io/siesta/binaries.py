@@ -92,6 +92,10 @@ class onlysSileSiesta(SileBinSiesta):
                             'passed geometry as the number of atoms or orbitals is '
                             'inconsistent with TSHS file.')
 
+        # Ensure that the number of supercells is correct
+        if np.any(geom.nsc != tshs_g.nsc):
+            geom.set_nsc(tshs_g.nsc)
+
         # read the sizes used...
         sizes = _siesta.read_tshs_sizes(self.file)
         isc = _siesta.read_tshs_cell(self.file, sizes[3])[2].T
@@ -129,6 +133,10 @@ class tshsSileSiesta(onlysSileSiesta):
             raise SileError(self.__class__.__name__ + '.read_hamiltonian could not use the '
                             'passed geometry as the number of atoms or orbitals is inconsistent '
                             'with TSHS file.')
+
+        # Ensure that the number of supercells is correct
+        if np.any(geom.nsc != tshs_g.nsc):
+            geom.set_nsc(tshs_g.nsc)
 
         # read the sizes used...
         sizes = _siesta.read_tshs_sizes(self.file)
@@ -480,6 +488,24 @@ class _gfSileSiesta(SileBinSiesta):
     """ Surface Green function file containing, Hamiltonian, overlap matrix and self-energies
 
     Do not mix read and write statements when using this code.
+
+    This small snippet reads/writes the GF file
+
+    >>> with sisl.io._gfSileSiesta('hello.GF') as f:
+    ...    no, k, E = f.read_header()
+    ...    for is_k, k, E in f:
+    ...        if is_k:
+    ...            H, S = f.read_hamiltonian()
+    ...        SeHSE = f.read_self_energy()
+
+    To write a file do:
+
+    >>> with sisl.io._gfSileSiesta('hello.GF') as f:
+    ...    f.write_header(E, sisl.MonkhorstPack(...), H, mu=0.)
+    ...    for is_k, k, E in f:
+    ...        if is_k:
+    ...            f.write_hamiltonian(H, S)
+    ...        f.write_self_energy(SeHSE)
     """
 
     def _setup(self, *args, **kwargs):
@@ -586,6 +612,8 @@ class _gfSileSiesta(SileBinSiesta):
            contains the k-points and their weights
         obj : ...
            an object that contains the Hamiltonian definitions
+        mu : float, optional
+           chemical potential in the file
         """
         nspin = len(obj.spin)
         cell = obj.geom.sc.cell * Ang2Bohr

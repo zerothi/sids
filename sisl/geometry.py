@@ -871,9 +871,9 @@ class Geometry(SuperCellChild):
 
         Parameters
         ----------
-        iR  : int, optional
+        iR : int, optional
             the number of `R` ranges taken into account when doing the iterator
-        R  : float, optional
+        R : float, optional
             enables overwriting the local R quantity. Defaults to ``self.maxR()``
         atom : array_like, optional
             enables only effectively looping a subset of the full geometry
@@ -1017,7 +1017,7 @@ class Geometry(SuperCellChild):
 
         Parameters
         ----------
-        atom  : array_like
+        atom : array_like
             indices of all atoms to be removed.
         cell   : array_like or SuperCell, optional
             the new associated cell of the geometry (defaults to the same cell)
@@ -1052,9 +1052,9 @@ class Geometry(SuperCellChild):
 
         Parameters
         ----------
-        seps  : int
+        seps : int
             number of times the structure will be cut.
-        axis  : int
+        axis : int
             the axis that will be cut
         seg : int, optional
             returns the i'th segment of the cut structure
@@ -1102,7 +1102,7 @@ class Geometry(SuperCellChild):
 
         Parameters
         ----------
-        atom  : array_like
+        atom : array_like
             indices of all atoms to be removed.
 
         See Also
@@ -1120,9 +1120,9 @@ class Geometry(SuperCellChild):
 
         Parameters
         ----------
-        reps  : int
+        reps : int
            number of tiles (repetitions)
-        axis  : int
+        axis : int
            direction of tiling, 0, 1, 2 according to the cell-direction
 
         Examples
@@ -1196,9 +1196,9 @@ class Geometry(SuperCellChild):
 
         Parameters
         ----------
-        reps  : int
+        reps : int
            number of repetitions
-        axis  : int
+        axis : int
            direction of repetition, 0, 1, 2 according to the cell-direction
 
         Examples
@@ -1425,7 +1425,7 @@ class Geometry(SuperCellChild):
         atom : int or array_like, optional
              only rotate the given atomic indices, if not specified, all
              atoms will be rotated.
-        only  : {'abc+xyz', 'xyz', 'abc'}
+        only : {'abc+xyz', 'xyz', 'abc'}
              which coordinate subject should be rotated,
              if ``abc`` is in this string the cell will be rotated
              if ``xyz`` is in this string the coordinates will be rotated
@@ -1503,12 +1503,12 @@ class Geometry(SuperCellChild):
 
         Parameters
         ----------
-        v     : array_like
+        v : array_like
              the vector to displace all atomic coordinates
         atom : int or array_like, optional
              only displace the given atomic indices, if not specified, all
              atoms will be displaced
-        cell  : bool, optional
+        cell : bool, optional
              If True the supercell also gets enlarged by the vector
         """
         g = self.copy()
@@ -1623,7 +1623,7 @@ class Geometry(SuperCellChild):
         other : Geometry or SuperCell
             Other geometry class which needs to be appended
             If a `SuperCell` only the super cell will be extended
-        axis  : int
+        axis : int
             Cell direction to which the `other` geometry should be
             appended.
 
@@ -1668,7 +1668,7 @@ class Geometry(SuperCellChild):
         other : Geometry or SuperCell
             Other geometry class which needs to be prepended
             If a `SuperCell` only the super cell will be extended
-        axis  : int
+        axis : int
             Cell direction to which the `other` geometry should be
             prepended
 
@@ -1807,11 +1807,13 @@ class Geometry(SuperCellChild):
     def attach(self, s_idx, other, o_idx, dist='calc', axis=None):
         """ Attaches another `Geometry` at the `s_idx` index with respect to `o_idx` using different methods.
 
+        The attached geometry will be inserted at the end of the geometry via `add`.
+
         Parameters
         ----------
         s_idx : int
            atomic index which is the base position of the attachment. The distance
-           between `s_idx` and `o_idx` are `dist`.
+           between `s_idx` and `o_idx` is `dist`.
         other : Geometry
            the other Geometry to attach at the given point. In this case `dist` from
            `s_idx`.
@@ -1917,7 +1919,7 @@ class Geometry(SuperCellChild):
         atom : int or array_like
           atom(s) from which we should return the coordinates, the atomic indices
           may be in supercell format.
-        isc   : array_like, optional
+        isc : array_like, optional
             Returns the atomic coordinates shifted according to the integer
             parts of the cell. Defaults to the unit-cell
 
@@ -1986,15 +1988,15 @@ class Geometry(SuperCellChild):
 
         Parameters
         ----------
-        shapes  : Shape or list of Shape
+        shapes : Shape or list of Shape
             A list of increasing shapes that define the extend of the geometric
             volume that is searched.
             It is vital that::
 
                shapes[0] in shapes[1] in shapes[2] ...
-        isc       : array_like, optional
+        isc : array_like, optional
             The super-cell which the coordinates are checked in. Defaults to ``[0, 0, 0]``
-        idx       : array_like, optional
+        idx : array_like, optional
             List of atoms that will be considered. This can
             be used to only take out a certain atoms.
         idx_xyz : array_like, optional
@@ -2003,8 +2005,13 @@ class Geometry(SuperCellChild):
             If True this method will return the coordinates
             for each of the couplings.
         ret_rij : bool, optional
-            If True this method will return the distance
-            for each of the couplings.
+            If True this method will return the distance to the center of the shapes
+
+        Returns
+        -------
+        index : indices of atoms (in supercell indices) within the shape
+        xyz : atomic coordinates of the indexed atoms (only for true ``ret_xyz``)
+        rij : distance of the indexed atoms to the center of the shape (only for true ``ret_rij``)
         """
 
         # Ensure that `shapes` is a list
@@ -2162,6 +2169,12 @@ class Geometry(SuperCellChild):
         ret_rij : bool, optional
             If True this method will return the distance
             for each of the couplings.
+
+        Returns
+        -------
+        index : indices of atoms (in supercell indices) within the shells of radius `R`
+        xyz : atomic coordinates of the indexed atoms (only for true ``ret_xyz``)
+        rij : distance of the indexed atoms to the center coordinate (only for true ``ret_rij``)
         """
         if R is None:
             R = np.array([self.maxR()], np.float64)
@@ -2454,7 +2467,7 @@ class Geometry(SuperCellChild):
         Parameters
         ----------
         shapes : Shape, list of Shape
-        idx     : array_like, optional
+        idx : array_like, optional
             List of indices for atoms that are to be considered
         idx_xyz : array_like, optional
             The atomic coordinates of the equivalent `idx` variable (`idx` must also be passed)
@@ -2464,6 +2477,12 @@ class Geometry(SuperCellChild):
         ret_rij : bool, optional
             If true this method will return the distances from the `xyz_ia`
             for each of the couplings.
+
+        Returns
+        -------
+        index : indices of atoms (in supercell indices) within the shape
+        xyz : atomic coordinates of the indexed atoms (only for true ``ret_xyz``)
+        rij : distance of the indexed atoms to the center of the shape (only for true ``ret_rij``)
         """
 
         # Ensure that `shapes` is a list
@@ -2545,7 +2564,7 @@ class Geometry(SuperCellChild):
             Either a point in space or an index of an atom.
             If an index is passed it is the equivalent of passing
             the atomic coordinate ``close_sc(self.xyz[xyz_ia,:])``.
-        R      : (None), float/tuple of float
+        R : (None), float/tuple of float
             The radii parameter to where the atomic connections are found.
             If `R` is an array it will return the indices:
             in the ranges:
@@ -2556,7 +2575,7 @@ class Geometry(SuperCellChild):
 
             >>> x <= R # doctest: +SKIP
 
-        idx     : array_like, optional
+        idx : array_like, optional
             List of indices for atoms that are to be considered
         idx_xyz : array_like, optional
             The atomic coordinates of the equivalent `idx` variable (`idx` must also be passed)
@@ -2566,6 +2585,12 @@ class Geometry(SuperCellChild):
         ret_rij : bool, optional
             If true this method will return the distances from the `xyz_ia`
             for each of the couplings.
+
+        Returns
+        -------
+        index : indices of atoms (in supercell indices) within the shells of radius `R`
+        xyz : atomic coordinates of the indexed atoms (only for true ``ret_xyz``)
+        rij : distance of the indexed atoms to the center coordinate (only for true ``ret_rij``)
         """
         if R is None:
             R = self.maxR()
@@ -2635,10 +2660,6 @@ class Geometry(SuperCellChild):
             return ret
 
         return ret[0]
-
-    # Hence ``close_all`` has exact meaning
-    # but ``close`` is shorten and retains meaning
-    close_all = close
 
     def a2o(self, ia, all=False):
         """
