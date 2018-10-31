@@ -24,26 +24,18 @@
 
   
 
-  
-  
-    <link rel="stylesheet" href="../../../../_static/css/theme.css" type="text/css" />
-  
-
-  
-
-  
-        <link rel="index" title="Index"
-              href="../../../../genindex.html"/>
-        <link rel="search" title="Search" href="../../../../search.html"/>
-    <link rel="top" title="sisl |release| documentation" href="../../../../index.html"/>
-        <link rel="up" title="Module code" href="../../../index.html"/> 
+  <link rel="stylesheet" href="../../../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../../../_static/graphviz.css" type="text/css" />
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" /> 
 
   
   <script src="../../../../_static/js/modernizr.min.js"></script>
 
 </head>
 
-<body class="wy-body-for-nav" role="document">
+<body class="wy-body-for-nav">
 
    
   <div class="wy-grid-for-nav">
@@ -120,7 +112,7 @@
     <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
 
       
-      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+      <nav class="wy-nav-top" aria-label="top navigation">
         
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
           <a href="../../../../index.html">sisl</a>
@@ -128,9 +120,10 @@
       </nav>
 
 
-      
       <div class="wy-nav-content">
+        
         <div class="rst-content">
+        
           
 
 
@@ -159,8 +152,6 @@
     
     
       <li class="wy-breadcrumbs-aside">
-        
-            
         
       </li>
     
@@ -662,23 +653,26 @@
 <span class="k">class</span> <span class="nc">_gfSileSiesta</span><span class="p">(</span><span class="n">SileBinSiesta</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot; Surface Green function file containing, Hamiltonian, overlap matrix and self-energies</span>
 
-<span class="sd">    Do not mix read and write statements when using this code.</span>
+<span class="sd">    Do not mix read and write statements when using this code. Complete one or the other</span>
+<span class="sd">    before doing the other thing. Fortran does not allow the same file opened twice, if this</span>
+<span class="sd">    is needed you are recommended to make a symlink to the file and thus open two different</span>
+<span class="sd">    files.</span>
 
 <span class="sd">    This small snippet reads/writes the GF file</span>
 
 <span class="sd">    &gt;&gt;&gt; with sisl.io._gfSileSiesta(&#39;hello.GF&#39;) as f:</span>
-<span class="sd">    ...    no, k, E = f.read_header()</span>
-<span class="sd">    ...    for is_k, k, E in f:</span>
-<span class="sd">    ...        if is_k:</span>
+<span class="sd">    ...    nspin, no, k, E = f.read_header()</span>
+<span class="sd">    ...    for ispin, new_k, k, E in f:</span>
+<span class="sd">    ...        if new_k:</span>
 <span class="sd">    ...            H, S = f.read_hamiltonian()</span>
 <span class="sd">    ...        SeHSE = f.read_self_energy()</span>
 
 <span class="sd">    To write a file do:</span>
 
 <span class="sd">    &gt;&gt;&gt; with sisl.io._gfSileSiesta(&#39;hello.GF&#39;) as f:</span>
-<span class="sd">    ...    f.write_header(E, sisl.MonkhorstPack(...), H, mu=0.)</span>
-<span class="sd">    ...    for is_k, k, E in f:</span>
-<span class="sd">    ...        if is_k:</span>
+<span class="sd">    ...    f.write_header(sisl.MonkhorstPack(...), E)</span>
+<span class="sd">    ...    for ispin, new_k, k, E in f:</span>
+<span class="sd">    ...        if new_k:</span>
 <span class="sd">    ...            f.write_hamiltonian(H, S)</span>
 <span class="sd">    ...        f.write_self_energy(SeHSE)</span>
 <span class="sd">    &quot;&quot;&quot;</span>
@@ -719,6 +713,10 @@
             <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">_no_u</span>
         <span class="k">except</span><span class="p">:</span>
             <span class="k">pass</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">_nspin</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="k">pass</span>
 
     <span class="k">def</span> <span class="nf">read_header</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Read the header of the file and open it for reading subsequently</span>
@@ -727,6 +725,7 @@
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
+<span class="sd">        nspin : number of spin-components stored (1 or 2)</span>
 <span class="sd">        no_u : size of the matrices returned</span>
 <span class="sd">        k : k points in the GF file</span>
 <span class="sd">        E : energy points in the GF file</span>
@@ -734,7 +733,7 @@
         <span class="c1"># Ensure it is open (in read-mode)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_close_gf</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_open_gf</span><span class="p">(</span><span class="s1">&#39;r&#39;</span><span class="p">)</span>
-        <span class="n">no_u</span><span class="p">,</span> <span class="n">nkpt</span><span class="p">,</span> <span class="n">NE</span> <span class="o">=</span> <span class="n">_siesta</span><span class="o">.</span><span class="n">read_gf_sizes</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_iu</span><span class="p">)</span>
+        <span class="n">nspin</span><span class="p">,</span> <span class="n">no_u</span><span class="p">,</span> <span class="n">nkpt</span><span class="p">,</span> <span class="n">NE</span> <span class="o">=</span> <span class="n">_siesta</span><span class="o">.</span><span class="n">read_gf_sizes</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_iu</span><span class="p">)</span>
 
         <span class="c1"># We need to re-read (because of k-points)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_close_gf</span><span class="p">()</span>
@@ -742,10 +741,11 @@
 
         <span class="n">k</span><span class="p">,</span> <span class="n">E</span> <span class="o">=</span> <span class="n">_siesta</span><span class="o">.</span><span class="n">read_gf_header</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_iu</span><span class="p">,</span> <span class="n">nkpt</span><span class="p">,</span> <span class="n">NE</span><span class="p">)</span>
         <span class="n">k</span> <span class="o">=</span> <span class="n">k</span><span class="o">.</span><span class="n">T</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_nspin</span> <span class="o">=</span> <span class="n">nspin</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_no_u</span> <span class="o">=</span> <span class="n">no_u</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_E</span> <span class="o">=</span> <span class="n">E</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_k</span> <span class="o">=</span> <span class="n">k</span>
-        <span class="k">return</span> <span class="n">no_u</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">E</span> <span class="o">*</span> <span class="n">Ry2eV</span>
+        <span class="k">return</span> <span class="n">nspin</span><span class="p">,</span> <span class="n">no_u</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">E</span> <span class="o">*</span> <span class="n">Ry2eV</span>
 
     <span class="k">def</span> <span class="nf">read_hamiltonian</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Return current Hamiltonian and overlap matrix from the GF file</span>
@@ -755,41 +755,46 @@
 <span class="sd">        complex128 : Hamiltonian matrix</span>
 <span class="sd">        complex128 : Overlap matrix</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="c1"># Step k</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_ik</span> <span class="o">+=</span> <span class="mi">1</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_ie</span> <span class="o">=</span> <span class="mi">1</span>
 
         <span class="n">H</span><span class="p">,</span> <span class="n">S</span> <span class="o">=</span> <span class="n">_siesta</span><span class="o">.</span><span class="n">read_gf_hs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_iu</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_no_u</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">H</span> <span class="o">*</span> <span class="n">Ry2eV</span><span class="p">,</span> <span class="n">S</span>
+        <span class="k">return</span> <span class="n">H</span><span class="o">.</span><span class="n">T</span> <span class="o">*</span> <span class="n">Ry2eV</span><span class="p">,</span> <span class="n">S</span><span class="o">.</span><span class="n">T</span>
 
     <span class="k">def</span> <span class="nf">read_self_energy</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot; Return current self-energy</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot; Read the currently reached bulk self-energy</span>
+
+<span class="sd">        The returned self-energy is:</span>
+
+<span class="sd">        .. math::</span>
+<span class="sd">            \boldsymbol \Sigma_{\mathrm{bulk}}(E) = \mathbf S E - \mathbf H - \boldsymbol \Sigma(E)</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
 <span class="sd">        complex128 : Self-energy matrix</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="c1"># Step E</span>
-        <span class="n">SE</span> <span class="o">=</span> <span class="n">_siesta</span><span class="o">.</span><span class="n">read_gf_se</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_iu</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_no_u</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ie</span><span class="p">)</span>
+        <span class="n">SE</span> <span class="o">=</span> <span class="n">_siesta</span><span class="o">.</span><span class="n">read_gf_se</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_iu</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_no_u</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ie</span><span class="p">)</span><span class="o">.</span><span class="n">T</span> <span class="o">*</span> <span class="n">Ry2eV</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_ie</span> <span class="o">+=</span> <span class="mi">1</span>
-        <span class="k">return</span> <span class="n">SE</span> <span class="o">*</span> <span class="n">Ry2eV</span>
+        <span class="k">return</span> <span class="n">SE</span>
 
-    <span class="k">def</span> <span class="nf">write_header</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">E</span><span class="p">,</span> <span class="n">bz</span><span class="p">,</span> <span class="n">obj</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="mf">0.</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">write_header</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">bz</span><span class="p">,</span> <span class="n">E</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="mf">0.</span><span class="p">,</span> <span class="n">obj</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Write to the binary file the header of the file</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
+<span class="sd">        bz : BrillouinZone</span>
+<span class="sd">           contains the k-points, the weights and possibly the parent Hamiltonian (if `obj` is None)s</span>
 <span class="sd">        E : array_like of cmplx or float</span>
 <span class="sd">           the energy points. If `obj` is an instance of `SelfEnergy` where an</span>
 <span class="sd">           associated ``eta`` is defined then `E` may be float, otherwise</span>
 <span class="sd">           it *has* to be a complex array.</span>
-<span class="sd">        bz : BrillouinZone</span>
-<span class="sd">           contains the k-points and their weights</span>
-<span class="sd">        obj : ...</span>
-<span class="sd">           an object that contains the Hamiltonian definitions</span>
 <span class="sd">        mu : float, optional</span>
 <span class="sd">           chemical potential in the file</span>
+<span class="sd">        obj : ..., optional</span>
+<span class="sd">           an object that contains the Hamiltonian definitions, defaults to ``bz.parent``</span>
 <span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">obj</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">obj</span> <span class="o">=</span> <span class="n">bz</span><span class="o">.</span><span class="n">parent</span>
         <span class="n">nspin</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">obj</span><span class="o">.</span><span class="n">spin</span><span class="p">)</span>
         <span class="n">cell</span> <span class="o">=</span> <span class="n">obj</span><span class="o">.</span><span class="n">geom</span><span class="o">.</span><span class="n">sc</span><span class="o">.</span><span class="n">cell</span> <span class="o">*</span> <span class="n">Ang2Bohr</span>
         <span class="n">na_u</span> <span class="o">=</span> <span class="n">obj</span><span class="o">.</span><span class="n">geom</span><span class="o">.</span><span class="n">na</span>
@@ -814,6 +819,7 @@
             <span class="s1">&#39;ne&#39;</span><span class="p">:</span> <span class="n">NE</span><span class="p">,</span>
         <span class="p">}</span>
 
+        <span class="bp">self</span><span class="o">.</span><span class="n">_nspin</span> <span class="o">=</span> <span class="n">nspin</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_E</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">E</span><span class="p">)</span> <span class="o">*</span> <span class="n">eV2Ry</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_k</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">k</span><span class="p">)</span>
 
@@ -836,7 +842,6 @@
 <span class="sd">           a square matrix corresponding to the overlap, for efficiency reasons</span>
 <span class="sd">           it may be advantageous to specify this argument for orthogonal cells.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="c1"># Step k</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_ik</span> <span class="o">+=</span> <span class="mi">1</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_ie</span> <span class="o">=</span> <span class="mi">1</span>
         <span class="n">no</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">H</span><span class="p">)</span>
@@ -863,7 +868,6 @@
         <span class="n">_siesta</span><span class="o">.</span><span class="n">write_gf_se</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_iu</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ik</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ie</span><span class="p">,</span>
                             <span class="bp">self</span><span class="o">.</span><span class="n">_E</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_ie</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span>
                             <span class="n">SE</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">complex128</span><span class="p">,</span> <span class="s1">&#39;C&#39;</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span><span class="o">.</span><span class="n">T</span> <span class="o">*</span> <span class="n">eV2Ry</span><span class="p">,</span> <span class="n">no_u</span><span class="o">=</span><span class="n">no</span><span class="p">)</span>
-        <span class="c1"># Step energy counter</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_ie</span> <span class="o">+=</span> <span class="mi">1</span>
 
     <span class="k">def</span> <span class="nf">__iter__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -873,10 +877,18 @@
 <span class="sd">        ------</span>
 <span class="sd">        bool, list of float, float</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_k</span><span class="p">:</span>
-            <span class="k">yield</span> <span class="kc">True</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_E</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">Ry2eV</span>
-            <span class="k">for</span> <span class="n">E</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_E</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span> <span class="o">*</span> <span class="n">Ry2eV</span><span class="p">:</span>
-                <span class="k">yield</span> <span class="kc">False</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">E</span>
+        <span class="c1"># get everything</span>
+        <span class="n">e</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_E</span> <span class="o">*</span> <span class="n">Ry2eV</span>
+        <span class="k">for</span> <span class="n">ispin</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_nspin</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_k</span><span class="p">:</span>
+                <span class="k">yield</span> <span class="n">ispin</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">e</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="k">for</span> <span class="n">E</span> <span class="ow">in</span> <span class="n">e</span><span class="p">[</span><span class="mi">1</span><span class="p">:]:</span>
+                    <span class="k">yield</span> <span class="n">ispin</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">E</span>
+
+            <span class="c1"># Reset counters for k and e</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_ik</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_ie</span> <span class="o">=</span> <span class="mi">0</span>
+
         <span class="c1"># We will automatically close once we hit the end</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_close_gf</span><span class="p">()</span>
 
@@ -909,9 +921,7 @@
 </pre></div>
 
            </div>
-           <div class="articleComments">
-            
-           </div>
+           
           </div>
           <footer>
   
@@ -920,11 +930,11 @@
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2015-2018, Nick R. Papior.
+        &copy; Copyright 2015-2018, Nick R. Papior
 
     </p>
   </div>
-  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
 
 </footer>
 
@@ -939,36 +949,24 @@
 
   
 
-    <script type="text/javascript">
-        var DOCUMENTATION_OPTIONS = {
-            URL_ROOT:'../../../../',
-            VERSION:'latest',
-            COLLAPSE_INDEX:false,
-            FILE_SUFFIX:'.html',
-            HAS_SOURCE:  true,
-            SOURCELINK_SUFFIX: '.txt'
-        };
-    </script>
-      <script type="text/javascript" src="../../../../_static/jquery.js"></script>
-      <script type="text/javascript" src="../../../../_static/underscore.js"></script>
-      <script type="text/javascript" src="../../../../_static/doctools.js"></script>
-      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../../../" src="../../../../_static/documentation_options.js"></script>
+        <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+        <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+        <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+        <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
 
   
 
-  
-  
-    <script type="text/javascript" src="../../../../_static/js/theme.js"></script>
-  
+  <script type="text/javascript" src="../../../../_static/js/theme.js"></script>
 
-  
-  
   <script type="text/javascript">
       jQuery(function () {
-          SphinxRtdTheme.StickyNav.enable();
+          SphinxRtdTheme.Navigation.enable(true);
       });
-  </script>
-   
+  </script> 
 
 </body>
 </html>

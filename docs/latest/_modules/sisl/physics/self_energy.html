@@ -24,26 +24,18 @@
 
   
 
-  
-  
-    <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
-  
-
-  
-
-  
-        <link rel="index" title="Index"
-              href="../../../genindex.html"/>
-        <link rel="search" title="Search" href="../../../search.html"/>
-    <link rel="top" title="sisl |release| documentation" href="../../../index.html"/>
-        <link rel="up" title="Module code" href="../../index.html"/> 
+  <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/graphviz.css" type="text/css" />
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
 
   
   <script src="../../../_static/js/modernizr.min.js"></script>
 
 </head>
 
-<body class="wy-body-for-nav" role="document">
+<body class="wy-body-for-nav">
 
    
   <div class="wy-grid-for-nav">
@@ -120,7 +112,7 @@
     <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
 
       
-      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+      <nav class="wy-nav-top" aria-label="top navigation">
         
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
           <a href="../../../index.html">sisl</a>
@@ -128,9 +120,10 @@
       </nav>
 
 
-      
       <div class="wy-nav-content">
+        
         <div class="rst-content">
+        
           
 
 
@@ -160,8 +153,6 @@
     
       <li class="wy-breadcrumbs-aside">
         
-            
-        
       </li>
     
   </ul>
@@ -178,7 +169,8 @@
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">dot</span><span class="p">,</span> <span class="n">amax</span><span class="p">,</span> <span class="n">conjugate</span>
 <span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">subtract</span>
-<span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">empty</span><span class="p">,</span> <span class="n">zeros_like</span><span class="p">,</span> <span class="n">empty_like</span><span class="p">,</span> <span class="n">identity</span>
+<span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">empty</span><span class="p">,</span> <span class="n">zeros</span><span class="p">,</span> <span class="n">identity</span>
+<span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">zeros_like</span><span class="p">,</span> <span class="n">empty_like</span>
 <span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">complex128</span>
 <span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="nb">abs</span> <span class="k">as</span> <span class="n">_abs</span>
 
@@ -610,8 +602,8 @@
     <span class="k">def</span> <span class="nf">real_space_coupling</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ret_indices</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Return the real-space coupling parent where they fold into the parent real-space unit cell</span>
 
-<span class="sd">        The resulting parent object only contains the couplings for the real-space matrix out into the</span>
-<span class="sd">        neighbouring unit cells.</span>
+<span class="sd">        The resulting parent object only contains the inner-cell couplings for the elements that couple</span>
+<span class="sd">        out of the real-space matrix.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
@@ -626,35 +618,32 @@
         <span class="n">opt</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_options</span>
         <span class="n">s_ax</span> <span class="o">=</span> <span class="n">opt</span><span class="p">[</span><span class="s1">&#39;semi_axis&#39;</span><span class="p">]</span>
         <span class="n">k_ax</span> <span class="o">=</span> <span class="n">opt</span><span class="p">[</span><span class="s1">&#39;k_axis&#39;</span><span class="p">]</span>
-        <span class="n">P0</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_unfold</span><span class="p">[</span><span class="n">s_ax</span><span class="p">]),</span> <span class="n">s_ax</span><span class="p">)</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_unfold</span><span class="p">[</span><span class="n">k_ax</span><span class="p">],</span> <span class="n">k_ax</span><span class="p">)</span>
+        <span class="n">PC</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_unfold</span><span class="p">[</span><span class="n">s_ax</span><span class="p">]),</span> <span class="n">s_ax</span><span class="p">)</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_unfold</span><span class="p">[</span><span class="n">k_ax</span><span class="p">],</span> <span class="n">k_ax</span><span class="p">)</span>
 
-        <span class="c1"># Figure out all couplings crossing the borders along the semi+k directions</span>
-        <span class="n">nsc</span> <span class="o">=</span> <span class="n">P0</span><span class="o">.</span><span class="n">nsc</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
-        <span class="k">if</span> <span class="mi">0</span> <span class="ow">in</span> <span class="p">[</span><span class="n">s_ax</span><span class="p">,</span> <span class="n">k_ax</span><span class="p">]</span> <span class="ow">and</span> <span class="mi">1</span> <span class="ow">in</span> <span class="p">[</span><span class="n">s_ax</span><span class="p">,</span> <span class="n">k_ax</span><span class="p">]:</span>
-            <span class="n">nsc</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
-        <span class="k">elif</span> <span class="mi">0</span> <span class="ow">in</span> <span class="p">[</span><span class="n">s_ax</span><span class="p">,</span> <span class="n">k_ax</span><span class="p">]</span> <span class="ow">and</span> <span class="mi">2</span> <span class="ow">in</span> <span class="p">[</span><span class="n">s_ax</span><span class="p">,</span> <span class="n">k_ax</span><span class="p">]:</span>
-            <span class="n">nsc</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
-        <span class="k">elif</span> <span class="mi">1</span> <span class="ow">in</span> <span class="p">[</span><span class="n">s_ax</span><span class="p">,</span> <span class="n">k_ax</span><span class="p">]</span> <span class="ow">and</span> <span class="mi">2</span> <span class="ow">in</span> <span class="p">[</span><span class="n">s_ax</span><span class="p">,</span> <span class="n">k_ax</span><span class="p">]:</span>
-            <span class="n">nsc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
-
-        <span class="c1"># Remove the non-used direction</span>
-        <span class="n">P0</span><span class="o">.</span><span class="n">set_nsc</span><span class="p">(</span><span class="n">nsc</span><span class="p">)</span>
         <span class="c1"># Geometry short-hand</span>
-        <span class="n">g</span> <span class="o">=</span> <span class="n">P0</span><span class="o">.</span><span class="n">geometry</span>
-        <span class="c1"># Remove all inner-cell couplings (0, 0, 0)</span>
-        <span class="n">n</span> <span class="o">=</span> <span class="n">P0</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">g</span> <span class="o">=</span> <span class="n">PC</span><span class="o">.</span><span class="n">geometry</span>
+        <span class="c1"># Remove all inner-cell couplings (0, 0, 0) to figure out the</span>
+        <span class="c1"># elements that couple out of the real-space region</span>
+        <span class="n">n</span> <span class="o">=</span> <span class="n">PC</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
         <span class="n">idx</span> <span class="o">=</span> <span class="n">g</span><span class="o">.</span><span class="n">sc</span><span class="o">.</span><span class="n">sc_index</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">])</span>
         <span class="n">cols</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">arangei</span><span class="p">(</span><span class="n">n</span><span class="p">)</span> <span class="o">+</span> <span class="n">idx</span> <span class="o">*</span> <span class="n">n</span>
-        <span class="c1"># Short hand sparse matrix</span>
-        <span class="n">csr</span> <span class="o">=</span> <span class="n">P0</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">csr</span> <span class="o">=</span> <span class="n">PC</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">copy</span><span class="p">([</span><span class="mi">0</span><span class="p">])</span> <span class="c1"># we just want the sparse pattern, so forget about the other elements</span>
         <span class="n">csr</span><span class="o">.</span><span class="n">delete_columns</span><span class="p">(</span><span class="n">cols</span><span class="p">,</span> <span class="n">keep_shape</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-        <span class="c1"># Now P0 only contains couplings along the k and semi-inf directions</span>
+        <span class="c1"># Now PC only contains couplings along the k and semi-inf directions</span>
         <span class="c1"># Extract the connecting orbitals and reduce them to unique atomic indices</span>
         <span class="n">orbs</span> <span class="o">=</span> <span class="n">g</span><span class="o">.</span><span class="n">osc2uc</span><span class="p">(</span><span class="n">csr</span><span class="o">.</span><span class="n">col</span><span class="p">[</span><span class="n">array_arange</span><span class="p">(</span><span class="n">csr</span><span class="o">.</span><span class="n">ptr</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">n</span><span class="o">=</span><span class="n">csr</span><span class="o">.</span><span class="n">ncol</span><span class="p">)],</span> <span class="kc">True</span><span class="p">)</span>
         <span class="n">atom_idx</span> <span class="o">=</span> <span class="n">g</span><span class="o">.</span><span class="n">o2a</span><span class="p">(</span><span class="n">orbs</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+        <span class="c1"># Only retain coupling atoms</span>
+        <span class="n">PC</span> <span class="o">=</span> <span class="n">PC</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="n">atom_idx</span><span class="p">)</span>
+
+        <span class="c1"># Remove all out-of-cell couplings such that we only have inner-cell couplings.</span>
+        <span class="n">nsc</span> <span class="o">=</span> <span class="n">PC</span><span class="o">.</span><span class="n">nsc</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">nsc</span><span class="p">[</span><span class="n">s_ax</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="n">nsc</span><span class="p">[</span><span class="n">k_ax</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="n">PC</span><span class="o">.</span><span class="n">set_nsc</span><span class="p">(</span><span class="n">nsc</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">ret_indices</span><span class="p">:</span>
-            <span class="k">return</span> <span class="n">P0</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="n">atom_idx</span><span class="p">),</span> <span class="n">atom_idx</span>
-        <span class="k">return</span> <span class="n">P0</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="n">atom_idx</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">PC</span><span class="p">,</span> <span class="n">atom_idx</span>
+        <span class="k">return</span> <span class="n">PC</span>
 
     <span class="k">def</span> <span class="nf">initialize</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Initialize the internal data-arrays used for efficient calculation of the real-space quantities</span>
@@ -792,16 +781,21 @@
             <span class="n">dtype</span> <span class="o">=</span> <span class="n">complex128</span>
         <span class="k">if</span> <span class="n">E</span><span class="o">.</span><span class="n">imag</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
             <span class="n">E</span> <span class="o">=</span> <span class="n">E</span><span class="o">.</span><span class="n">real</span> <span class="o">+</span> <span class="mi">1</span><span class="n">j</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_options</span><span class="p">[</span><span class="s1">&#39;eta&#39;</span><span class="p">]</span>
-        <span class="n">invG</span> <span class="o">=</span> <span class="n">inv</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">green</span><span class="p">(</span><span class="n">E</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">),</span> <span class="kc">True</span><span class="p">)</span>
+        <span class="n">G</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">green</span><span class="p">(</span><span class="n">E</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">coupling</span><span class="p">:</span>
             <span class="n">orbs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_calc</span><span class="p">[</span><span class="s1">&#39;orbs&#39;</span><span class="p">]</span>
+            <span class="n">iorbs</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">arangei</span><span class="p">(</span><span class="n">orbs</span><span class="o">.</span><span class="n">size</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">I</span> <span class="o">=</span> <span class="n">zeros</span><span class="p">([</span><span class="n">G</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">orbs</span><span class="o">.</span><span class="n">size</span><span class="p">],</span> <span class="n">dtype</span><span class="p">)</span>
+            <span class="c1"># Set diagonal</span>
+            <span class="n">I</span><span class="p">[</span><span class="n">orbs</span><span class="o">.</span><span class="n">ravel</span><span class="p">(),</span> <span class="n">iorbs</span><span class="o">.</span><span class="n">ravel</span><span class="p">()]</span> <span class="o">=</span> <span class="mf">1.</span>
             <span class="k">if</span> <span class="n">bulk</span><span class="p">:</span>
-                <span class="k">return</span> <span class="n">invG</span><span class="p">[</span><span class="n">orbs</span><span class="p">,</span> <span class="n">orbs</span><span class="o">.</span><span class="n">T</span><span class="p">]</span>
-            <span class="k">return</span> <span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">_calc</span><span class="p">[</span><span class="s1">&#39;S0&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="n">E</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">_calc</span><span class="p">[</span><span class="s1">&#39;P0&#39;</span><span class="p">])</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">dtype</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span><span class="o">.</span><span class="n">toarray</span><span class="p">()</span> <span class="o">-</span> <span class="n">invG</span><span class="p">)[</span><span class="n">orbs</span><span class="p">,</span> <span class="n">orbs</span><span class="o">.</span><span class="n">T</span><span class="p">]</span>
+                <span class="k">return</span> <span class="n">solve</span><span class="p">(</span><span class="n">G</span><span class="p">,</span> <span class="n">I</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="kc">True</span><span class="p">)[</span><span class="n">orbs</span><span class="p">,</span> <span class="n">iorbs</span><span class="p">]</span>
+            <span class="k">return</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_calc</span><span class="p">[</span><span class="s1">&#39;S0&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="n">E</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">_calc</span><span class="p">[</span><span class="s1">&#39;P0&#39;</span><span class="p">])</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">dtype</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span><span class="o">.</span><span class="n">toarray</span><span class="p">()[</span><span class="n">orbs</span><span class="p">,</span> <span class="n">orbs</span><span class="o">.</span><span class="n">T</span><span class="p">]</span> \
+                <span class="o">-</span> <span class="n">solve</span><span class="p">(</span><span class="n">G</span><span class="p">,</span> <span class="n">I</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="kc">True</span><span class="p">)[</span><span class="n">orbs</span><span class="p">,</span> <span class="n">iorbs</span><span class="p">]</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="k">if</span> <span class="n">bulk</span><span class="p">:</span>
-                <span class="k">return</span> <span class="n">invG</span>
-            <span class="k">return</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_calc</span><span class="p">[</span><span class="s1">&#39;S0&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="n">E</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">_calc</span><span class="p">[</span><span class="s1">&#39;P0&#39;</span><span class="p">])</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">dtype</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span><span class="o">.</span><span class="n">toarray</span><span class="p">()</span> <span class="o">-</span> <span class="n">invG</span>
+                <span class="k">return</span> <span class="n">inv</span><span class="p">(</span><span class="n">G</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+            <span class="k">return</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_calc</span><span class="p">[</span><span class="s1">&#39;S0&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="n">E</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">_calc</span><span class="p">[</span><span class="s1">&#39;P0&#39;</span><span class="p">])</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">dtype</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span><span class="o">.</span><span class="n">toarray</span><span class="p">()</span> <span class="o">-</span> <span class="n">inv</span><span class="p">(</span><span class="n">G</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">green</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">E</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sa">r</span><span class="sd">&quot;&quot;&quot; Calculate the real-space Green function</span>
@@ -875,19 +869,19 @@
                     <span class="n">B</span> <span class="o">=</span> <span class="o">-</span> <span class="n">M1Pk</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s1">&#39;array&#39;</span><span class="p">)</span>
                     <span class="c1"># C = conjugate(B.T)</span>
 
-                    <span class="n">tY</span> <span class="o">=</span> <span class="n">solve</span><span class="p">(</span><span class="n">Gf</span><span class="p">,</span> <span class="n">conjugate</span><span class="p">(</span><span class="n">B</span><span class="o">.</span><span class="n">T</span><span class="p">),</span> <span class="kc">True</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
-                    <span class="n">Gf</span> <span class="o">=</span> <span class="n">inv</span><span class="p">(</span><span class="n">A2</span> <span class="o">-</span> <span class="n">dot</span><span class="p">(</span><span class="n">B</span><span class="p">,</span> <span class="n">tY</span><span class="p">),</span> <span class="kc">True</span><span class="p">)</span>
-                    <span class="n">tX</span> <span class="o">=</span> <span class="n">solve</span><span class="p">(</span><span class="n">A2</span><span class="p">,</span> <span class="n">B</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+                    <span class="n">tY</span> <span class="o">=</span> <span class="o">-</span> <span class="n">solve</span><span class="p">(</span><span class="n">Gf</span><span class="p">,</span> <span class="n">conjugate</span><span class="p">(</span><span class="n">B</span><span class="o">.</span><span class="n">T</span><span class="p">),</span> <span class="kc">True</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+                    <span class="n">Gf</span> <span class="o">=</span> <span class="n">inv</span><span class="p">(</span><span class="n">A2</span> <span class="o">+</span> <span class="n">dot</span><span class="p">(</span><span class="n">B</span><span class="p">,</span> <span class="n">tY</span><span class="p">),</span> <span class="kc">True</span><span class="p">)</span>
+                    <span class="n">tX</span> <span class="o">=</span> <span class="o">-</span> <span class="n">solve</span><span class="p">(</span><span class="n">A2</span><span class="p">,</span> <span class="n">B</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
 
                     <span class="c1"># Since this is the pristine case, we know that</span>
                     <span class="c1"># G11 and G22 are the same:</span>
-                    <span class="c1">#  G = [A1 - C.tX]^-1 == [A2 - B.tY]^-1</span>
+                    <span class="c1">#  G = [A1 + C.tX]^-1 == [A2 + B.tY]^-1</span>
 
                     <span class="n">G</span> <span class="o">=</span> <span class="n">empty</span><span class="p">([</span><span class="n">tile</span><span class="p">,</span> <span class="n">no</span><span class="p">,</span> <span class="n">tile</span><span class="p">,</span> <span class="n">no</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span>
                     <span class="n">G</span><span class="p">[</span><span class="n">idx0</span><span class="p">,</span> <span class="p">:,</span> <span class="n">idx0</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">Gf</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">no</span><span class="p">,</span> <span class="n">no</span><span class="p">)</span>
                     <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">tile</span><span class="p">):</span>
-                        <span class="n">G</span><span class="p">[</span><span class="n">idx0</span><span class="p">[</span><span class="n">i</span><span class="p">:],</span> <span class="p">:,</span> <span class="n">idx0</span><span class="p">[:</span><span class="o">-</span><span class="n">i</span><span class="p">],</span> <span class="p">:]</span> <span class="o">=</span> <span class="o">-</span> <span class="n">dot</span><span class="p">(</span><span class="n">tX</span><span class="p">,</span> <span class="n">G</span><span class="p">[</span><span class="n">i</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="p">:,</span> <span class="mi">0</span><span class="p">,</span> <span class="p">:])</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">no</span><span class="p">,</span> <span class="n">no</span><span class="p">)</span>
-                        <span class="n">G</span><span class="p">[</span><span class="n">idx0</span><span class="p">[:</span><span class="o">-</span><span class="n">i</span><span class="p">],</span> <span class="p">:,</span> <span class="n">idx0</span><span class="p">[</span><span class="n">i</span><span class="p">:],</span> <span class="p">:]</span> <span class="o">=</span> <span class="o">-</span> <span class="n">dot</span><span class="p">(</span><span class="n">tY</span><span class="p">,</span> <span class="n">G</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="p">:,</span> <span class="n">i</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="p">:])</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">no</span><span class="p">,</span> <span class="n">no</span><span class="p">)</span>
+                        <span class="n">G</span><span class="p">[</span><span class="n">idx0</span><span class="p">[</span><span class="n">i</span><span class="p">:],</span> <span class="p">:,</span> <span class="n">idx0</span><span class="p">[:</span><span class="o">-</span><span class="n">i</span><span class="p">],</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">dot</span><span class="p">(</span><span class="n">tX</span><span class="p">,</span> <span class="n">G</span><span class="p">[</span><span class="n">i</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="p">:,</span> <span class="mi">0</span><span class="p">,</span> <span class="p">:])</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">no</span><span class="p">,</span> <span class="n">no</span><span class="p">)</span>
+                        <span class="n">G</span><span class="p">[</span><span class="n">idx0</span><span class="p">[:</span><span class="o">-</span><span class="n">i</span><span class="p">],</span> <span class="p">:,</span> <span class="n">idx0</span><span class="p">[</span><span class="n">i</span><span class="p">:],</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">dot</span><span class="p">(</span><span class="n">tY</span><span class="p">,</span> <span class="n">G</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="p">:,</span> <span class="n">i</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="p">:])</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">no</span><span class="p">,</span> <span class="n">no</span><span class="p">)</span>
                     <span class="k">return</span> <span class="n">G</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">tile</span> <span class="o">*</span> <span class="n">no</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
 
             <span class="k">else</span><span class="p">:</span>
@@ -899,15 +893,15 @@
                     <span class="n">B</span> <span class="o">=</span> <span class="n">tY</span> <span class="o">*</span> <span class="n">E</span> <span class="o">-</span> <span class="n">tX</span>
                     <span class="c1"># C = _conj(tY.T) * E - _conj(tX.T)</span>
 
-                    <span class="n">tY</span> <span class="o">=</span> <span class="n">solve</span><span class="p">(</span><span class="n">Gf</span><span class="p">,</span> <span class="n">conjugate</span><span class="p">(</span><span class="n">tY</span><span class="o">.</span><span class="n">T</span><span class="p">)</span> <span class="o">*</span> <span class="n">E</span> <span class="o">-</span> <span class="n">conjugate</span><span class="p">(</span><span class="n">tX</span><span class="o">.</span><span class="n">T</span><span class="p">),</span> <span class="kc">True</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
-                    <span class="n">Gf</span> <span class="o">=</span> <span class="n">inv</span><span class="p">(</span><span class="n">A2</span> <span class="o">-</span> <span class="n">dot</span><span class="p">(</span><span class="n">B</span><span class="p">,</span> <span class="n">tY</span><span class="p">),</span> <span class="kc">True</span><span class="p">)</span>
-                    <span class="n">tX</span> <span class="o">=</span> <span class="n">solve</span><span class="p">(</span><span class="n">A2</span><span class="p">,</span> <span class="n">B</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+                    <span class="n">tY</span> <span class="o">=</span> <span class="o">-</span> <span class="n">solve</span><span class="p">(</span><span class="n">Gf</span><span class="p">,</span> <span class="n">conjugate</span><span class="p">(</span><span class="n">tY</span><span class="o">.</span><span class="n">T</span><span class="p">)</span> <span class="o">*</span> <span class="n">E</span> <span class="o">-</span> <span class="n">conjugate</span><span class="p">(</span><span class="n">tX</span><span class="o">.</span><span class="n">T</span><span class="p">),</span> <span class="kc">True</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+                    <span class="n">Gf</span> <span class="o">=</span> <span class="n">inv</span><span class="p">(</span><span class="n">A2</span> <span class="o">+</span> <span class="n">dot</span><span class="p">(</span><span class="n">B</span><span class="p">,</span> <span class="n">tY</span><span class="p">),</span> <span class="kc">True</span><span class="p">)</span>
+                    <span class="n">tX</span> <span class="o">=</span> <span class="o">-</span> <span class="n">solve</span><span class="p">(</span><span class="n">A2</span><span class="p">,</span> <span class="n">B</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
 
                     <span class="n">G</span> <span class="o">=</span> <span class="n">empty</span><span class="p">([</span><span class="n">tile</span><span class="p">,</span> <span class="n">no</span><span class="p">,</span> <span class="n">tile</span><span class="p">,</span> <span class="n">no</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span>
                     <span class="n">G</span><span class="p">[</span><span class="n">idx0</span><span class="p">,</span> <span class="p">:,</span> <span class="n">idx0</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">Gf</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">no</span><span class="p">,</span> <span class="n">no</span><span class="p">)</span>
                     <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">tile</span><span class="p">):</span>
-                        <span class="n">G</span><span class="p">[</span><span class="n">idx0</span><span class="p">[</span><span class="n">i</span><span class="p">:],</span> <span class="p">:,</span> <span class="n">idx0</span><span class="p">[:</span><span class="o">-</span><span class="n">i</span><span class="p">],</span> <span class="p">:]</span> <span class="o">=</span> <span class="o">-</span> <span class="n">dot</span><span class="p">(</span><span class="n">tX</span><span class="p">,</span> <span class="n">G</span><span class="p">[</span><span class="n">i</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="p">:,</span> <span class="mi">0</span><span class="p">,</span> <span class="p">:])</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">no</span><span class="p">,</span> <span class="n">no</span><span class="p">)</span>
-                        <span class="n">G</span><span class="p">[</span><span class="n">idx0</span><span class="p">[:</span><span class="o">-</span><span class="n">i</span><span class="p">],</span> <span class="p">:,</span> <span class="n">idx0</span><span class="p">[</span><span class="n">i</span><span class="p">:],</span> <span class="p">:]</span> <span class="o">=</span> <span class="o">-</span> <span class="n">dot</span><span class="p">(</span><span class="n">tY</span><span class="p">,</span> <span class="n">G</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="p">:,</span> <span class="n">i</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="p">:])</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">no</span><span class="p">,</span> <span class="n">no</span><span class="p">)</span>
+                        <span class="n">G</span><span class="p">[</span><span class="n">idx0</span><span class="p">[</span><span class="n">i</span><span class="p">:],</span> <span class="p">:,</span> <span class="n">idx0</span><span class="p">[:</span><span class="o">-</span><span class="n">i</span><span class="p">],</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">dot</span><span class="p">(</span><span class="n">tX</span><span class="p">,</span> <span class="n">G</span><span class="p">[</span><span class="n">i</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="p">:,</span> <span class="mi">0</span><span class="p">,</span> <span class="p">:])</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">no</span><span class="p">,</span> <span class="n">no</span><span class="p">)</span>
+                        <span class="n">G</span><span class="p">[</span><span class="n">idx0</span><span class="p">[:</span><span class="o">-</span><span class="n">i</span><span class="p">],</span> <span class="p">:,</span> <span class="n">idx0</span><span class="p">[</span><span class="n">i</span><span class="p">:],</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">dot</span><span class="p">(</span><span class="n">tY</span><span class="p">,</span> <span class="n">G</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="p">:,</span> <span class="n">i</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="p">:])</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">no</span><span class="p">,</span> <span class="n">no</span><span class="p">)</span>
                     <span class="k">return</span> <span class="n">G</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">tile</span> <span class="o">*</span> <span class="n">no</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
 
         <span class="c1"># Create functions used to calculate the real-space Green function</span>
@@ -940,9 +934,7 @@
 </pre></div>
 
            </div>
-           <div class="articleComments">
-            
-           </div>
+           
           </div>
           <footer>
   
@@ -951,11 +943,11 @@
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2015-2018, Nick R. Papior.
+        &copy; Copyright 2015-2018, Nick R. Papior
 
     </p>
   </div>
-  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
 
 </footer>
 
@@ -970,36 +962,24 @@
 
   
 
-    <script type="text/javascript">
-        var DOCUMENTATION_OPTIONS = {
-            URL_ROOT:'../../../',
-            VERSION:'latest',
-            COLLAPSE_INDEX:false,
-            FILE_SUFFIX:'.html',
-            HAS_SOURCE:  true,
-            SOURCELINK_SUFFIX: '.txt'
-        };
-    </script>
-      <script type="text/javascript" src="../../../_static/jquery.js"></script>
-      <script type="text/javascript" src="../../../_static/underscore.js"></script>
-      <script type="text/javascript" src="../../../_static/doctools.js"></script>
-      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+        <script type="text/javascript" src="../../../_static/jquery.js"></script>
+        <script type="text/javascript" src="../../../_static/underscore.js"></script>
+        <script type="text/javascript" src="../../../_static/doctools.js"></script>
+        <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
 
   
 
-  
-  
-    <script type="text/javascript" src="../../../_static/js/theme.js"></script>
-  
+  <script type="text/javascript" src="../../../_static/js/theme.js"></script>
 
-  
-  
   <script type="text/javascript">
       jQuery(function () {
-          SphinxRtdTheme.StickyNav.enable();
+          SphinxRtdTheme.Navigation.enable(true);
       });
-  </script>
-   
+  </script> 
 
 </body>
 </html>
