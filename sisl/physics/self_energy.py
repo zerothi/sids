@@ -3,7 +3,8 @@ from __future__ import print_function, division
 import numpy as np
 from numpy import dot, amax, conjugate
 from numpy import subtract
-from numpy import empty, zeros_like, empty_like, identity
+from numpy import empty, zeros, identity
+from numpy import zeros_like, empty_like
 from numpy import complex128
 from numpy import abs as _abs
 
@@ -59,7 +60,7 @@ class SemiInfinite(SelfEnergy):
        the default imaginary part of the self-energy calculation
     """
 
-    def __init__(self, spgeom, infinite, eta=1e-6):
+    def __init__(self, spgeom, infinite, eta=1e-4):
         """ Create a `SelfEnergy` object from any `SparseGeometry` """
         self.eta = eta
 
@@ -413,7 +414,7 @@ class RealSpaceSE(SelfEnergy):
             # whether TRS is used in if get_integration is used (default)
             'trs': True,
             # imaginary part used in the Green function calculation (unless an imaginary energy is passed)
-            'eta': 1e-6,
+            'eta': 1e-4,
             # The BrillouinZone used for integration
             'bz': None,
         }
@@ -435,8 +436,8 @@ class RealSpaceSE(SelfEnergy):
     def real_space_coupling(self, ret_indices=False):
         """ Return the real-space coupling parent where they fold into the parent real-space unit cell
 
-        The resulting parent object only contains the couplings for the real-space matrix out into the
-        neighbouring unit cells.
+        The resulting parent object only contains the inner-cell couplings for the elements that couple
+        out of the real-space matrix.
 
         Parameters
         ----------
@@ -451,35 +452,32 @@ class RealSpaceSE(SelfEnergy):
         opt = self._options
         s_ax = opt['semi_axis']
         k_ax = opt['k_axis']
-        P0 = self.parent.tile(max(1, self._unfold[s_ax]), s_ax).tile(self._unfold[k_ax], k_ax)
+        PC = self.parent.tile(max(1, self._unfold[s_ax]), s_ax).tile(self._unfold[k_ax], k_ax)
 
-        # Figure out all couplings crossing the borders along the semi+k directions
-        nsc = P0.nsc.copy()
-        if 0 in [s_ax, k_ax] and 1 in [s_ax, k_ax]:
-            nsc[2] = 1
-        elif 0 in [s_ax, k_ax] and 2 in [s_ax, k_ax]:
-            nsc[1] = 1
-        elif 1 in [s_ax, k_ax] and 2 in [s_ax, k_ax]:
-            nsc[0] = 1
-
-        # Remove the non-used direction
-        P0.set_nsc(nsc)
         # Geometry short-hand
-        g = P0.geometry
-        # Remove all inner-cell couplings (0, 0, 0)
-        n = P0.shape[0]
+        g = PC.geometry
+        # Remove all inner-cell couplings (0, 0, 0) to figure out the
+        # elements that couple out of the real-space region
+        n = PC.shape[0]
         idx = g.sc.sc_index([0, 0, 0])
         cols = _a.arangei(n) + idx * n
-        # Short hand sparse matrix
-        csr = P0._csr.copy()
+        csr = PC._csr.copy([0]) # we just want the sparse pattern, so forget about the other elements
         csr.delete_columns(cols, keep_shape=True)
-        # Now P0 only contains couplings along the k and semi-inf directions
+        # Now PC only contains couplings along the k and semi-inf directions
         # Extract the connecting orbitals and reduce them to unique atomic indices
         orbs = g.osc2uc(csr.col[array_arange(csr.ptr[:-1], n=csr.ncol)], True)
         atom_idx = g.o2a(orbs, True)
+        # Only retain coupling atoms
+        PC = PC.sub(atom_idx)
+
+        # Remove all out-of-cell couplings such that we only have inner-cell couplings.
+        nsc = PC.nsc.copy()
+        nsc[s_ax] = 1
+        nsc[k_ax] = 1
+        PC.set_nsc(nsc)
         if ret_indices:
-            return P0.sub(atom_idx), atom_idx
-        return P0.sub(atom_idx)
+            return PC, atom_idx
+        return PC
 
     def initialize(self):
         """ Initialize the internal data-arrays used for efficient calculation of the real-space quantities
@@ -617,16 +615,21 @@ class RealSpaceSE(SelfEnergy):
             dtype = complex128
         if E.imag == 0:
             E = E.real + 1j * self._options['eta']
-        invG = inv(self.green(E, dtype=dtype), True)
+        G = self.green(E, dtype=dtype)
         if coupling:
             orbs = self._calc['orbs']
+            iorbs = _a.arangei(orbs.size).reshape(1, -1)
+            I = zeros([G.shape[0], orbs.size], dtype)
+            # Set diagonal
+            I[orbs.ravel(), iorbs.ravel()] = 1.
             if bulk:
-                return invG[orbs, orbs.T]
-            return ((self._calc['S0'] * E - self._calc['P0']).astype(dtype, copy=False).toarray() - invG)[orbs, orbs.T]
+                return solve(G, I, True, True)[orbs, iorbs]
+            return (self._calc['S0'] * E - self._calc['P0']).astype(dtype, copy=False).toarray()[orbs, orbs.T] \
+                - solve(G, I, True, True)[orbs, iorbs]
         else:
             if bulk:
-                return invG
-            return (self._calc['S0'] * E - self._calc['P0']).astype(dtype, copy=False).toarray() - invG
+                return inv(G, True)
+            return (self._calc['S0'] * E - self._calc['P0']).astype(dtype, copy=False).toarray() - inv(G, True)
 
     def green(self, E, dtype=None):
         r""" Calculate the real-space Green function
@@ -700,19 +703,19 @@ class RealSpaceSE(SelfEnergy):
                     B = - M1Pk(k, dtype=dtype, format='array')
                     # C = conjugate(B.T)
 
-                    tY = solve(Gf, conjugate(B.T), True, True)
-                    Gf = inv(A2 - dot(B, tY), True)
-                    tX = solve(A2, B, True, True)
+                    tY = - solve(Gf, conjugate(B.T), True, True)
+                    Gf = inv(A2 + dot(B, tY), True)
+                    tX = - solve(A2, B, True, True)
 
                     # Since this is the pristine case, we know that
                     # G11 and G22 are the same:
-                    #  G = [A1 - C.tX]^-1 == [A2 - B.tY]^-1
+                    #  G = [A1 + C.tX]^-1 == [A2 + B.tY]^-1
 
                     G = empty([tile, no, tile, no], dtype=dtype)
                     G[idx0, :, idx0, :] = Gf.reshape(1, no, no)
                     for i in range(1, tile):
-                        G[idx0[i:], :, idx0[:-i], :] = - dot(tX, G[i-1, :, 0, :]).reshape(1, no, no)
-                        G[idx0[:-i], :, idx0[i:], :] = - dot(tY, G[0, :, i-1, :]).reshape(1, no, no)
+                        G[idx0[i:], :, idx0[:-i], :] = dot(tX, G[i-1, :, 0, :]).reshape(1, no, no)
+                        G[idx0[:-i], :, idx0[i:], :] = dot(tY, G[0, :, i-1, :]).reshape(1, no, no)
                     return G.reshape(tile * no, -1)
 
             else:
@@ -724,15 +727,15 @@ class RealSpaceSE(SelfEnergy):
                     B = tY * E - tX
                     # C = _conj(tY.T) * E - _conj(tX.T)
 
-                    tY = solve(Gf, conjugate(tY.T) * E - conjugate(tX.T), True, True)
-                    Gf = inv(A2 - dot(B, tY), True)
-                    tX = solve(A2, B, True, True)
+                    tY = - solve(Gf, conjugate(tY.T) * E - conjugate(tX.T), True, True)
+                    Gf = inv(A2 + dot(B, tY), True)
+                    tX = - solve(A2, B, True, True)
 
                     G = empty([tile, no, tile, no], dtype=dtype)
                     G[idx0, :, idx0, :] = Gf.reshape(1, no, no)
                     for i in range(1, tile):
-                        G[idx0[i:], :, idx0[:-i], :] = - dot(tX, G[i-1, :, 0, :]).reshape(1, no, no)
-                        G[idx0[:-i], :, idx0[i:], :] = - dot(tY, G[0, :, i-1, :]).reshape(1, no, no)
+                        G[idx0[i:], :, idx0[:-i], :] = dot(tX, G[i-1, :, 0, :]).reshape(1, no, no)
+                        G[idx0[:-i], :, idx0[i:], :] = dot(tY, G[0, :, i-1, :]).reshape(1, no, no)
                     return G.reshape(tile * no, -1)
 
         # Create functions used to calculate the real-space Green function

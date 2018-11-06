@@ -714,7 +714,7 @@ def _inv_eff_mass_tensor_ortho(state, ddHk, degenerate, as_matrix):
     return M * _inv_eff_mass_const
 
 
-def berry_phase(contour, sub=None, eigvals=False, closed=True):
+def berry_phase(contour, sub=None, eigvals=False, closed=True, method='berry'):
     r""" Calculate the Berry-phase on a loop using a predefined path
 
     The Berry phase for a single Bloch state is calculated using the discretized formula:
@@ -735,7 +735,12 @@ def berry_phase(contour, sub=None, eigvals=False, closed=True):
     eigvals : bool, optional
        return the eigenvalues of the product of the overlap matrices
     closed : bool, optional
-       whether or not to include the connection of the last and first points in the loop (unwanted for the Zak phase)
+       whether or not to include the connection of the last and first points in the loop
+    method : {'berry', 'zak'}
+       'berry' will return the usual integral of the Berry connection over the specified contour
+       'zak' will compute the Zak phase for 1D systems by performing a closed loop integration but
+       taking into account the Bloch factor :math:`e^{-i2\pi/a x}` accumulated over a Brillouin zone,
+       see J. Zak, "Berry's phase for energy bands in solids" PRL 62, 2747 (1989).
 
     Notes
     -----
@@ -780,6 +785,14 @@ def berry_phase(contour, sub=None, eigvals=False, closed=True):
         # When the user has the contour points closed, we don't need to do this in the below loop
         closed = False
 
+    method = method.lower()
+    if method == 'berry':
+        pass
+    elif method == 'zak':
+        closed = True
+    else:
+        raise SislError('berry_phase: requires the method to be [berry, zak]')
+
     # Whether we should calculate the eigenvalues of the overlap matrix
     if eigvals:
         # We calculate the final eigenvalues
@@ -810,6 +823,14 @@ def berry_phase(contour, sub=None, eigvals=False, closed=True):
 
             # Complete the loop
             if closed:
+                # Insert Bloch phase for 1D integral?
+                if method == 'zak':
+                    g = contour.parent.geometry
+                    axis = contour.k[1] - contour.k[0]
+                    axis /= (axis ** 2).sum() ** 0.5
+                    phase = dot(g.xyz[g.o2a(_a.arangei(g.no)), :], dot(axis, g.rcell)).reshape(1, -1)
+                    prev.state *= np.exp(-1j * phase)
+
                 # Include last-to-first segment
                 prd = _process(prd, prev.inner(first, False))
             return prd
@@ -826,7 +847,12 @@ def berry_phase(contour, sub=None, eigvals=False, closed=True):
                 prd = _process(prd, prev.inner(second, False))
                 prev = second
             if closed:
-                # Include last-to-first segment
+                if method == 'zak':
+                    g = contour.parent.geometry
+                    axis = contour.k[1] - contour.k[0]
+                    axis /= (axis ** 2).sum() ** 0.5
+                    phase = dot(g.xyz[g.o2a(_a.arangei(g.no)), :], dot(axis, g.rcell)).reshape(1, -1)
+                    prev.state *= np.exp(-1j * phase)
                 prd = _process(prd, prev.inner(first, False))
             return prd
 
@@ -921,6 +947,8 @@ def wavefunction(v, grid, geometry=None, k=None, spinor=0, spin=None, eta=False)
 
     # In case the user has passed several vectors we sum them to plot the summed state
     if v.ndim == 2:
+        if v.shape[0] > 1:
+            info('wavefunction: summing {} different state coefficients, will continue silently!'.format(v.shape[0]))
         v = v.sum(0)
 
     if spin is None:
@@ -934,7 +962,7 @@ def wavefunction(v, grid, geometry=None, k=None, spinor=0, spin=None, eta=False)
         v = v.reshape(-1, 2)[:, spinor]
 
     if len(v) != geometry.no:
-        raise ValueError("wavefunction require wavefunction coefficients corresponding to number of orbitals in the geometry.")
+        raise ValueError("wavefunction: require wavefunction coefficients corresponding to number of orbitals in the geometry.")
 
     # Check for k-points
     k = _a.asarrayd(k)
@@ -949,7 +977,7 @@ def wavefunction(v, grid, geometry=None, k=None, spinor=0, spin=None, eta=False)
     # Likewise if a k-point has been passed.
     is_complex = np.iscomplexobj(v) or has_k
     if is_complex and not np.iscomplexobj(grid.grid):
-        raise SislError("wavefunction input coefficients are complex, while grid only contains real.")
+        raise SislError("wavefunction: input coefficients are complex, while grid only contains real.")
 
     if is_complex:
         psi_init = _a.zerosz
@@ -959,8 +987,12 @@ def wavefunction(v, grid, geometry=None, k=None, spinor=0, spin=None, eta=False)
     # Extract sub variables used throughout the loop
     shape = _a.asarrayi(grid.shape)
     dcell = grid.dcell
-    ic = grid.sc.icell
-    geom_shape = dot(ic, geometry.cell.T) * shape.reshape(1, -1)
+    ic_shape = grid.sc.icell * shape.reshape(3, 1)
+
+    # Convert the geometry (hosting the wavefunction coefficients) coordinates into
+    # grid-fractionals X grid-shape to get index-offsets in the grid for the geometry
+    # supercell.
+    geom_shape = dot(geometry.cell, ic_shape.T)
 
     # In the following we don't care about division
     # So 1) save error state, 2) turn off divide by 0, 3) calculate, 4) turn on old error state
@@ -994,39 +1026,43 @@ def wavefunction(v, grid, geometry=None, k=None, spinor=0, spin=None, eta=False)
     del theta, phi, rad1
 
     # First we calculate the min/max indices for all atoms
-    idx_mm = _a.emptyi([geometry.na, 2, 3])
     rxyz = _a.emptyd(nrxyz)
     rxyz[..., 0] = ctheta_sphi
     rxyz[..., 1] = stheta_sphi
     rxyz[..., 2] = cphi
     # Reshape
     rxyz.shape = (-1, 3)
-    idx = dot(ic, rxyz.T).T * shape.reshape(1, -1)
+    idx = dot(rxyz, ic_shape.T)
     idxm = idx.min(0).reshape(1, 3)
     idxM = idx.max(0).reshape(1, 3)
     del ctheta_sphi, stheta_sphi, cphi, idx, rxyz, nrxyz
 
-    origo = grid.sc.origo.reshape(1, -1)
+    # Fast loop (only per specie)
+    origo = grid.sc.origo.reshape(1, 3)
+    idx_mm = _a.emptyd([geometry.na, 2, 3])
+    all_negative_R = True
     for atom, ia in geometry.atom.iter(True):
         if len(ia) == 0:
             continue
         R = atom.maxR()
+        all_negative_R = all_negative_R and R < 0.
 
         # Now do it for all the atoms to get indices of the middle of
         # the atoms
         # The coordinates are relative to origo, so we need to shift (when writing a grid
         # it is with respect to origo)
-        xyz = geometry.xyz[ia, :] - origo
-        idx = dot(ic, xyz.T).T * shape.reshape(1, -1)
+        idx = dot(geometry.xyz[ia, :] - origo, ic_shape.T)
 
         # Get min-max for all atoms
         idx_mm[ia, 0, :] = idxm * R + idx
         idx_mm[ia, 1, :] = idxM * R + idx
 
+    if all_negative_R:
+        raise SislError("wavefunction: Cannot create wavefunction since no atoms have an associated basis-orbital on a real-space grid")
+
     # Now we have min-max for all atoms
     # When we run the below loop all indices can be retrieved by looking
     # up in the above table.
-
     # Before continuing, we can easily clean up the temporary arrays
     del origo, idx
 
@@ -1046,17 +1082,23 @@ def wavefunction(v, grid, geometry=None, k=None, spinor=0, spin=None, eta=False)
 
     # Instead of looping all atoms in the supercell we find the exact atoms
     # and their supercell indices.
-    add_R = _a.zerosd(3) + geometry.maxR()
+    add_R = _a.fulld(3, geometry.maxR())
     # Calculate the required additional vectors required to increase the fictitious
     # supercell by add_R in each direction.
     # For extremely skewed lattices this will be way too much, hence we make
     # them square.
+
     o = sc.toCuboid(True)
-    sc = SuperCell(o._v, origo=o.origo - add_R) + np.diag(2 * add_R)
+    sc = SuperCell(o._v + np.diag(2 * add_R), origo=o.origo - add_R)
 
     # Retrieve all atoms within the grid supercell
     # (and the neighbours that connect into the cell)
-    IA, XYZ, ISC = geometry.within_inf(sc, periodic=pbc, origo=grid.origo)
+    # Note that we cannot pass the "moved" origo because then ISC would be wrong
+    IA, XYZ, ISC = geometry.within_inf(sc, periodic=pbc, origo=geometry.origo)
+    # We need to revert the grid supercell origo as that is not subtracted in the `within_inf` returned
+    # coordinates (and the below loop expects positions with respect to the origo of the plotting
+    # grid).
+    XYZ -= grid.sc.origo.reshape(1, 3)
 
     phk = k * 2 * np.pi
     phase = 1
@@ -1072,7 +1114,7 @@ def wavefunction(v, grid, geometry=None, k=None, spinor=0, spin=None, eta=False)
         # Extract maximum R
         R = atom.maxR()
         if R <= 0.:
-            warn("Atom '{}' does not have a wave-function, skipping atom.".format(atom))
+            warn("wavefunction: Atom '{}' does not have a wave-function, skipping atom.".format(atom))
             eta.update()
             continue
 
@@ -1123,7 +1165,7 @@ def wavefunction(v, grid, geometry=None, k=None, spinor=0, spin=None, eta=False)
             oR = os[0].R
 
             if oR <= 0.:
-                warn("Orbital(s) '{}' does not have a wave-function, skipping orbital!".format(os))
+                warn("wavefunction: Orbital(s) '{}' does not have a wave-function, skipping orbital!".format(os))
                 # Skip these orbitals
                 io += len(os)
                 continue
@@ -1311,7 +1353,8 @@ class _electron_State(object):
     def wavefunction(self, grid, spinor=0, eta=False):
         r""" Expand the coefficients as the wavefunction on `grid` *as-is*
 
-        See `~sisl.physics.electron.wavefunction` for argument details.
+        See `~sisl.physics.electron.wavefunction` for argument details, the arguments not present
+        in this method are automatically passed from this object.
         """
         try:
             spin = self.parent.spin
@@ -1332,8 +1375,7 @@ class _electron_State(object):
         # Retrieve k
         k = self.info.get('k', _a.zerosd(3))
 
-        wavefunction(self.state, grid, geometry=geometry, k=k, spinor=spinor,
-                     spin=spin, eta=eta)
+        wavefunction(self.state, grid, geometry=geometry, k=k, spinor=spinor, spin=spin, eta=eta)
 
     def change_gauge(self, gauge):
         r""" In-place change of the gauge of the state coefficients
@@ -1373,9 +1415,6 @@ class _electron_State(object):
             self.state *= np.exp(1j * phase).reshape(1, -1)
         elif gauge == 'R':
             self.state *= np.exp(-1j * phase).reshape(1, -1)
-
-    # TODO to be deprecated
-    psi = wavefunction
 
 
 class CoefficientElectron(Coefficient):
@@ -1523,6 +1562,7 @@ class EigenvalueElectron(CoefficientElectron):
 
     @property
     def eig(self):
+        """ Eigenvalues """
         return self.c
 
     def occupation(self, distribution='fermi_dirac'):
@@ -1570,6 +1610,7 @@ class EigenstateElectron(StateCElectron):
 
     @property
     def eig(self):
+        """ Eigenvalues for each state """
         return self.c
 
     def occupation(self, distribution='fermi_dirac'):

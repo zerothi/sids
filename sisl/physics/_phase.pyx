@@ -1,4 +1,5 @@
-# Import libc functions
+#!python
+#cython: language_level=2
 cimport cython
 from libc.math cimport fabs
 
@@ -43,9 +44,9 @@ def phase_dtype(ndarray[float64_t, ndim=1, mode='c'] k, dtype, force_complex=Fal
             dtype = complex128
         elif dtype is None:
             dtype = complex128
-            
+
     return dtype
-    
+
 
 def phase_rsc(sc, ndarray[float64_t, ndim=1, mode='c'] k, dtype):
     """ Calculate the phases for the supercell interactions using k """

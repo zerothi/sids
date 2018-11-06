@@ -18,10 +18,9 @@ from ..sile import *
 from .sile import SileSiesta
 
 from .binaries import tshsSileSiesta, tsdeSileSiesta
-from .binaries import dmSileSiesta, hsxSileSiesta
+from .binaries import dmSileSiesta, hsxSileSiesta, onlysSileSiesta
 from .fc import fcSileSiesta
 from .fa import faSileSiesta
-from .pdos import pdosSileSiesta
 from .siesta_nc import ncSileSiesta
 from .basis import ionxmlSileSiesta, ionncSileSiesta
 from .orb_indx import orbindxSileSiesta
@@ -1476,6 +1475,62 @@ class fdfSileSiesta(SileSiesta):
             EDM = tsdeSileSiesta(f).read_energy_density_matrix(*args, **kwargs)
         return EDM
 
+    def read_overlap(self, *args, **kwargs):
+        """ Try and read the overlap matrix by reading the <>.nc, <>.TSHS files, <>.HSX, <>.onlyS (in that order)
+
+        One can limit the tried files to only one file by passing
+        only a single file ending.
+
+        Parameters
+        ----------
+        order: list of str, optional
+            the order of which to try and read the overlap matrix
+            By default this is ``['nc', 'TSHS', 'HSX', 'onlyS']``.
+        """
+        order = kwargs.pop('order', ['nc', 'TSHS', 'HSX', 'onlyS'])
+        for f in order:
+            v = getattr(self, '_r_overlap_{}'.format(f.lower()))(*args, **kwargs)
+            if v is not None:
+                return v
+        return None
+
+    def _r_overlap_nc(self, *args, **kwargs):
+        """ Read overlap from the nc file """
+        f = self.dir_file(self.get('SystemLabel', default='siesta')) + '.nc'
+        if isfile(f):
+            return ncSileSiesta(f).read_overlap(*args, **kwargs)
+        return None
+
+    def _r_overlap_tshs(self, *args, **kwargs):
+        """ Read overlap from the TSHS file """
+        f = self.dir_file(self.get('SystemLabel', default='siesta')) + '.TSHS'
+        S = None
+        if isfile(f):
+            if 'geometry' not in kwargs:
+                kwargs['geometry'] = self.read_geometry(True)
+            S = tshsSileSiesta(f).read_overlap(*args, **kwargs)
+        return S
+
+    def _r_overlap_hsx(self, *args, **kwargs):
+        """ Read overlap from the HSX file """
+        f = self.dir_file(self.get('SystemLabel', default='siesta')) + '.HSX'
+        S = None
+        if isfile(f):
+            if 'geometry' not in kwargs:
+                kwargs['geometry'] = self.read_geometry(True)
+            S = hsxSileSiesta(f).read_overlap(*args, **kwargs)
+        return S
+
+    def _r_overlap_onlys(self, *args, **kwargs):
+        """ Read overlap from the onlyS file """
+        f = self.dir_file(self.get('SystemLabel', default='siesta')) + '.onlyS'
+        S = None
+        if isfile(f):
+            if 'geometry' not in kwargs:
+                kwargs['geometry'] = self.read_geometry(True)
+            S = onlySSileSiesta(f).read_overlap(*args, **kwargs)
+        return S
+
     def read_hamiltonian(self, *args, **kwargs):
         """ Try and read the Hamiltonian by reading the <>.nc, <>.TSHS files, <>.HSX (in that order)
 
@@ -1612,7 +1667,7 @@ class fdfSileSiesta(SileSiesta):
         if isfile(f):
             tmp_p = sp.add_parser('pdos',
                                   help="Manipulate PDOS.xml file from the Siesta simulation")
-            tmp_p, tmp_ns = pdosSileSiesta(f).ArgumentParser(tmp_p, *args, **kwargs)
+            tmp_p, tmp_ns = sis.pdosSileSiesta(f).ArgumentParser(tmp_p, *args, **kwargs)
             namespace = merge_instances(namespace, tmp_ns)
 
         f = label + '.EIG'

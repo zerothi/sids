@@ -5,9 +5,9 @@ import pytest
 import warnings
 import numpy as np
 
-from sisl import Geometry, Atom, SuperCell, Hamiltonian, Spin, BandStructure, MonkhorstPack
+from sisl import Geometry, Atom, SuperCell, Hamiltonian, Spin, BandStructure, MonkhorstPack, BrillouinZone
 from sisl import Grid, SphericalOrbital, SislError
-from sisl import electron as elec
+from sisl.physics.electron import berry_phase
 
 
 pytestmark = pytest.mark.hamiltonian
@@ -597,23 +597,51 @@ class TestHamiltonian(object):
         H = Hamiltonian(g)
         H.construct((R, param))
         bz = BandStructure.param_circle(H, 20, 0.01, [0, 0, 1], [1/3] * 3)
-        elec.berry_phase(bz)
-        elec.berry_phase(bz, sub=0)
-        elec.berry_phase(bz, eigvals=True, sub=0)
+        berry_phase(bz)
+        berry_phase(bz, sub=0)
+        berry_phase(bz, eigvals=True, sub=0)
 
     @pytest.mark.xfail(raises=SislError)
     def test_berry_phase_fail_sc(self, setup):
         g = setup.g.tile(2, 0).tile(2, 1).tile(2, 2)
         H = Hamiltonian(g)
         bz = BandStructure.param_circle(H.geometry.sc, 20, 0.01, [0, 0, 1], [1/3] * 3)
-        elec.berry_phase(bz)
+        berry_phase(bz)
 
     def test_berry_phase_loop(self, setup):
         g = setup.g.tile(2, 0).tile(2, 1).tile(2, 2)
         H = Hamiltonian(g)
         bz1 = BandStructure.param_circle(H, 20, 0.01, [0, 0, 1], [1/3] * 3)
         bz2 = BandStructure.param_circle(H, 20, 0.01, [0, 0, 1], [1/3] * 3, loop=True)
-        assert np.allclose(elec.berry_phase(bz1), elec.berry_phase(bz2))
+        assert np.allclose(berry_phase(bz1), berry_phase(bz2))
+
+    def test_berry_phase_zak(self):
+        # SSH model, topological cell
+        g = Geometry([[-.6, 0, 0], [0.6, 0, 0]], Atom(1, 1.001), sc=[2, 10, 10])
+        g.set_nsc([3, 1, 1])
+        H = Hamiltonian(g)
+        H.construct([(0.1, 1.0, 1.5), (0, 1., 0.5)])
+        # Contour
+        k = np.linspace(0.0, 1.0, 101)
+        K = np.zeros([k.size, 3])
+        K[:, 0] = k
+        bz = BrillouinZone(H, K)
+        assert np.allclose(np.abs(berry_phase(bz, sub=0, method='zak')), np.pi)
+        # Just to do the other branch
+        berry_phase(bz, method='zak')
+
+    @pytest.mark.xfail(raises=SislError)
+    def test_berry_phase_method_fail(self):
+        g = Geometry([[-.6, 0, 0], [0.6, 0, 0]], Atom(1, 1.001), sc=[2, 10, 10])
+        g.set_nsc([3, 1, 1])
+        H = Hamiltonian(g)
+        H.construct([(0.1, 1.0, 1.5), (0, 1., 0.5)])
+        # Contour
+        k = np.linspace(0.0, 1.0, 101)
+        K = np.zeros([k.size, 3])
+        K[:, 0] = k
+        bz = BrillouinZone(H, K)
+        berry_phase(bz, method='unknown')
 
     def test_gauge_inv_eff(self, setup):
         R, param = [0.1, 1.5], [1., 0.1]
@@ -1289,7 +1317,7 @@ class TestHamiltonian(object):
         assert len(H2.geom.o2a(edge, unique=True)) == 4
 
 
-def test_psi1():
+def test_wavefunction1():
     N = 50
     o1 = SphericalOrbital(0, (np.linspace(0, 2, N), np.exp(-np.linspace(0, 100, N))))
     G = Geometry([[1] * 3, [2] * 3], Atom(6, o1), sc=[4, 4, 4])
@@ -1300,10 +1328,10 @@ def test_psi1():
     # Plot in the full thing
     grid = Grid(0.1, geometry=H.geom)
     grid.fill(0.)
-    ES.sub(0).psi(grid)
+    ES.sub(0).wavefunction(grid)
 
 
-def test_psi2():
+def test_wavefunction2():
     N = 50
     o1 = SphericalOrbital(0, (np.linspace(0, 2, N), np.exp(-np.linspace(0, 100, N))))
     G = Geometry([[1] * 3, [2] * 3], Atom(6, o1), sc=[4, 4, 4])
@@ -1315,10 +1343,10 @@ def test_psi2():
     # (there could however still be psi weight).
     grid = Grid(0.1, sc=SuperCell([2, 2, 2], origo=[2] * 3))
     grid.fill(0.)
-    ES.sub(0).psi(grid)
+    ES.sub(0).wavefunction(grid)
 
 
-def test_psi3():
+def test_wavefunction3():
     N = 50
     o1 = SphericalOrbital(0, (np.linspace(0, 2, N), np.exp(-np.linspace(0, 100, N))))
     G = Geometry([[1] * 3, [2] * 3], Atom(6, o1), sc=[4, 4, 4])
@@ -1330,10 +1358,10 @@ def test_psi3():
     # Plot in the full thing
     grid = Grid(0.1, dtype=np.complex128, sc=SuperCell([2, 2, 2], origo=[-1] * 3))
     grid.fill(0.)
-    ES.sub(0).psi(grid)
+    ES.sub(0).wavefunction(grid)
 
 
-def test_psi_eta():
+def test_wavefunction_eta():
     N = 50
     o1 = SphericalOrbital(0, (np.linspace(0, 2, N), np.exp(-np.linspace(0, 100, N))))
     G = Geometry([[1] * 3, [2] * 3], Atom(6, o1), sc=[4, 4, 4])
@@ -1345,4 +1373,4 @@ def test_psi_eta():
     # Plot in the full thing
     grid = Grid(0.1, dtype=np.complex128, sc=SuperCell([2, 2, 2], origo=[-1] * 3))
     grid.fill(0.)
-    ES.sub(0).psi(grid, eta=True)
+    ES.sub(0).wavefunction(grid, eta=True)

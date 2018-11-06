@@ -255,8 +255,6 @@ def get_sile_class(filename, *args, **kwargs):
         return clss
 
     except Exception as e:
-        import traceback as t
-        t.print_exc()
         raise e
 
 
@@ -349,12 +347,6 @@ class BaseSile(object):
                 func = getattr(self, "read_" + key)
                 # Call read
                 return func(kwargs[key], **kwargs)
-
-    def read_geom(self, *args, **kwargs):
-        """ Deprecated function which is superseeded by `read_geometry` """
-        if getattr(self, 'read_geometry'):
-            return self.read_geometry(*args, **kwargs)
-        raise ValueError('read_geom is deprecated, please use read_geometry')
 
     # Options for writing
     # The default routine for writing

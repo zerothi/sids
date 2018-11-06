@@ -236,17 +236,18 @@ class _realspace_DensityMatrix(SparseOrbitalBZSpin):
 
         # Instead of looping all atoms in the supercell we find the exact atoms
         # and their supercell indices.
-        add_R = _a.zerosd(3) + geometry.maxR()
+        add_R = _a.fulld(3, geometry.maxR())
         # Calculate the required additional vectors required to increase the fictitious
         # supercell by add_R in each direction.
         # For extremely skewed lattices this will be way too much, hence we make
         # them square.
         o = sc.toCuboid(True)
-        sc = SuperCell(o._v, origo=o.origo - add_R) + np.diag(2 * add_R)
+        sc = SuperCell(o._v + np.diag(2 * add_R), origo=o.origo - add_R)
 
         # Retrieve all atoms within the grid supercell
         # (and the neighbours that connect into the cell)
-        IA, XYZ, ISC = geometry.within_inf(sc, periodic=pbc, origo=grid.origo)
+        IA, XYZ, ISC = geometry.within_inf(sc, periodic=pbc, origo=geometry.origo)
+        XYZ -= grid.sc.origo.reshape(1, 3)
 
         # Retrieve progressbar
         eta = tqdm_eta(len(IA), self.__class__.__name__ + '.density', 'atom', eta)
