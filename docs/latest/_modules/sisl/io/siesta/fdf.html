@@ -187,6 +187,7 @@
 <span class="kn">from</span> <span class="nn">.binaries</span> <span class="k">import</span> <span class="n">dmSileSiesta</span><span class="p">,</span> <span class="n">hsxSileSiesta</span><span class="p">,</span> <span class="n">onlysSileSiesta</span>
 <span class="kn">from</span> <span class="nn">.fc</span> <span class="k">import</span> <span class="n">fcSileSiesta</span>
 <span class="kn">from</span> <span class="nn">.fa</span> <span class="k">import</span> <span class="n">faSileSiesta</span>
+<span class="kn">from</span> <span class="nn">.siesta_grid</span> <span class="k">import</span> <span class="n">gridncSileSiesta</span>
 <span class="kn">from</span> <span class="nn">.siesta_nc</span> <span class="k">import</span> <span class="n">ncSileSiesta</span>
 <span class="kn">from</span> <span class="nn">.basis</span> <span class="k">import</span> <span class="n">ionxmlSileSiesta</span><span class="p">,</span> <span class="n">ionncSileSiesta</span>
 <span class="kn">from</span> <span class="nn">.orb_indx</span> <span class="k">import</span> <span class="n">orbindxSileSiesta</span>
@@ -1409,11 +1410,11 @@
 <span class="sd">            case insensitive.</span>
 <span class="sd">        order: list of str, optional</span>
 <span class="sd">            the order of which to try and read the geometry.</span>
-<span class="sd">            By default this is ``[&#39;nc&#39;, &#39;grid.nc&#39;]``.</span>
+<span class="sd">            By default this is ``[&#39;nc&#39;, &#39;grid.nc&#39;, &#39;bin&#39;]`` (bin refers to the binary files)</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">order</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;order&#39;</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;nc&#39;</span><span class="p">,</span> <span class="s1">&#39;grid.nc&#39;</span><span class="p">])</span>
+        <span class="n">order</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;order&#39;</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;nc&#39;</span><span class="p">,</span> <span class="s1">&#39;grid.nc&#39;</span><span class="p">,</span> <span class="s1">&#39;bin&#39;</span><span class="p">])</span>
         <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">order</span><span class="p">:</span>
-            <span class="n">v</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;_r_grid_</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">lower</span><span class="p">()))(</span><span class="n">name</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+            <span class="n">v</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;_r_grid_</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;.&#39;</span><span class="p">,</span> <span class="s1">&#39;_&#39;</span><span class="p">)))(</span><span class="n">name</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
             <span class="k">if</span> <span class="n">v</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
                 <span class="k">return</span> <span class="n">v</span>
         <span class="k">return</span> <span class="kc">None</span></div>
@@ -1465,6 +1466,33 @@
         <span class="k">if</span> <span class="n">isfile</span><span class="p">(</span><span class="n">f</span><span class="p">):</span>
             <span class="n">grid</span> <span class="o">=</span> <span class="n">gridncSileSiesta</span><span class="p">(</span><span class="n">f</span><span class="p">)</span><span class="o">.</span><span class="n">read_grid</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
             <span class="n">grid</span><span class="o">.</span><span class="n">set_geometry</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">read_geometry</span><span class="p">(</span><span class="kc">True</span><span class="p">))</span>
+            <span class="k">return</span> <span class="n">grid</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+    <span class="k">def</span> <span class="nf">_r_grid_bin</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="c1"># Read grid from the &lt;&gt;.VT/... file</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;rho&#39;</span><span class="p">:</span> <span class="s1">&#39;.RHO&#39;</span><span class="p">,</span>
+                <span class="s1">&#39;rhoinit&#39;</span><span class="p">:</span> <span class="s1">&#39;.RHOINIT&#39;</span><span class="p">,</span>
+                <span class="s1">&#39;vna&#39;</span><span class="p">:</span> <span class="s1">&#39;.VNA&#39;</span><span class="p">,</span>
+                <span class="s1">&#39;chlocal&#39;</span><span class="p">:</span> <span class="s1">&#39;.IOCH&#39;</span><span class="p">,</span>
+                <span class="s1">&#39;rhotot&#39;</span><span class="p">:</span> <span class="s1">&#39;.TOCH&#39;</span><span class="p">,</span>
+                <span class="s1">&#39;totalcharge&#39;</span><span class="p">:</span> <span class="s1">&#39;.TOCH&#39;</span><span class="p">,</span>
+                <span class="s1">&#39;deltarho&#39;</span><span class="p">:</span> <span class="s1">&#39;.DRHO&#39;</span><span class="p">,</span>
+                <span class="s1">&#39;rhodelta&#39;</span><span class="p">:</span> <span class="s1">&#39;.DRHO&#39;</span><span class="p">,</span>
+                <span class="s1">&#39;electrostaticpotential&#39;</span><span class="p">:</span> <span class="s1">&#39;.VH&#39;</span><span class="p">,</span>
+                <span class="s1">&#39;vh&#39;</span><span class="p">:</span> <span class="s1">&#39;.VH&#39;</span><span class="p">,</span>
+                <span class="s1">&#39;rhoxc&#39;</span><span class="p">:</span> <span class="s1">&#39;.RHOXC&#39;</span><span class="p">,</span>
+                <span class="s1">&#39;totalpotential&#39;</span><span class="p">:</span> <span class="s1">&#39;.VT&#39;</span><span class="p">,</span>
+                <span class="s1">&#39;vt&#39;</span><span class="p">:</span> <span class="s1">&#39;.VT&#39;</span><span class="p">,</span>
+                <span class="s1">&#39;baderrho&#39;</span><span class="p">:</span> <span class="s1">&#39;.BADER&#39;</span><span class="p">,</span>
+                <span class="s1">&#39;rhobader&#39;</span><span class="p">:</span> <span class="s1">&#39;.BADER&#39;</span>
+        <span class="p">}</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">name</span><span class="o">.</span><span class="n">lower</span><span class="p">())</span>
+
+        <span class="n">f</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dir_file</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;SystemLabel&#39;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="s1">&#39;siesta&#39;</span><span class="p">))</span> <span class="o">+</span> <span class="n">name</span>
+        <span class="k">if</span> <span class="n">isfile</span><span class="p">(</span><span class="n">f</span><span class="p">):</span>
+            <span class="n">grid</span> <span class="o">=</span> <span class="n">get_sile_class</span><span class="p">(</span><span class="n">f</span><span class="p">)(</span><span class="n">f</span><span class="p">)</span><span class="o">.</span><span class="n">read_grid</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+            <span class="n">grid</span><span class="o">.</span><span class="n">set_geometry</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">read_geometry</span><span class="p">(</span><span class="kc">True</span><span class="p">))</span>
+            <span class="k">return</span> <span class="n">grid</span>
         <span class="k">return</span> <span class="kc">None</span>
 
 <div class="viewcode-block" id="fdfSileSiesta.read_basis"><a class="viewcode-back" href="../../../../api-generated/sisl.io.siesta.fdfSileSiesta.html#sisl.io.siesta.fdfSileSiesta.read_basis">[docs]</a>    <span class="k">def</span> <span class="nf">read_basis</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
