@@ -146,10 +146,6 @@ def test_1_graphene_all_content(sisl_files):
         assert np.allclose(tbt.DOS(kavg=ik), tbt.ADOS(left, kavg=ik) + tbt.ADOS(right, kavg=ik))
         assert np.allclose(tbt.DOS(E=0.195, kavg=ik), tbt.ADOS(left, E=0.195, kavg=ik) + tbt.ADOS(right, E=0.195, kavg=ik))
 
-    kavg = list(range(10))
-    assert np.allclose(tbt.DOS(kavg=kavg), tbt.ADOS(left, kavg=kavg) + tbt.ADOS(right, kavg=kavg))
-    assert np.allclose(tbt.DOS(E=0.195, kavg=kavg), tbt.ADOS(left, E=0.195, kavg=kavg) + tbt.ADOS(right, E=0.195, kavg=kavg))
-
     # Check that norm returns correct values
     assert tbt.norm() == 1
     assert tbt.norm(norm='all') == tbt.no_d
@@ -182,14 +178,27 @@ def test_1_graphene_all_content(sisl_files):
 
     # Since this is a perfect system there should be *no* QM shot-noise
     # Also, the shot-noise is related to the applied bias, so NO shot-noise
+    assert np.allclose((tbt.shot_noise(left, right, kavg=False) * tbt.wkpt.reshape(-1, 1)).sum(0), 0.)
     assert np.allclose(tbt.shot_noise(left, right), 0.)
     assert np.allclose(tbt.shot_noise(right, left), 0.)
+    assert np.allclose(tbt.shot_noise(left, right, kavg=1), 0.)
+
     # Since the data-file does not contain all T-eigs (only the first two)
     # we can't correctly calculate the fano factors
-    assert np.all(tbt.fano(left, right) > 0.)
-    assert np.all(tbt.fano(right, left) > 0.)
+    # This is a pristine system, hence all fano-factors should be more or less zero
+    # All transmissions are step-functions, however close to band-edges there is some
+    # smearing.
+    # When calculating the Fano factor it is extremely important that the zero_T is *sufficient*
+    # I don't now which value is *good*
+    assert np.all((tbt.fano(left, right, kavg=False) * tbt.wkpt.reshape(-1, 1)).sum(0) <= 1)
+    assert np.all(tbt.fano(left, right) <= 1)
+    assert np.all(tbt.fano(right, left) <= 1)
+    assert np.all(tbt.fano(left, right, kavg=0) <= 1)
+
     # Neither should the noise_power exist
+    assert (tbt.noise_power(right, left, kavg=False) * tbt.wkpt).sum() == pytest.approx(0.)
     assert tbt.noise_power(right, left) == pytest.approx(0.)
+    assert tbt.noise_power(right, left, kavg=0) == pytest.approx(0.)
 
     # Check specific DOS queries
     DOS = tbt.DOS
@@ -296,6 +305,18 @@ def test_1_graphene_all_tbtav(sisl_files, sisl_tmp):
     tbt.write_tbtav(f)
 
 
+@pytest.mark.xfail(raises=ValueError)
+def test_1_graphene_all_fail_kavg(sisl_files, sisl_tmp):
+    tbt = sisl.get_sile(sisl_files(_dir, '1_graphene_all.TBT.nc'))
+    tbt.transmission(kavg=[0, 1])
+
+
+@pytest.mark.xfail(raises=ValueError)
+def test_1_graphene_all_fail_kavg_E(sisl_files, sisl_tmp):
+    tbt = sisl.get_sile(sisl_files(_dir, '1_graphene_all.TBT.nc'))
+    tbt.orbital_COOP(kavg=[0, 1], E=0.1)
+
+
 def test_1_graphene_all_ArgumentParser(sisl_files, sisl_tmp):
     try:
         import matplotlib
@@ -328,10 +349,10 @@ def test_1_graphene_all_ArgumentParser(sisl_files, sisl_tmp):
     assert not out._actions_run
     run(out)
 
-    out = p.parse_args(['--kpoint', '0,1,10-12'], namespace=copy(ns))
+    out = p.parse_args(['--kpoint', '1'], namespace=copy(ns))
     assert out._krng
     run(out)
-    assert out._krng == [0, 1, 10, 11, 12]
+    assert out._krng == 1
 
     out = p.parse_args(['--norm', 'orbital'], namespace=copy(ns))
     run(out)
@@ -341,9 +362,9 @@ def test_1_graphene_all_ArgumentParser(sisl_files, sisl_tmp):
     run(out)
     assert out._norm == 'atom'
 
-    out = p.parse_args(['--kpoint', '0,1,10-12', '--norm', 'orbital'], namespace=copy(ns))
+    out = p.parse_args(['--kpoint', '1', '--norm', 'orbital'], namespace=copy(ns))
     run(out)
-    assert out._krng == [0, 1, 10, 11, 12]
+    assert out._krng == 1
     assert out._norm == 'orbital'
 
     out = p.parse_args(['--atom', '10:11,14'], namespace=copy(ns))

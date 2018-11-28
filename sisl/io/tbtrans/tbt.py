@@ -114,15 +114,11 @@ class tbtncSileTBtrans(_devncSileTBtrans):
                 data = v[:]
 
         elif isinstance(kavg, Integral):
-            data = v[kavg, ...] * wkpt[kavg]
+            data = v[kavg, ...]
             data.shape = orig_shape[1:]
 
         else:
-            # We assume kavg is some kind of iterable
-            data = v[kavg[0], ...] * wkpt[kavg[0]]
-            for i in range(1, len(kavg)):
-                data += v[kavg[i], ...] * wkpt[kavg[i]]
-            data.shape = orig_shape[1:]
+            raise ValueError(self.__class__.__name__ + ' requires kavg argument to be either bool or an integer corresponding to the k-point index.')
 
         # Return data
         return data
@@ -157,15 +153,11 @@ class tbtncSileTBtrans(_devncSileTBtrans):
                 data = np.array(v[:, iE, ...])
 
         elif isinstance(kavg, Integral):
-            data = np.array(v[kavg, iE, ...]) * wkpt[kavg]
+            data = np.array(v[kavg, iE, ...])
             data.shape = orig_shape[2:]
 
         else:
-            # We assume kavg is some kind of itterable
-            data = v[kavg[0], iE, ...] * wkpt[kavg[0]]
-            for i in kavg[1:]:
-                data += v[i, iE, ...] * wkpt[i]
-            data.shape = orig_shape[2:]
+            raise ValueError(self.__class__.__name__ + ' requires kavg argument to be either bool or an integer corresponding to the k-point index.')
 
         # Return data
         return data
@@ -266,9 +258,9 @@ class tbtncSileTBtrans(_devncSileTBtrans):
            the originating electrode
         elec_to: str, int, optional
            the absorbing electrode (different from `elec_from`)
-        kavg: bool, int or array_like, optional
-           whether the returned transmission is k-averaged, an explicit k-point
-           or a selection of k-points
+        kavg: bool, int, optional
+           whether the returned transmission is k-averaged, or an explicit (unweighed) k-point
+           is returned
 
         See Also
         --------
@@ -291,9 +283,9 @@ class tbtncSileTBtrans(_devncSileTBtrans):
            the originating electrode
         elec_to: str, int, optional
            the absorbing electrode (different from `elec_from`)
-        kavg: bool, int or array_like, optional
-           whether the returned transmission is k-averaged, an explicit k-point
-           or a selection of k-points
+        kavg: bool, int, optional
+           whether the returned transmission eigenvalues are k-averaged, or an explicit (unweighed) k-point
+           is returned
 
         See Also
         --------
@@ -317,9 +309,9 @@ class tbtncSileTBtrans(_devncSileTBtrans):
         ----------
         elec: str, int, optional
            the bulk electrode
-        kavg: bool, int or array_like, optional
-           whether the returned transmission is k-averaged, an explicit k-point
-           or a selection of k-points
+        kavg: bool, int, optional
+           whether the returned transmission are k-averaged, or an explicit (unweighed) k-point
+           is returned
 
         See Also
         --------
@@ -501,9 +493,9 @@ class tbtncSileTBtrans(_devncSileTBtrans):
         ----------
         E : float or int, optional
            optionally only return the DOS of atoms at a given energy point
-        kavg: bool, int or array_like, optional
-           whether the returned DOS is k-averaged, an explicit k-point
-           or a selection of k-points
+        kavg: bool, int, optional
+           whether the returned DOS is k-averaged, or an explicit (unweighed) k-point
+           is returned
         atom : array_like of int or bool, optional
            only return for a given set of atoms (default to all).
            *NOT* allowed with `orbital` keyword
@@ -539,9 +531,9 @@ class tbtncSileTBtrans(_devncSileTBtrans):
            electrode originating spectral function
         E : float or int, optional
            optionally only return the DOS of atoms at a given energy point
-        kavg: bool, int or array_like, optional
-           whether the returned DOS is k-averaged, an explicit k-point
-           or a selection of k-points
+        kavg: bool, int, optional
+           whether the returned DOS is k-averaged, or an explicit (unweighed) k-point
+           is returned
         atom : array_like of int or bool, optional
            only return for a given set of atoms (default to all).
            *NOT* allowed with `orbital` keyword
@@ -576,9 +568,9 @@ class tbtncSileTBtrans(_devncSileTBtrans):
            electrode where the bulk DOS is returned
         E : float or int, optional
            optionally only return the DOS of atoms at a given energy point
-        kavg: bool, int or array_like, optional
-           whether the returned DOS is k-averaged, an explicit k-point
-           or a selection of k-points
+        kavg: bool, int, optional
+           whether the returned DOS is k-averaged, or an explicit (unweighed) k-point
+           is returned
         sum : bool, optional
            whether the returned quantities are summed or returned *as is*, i.e. resolved per atom/orbital.
         norm : {'none', 'atom', 'orbital', 'all'}
@@ -628,9 +620,9 @@ class tbtncSileTBtrans(_devncSileTBtrans):
            the originating electrode
         elec_to: str, int, optional
            the absorbing electrode (different from `elec_from`)
-        kavg: bool, int or array_like, optional
-           whether the returned current is k-averaged, an explicit k-point
-           or a selection of k-points
+        kavg: bool, int, optional
+           whether the returned current is k-averaged, or an explicit (unweighed) k-point
+           is returned
 
         See Also
         --------
@@ -671,9 +663,9 @@ class tbtncSileTBtrans(_devncSileTBtrans):
            the chemical potential of the electrode (in eV)
         kt_to: float
            the electronic temperature of the electrode (in eV)
-        kavg: bool, int or array_like, optional
-           whether the returned current is k-averaged, an explicit k-point
-           or a selection of k-points
+        kavg: bool, int, optional
+           whether the returned current is k-averaged, or an explicit (unweighed) k-point
+           is returned
 
         See Also
         --------
@@ -713,6 +705,13 @@ class tbtncSileTBtrans(_devncSileTBtrans):
         I = (T * dE * (fermi_dirac(E, kt_from, mu_from) - fermi_dirac(E, kt_to, mu_to))).sum()
         return I * units('eV', 'J') / constant.h('eV s')
 
+    def _check_Teig(self, func_name, TE, eps=0.001):
+        """ Internal method to check whether all transmission eigenvalues are present """
+        if np.any(np.logical_and.reduce(TE > eps, axis=-1)):
+            info('{}.{} does possibly not have all relevant transmission eigenvalues in the '
+                 'calculation. For some energy values all transmission eigenvalues are above {}!'.format(self.__class__.__name__,
+                                                                                                         func_name, eps))
+
     def shot_noise(self, elec_from=0, elec_to=1, classical=False, kavg=True):
         r""" Shot-noise term `from` to `to` using the k-weights
 
@@ -722,14 +721,14 @@ class tbtncSileTBtrans(_devncSileTBtrans):
         .. math::
            S_P(E, V) = \frac{2e^2}{h}|V|\sum_n T_n(E) = \frac{2e^3}{h}|V|T(E)
 
-        while for `classical` False the Fermi-Dirac statistics is taken into account:
+        while for `classical` False (default) the Fermi-Dirac statistics is taken into account:
 
         .. math::
-           S(E, V) = \frac{2e^2}{h}|V|\sum_n T_n(E) (1 - T_n(E))
+           S(E, V) = \frac{2e^2}{h}|V|\sum_k\sum_n T_{k,n}(E) (1 - T_{k,n}(E)) w_k
 
         Raises
         ------
-        SislInfo: If *all* of the calculated :math:`T_n(E)` values in the file are above 0.001.
+        SislInfo: If *all* of the calculated :math:`T_{k,n}(E)` values in the file are above 0.001.
 
         Parameters
         ----------
@@ -738,10 +737,10 @@ class tbtncSileTBtrans(_devncSileTBtrans):
         elec_to: str, int, optional
            the absorbing electrode (different from `elec_from`)
         classical: bool, optional
-           which shot-noise to calculate
-        kavg: bool, int or array_like, optional
-           whether the returned shot-noise is k-averaged, an explicit k-point
-           or a selection of k-points
+           which shot-noise to calculate, default to non-classical
+        kavg: bool, int, optional
+           whether the returned shot-noise is k-averaged, or an explicit (unweighed) k-point
+           is returned
 
         See Also
         --------
@@ -759,13 +758,32 @@ class tbtncSileTBtrans(_devncSileTBtrans):
         if classical:
             # Calculate the Poisson shot-noise (equal to 2eI in the low T and zero kT limit)
             return _noise_const * self.transmission(elec_from, elec_to, kavg=kavg)
+
+        # Non-classical
+        if isinstance(kavg, bool):
+            if not kavg:
+                # The user wants it k-resolved
+                T = self.transmission_eig(elec_from, elec_to, kavg=False)
+                self._check_Teig('shot_noise', T)
+                return _noise_const * (T * (1 - T)).sum(-1)
+
+            # We need to manually weigh the k-points
+            wkpt = self.wkpt
+
+            T = self.transmission_eig(elec_from, elec_to, kavg=0)
+            self._check_Teig('shot_noise', T)
+            sn = (T * (1 - T)).sum(-1) * wkpt[0]
+            for ik in range(1, self.nkpt):
+                T = self.transmission_eig(elec_from, elec_to, kavg=ik)
+                self._check_Teig('shot_noise', T)
+                sn += (T * (1 - T)).sum(-1) * wkpt[ik]
+
         else:
             T = self.transmission_eig(elec_from, elec_to, kavg=kavg)
-            # Check that at least one value is below the 0.001 limit
-            if np.any(np.logical_and.reduce(T > 0.001, axis=-1)):
-                info(self.__class__.__name__ + ".shot_noise does possibly not have all relevant transmission eigenvalues in the "
-                     "calculation. For some energy values all transmission eigenvalues are above 0.001!")
-            return _noise_const * (T * (1 - T)).sum(-1)
+            self._check_Teig('shot_noise', T)
+            sn = (T * (1 - T)).sum(-1)
+
+        return _noise_const * sn
 
     def noise_power(self, elec_from=0, elec_to=1, kavg=True):
         r""" Noise power `from` to `to` using the k-weights and energy spacings in the file (temperature dependent)
@@ -773,15 +791,15 @@ class tbtncSileTBtrans(_devncSileTBtrans):
         Calculates the noise power as
 
         .. math::
-           S(V) = \frac{2e^2}{h}\sum_n \int\mathrm d E
-                  \big\{T_n(E)[f_L(1-f_L)+f_R(1-f_R)] +
-                        T_n(E)[1 - T_n(E)](f_L - f_R)^2\big\}
+           S(V) = \frac{2e^2}{h}\sum_k\sum_n \int\mathrm d E
+                  \big\{T_{k,n}(E)[f_L(1-f_L)+f_R(1-f_R)] +
+                        T_{k,n}(E)[1 - T_{k,n}(E)](f_L - f_R)^2\big\} w_k
 
         Where :math:`f_i` are the Fermi-Dirac distributions for the electrodes.
 
         Raises
         ------
-        SislInfo: If *all* of the calculated :math:`T_n(E)` values in the file are above 0.001.
+        SislInfo: If *all* of the calculated :math:`T_{k,n}(E)` values in the file are above 0.001.
 
         Parameters
         ----------
@@ -789,9 +807,9 @@ class tbtncSileTBtrans(_devncSileTBtrans):
            the originating electrode
         elec_to: str, int, optional
            the absorbing electrode (different from `elec_from`)
-        kavg: bool, int or array_like, optional
-           whether the returned noise power is k-averaged, an explicit k-point
-           or a selection of k-points
+        kavg: bool, int, optional
+           whether the returned noise-power is k-averaged, or an explicit (unweighed) k-point
+           is returned
 
         See Also
         --------
@@ -808,29 +826,55 @@ class tbtncSileTBtrans(_devncSileTBtrans):
         # Get the energy spacing (probably we should add a routine)
         dE = self.E[1] - self.E[0]
 
+        # Pre-calculate the factors
+        eq_fac = dE * (fd_f * (1 - fd_f) + fd_t * (1 - fd_t))
+        neq_fac = dE * (fd_f - fd_t) ** 2
+        del fd_f, fd_t
+
         # Pre-factor
         # 2 e ^ 2 / h
         # Note that h in eV units will cancel the units in the dE integration
         _noise_const = 2 * units('eV', 'J') ** 2 / constant.h('eV s')
-        T = self.transmission_eig(elec_from, elec_to, kavg=kavg)
-        # Check that at least one value is below the 0.001 limit
-        if np.any(np.logical_and.reduce(T > 0.001, axis=-1)):
-            info(self.__class__.__name__ + ".shot_noise does possibly not have all relevant transmission eigenvalues in the "
-                 "calculation. For some energy values all transmission eigenvalues are above 0.001!")
 
-        # Separate the calculation into two terms (see Ya.M. Blanter, M. Buttiker, Physics Reports 336 2000)
-        eq = (T.sum(-1) * dE * (fd_f * (1 - fd_f) + fd_t * (1 - fd_t))).sum()
-        neq = ((T * (1 - T)).sum(-1) * dE * (fd_f - fd_t) ** 2).sum()
+        # Determine the k-average
+        if isinstance(kavg, bool):
+            if not kavg:
+                # The user wants it k-resolved
+                T = self.transmission_eig(elec_from, elec_to, kavg=False)
+                self._check_Teig('noise_power', T)
+                return _noise_const * ((T.sum(-1) * eq_fac).sum(-1) + ((T * (1 - T)).sum(-1) * neq_fac).sum(-1))
 
-        return _noise_const * (eq + neq)
+            # We need to manually weigh the k-points
+            wkpt = self.wkpt
 
-    def fano(self, elec_from=0, elec_to=1, kavg=True):
+            T = self.transmission_eig(elec_from, elec_to, kavg=0)
+            self._check_Teig('noise_power', T)
+            # Separate the calculation into two terms (see Ya.M. Blanter, M. Buttiker, Physics Reports 336 2000)
+            np = ((T.sum(-1) * eq_fac).sum(-1) + ((T * (1 - T)).sum(-1) * neq_fac).sum(-1)) * wkpt[0]
+            for ik in range(1, self.nkpt):
+                T = self.transmission_eig(elec_from, elec_to, kavg=ik)
+                self._check_Teig('noise_power', T)
+                np += ((T.sum(-1) * eq_fac).sum(-1) + ((T * (1 - T)).sum(-1) * neq_fac).sum(-1)) * wkpt[ik]
+
+        else:
+            T = self.transmission_eig(elec_from, elec_to, kavg=kavg)
+            self._check_Teig('noise_power', T)
+            np = (T.sum(-1) * eq_fac).sum(-1) + ((T * (1 - T)).sum(-1) * neq_fac).sum(-1)
+
+        # Do final conversion
+        return _noise_const * np
+
+    def fano(self, elec_from=0, elec_to=1, kavg=True, zero_T=1e-6):
         r""" The Fano-factor for the calculation (requires calculated transmission eigenvalues)
 
         Calculate the Fano factor defined as:
 
         .. math::
-           F(E) = \frac{\sum_n T_n(1 - T_n)}{\sum_n T_n}
+           F(E) = \sum_k\frac{\sum_n T_{k,n}(E)[1 - T_{k,n}(E)]}{\sum_n T_{k,n}(E)} w_k
+
+        Notes
+        -----
+        The default `zero_T` may change in the future.
 
         Parameters
         ----------
@@ -838,20 +882,50 @@ class tbtncSileTBtrans(_devncSileTBtrans):
            the originating electrode
         elec_to: str, int, optional
            the absorbing electrode (different from `elec_from`)
-        kavg: bool, int or array_like, optional
-           whether the returned Fano factor is k-averaged, an explicit k-point
-           or a selection of k-points
+        kavg: bool, int, optional
+           whether the returned Fano factor is k-averaged, or an explicit (unweighed) k-point
+           is returned
+        zero_T : float, optional
+           any transmission eigen value lower than this value will be treated as exactly 0.
 
         See Also
         --------
         shot_noise : shot-noise term (zero temperature limit)
         noise_power : temperature dependent noise power
         """
-        TE = self.transmission_eig(elec_from, elec_to, kavg=kavg)
-        if np.any(np.logical_and.reduce(TE > 0.001, axis=-1)):
-            info(self.__class__.__name__ + ".fano does possibly not have all relevant transmission eigenvalues in the "
-                 "calculation. For some energy values all transmission eigenvalues are above 0.001!")
-        return (TE * (1 - TE)).sum(-1) / TE.sum(-1)
+        def _fano(T):
+            T[T <= zero_T] = 0.
+            r = (T * (1 - T)).sum(-1)
+            T = T.sum(-1)
+            fano = r / T
+            # If the transmission is zero, so is the Fano-factor
+            fano[T <= zero_T] = 0.
+            return fano
+
+        if isinstance(kavg, bool):
+            if not kavg:
+                # The user wants it k-resolved
+                T = self.transmission_eig(elec_from, elec_to, kavg=False)
+                self._check_Teig('fano', T)
+                return _fano(T)
+
+            # We need to manually weigh the k-points
+            wkpt = self.wkpt
+
+            T = self.transmission_eig(elec_from, elec_to, kavg=0)
+            self._check_Teig('fano', T)
+            fano = _fano(T) * wkpt[0]
+            for ik in range(1, self.nkpt):
+                T = self.transmission_eig(elec_from, elec_to, kavg=ik)
+                self._check_Teig('fano', T)
+                fano += _fano(T) * wkpt[ik]
+
+        else:
+            T = self.transmission_eig(elec_from, elec_to, kavg=kavg)
+            self._check_Teig('fano', T)
+            fano = _fano(T)
+
+        return fano
 
     def _sparse_data(self, data, elec, E, kavg=True, isc=None):
         """ Internal routine for retrieving sparse data (orbital current, COOP) """
@@ -1035,9 +1109,9 @@ class tbtncSileTBtrans(_devncSileTBtrans):
            the energy or the energy index of the orbital current. If an integer
            is passed it is the index, otherwise the index corresponding to
            ``Eindex(E)`` is used.
-        kavg: bool, int or array_like, optional
-           whether the returned orbital current is k-averaged, an explicit k-point
-           or a selection of k-points
+        kavg: bool, int, optional
+           whether the returned orbital current is k-averaged, or an explicit (unweighed) k-point
+           is returned
         isc: array_like, optional
            the returned bond currents from the unit-cell (``[None, None, None]``) to
            the given supercell, the default is all orbital currents for the supercell.
@@ -1152,9 +1226,9 @@ class tbtncSileTBtrans(_devncSileTBtrans):
            A `float` for energy in eV, `int` for explicit energy index
            Unlike `orbital_current` this may not be `None` as the down-scaling of the
            orbital currents may not be equivalent for all energy points.
-        kavg : bool, int or array_like, optional
-           whether the returned bond current is k-averaged, an explicit k-point
-           or a selection of k-points
+        kavg : bool, int, optional
+           whether the returned bond current is k-averaged, or an explicit (unweighed) k-point
+           is returned
         isc : array_like, optional
            the returned bond currents from the unit-cell (``[None, None, None]``) (default) to
            the given supercell. If ``[None, None, None]`` is passed all
@@ -1261,9 +1335,9 @@ class tbtncSileTBtrans(_devncSileTBtrans):
            the electrode of originating electrons
         E: float or int
            the energy or energy index of the atom current.
-        kavg: bool, int or array_like, optional
-           whether the returned atomic current is k-averaged, an explicit k-point
-           or a selection of k-points
+        kavg: bool, int, optional
+           whether the returned atomic current is k-averaged, or an explicit (unweighed) k-point
+           is returned
         activity: bool, optional
            whether the activity current is returned, see `atom_current_from_orbital` for details.
 
@@ -1351,9 +1425,9 @@ class tbtncSileTBtrans(_devncSileTBtrans):
            the energy or energy index of the vector current.
            Unlike `orbital_current` this may not be `None` as the down-scaling of the
            orbital currents may not be equivalent for all energy points.
-        kavg: bool, int or array_like, optional
-           whether the returned vector current is k-averaged, an explicit k-point
-           or a selection of k-points
+        kavg: bool, int, optional
+           whether the returned vector current is k-averaged, or an explicit (unweighed) k-point
+           is returned
         only : {'+', '-', 'all'}
            By default only sum *outgoing* vector currents (``'+'``).
            The *incoming* vector currents may be retrieved by ``'-'``, while the
@@ -1406,9 +1480,9 @@ class tbtncSileTBtrans(_devncSileTBtrans):
            the energy or the energy index of density matrix. If an integer
            is passed it is the index, otherwise the index corresponding to
            ``Eindex(E)`` is used.
-        kavg: bool, int or array_like, optional
-           whether the returned density matrix is k-averaged, an explicit k-point
-           or a selection of k-points
+        kavg: bool, int, optional
+           whether the returned density matrix is k-averaged, or an explicit (unweighed) k-point
+           is returned
         isc: array_like, optional
            the returned density matrix from unit-cell (``[None, None, None]``) to
            the given supercell, the default is all density matrix elements for the supercell.
@@ -1453,9 +1527,9 @@ class tbtncSileTBtrans(_devncSileTBtrans):
            the energy or the energy index of density matrix. If an integer
            is passed it is the index, otherwise the index corresponding to
            ``Eindex(E)`` is used.
-        kavg: bool, int or array_like, optional
-           whether the returned density matrix is k-averaged, an explicit k-point
-           or a selection of k-points
+        kavg: bool, int, optional
+           whether the returned density matrix is k-averaged, or an explicit (unweighed) k-point
+           is returned
         isc: array_like, optional
            the returned density matrix from unit-cell (``[None, None, None]``) to
            the given supercell, the default is all density matrix elements for the supercell.
@@ -1522,9 +1596,9 @@ class tbtncSileTBtrans(_devncSileTBtrans):
            the energy or the energy index of COOP. If an integer
            is passed it is the index, otherwise the index corresponding to
            ``Eindex(E)`` is used.
-        kavg: bool, int or array_like, optional
-           whether the returned COOP is k-averaged, an explicit k-point
-           or a selection of k-points
+        kavg: bool, int, optional
+           whether the returned COOP is k-averaged, or an explicit (unweighed) k-point
+           is returned
         isc: array_like, optional
            the returned COOP from unit-cell (``[None, None, None]``) to
            the given supercell, the default is all COOP for the supercell.
@@ -1587,9 +1661,9 @@ class tbtncSileTBtrans(_devncSileTBtrans):
            the energy or the energy index of COOP. If an integer
            is passed it is the index, otherwise the index corresponding to
            ``Eindex(E)`` is used.
-        kavg: bool, int or array_like, optional
-           whether the returned COOP is k-averaged, an explicit k-point
-           or a selection of k-points
+        kavg: bool, int, optional
+           whether the returned COOP is k-averaged, or an explicit (unweighed) k-point
+           is returned
         isc: array_like, optional
            the returned COOP from unit-cell (``[None, None, None]``) to
            the given supercell, the default is all COOP for the supercell.
@@ -1659,9 +1733,9 @@ class tbtncSileTBtrans(_devncSileTBtrans):
            the energy or the energy index of COOP. If an integer
            is passed it is the index, otherwise the index corresponding to
            ``Eindex(E)`` is used.
-        kavg: bool, int or array_like, optional
-           whether the returned COOP is k-averaged, an explicit k-point
-           or a selection of k-points
+        kavg: bool, int, optional
+           whether the returned COOP is k-averaged, or an explicit (unweighed) k-point
+           is returned
         isc: array_like, optional
            the returned COOP from unit-cell (``[None, None, None]``) to
            the given supercell, the default is all COOP for the supercell.
@@ -1692,9 +1766,9 @@ class tbtncSileTBtrans(_devncSileTBtrans):
            the energy or the energy index of COOP. If an integer
            is passed it is the index, otherwise the index corresponding to
            ``Eindex(E)`` is used.
-        kavg: bool, int or array_like, optional
-           whether the returned COOP is k-averaged, an explicit k-point
-           or a selection of k-points
+        kavg: bool, int, optional
+           whether the returned COOP is k-averaged, or an explicit (unweighed) k-point
+           is returned
         isc: array_like, optional
            the returned COOP from unit-cell (``[None, None, None]``) to
            the given supercell, the default is all COOP for the supercell.
@@ -1734,9 +1808,9 @@ class tbtncSileTBtrans(_devncSileTBtrans):
            the energy or the energy index of COHP. If an integer
            is passed it is the index, otherwise the index corresponding to
            ``Eindex(E)`` is used.
-        kavg: bool, int or array_like, optional
-           whether the returned COHP is k-averaged, an explicit k-point
-           or a selection of k-points
+        kavg: bool, int, optional
+           whether the returned COHP is k-averaged, or an explicit (unweighed) k-point
+           is returned
         isc: array_like, optional
            the returned COHP from unit-cell (``[None, None, None]``) to
            the given supercell, the default is all COHP for the supercell.
@@ -1782,9 +1856,9 @@ class tbtncSileTBtrans(_devncSileTBtrans):
            the energy or the energy index of COHP. If an integer
            is passed it is the index, otherwise the index corresponding to
            ``Eindex(E)`` is used.
-        kavg: bool, int or array_like, optional
-           whether the returned COHP is k-averaged, an explicit k-point
-           or a selection of k-points
+        kavg: bool, int, optional
+           whether the returned COHP is k-averaged, or an explicit (unweighed) k-point
+           is returned
         isc: array_like, optional
            the returned COHP from unit-cell (``[None, None, None]``) to
            the given supercell, the default is all COHP for the supercell.
@@ -1842,9 +1916,9 @@ class tbtncSileTBtrans(_devncSileTBtrans):
            the energy or the energy index of COHP. If an integer
            is passed it is the index, otherwise the index corresponding to
            ``Eindex(E)`` is used.
-        kavg: bool, int or array_like, optional
-           whether the returned COHP is k-averaged, an explicit k-point
-           or a selection of k-points
+        kavg: bool, int, optional
+           whether the returned COHP is k-averaged, or an explicit (unweighed) k-point
+           is returned
         isc: array_like, optional
            the returned COHP from unit-cell (``[None, None, None]``) to
            the given supercell, the default is all COHP for the supercell.
@@ -1875,9 +1949,9 @@ class tbtncSileTBtrans(_devncSileTBtrans):
            the energy or the energy index of COHP. If an integer
            is passed it is the index, otherwise the index corresponding to
            ``Eindex(E)`` is used.
-        kavg: bool, int or array_like, optional
-           whether the returned COHP is k-averaged, an explicit k-point
-           or a selection of k-points
+        kavg: bool, int, optional
+           whether the returned COHP is k-averaged, or an explicit (unweighed) k-point
+           is returned
         isc: array_like, optional
            the returned COHP from unit-cell (``[None, None, None]``) to
            the given supercell, the default is all COHP for the supercell.
@@ -2121,10 +2195,10 @@ class tbtncSileTBtrans(_devncSileTBtrans):
 
             @collect_action
             def __call__(self, parser, ns, value, option_string=None):
-                ns._krng = lstranges(strmap(int, value))
+                ns._krng = int(value)
         if not self._k_avg:
             p.add_argument('--kpoint', '-k', action=kRange,
-                           help="""Denote the sub-section of k-indices that are extracted.
+                           help="""Denote a specific k-index that is extracted, default to k-averaged quantity.
 
                            This flag takes effect on all k-resolved quantities and is reset whenever --plot or --out is called""")
 
@@ -2638,8 +2712,14 @@ class tbtavncSileTBtrans(tbtncSileTBtrans):
     # Denote default writing routine
     _write_default = write_tbtav
 
+# Clean up methods in the average one, if there were multiple k-points
+# We can't ensure the results are the same, hence it is more
+# safe to delete the methods
+for _name in ['shot_noise', 'noise_power', 'fano']:
+    setattr(tbtavncSileTBtrans, _name, None)
 
 # Phonon output
+
 
 class phtncSileTBtrans(tbtncSileTBtrans):
     """ PHtrans file object """
