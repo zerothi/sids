@@ -166,6 +166,7 @@
   <h1>Source code for sisl.io.vasp.chg</h1><div class="highlight"><pre>
 <span></span><span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">print_function</span><span class="p">,</span> <span class="n">division</span>
 
+<span class="kn">from</span> <span class="nn">numbers</span> <span class="k">import</span> <span class="n">Integral</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 
 <span class="kn">from</span> <span class="nn">.sile</span> <span class="k">import</span> <span class="n">SileVASP</span>
@@ -189,11 +190,12 @@
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
-<span class="sd">        index : int, optional</span>
+<span class="sd">        index : int or array_like, optional</span>
 <span class="sd">           the index of the grid to read. For a spin-polarized VASP calculation 0 and 1 are</span>
 <span class="sd">           allowed, UP/DOWN. For non-collinear 0, 1, 2 or 3 is allowed which equals,</span>
 <span class="sd">           TOTAL, x, y, z charge density with the Cartesian directions equal to the charge</span>
-<span class="sd">           magnetization.</span>
+<span class="sd">           magnetization. For array-like they refer to the fractional</span>
+<span class="sd">           contributions for each corresponding index.</span>
 <span class="sd">        dtype : numpy.dtype, optional</span>
 <span class="sd">           grid stored dtype</span>
 
@@ -210,27 +212,56 @@
         <span class="n">nx</span><span class="p">,</span> <span class="n">ny</span><span class="p">,</span> <span class="n">nz</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">readline</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">()))</span>
         <span class="n">n</span> <span class="o">=</span> <span class="n">nx</span> <span class="o">*</span> <span class="n">ny</span> <span class="o">*</span> <span class="n">nz</span>
 
+        <span class="n">is_index</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">Integral</span><span class="p">):</span>
+            <span class="n">max_index</span> <span class="o">=</span> <span class="n">index</span> <span class="o">+</span> <span class="mi">1</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">is_index</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="n">max_index</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">index</span><span class="p">)</span>
+
         <span class="n">rl</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">readline</span>
-        <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span>
         <span class="n">vals</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="n">vapp</span> <span class="o">=</span> <span class="n">vals</span><span class="o">.</span><span class="n">append</span>
-        <span class="k">while</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">n</span> <span class="o">*</span> <span class="p">(</span><span class="n">index</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):</span>
-            <span class="n">dat</span> <span class="o">=</span> <span class="p">[</span><span class="nb">float</span><span class="p">(</span><span class="n">l</span><span class="p">)</span> <span class="k">for</span> <span class="n">l</span> <span class="ow">in</span> <span class="n">rl</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">()]</span>
+
+        <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">while</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">n</span> <span class="o">*</span> <span class="n">max_index</span><span class="p">:</span>
+            <span class="n">dat</span> <span class="o">=</span> <span class="p">[</span><span class="n">l</span> <span class="k">for</span> <span class="n">l</span> <span class="ow">in</span> <span class="n">rl</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">()]</span>
             <span class="n">vapp</span><span class="p">(</span><span class="n">dat</span><span class="p">)</span>
             <span class="n">i</span> <span class="o">+=</span> <span class="nb">len</span><span class="p">(</span><span class="n">dat</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">i</span> <span class="o">%</span> <span class="n">n</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">n</span> <span class="o">*</span> <span class="n">max_index</span><span class="p">:</span>
+                <span class="c1"># Each time a new spin-index is present, we need to read the coordinates</span>
+                <span class="n">j</span> <span class="o">=</span> <span class="mi">0</span>
+                <span class="k">while</span> <span class="n">j</span> <span class="o">&lt;</span> <span class="n">geom</span><span class="o">.</span><span class="n">na</span><span class="p">:</span>
+                    <span class="n">j</span> <span class="o">+=</span> <span class="nb">len</span><span class="p">(</span><span class="n">rl</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">())</span>
+
+                <span class="c1"># one line of nx, ny, nz</span>
+                <span class="n">rl</span><span class="p">()</span>
+
         <span class="c1"># Cut size before proceeding (otherwise it *may* fail)</span>
-        <span class="n">vals</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">vals</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()[</span><span class="n">n</span> <span class="o">*</span> <span class="n">index</span><span class="p">:</span><span class="n">n</span> <span class="o">*</span> <span class="p">(</span><span class="n">index</span><span class="o">+</span><span class="mi">1</span><span class="p">)]</span>
-        <span class="n">vals</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">swapaxes</span><span class="p">(</span><span class="n">vals</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">nz</span><span class="p">,</span> <span class="n">ny</span><span class="p">,</span> <span class="n">nx</span><span class="p">),</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span> <span class="o">/</span> <span class="n">V</span>
+        <span class="n">vals</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">vals</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">dtype</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">is_index</span><span class="p">:</span>
+            <span class="n">val</span> <span class="o">=</span> <span class="n">vals</span><span class="p">[</span><span class="n">n</span> <span class="o">*</span> <span class="n">index</span><span class="p">:</span><span class="n">n</span> <span class="o">*</span> <span class="p">(</span><span class="n">index</span><span class="o">+</span><span class="mi">1</span><span class="p">)]</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">nz</span><span class="p">,</span> <span class="n">ny</span><span class="p">,</span> <span class="n">nx</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">vals</span> <span class="o">=</span> <span class="n">vals</span><span class="p">[:</span><span class="n">n</span> <span class="o">*</span> <span class="n">max_index</span><span class="p">]</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">nz</span><span class="p">,</span> <span class="n">ny</span><span class="p">,</span> <span class="n">nx</span><span class="p">)</span>
+            <span class="n">val</span> <span class="o">=</span> <span class="n">vals</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">index</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">scale</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">index</span><span class="p">[</span><span class="mi">1</span><span class="p">:]):</span>
+                <span class="n">val</span> <span class="o">+=</span> <span class="n">vals</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="n">scale</span>
+        <span class="k">del</span> <span class="n">vals</span>
+
+        <span class="c1"># Make it C-ordered with nx, ny, nz</span>
+        <span class="n">val</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">swapaxes</span><span class="p">(</span><span class="n">val</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span> <span class="o">/</span> <span class="n">V</span>
 
         <span class="c1"># Create the grid with data</span>
         <span class="c1"># Since we populate the grid data afterwards there</span>
         <span class="c1"># is no need to create a bigger grid than necessary.</span>
         <span class="n">grid</span> <span class="o">=</span> <span class="n">Grid</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">,</span> <span class="n">geometry</span><span class="o">=</span><span class="n">geom</span><span class="p">)</span>
-        <span class="n">grid</span><span class="o">.</span><span class="n">grid</span> <span class="o">=</span> <span class="n">vals</span>
+        <span class="n">grid</span><span class="o">.</span><span class="n">grid</span> <span class="o">=</span> <span class="n">val</span>
 
         <span class="k">return</span> <span class="n">grid</span></div></div>
 
 
+<span class="c1"># CHG has low-precision, so the user should prefer CHGCAR</span>
 <span class="n">add_sile</span><span class="p">(</span><span class="s1">&#39;CHG&#39;</span><span class="p">,</span> <span class="n">chgSileVASP</span><span class="p">,</span> <span class="n">gzip</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 <span class="n">add_sile</span><span class="p">(</span><span class="s1">&#39;CHGCAR&#39;</span><span class="p">,</span> <span class="n">chgSileVASP</span><span class="p">,</span> <span class="n">gzip</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 </pre></div>

@@ -1285,6 +1285,12 @@
 
 <span class="sd">        The atomic indices are retained for the base structure.</span>
 
+<span class="sd">        This method allows to utilise Bloch&#39;s theorem when creating</span>
+<span class="sd">        Hamiltonian parameter sets for TBtrans.</span>
+
+<span class="sd">        Tiling and repeating a geometry will result in the same geometry.</span>
+<span class="sd">        The *only* difference between the two is the final ordering of the atoms.</span>
+
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
 <span class="sd">        reps : int</span>
@@ -1341,7 +1347,7 @@
 <div class="viewcode-block" id="Geometry.repeat"><a class="viewcode-back" href="../../api-generated/sisl.Geometry.html#sisl.Geometry.repeat">[docs]</a>    <span class="k">def</span> <span class="nf">repeat</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">reps</span><span class="p">,</span> <span class="n">axis</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Create a repeated geometry</span>
 
-<span class="sd">        The atomic indices are *NOT* retained for the base structure.</span>
+<span class="sd">        The atomic indices are *NOT* retained from the base structure.</span>
 
 <span class="sd">        The expansion of the atoms are basically performed using this</span>
 <span class="sd">        algorithm:</span>
@@ -1358,8 +1364,8 @@
 <span class="sd">        For geometries with a single atom this routine returns the same as</span>
 <span class="sd">        `tile`.</span>
 
-<span class="sd">        It is adviced to only use this for electrode Bloch&#39;s theorem</span>
-<span class="sd">        purposes as `tile` is faster.</span>
+<span class="sd">        Tiling and repeating a geometry will result in the same geometry.</span>
+<span class="sd">        The *only* difference between the two is the final ordering of the atoms.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
@@ -2084,18 +2090,29 @@
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="p">(</span><span class="n">xyz</span><span class="p">,</span> <span class="n">atom</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">atoms</span><span class="o">.</span><span class="n">reverse</span><span class="p">(</span><span class="n">atom</span><span class="p">),</span> <span class="n">sc</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">sc</span><span class="o">.</span><span class="n">copy</span><span class="p">())</span></div>
 
 <div class="viewcode-block" id="Geometry.mirror"><a class="viewcode-back" href="../../api-generated/sisl.Geometry.html#sisl.Geometry.mirror">[docs]</a>    <span class="k">def</span> <span class="nf">mirror</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">plane</span><span class="p">,</span> <span class="n">atom</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot; Mirrors the structure around the center of the atoms &quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot; Mirrors the atomic coordinates by multiplying by -1</span>
+
+<span class="sd">        This will typically move the atomic coordinates outside of the unit-cell.</span>
+<span class="sd">        This method should be used with care.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        plane : {&#39;xy&#39;/&#39;ab&#39;, &#39;yz&#39;/&#39;bc&#39;, &#39;xz&#39;/&#39;ac&#39;}</span>
+<span class="sd">           mirror the structure across the lattice vector plane</span>
+<span class="sd">        atom : array_like, optional</span>
+<span class="sd">           only mirror a subset of atoms</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">atom</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">atom</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">asarrayi</span><span class="p">(</span><span class="n">atom</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">atom</span> <span class="o">=</span> <span class="nb">slice</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
         <span class="n">g</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
         <span class="n">lplane</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">plane</span><span class="o">.</span><span class="n">lower</span><span class="p">()))</span>
-        <span class="k">if</span> <span class="n">lplane</span> <span class="o">==</span> <span class="s1">&#39;xy&#39;</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">lplane</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;xy&#39;</span><span class="p">,</span> <span class="s1">&#39;ab&#39;</span><span class="p">]:</span>
             <span class="n">g</span><span class="o">.</span><span class="n">xyz</span><span class="p">[</span><span class="n">atom</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">*=</span> <span class="o">-</span><span class="mi">1</span>
-        <span class="k">elif</span> <span class="n">lplane</span> <span class="o">==</span> <span class="s1">&#39;yz&#39;</span><span class="p">:</span>
+        <span class="k">elif</span> <span class="n">lplane</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;yz&#39;</span><span class="p">,</span> <span class="s1">&#39;bc&#39;</span><span class="p">]:</span>
             <span class="n">g</span><span class="o">.</span><span class="n">xyz</span><span class="p">[</span><span class="n">atom</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">*=</span> <span class="o">-</span><span class="mi">1</span>
-        <span class="k">elif</span> <span class="n">lplane</span> <span class="o">==</span> <span class="s1">&#39;xz&#39;</span><span class="p">:</span>
+        <span class="k">elif</span> <span class="n">lplane</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;xz&#39;</span><span class="p">,</span> <span class="s1">&#39;ac&#39;</span><span class="p">]:</span>
             <span class="n">g</span><span class="o">.</span><span class="n">xyz</span><span class="p">[</span><span class="n">atom</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">*=</span> <span class="o">-</span><span class="mi">1</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="p">(</span><span class="n">g</span><span class="o">.</span><span class="n">xyz</span><span class="p">,</span> <span class="n">atom</span><span class="o">=</span><span class="n">g</span><span class="o">.</span><span class="n">atom</span><span class="p">,</span> <span class="n">sc</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">sc</span><span class="o">.</span><span class="n">copy</span><span class="p">())</span></div>
 
