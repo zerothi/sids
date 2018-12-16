@@ -414,10 +414,18 @@
             <span class="k">return</span> <span class="mf">0.</span> <span class="c1"># unknown!</span></div>
 
 <div class="viewcode-block" id="tbtncSileTBtrans.transmission"><a class="viewcode-back" href="../../../../api-generated/sisl.io.tbtrans.tbtncSileTBtrans.html#sisl.io.tbtrans.tbtncSileTBtrans.transmission">[docs]</a>    <span class="k">def</span> <span class="nf">transmission</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">elec_from</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">elec_to</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">kavg</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot; Transmission from `elec_from` to `elec_to`.</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot; Transmission from `elec_from` to `elec_to`.</span>
 
 <span class="sd">        The transmission between two electrodes may be retrieved</span>
 <span class="sd">        from the `Sile`.</span>
+
+<span class="sd">        The transmission is calculated as:</span>
+
+<span class="sd">        .. math::</span>
+
+<span class="sd">            T(E) = \mathrm{Tr}[\mathbf{G}\boldsymbol\Gamma_{\mathrm{from}}\mathbf{G}^\dagger\boldsymbol\Gamma_{\mathrm{to}}]</span>
+
+<span class="sd">        where all quantities are energy dependent.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
@@ -433,6 +441,7 @@
 <span class="sd">        --------</span>
 <span class="sd">        transmission_eig : the transmission decomposed in eigenchannels</span>
 <span class="sd">        transmission_bulk : the total transmission in a periodic lead</span>
+<span class="sd">        reflection : total reflection back into the electrode</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">elec_from</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_elec</span><span class="p">(</span><span class="n">elec_from</span><span class="p">)</span>
         <span class="n">elec_to</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_elec</span><span class="p">(</span><span class="n">elec_to</span><span class="p">)</span>
@@ -440,6 +449,58 @@
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s2">&quot;.transmission elec_from and elec_to must not be the same.&quot;</span><span class="p">)</span>
 
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_value_avg</span><span class="p">(</span><span class="n">elec_to</span> <span class="o">+</span> <span class="s1">&#39;.T&#39;</span><span class="p">,</span> <span class="n">elec_from</span><span class="p">,</span> <span class="n">kavg</span><span class="o">=</span><span class="n">kavg</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="tbtncSileTBtrans.reflection"><a class="viewcode-back" href="../../../../api-generated/sisl.io.tbtrans.tbtncSileTBtrans.html#sisl.io.tbtrans.tbtncSileTBtrans.reflection">[docs]</a>    <span class="k">def</span> <span class="nf">reflection</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">elec</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">kavg</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">from_single</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot; Reflection into electrode `elec`</span>
+
+<span class="sd">        The reflection into electrode `elec` is calculated as:</span>
+
+<span class="sd">        .. math::</span>
+
+<span class="sd">             R(E) = T_{\mathrm{bulk}}(E) - \sum_{\mathrm{to}} T_{\mathrm{elec}\to\mathrm{to}}(E)</span>
+
+<span class="sd">        Another way of calculating the reflection is via:</span>
+
+<span class="sd">        .. math::</span>
+
+<span class="sd">             R(E) = T_{\mathrm{bulk}}(E) - \big\{i \mathrm{Tr}[(\mathbf G-\mathbf G^\dagger)\boldsymbol\Gamma_{\mathrm{elec}}]</span>
+<span class="sd">                   - \mathrm{Tr}[\mathbf G\boldsymbol\Gamma_{\mathrm{elec}}\mathbf G^\dagger\boldsymbol\Gamma_{\mathrm{elec}}]\big\}</span>
+
+<span class="sd">        Both are identical, however, numerically they may be different. Particularly when the bulk transmission</span>
+<span class="sd">        is very large compared to the transmission to the other electrodes one should prefer the first equation.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        elec: str, int, optional</span>
+<span class="sd">           the backscattered electrode</span>
+<span class="sd">        kavg: bool, int, optional</span>
+<span class="sd">           whether the returned reflection is k-averaged, or an explicit (unweighed) k-point</span>
+<span class="sd">           is returned</span>
+<span class="sd">        from_single: bool, optional</span>
+<span class="sd">           whether the reflection is calculated using the Green function and a</span>
+<span class="sd">           single scattering matrix Eq. (2) above (true), otherwise Eq. (1) will be used (false).</span>
+
+<span class="sd">        See Also</span>
+<span class="sd">        --------</span>
+<span class="sd">        transmission : the total transmission</span>
+<span class="sd">        transmission_eig : the transmission decomposed in eigenchannels</span>
+<span class="sd">        transmission_bulk : the total transmission in a periodic lead</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">elec</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_elec</span><span class="p">(</span><span class="n">elec</span><span class="p">)</span>
+        <span class="n">BT</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">transmission_bulk</span><span class="p">(</span><span class="n">elec</span><span class="p">,</span> <span class="n">kavg</span><span class="o">=</span><span class="n">kavg</span><span class="p">)</span>
+
+        <span class="c1"># Find full transmission out of electrode</span>
+        <span class="k">if</span> <span class="n">from_single</span><span class="p">:</span>
+            <span class="n">T</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_value_avg</span><span class="p">(</span><span class="n">elec</span> <span class="o">+</span> <span class="s1">&#39;.T&#39;</span><span class="p">,</span> <span class="n">elec</span><span class="p">,</span> <span class="n">kavg</span><span class="o">=</span><span class="n">kavg</span><span class="p">)</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">_value_avg</span><span class="p">(</span><span class="n">elec</span> <span class="o">+</span> <span class="s1">&#39;.C&#39;</span><span class="p">,</span> <span class="n">elec</span><span class="p">,</span> <span class="n">kavg</span><span class="o">=</span><span class="n">kavg</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">T</span> <span class="o">=</span> <span class="mf">0.</span>
+            <span class="k">for</span> <span class="n">to</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">elecs</span><span class="p">:</span>
+                <span class="n">to</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_elec</span><span class="p">(</span><span class="n">to</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">elec</span> <span class="o">==</span> <span class="n">to</span><span class="p">:</span>
+                    <span class="k">continue</span>
+                <span class="n">T</span> <span class="o">=</span> <span class="n">T</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">transmission</span><span class="p">(</span><span class="n">elec</span><span class="p">,</span> <span class="n">to</span><span class="p">,</span> <span class="n">kavg</span><span class="o">=</span><span class="n">kavg</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">BT</span> <span class="o">-</span> <span class="n">T</span></div>
 
 <div class="viewcode-block" id="tbtncSileTBtrans.transmission_eig"><a class="viewcode-back" href="../../../../api-generated/sisl.io.tbtrans.tbtncSileTBtrans.html#sisl.io.tbtrans.tbtncSileTBtrans.transmission_eig">[docs]</a>    <span class="k">def</span> <span class="nf">transmission_eig</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">elec_from</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">elec_to</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">kavg</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Transmission eigenvalues from `elec_from` to `elec_to`.</span>
@@ -484,6 +545,7 @@
 <span class="sd">        --------</span>
 <span class="sd">        transmission : the total transmission</span>
 <span class="sd">        transmission_eig : the transmission decomposed in eigenchannels</span>
+<span class="sd">        reflection : total reflection back into the electrode</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_value_avg</span><span class="p">(</span><span class="s1">&#39;T&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_elec</span><span class="p">(</span><span class="n">elec</span><span class="p">),</span> <span class="n">kavg</span><span class="o">=</span><span class="n">kavg</span><span class="p">)</span></div>
 
@@ -527,6 +589,7 @@
         <span class="k">else</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39;.norm error on norm keyword in when requesting normalization!&#39;</span><span class="p">)</span>
 
+        <span class="c1"># If the user simply requests a specific norm</span>
         <span class="k">if</span> <span class="n">atom</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">orbital</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">NORM</span>
 
@@ -542,9 +605,15 @@
                 <span class="n">NORM</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">_a</span><span class="o">.</span><span class="n">sumi</span><span class="p">(</span><span class="n">geom</span><span class="o">.</span><span class="n">firsto</span><span class="p">[</span><span class="n">a</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">geom</span><span class="o">.</span><span class="n">firsto</span><span class="p">[</span><span class="n">a</span><span class="p">]))</span>
             <span class="k">return</span> <span class="n">NORM</span>
 
-        <span class="c1"># atom is specified</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">orbital</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39;.norm both atom and orbital cannot be specified!&#39;</span><span class="p">)</span>
+
+        <span class="c1"># atom is specified, this will result in the same normalization</span>
+        <span class="c1"># regardless of norm == [orbital, atom] since it is all orbitals</span>
+        <span class="c1"># on the given atoms.</span>
         <span class="k">if</span> <span class="n">norm</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;orbital&#39;</span><span class="p">,</span> <span class="s1">&#39;atom&#39;</span><span class="p">]:</span>
-            <span class="n">NORM</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">o2p</span><span class="p">(</span><span class="n">atom</span><span class="p">)))</span>
+            <span class="n">NORM</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">a2p</span><span class="p">(</span><span class="n">atom</span><span class="p">)))</span>
+
         <span class="k">return</span> <span class="n">NORM</span></div>
 
     <span class="k">def</span> <span class="nf">_DOS</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">DOS</span><span class="p">,</span> <span class="n">atom</span><span class="p">,</span> <span class="n">orbital</span><span class="p">,</span> <span class="nb">sum</span><span class="p">,</span> <span class="n">norm</span><span class="p">):</span>
@@ -636,7 +705,7 @@
 
         <span class="c1"># Sum for new return stuff</span>
         <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">a</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">atom</span><span class="p">):</span>
-            <span class="n">pvt</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">o2p</span><span class="p">(</span><span class="n">geom</span><span class="o">.</span><span class="n">a2o</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="kc">True</span><span class="p">))</span>
+            <span class="n">pvt</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">a2p</span><span class="p">(</span><span class="n">a</span><span class="p">)</span>
             <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">pvt</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
                 <span class="n">nDOS</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.</span>
             <span class="k">else</span><span class="p">:</span>
@@ -2324,8 +2393,8 @@
                 <span class="n">atoms</span> <span class="o">=</span> <span class="p">[</span><span class="kc">None</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">old_g</span><span class="p">)</span>
                 <span class="k">for</span> <span class="n">a</span><span class="p">,</span> <span class="n">idx</span> <span class="ow">in</span> <span class="n">g</span><span class="o">.</span><span class="n">atom</span><span class="p">:</span>
                     <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">idx</span><span class="p">:</span>
-                        <span class="n">atoms</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">a</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">orbital</span><span class="o">=</span><span class="n">old_g</span><span class="o">.</span><span class="n">atom</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">R</span><span class="p">)</span>
-                <span class="n">g</span><span class="o">.</span><span class="n">_atom</span> <span class="o">=</span> <span class="n">Atoms</span><span class="p">(</span><span class="n">atoms</span><span class="p">)</span>
+                        <span class="n">atoms</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">a</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">orbital</span><span class="o">=</span><span class="n">old_g</span><span class="o">.</span><span class="n">atoms</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">R</span><span class="p">)</span>
+                <span class="n">g</span><span class="o">.</span><span class="n">_atoms</span> <span class="o">=</span> <span class="n">Atoms</span><span class="p">(</span><span class="n">atoms</span><span class="p">)</span>
 
                 <span class="n">ns</span><span class="o">.</span><span class="n">_geometry</span> <span class="o">=</span> <span class="n">g</span>
         <span class="n">p</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--geometry&#39;</span><span class="p">,</span> <span class="s1">&#39;-G&#39;</span><span class="p">,</span>

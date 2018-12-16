@@ -167,7 +167,9 @@
   <h1>Source code for sisl.physics.hamiltonian</h1><div class="highlight"><pre>
 <span></span><span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">print_function</span><span class="p">,</span> <span class="n">division</span>
 
+<span class="kn">import</span> <span class="nn">math</span> <span class="k">as</span> <span class="nn">ma</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">scipy.interpolate</span> <span class="k">import</span> <span class="n">CubicSpline</span>
 
 <span class="kn">from</span> <span class="nn">sisl._help</span> <span class="k">import</span> <span class="n">_range</span> <span class="k">as</span> <span class="nb">range</span>
 <span class="kn">import</span> <span class="nn">sisl._array</span> <span class="k">as</span> <span class="nn">_a</span>
@@ -213,7 +215,10 @@
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">geometry</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">nnzpr</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Initialize Hamiltonian &quot;&quot;&quot;</span>
         <span class="nb">super</span><span class="p">(</span><span class="n">Hamiltonian</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">geometry</span><span class="p">,</span> <span class="n">dim</span><span class="p">,</span> <span class="n">dtype</span><span class="p">,</span> <span class="n">nnzpr</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_reset</span><span class="p">()</span>
 
+    <span class="k">def</span> <span class="nf">_reset</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">Hamiltonian</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">_reset</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">Hk</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Pk</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">dHk</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dPk</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">ddHk</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ddPk</span>
@@ -254,7 +259,7 @@
 <span class="sd">        format : {&#39;csr&#39;, &#39;array&#39;, &#39;dense&#39;, &#39;coo&#39;, ...}</span>
 <span class="sd">           the returned format of the matrix, defaulting to the ``scipy.sparse.csr_matrix``,</span>
 <span class="sd">           however if one always requires operations on dense matrices, one can always</span>
-<span class="sd">           return in `numpy.ndarray` (`&#39;array&#39;`) or `numpy.matrix` (`&#39;dense&#39;`).</span>
+<span class="sd">           return in `numpy.ndarray` (`&#39;array&#39;`/`&#39;dense&#39;`/`&#39;matrix&#39;`).</span>
 <span class="sd">        spin : int, optional</span>
 <span class="sd">           if the Hamiltonian is a spin polarized one can extract the specific spin direction</span>
 <span class="sd">           matrix by passing an integer (0 or 1). If the Hamiltonian is not `Spin.POLARIZED`</span>
@@ -308,7 +313,7 @@
 <span class="sd">        format : {&#39;csr&#39;, &#39;array&#39;, &#39;dense&#39;, &#39;coo&#39;, ...}</span>
 <span class="sd">           the returned format of the matrix, defaulting to the ``scipy.sparse.csr_matrix``,</span>
 <span class="sd">           however if one always requires operations on dense matrices, one can always</span>
-<span class="sd">           return in `numpy.ndarray` (`&#39;array&#39;`) or `numpy.matrix` (`&#39;dense&#39;`).</span>
+<span class="sd">           return in `numpy.ndarray` (`&#39;array&#39;`/`&#39;dense&#39;`/`&#39;matrix&#39;`).</span>
 <span class="sd">        spin : int, optional</span>
 <span class="sd">           if the Hamiltonian is a spin polarized one can extract the specific spin direction</span>
 <span class="sd">           matrix by passing an integer (0 or 1). If the Hamiltonian is not `Spin.POLARIZED`</span>
@@ -362,7 +367,7 @@
 <span class="sd">        format : {&#39;csr&#39;, &#39;array&#39;, &#39;dense&#39;, &#39;coo&#39;, ...}</span>
 <span class="sd">           the returned format of the matrix, defaulting to the ``scipy.sparse.csr_matrix``,</span>
 <span class="sd">           however if one always requires operations on dense matrices, one can always</span>
-<span class="sd">           return in `numpy.ndarray` (`&#39;array&#39;`) or `numpy.matrix` (`&#39;dense&#39;`).</span>
+<span class="sd">           return in `numpy.ndarray` (`&#39;array&#39;`/`&#39;dense&#39;`/`&#39;matrix&#39;`).</span>
 <span class="sd">        spin : int, optional</span>
 <span class="sd">           if the Hamiltonian is a spin polarized one can extract the specific spin direction</span>
 <span class="sd">           matrix by passing an integer (0 or 1). If the Hamiltonian is not `Spin.POLARIZED`</span>
@@ -590,7 +595,7 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">eigenstate</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span><span class="o">.</span><span class="n">PDOS</span><span class="p">(</span><span class="n">E</span><span class="p">,</span> <span class="n">distribution</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="Hamiltonian.fermi_level"><a class="viewcode-back" href="../../../api-generated/sisl.physics.Hamiltonian.html#sisl.physics.Hamiltonian.fermi_level">[docs]</a>    <span class="k">def</span> <span class="nf">fermi_level</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">bz</span><span class="p">,</span> <span class="n">distribution</span><span class="o">=</span><span class="s1">&#39;fermi_dirac&#39;</span><span class="p">,</span> <span class="n">q</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">q_tol</span><span class="o">=</span><span class="mf">1e-10</span><span class="p">):</span>
+<div class="viewcode-block" id="Hamiltonian.fermi_level"><a class="viewcode-back" href="../../../api-generated/sisl.physics.Hamiltonian.html#sisl.physics.Hamiltonian.fermi_level">[docs]</a>    <span class="k">def</span> <span class="nf">fermi_level</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">bz</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">q</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">distribution</span><span class="o">=</span><span class="s1">&#39;fermi_dirac&#39;</span><span class="p">,</span> <span class="n">q_tol</span><span class="o">=</span><span class="mf">1e-12</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Calculate the Fermi-level using a Brillouinzone sampling and a target charge</span>
 
 <span class="sd">        The Fermi-level will be calculated using an iterative approach by first calculating all eigenvalues</span>
@@ -598,52 +603,96 @@
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
-<span class="sd">        bz : Brillouinzone</span>
+<span class="sd">        bz : Brillouinzone, optional</span>
 <span class="sd">            sampled k-points and weights, the ``bz.parent`` will be equal to this object upon return</span>
-<span class="sd">        distribution : str, func</span>
+<span class="sd">            default to Gamma-point</span>
+<span class="sd">        q : float, list of float, optional</span>
+<span class="sd">            seeked charge, if not set will be equal to ``self.geometry.q0``. If a list of two is passed</span>
+<span class="sd">            there will be calculated a Fermi-level per spin-channel. If the Hamiltonian is not spin-polarized</span>
+<span class="sd">            the sum of the list will be used and only a single fermi-level will be returned.</span>
+<span class="sd">        distribution : str, func, optional</span>
 <span class="sd">            used distribution, must accept the keyword ``mu`` as parameter for the Fermi-level</span>
-<span class="sd">        q : float, optional</span>
-<span class="sd">            seeked charge, if not set will be equal to ``self.geometry.q0``.</span>
 <span class="sd">        q_tol : float, optional</span>
 <span class="sd">            tolerance of charge for finding the Fermi-level</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
-<span class="sd">        fermi-level : the Fermi-level of the system.</span>
+<span class="sd">        fermi-level : the Fermi-level of the system (or two if two different charges are passed)</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="c1"># Overwrite the parent in bz</span>
-        <span class="n">bz</span><span class="o">.</span><span class="n">set_parent</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">bz</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># Gamma-point only</span>
+            <span class="kn">from</span> <span class="nn">.brillouinzone</span> <span class="k">import</span> <span class="n">BrillouinZone</span>
+            <span class="n">bz</span> <span class="o">=</span> <span class="n">BrillouinZone</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># Overwrite the parent in bz</span>
+            <span class="n">bz</span><span class="o">.</span><span class="n">set_parent</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="c1"># Ensure we are using asarray</span>
+        <span class="n">bz</span><span class="o">.</span><span class="n">asarray</span><span class="p">()</span>
 
         <span class="k">if</span> <span class="n">q</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">q</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">q0</span>
+        <span class="c1"># Ensure we have an &quot;array&quot; in case of spin-polarized calculations</span>
+        <span class="n">q</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">q</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">distribution</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
             <span class="n">distribution</span> <span class="o">=</span> <span class="n">get_distribution</span><span class="p">(</span><span class="n">distribution</span><span class="p">)</span>
 
-        <span class="c1"># We have two cases, either a spin-polarized calculation, or all others.</span>
-        <span class="n">spin</span> <span class="o">=</span> <span class="n">bz</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">spin</span>
-        <span class="k">if</span> <span class="n">spin</span><span class="o">.</span><span class="n">is_polarized</span><span class="p">:</span>
-            <span class="c1"># We need both spin eigenvalues</span>
-            <span class="n">eig</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">stack</span><span class="p">([</span><span class="n">bz</span><span class="o">.</span><span class="n">asarray</span><span class="p">()</span><span class="o">.</span><span class="n">eigh</span><span class="p">(</span><span class="n">spin</span><span class="o">=</span><span class="mi">0</span><span class="p">),</span>
-                            <span class="n">bz</span><span class="o">.</span><span class="n">asarray</span><span class="p">()</span><span class="o">.</span><span class="n">eigh</span><span class="p">(</span><span class="n">spin</span><span class="o">=</span><span class="mi">1</span><span class="p">)],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">eig</span> <span class="o">=</span> <span class="n">bz</span><span class="o">.</span><span class="n">asarray</span><span class="p">()</span><span class="o">.</span><span class="n">eigh</span><span class="p">()</span>
+        <span class="c1"># B-cast for easier weights</span>
         <span class="n">w</span> <span class="o">=</span> <span class="n">bz</span><span class="o">.</span><span class="n">weight</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
 
-        <span class="c1"># Find Fermi-level</span>
-        <span class="n">E_min</span> <span class="o">=</span> <span class="n">eig</span><span class="o">.</span><span class="n">min</span><span class="p">()</span>
-        <span class="n">E_max</span> <span class="o">=</span> <span class="n">eig</span><span class="o">.</span><span class="n">max</span><span class="p">()</span>
+        <span class="c1"># Internal class to calculate the Fermi-level</span>
+        <span class="k">def</span> <span class="nf">_Ef</span><span class="p">(</span><span class="n">q</span><span class="p">,</span> <span class="n">eig</span><span class="p">):</span>
+            <span class="c1"># We could reduce it depending on the temperature,</span>
+            <span class="c1"># however the distribution does not have the kT</span>
+            <span class="c1"># parameter available.</span>
+            <span class="n">Ef</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">average</span><span class="p">(</span><span class="n">eig</span><span class="p">[:,</span> <span class="nb">int</span><span class="p">(</span><span class="n">q</span><span class="p">)])</span>
 
-        <span class="c1"># We start by guessing on 10 (so we can faster move down)</span>
-        <span class="n">Ef</span> <span class="o">=</span> <span class="mf">10.</span>
-        <span class="n">qt</span> <span class="o">=</span> <span class="p">(</span><span class="n">distribution</span><span class="p">(</span><span class="n">eig</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="n">Ef</span><span class="p">)</span> <span class="o">*</span> <span class="n">w</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
-        <span class="k">while</span> <span class="nb">abs</span><span class="p">(</span><span class="n">qt</span> <span class="o">-</span> <span class="n">q</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">q_tol</span><span class="p">:</span>
-            <span class="k">if</span> <span class="n">qt</span> <span class="o">&gt;</span> <span class="n">q</span><span class="p">:</span>
-                <span class="n">E_max</span> <span class="o">=</span> <span class="n">Ef</span>
-            <span class="k">elif</span> <span class="n">qt</span> <span class="o">&lt;</span> <span class="n">q</span><span class="p">:</span>
-                <span class="n">E_min</span> <span class="o">=</span> <span class="n">Ef</span>
-            <span class="n">Ef</span> <span class="o">=</span> <span class="p">(</span><span class="n">E_min</span> <span class="o">+</span> <span class="n">E_max</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span>
+            <span class="n">l_Ef</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="n">l_q</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">def</span> <span class="nf">list_append</span><span class="p">(</span><span class="n">q</span><span class="p">,</span> <span class="n">Ef</span><span class="p">):</span>
+                <span class="n">l_q</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">q</span><span class="p">)</span>
+                <span class="n">l_Ef</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Ef</span><span class="p">)</span>
+
+            <span class="c1"># Calculate guessed charge</span>
             <span class="n">qt</span> <span class="o">=</span> <span class="p">(</span><span class="n">distribution</span><span class="p">(</span><span class="n">eig</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="n">Ef</span><span class="p">)</span> <span class="o">*</span> <span class="n">w</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+
+            <span class="k">while</span> <span class="nb">abs</span><span class="p">(</span><span class="n">qt</span> <span class="o">-</span> <span class="n">q</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">q_tol</span><span class="p">:</span>
+                <span class="c1"># Add to cubic-spline</span>
+                <span class="n">list_append</span><span class="p">(</span><span class="n">qt</span><span class="p">,</span> <span class="n">Ef</span><span class="p">)</span>
+
+                <span class="c1"># Estimate new Fermi-level</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">l_q</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+                    <span class="c1"># We can do a spline interpolation</span>
+                    <span class="n">lq</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">l_q</span><span class="p">)</span>
+                    <span class="n">idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="n">lq</span><span class="p">)</span>
+                    <span class="n">lEf</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">l_Ef</span><span class="p">)</span>
+                    <span class="n">Ef</span> <span class="o">=</span> <span class="n">CubicSpline</span><span class="p">(</span><span class="n">lq</span><span class="p">[</span><span class="n">idx</span><span class="p">],</span> <span class="n">lEf</span><span class="p">[</span><span class="n">idx</span><span class="p">],</span> <span class="n">extrapolate</span><span class="o">=</span><span class="kc">True</span><span class="p">)(</span><span class="n">q</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="c1"># Update limits</span>
+                    <span class="k">if</span> <span class="n">qt</span> <span class="o">&gt;</span> <span class="n">q</span><span class="p">:</span>
+                        <span class="n">Ef</span> <span class="o">=</span> <span class="n">Ef</span> <span class="o">-</span> <span class="mf">0.5</span>
+                    <span class="k">elif</span> <span class="n">qt</span> <span class="o">&lt;</span> <span class="n">q</span><span class="p">:</span>
+                        <span class="n">Ef</span> <span class="o">=</span> <span class="n">Ef</span> <span class="o">+</span> <span class="mf">0.5</span>
+
+                <span class="c1"># Calculate new guessed charge</span>
+                <span class="n">qt</span> <span class="o">=</span> <span class="p">(</span><span class="n">distribution</span><span class="p">(</span><span class="n">eig</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="n">Ef</span><span class="p">)</span> <span class="o">*</span> <span class="n">w</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+
+            <span class="k">return</span> <span class="n">Ef</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">spin</span><span class="o">.</span><span class="n">is_polarized</span> <span class="ow">and</span> <span class="n">q</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="c1"># We need to do Fermi-level separately since the user requests</span>
+            <span class="c1"># separate fillings</span>
+            <span class="n">Ef</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">emptyd</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+            <span class="n">Ef</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">_Ef</span><span class="p">(</span><span class="n">q</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">bz</span><span class="o">.</span><span class="n">eigh</span><span class="p">(</span><span class="n">spin</span><span class="o">=</span><span class="mi">0</span><span class="p">))</span>
+            <span class="n">Ef</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">_Ef</span><span class="p">(</span><span class="n">q</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">bz</span><span class="o">.</span><span class="n">eigh</span><span class="p">(</span><span class="n">spin</span><span class="o">=</span><span class="mi">1</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># Ensure a single charge</span>
+            <span class="n">q</span> <span class="o">=</span> <span class="n">q</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">spin</span><span class="o">.</span><span class="n">is_polarized</span><span class="p">:</span>
+                <span class="n">Ef</span> <span class="o">=</span> <span class="n">_Ef</span><span class="p">(</span><span class="n">q</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">([</span><span class="n">bz</span><span class="o">.</span><span class="n">eigh</span><span class="p">(</span><span class="n">spin</span><span class="o">=</span><span class="mi">0</span><span class="p">),</span>
+                                            <span class="n">bz</span><span class="o">.</span><span class="n">eigh</span><span class="p">(</span><span class="n">spin</span><span class="o">=</span><span class="mi">1</span><span class="p">)],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">))</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">Ef</span> <span class="o">=</span> <span class="n">_Ef</span><span class="p">(</span><span class="n">q</span><span class="p">,</span> <span class="n">bz</span><span class="o">.</span><span class="n">eigh</span><span class="p">())</span>
 
         <span class="k">return</span> <span class="n">Ef</span></div></div>
 </pre></div>

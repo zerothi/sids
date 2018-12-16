@@ -173,12 +173,14 @@
 <span class="c1"># To speed up the extension algorithm we limit</span>
 <span class="c1"># the lookup table</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">int32</span>
 <span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">empty</span><span class="p">,</span> <span class="n">zeros</span><span class="p">,</span> <span class="n">asarray</span><span class="p">,</span> <span class="n">arange</span>
 <span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">insert</span><span class="p">,</span> <span class="n">take</span><span class="p">,</span> <span class="n">delete</span><span class="p">,</span> <span class="n">copyto</span><span class="p">,</span> <span class="n">split</span>
 <span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">intersect1d</span><span class="p">,</span> <span class="n">setdiff1d</span><span class="p">,</span> <span class="n">unique</span><span class="p">,</span> <span class="n">in1d</span>
 <span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">diff</span><span class="p">,</span> <span class="n">count_nonzero</span>
 <span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="nb">any</span> <span class="k">as</span> <span class="n">np_any</span>
 <span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="nb">all</span> <span class="k">as</span> <span class="n">np_all</span>
+<span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">isnan</span>
 <span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">argsort</span>
 
 <span class="kn">from</span> <span class="nn">scipy.sparse</span> <span class="k">import</span> <span class="n">isspmatrix</span>
@@ -187,8 +189,9 @@
 <span class="kn">from</span> <span class="nn">scipy.sparse</span> <span class="k">import</span> <span class="n">isspmatrix_csc</span>
 <span class="kn">from</span> <span class="nn">scipy.sparse</span> <span class="k">import</span> <span class="n">isspmatrix_lil</span>
 
-<span class="kn">import</span> <span class="nn">sisl._array</span> <span class="k">as</span> <span class="nn">_a</span>
-<span class="kn">from</span> <span class="nn">._indices</span> <span class="k">import</span> <span class="n">indices</span><span class="p">,</span> <span class="n">sorted_unique</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="k">import</span> <span class="n">_array</span> <span class="k">as</span> <span class="n">_a</span>
+<span class="kn">from</span> <span class="nn">._array</span> <span class="k">import</span> <span class="n">asarrayi</span><span class="p">,</span> <span class="n">arrayi</span>
+<span class="kn">from</span> <span class="nn">._indices</span> <span class="k">import</span> <span class="n">indices</span><span class="p">,</span> <span class="n">indices_only</span><span class="p">,</span> <span class="n">sorted_unique</span>
 <span class="kn">from</span> <span class="nn">.messages</span> <span class="k">import</span> <span class="n">warn</span><span class="p">,</span> <span class="n">SislError</span>
 <span class="kn">from</span> <span class="nn">._help</span> <span class="k">import</span> <span class="n">array_fill_repeat</span><span class="p">,</span> <span class="n">get_dtype</span>
 <span class="kn">from</span> <span class="nn">._help</span> <span class="k">import</span> <span class="n">_range</span> <span class="k">as</span> <span class="nb">range</span><span class="p">,</span> <span class="n">_zip</span> <span class="k">as</span> <span class="nb">zip</span><span class="p">,</span> <span class="n">_map</span> <span class="k">as</span> <span class="nb">map</span>
@@ -392,7 +395,7 @@
         <span class="c1"># in the sparsity pattern</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">ncol</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">zerosi</span><span class="p">([</span><span class="n">M</span><span class="p">])</span>
         <span class="c1"># Create pointer array</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">ptr</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">cumsumi</span><span class="p">(</span><span class="n">_a</span><span class="o">.</span><span class="n">arrayi</span><span class="p">([</span><span class="n">nnzpr</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="n">M</span><span class="o">+</span><span class="mi">1</span><span class="p">)))</span> <span class="o">-</span> <span class="n">nnzpr</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ptr</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">cumsumi</span><span class="p">(</span><span class="n">arrayi</span><span class="p">([</span><span class="n">nnzpr</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="n">M</span><span class="o">+</span><span class="mi">1</span><span class="p">)))</span> <span class="o">-</span> <span class="n">nnzpr</span>
         <span class="c1"># Create column array</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">col</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">emptyi</span><span class="p">(</span><span class="n">nnz</span><span class="p">)</span>
         <span class="c1"># Store current number of non-zero elements</span>
@@ -677,7 +680,7 @@
             <span class="k">del</span> <span class="n">idx</span>
 
         <span class="c1"># Update number of non-zeroes</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_nnz</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">ncol</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_nnz</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">ncol</span><span class="o">.</span><span class="n">sum</span><span class="p">())</span>
 
         <span class="k">if</span> <span class="ow">not</span> <span class="n">keep_shape</span><span class="p">:</span>
             <span class="n">shape</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
@@ -714,7 +717,7 @@
         <span class="n">ptr</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span> <span class="o">-=</span> <span class="n">_a</span><span class="o">.</span><span class="n">cumsumi</span><span class="p">(</span><span class="n">ndel</span><span class="p">)</span>
 
         <span class="c1"># Update number of non-zeroes</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_nnz</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">ncol</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_nnz</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">ncol</span><span class="o">.</span><span class="n">sum</span><span class="p">())</span>
 
         <span class="c1"># We are *only* deleting columns, so if it is finalized,</span>
         <span class="c1"># it will still be</span>
@@ -888,7 +891,7 @@
 <span class="sd">        index : array_like</span>
 <span class="sd">           the indicies of the existing/added elements</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-
+        <span class="n">i1</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span>
         <span class="c1"># We skip this check and let sisl die if wrong input is given...</span>
         <span class="c1">#if not isinstance(i, Integral):</span>
         <span class="c1">#    raise ValueError(&quot;Retrieving/Setting elements in a sparse matrix&quot;</span>
@@ -896,36 +899,42 @@
         <span class="c1">#                     &quot;However, multiple columns at a time are allowed.&quot;)</span>
 
         <span class="c1"># Ensure flattened array...</span>
-        <span class="n">j</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">asarrayi</span><span class="p">(</span><span class="n">j</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
+        <span class="n">j</span> <span class="o">=</span> <span class="n">asarrayi</span><span class="p">(</span><span class="n">j</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">j</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="k">return</span> <span class="n">_a</span><span class="o">.</span><span class="n">arrayi</span><span class="p">([])</span>
+            <span class="k">return</span> <span class="n">arrayi</span><span class="p">([])</span>
 
         <span class="c1"># fast reference</span>
         <span class="n">ptr</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ptr</span>
-        <span class="n">ptr_i</span> <span class="o">=</span> <span class="n">ptr</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
         <span class="n">ncol</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ncol</span>
         <span class="n">col</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">col</span>
+
+        <span class="c1"># Get index pointer</span>
+        <span class="n">ptr_i</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">ptr</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+        <span class="n">ncol_i</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">ncol</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
 
         <span class="c1"># To create the indices for the sparse elements</span>
         <span class="c1"># we first find which values are _not_ in the sparse</span>
         <span class="c1"># matrix</span>
-        <span class="k">if</span> <span class="n">ncol</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">ncol_i</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
 
             <span class="c1"># Checks whether any non-zero elements are</span>
             <span class="c1"># already in the sparse pattern</span>
             <span class="c1"># If so we remove those from the j</span>
-            <span class="n">exists</span> <span class="o">=</span> <span class="n">intersect1d</span><span class="p">(</span><span class="n">j</span><span class="p">,</span> <span class="n">col</span><span class="p">[</span><span class="n">ptr_i</span><span class="p">:</span><span class="n">ptr_i</span><span class="o">+</span><span class="n">ncol</span><span class="p">[</span><span class="n">i</span><span class="p">]],</span>
-                                 <span class="n">assume_unique</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="n">new_j</span> <span class="o">=</span> <span class="n">j</span><span class="p">[</span><span class="n">in1d</span><span class="p">(</span><span class="n">j</span><span class="p">,</span> <span class="n">col</span><span class="p">[</span><span class="n">ptr_i</span><span class="p">:</span><span class="n">ptr_i</span><span class="o">+</span><span class="n">ncol_i</span><span class="p">],</span>
+                           <span class="n">invert</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">assume_unique</span><span class="o">=</span><span class="kc">True</span><span class="p">)]</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="n">exists</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">arrayi</span><span class="p">([])</span>
+            <span class="n">new_j</span> <span class="o">=</span> <span class="n">j</span>
 
         <span class="c1"># Get list of new elements to be added</span>
-        <span class="n">new_j</span> <span class="o">=</span> <span class="n">setdiff1d</span><span class="p">(</span><span class="n">j</span><span class="p">,</span> <span class="n">exists</span><span class="p">,</span> <span class="n">assume_unique</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="c1"># astype(...) is necessary since len(...) returns a long</span>
+        <span class="c1"># and adding long and 32 is horribly slow in Python!</span>
         <span class="n">new_n</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">new_j</span><span class="p">)</span>
+
+        <span class="n">ncol_ptr_i</span> <span class="o">=</span> <span class="n">ptr_i</span> <span class="o">+</span> <span class="n">ncol_i</span>
 
         <span class="c1"># Check how many elements cannot fit in the currently</span>
         <span class="c1"># allocated sparse matrix...</span>
-        <span class="n">new_nnz</span> <span class="o">=</span> <span class="n">ncol</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">+</span> <span class="n">new_n</span> <span class="o">-</span> <span class="p">(</span><span class="n">ptr</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">ptr_i</span><span class="p">)</span>
+        <span class="n">new_nnz</span> <span class="o">=</span> <span class="n">new_n</span> <span class="o">-</span> <span class="nb">int</span><span class="p">(</span><span class="n">ptr</span><span class="p">[</span><span class="n">i1</span><span class="p">])</span> <span class="o">+</span> <span class="n">ncol_ptr_i</span>
 
         <span class="k">if</span> <span class="n">new_nnz</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
 
@@ -943,8 +952,7 @@
 
             <span class="c1"># Insert new empty elements in the column index</span>
             <span class="c1"># after the column</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">col</span> <span class="o">=</span> <span class="n">insert</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">col</span><span class="p">,</span> <span class="n">ptr_i</span> <span class="o">+</span> <span class="n">ncol</span><span class="p">[</span><span class="n">i</span><span class="p">],</span>
-                              <span class="n">empty</span><span class="p">(</span><span class="n">ns</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">col</span><span class="o">.</span><span class="n">dtype</span><span class="p">))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">col</span> <span class="o">=</span> <span class="n">insert</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">col</span><span class="p">,</span> <span class="n">ncol_ptr_i</span><span class="p">,</span> <span class="n">empty</span><span class="p">(</span><span class="n">ns</span><span class="p">,</span> <span class="n">col</span><span class="o">.</span><span class="n">dtype</span><span class="p">))</span>
 
             <span class="c1"># update reference</span>
             <span class="n">col</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">col</span>
@@ -952,26 +960,25 @@
             <span class="c1"># Insert zero data in the data array</span>
             <span class="c1"># We use `zeros` as then one may set each dimension</span>
             <span class="c1"># individually...</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_D</span> <span class="o">=</span> <span class="n">insert</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_D</span><span class="p">,</span> <span class="n">ptr</span><span class="p">[</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">],</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_D</span> <span class="o">=</span> <span class="n">insert</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_D</span><span class="p">,</span> <span class="n">ptr</span><span class="p">[</span><span class="n">i1</span><span class="p">],</span>
                              <span class="n">zeros</span><span class="p">([</span><span class="n">ns</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">]],</span> <span class="bp">self</span><span class="o">.</span><span class="n">_D</span><span class="o">.</span><span class="n">dtype</span><span class="p">),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
 
             <span class="c1"># Lastly, shift all pointers above this row to account for the</span>
             <span class="c1"># new non-zero elements</span>
-            <span class="n">ptr</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">:]</span> <span class="o">+=</span> <span class="n">ns</span>
+            <span class="n">ptr</span><span class="p">[</span><span class="n">i1</span><span class="p">:]</span> <span class="o">+=</span> <span class="n">int32</span><span class="p">(</span><span class="n">ns</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="n">new_n</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
             <span class="c1"># Ensure that we write the new elements to the matrix...</span>
 
-            <span class="c1"># new data begins from this index location</span>
-            <span class="n">old_ptr</span> <span class="o">=</span> <span class="n">ptr_i</span> <span class="o">+</span> <span class="n">ncol</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
-
             <span class="c1"># assign the column indices for the new entries</span>
             <span class="c1"># NOTE that this may not assign them in the order</span>
             <span class="c1"># of entry as new_j is sorted and thus new_j != j</span>
-            <span class="n">col</span><span class="p">[</span><span class="n">old_ptr</span><span class="p">:</span><span class="n">old_ptr</span> <span class="o">+</span> <span class="n">new_n</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_j</span><span class="p">[:]</span>
+            <span class="n">col</span><span class="p">[</span><span class="n">ncol_ptr_i</span><span class="p">:</span><span class="n">ncol_ptr_i</span><span class="o">+</span><span class="n">new_n</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_j</span><span class="p">[:]</span>
 
             <span class="c1"># Step the size of the stored non-zero elements</span>
-            <span class="n">ncol</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">+=</span> <span class="n">new_n</span>
+            <span class="n">ncol</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">+=</span> <span class="n">int32</span><span class="p">(</span><span class="n">new_n</span><span class="p">)</span>
+
+            <span class="n">ncol_ptr_i</span> <span class="o">+=</span> <span class="n">new_n</span>
 
             <span class="c1"># Step the number of non-zero elements</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_nnz</span> <span class="o">+=</span> <span class="n">new_n</span>
@@ -980,7 +987,7 @@
         <span class="c1"># information that is required...</span>
 
         <span class="c1"># ... retrieve the indices and return</span>
-        <span class="k">return</span> <span class="n">indices</span><span class="p">(</span><span class="n">col</span><span class="p">[</span><span class="n">ptr_i</span><span class="p">:</span><span class="n">ptr_i</span> <span class="o">+</span> <span class="n">ncol</span><span class="p">[</span><span class="n">i</span><span class="p">]],</span> <span class="n">j</span><span class="p">,</span> <span class="n">ptr_i</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">indices</span><span class="p">(</span><span class="n">col</span><span class="p">[</span><span class="n">ptr_i</span><span class="p">:</span><span class="n">ncol_ptr_i</span><span class="p">],</span> <span class="n">j</span><span class="p">,</span> <span class="n">ptr_i</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">_get</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Retrieves the data pointer arrays of the elements, if it is non-existing, it will return ``-1``</span>
@@ -996,14 +1003,35 @@
 <span class="sd">        -------</span>
 <span class="sd">        numpy.ndarray : indicies of the existing elements</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-
         <span class="c1"># Ensure flattened array...</span>
-        <span class="n">j</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">asarrayi</span><span class="p">(</span><span class="n">j</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
+        <span class="n">j</span> <span class="o">=</span> <span class="n">asarrayi</span><span class="p">(</span><span class="n">j</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
 
         <span class="c1"># Make it a little easier</span>
         <span class="n">ptr</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ptr</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
 
         <span class="k">return</span> <span class="n">indices</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">col</span><span class="p">[</span><span class="n">ptr</span><span class="p">:</span><span class="n">ptr</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">ncol</span><span class="p">[</span><span class="n">i</span><span class="p">]],</span> <span class="n">j</span><span class="p">,</span> <span class="n">ptr</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_get_only</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Retrieves the data pointer arrays of the elements, only return elements in the sparse array</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        i : int</span>
+<span class="sd">           the row of the matrix</span>
+<span class="sd">        j : int or array_like of int</span>
+<span class="sd">           columns belonging to row `i` where a non-zero element is stored.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        numpy.ndarray : indicies of the existing elements</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Ensure flattened array...</span>
+        <span class="n">j</span> <span class="o">=</span> <span class="n">asarrayi</span><span class="p">(</span><span class="n">j</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
+
+        <span class="c1"># Make it a little easier</span>
+        <span class="n">ptr</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ptr</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+
+        <span class="k">return</span> <span class="n">indices_only</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">col</span><span class="p">[</span><span class="n">ptr</span><span class="p">:</span><span class="n">ptr</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">ncol</span><span class="p">[</span><span class="n">i</span><span class="p">]],</span> <span class="n">j</span><span class="p">)</span> <span class="o">+</span> <span class="n">ptr</span>
 
     <span class="k">def</span> <span class="nf">__delitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Remove items from the sparse patterns &quot;&quot;&quot;</span>
@@ -1021,11 +1049,7 @@
 
         <span class="n">i</span> <span class="o">=</span> <span class="n">key</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
         <span class="n">key</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_slice2list</span><span class="p">(</span><span class="n">key</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="mi">1</span><span class="p">)</span>
-        <span class="n">index</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">key</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
-
-        <span class="c1"># First remove all negative indices.</span>
-        <span class="c1"># The element isn&#39;t there anyway...</span>
-        <span class="n">index</span> <span class="o">=</span> <span class="n">index</span><span class="p">[</span><span class="n">index</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">]</span>
+        <span class="n">index</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_only</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">key</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
         <span class="n">index</span><span class="o">.</span><span class="n">sort</span><span class="p">()</span>
 
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">index</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
@@ -1047,7 +1071,8 @@
 
         <span class="c1"># Update new count of the number of</span>
         <span class="c1"># non-zero elements</span>
-        <span class="n">ncol</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">-=</span> <span class="nb">len</span><span class="p">(</span><span class="n">index</span><span class="p">)</span>
+        <span class="n">n_index</span> <span class="o">=</span> <span class="n">int32</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">index</span><span class="p">))</span>
+        <span class="n">ncol</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">-=</span> <span class="n">n_index</span>
 
         <span class="c1"># Now update the column indices and the data</span>
         <span class="n">sl</span> <span class="o">=</span> <span class="nb">slice</span><span class="p">(</span><span class="n">ptr</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">ptr</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">+</span> <span class="n">ncol</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="kc">None</span><span class="p">)</span>
@@ -1057,7 +1082,7 @@
         <span class="c1"># Once we remove some things, it is NOT</span>
         <span class="c1"># finalized...</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_finalized</span> <span class="o">=</span> <span class="kc">False</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_nnz</span> <span class="o">-=</span> <span class="nb">len</span><span class="p">(</span><span class="n">index</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_nnz</span> <span class="o">-=</span> <span class="n">n_index</span>
 
     <span class="k">def</span> <span class="nf">__getitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Intrinsic sparse matrix retrieval of a non-zero element &quot;&quot;&quot;</span>
@@ -1076,7 +1101,7 @@
 
             <span class="c1"># user requests a specific element</span>
             <span class="c1"># get dimension retrieved</span>
-            <span class="n">r</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+            <span class="n">r</span> <span class="o">=</span> <span class="n">zeros</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_D</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
             <span class="n">r</span><span class="p">[</span><span class="n">ret_idx</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_D</span><span class="p">[</span><span class="n">get_idx</span><span class="p">,</span> <span class="n">key</span><span class="p">[</span><span class="mi">2</span><span class="p">]]</span>
 
         <span class="k">else</span><span class="p">:</span>
@@ -1085,10 +1110,10 @@
 
             <span class="n">s</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
             <span class="k">if</span> <span class="n">s</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
-                <span class="n">r</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+                <span class="n">r</span> <span class="o">=</span> <span class="n">zeros</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_D</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
                 <span class="n">r</span><span class="p">[</span><span class="n">ret_idx</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_D</span><span class="p">[</span><span class="n">get_idx</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span>
             <span class="k">else</span><span class="p">:</span>
-                <span class="n">r</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">([</span><span class="n">n</span><span class="p">,</span> <span class="n">s</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+                <span class="n">r</span> <span class="o">=</span> <span class="n">zeros</span><span class="p">([</span><span class="n">n</span><span class="p">,</span> <span class="n">s</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_D</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
                 <span class="n">r</span><span class="p">[</span><span class="n">ret_idx</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_D</span><span class="p">[</span><span class="n">get_idx</span><span class="p">,</span> <span class="p">:]</span>
 
         <span class="k">return</span> <span class="n">r</span>
@@ -1112,17 +1137,9 @@
         <span class="c1"># TODO we need some way to reduce these things</span>
         <span class="c1"># for integer stuff.</span>
         <span class="n">data</span> <span class="o">=</span> <span class="n">asarray</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_D</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
-        <span class="n">isnan</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">np_all</span><span class="p">(</span><span class="n">isnan</span><span class="p">):</span>
-            <span class="c1"># If the entries are nan&#39;s</span>
-            <span class="c1"># then we return without adding the</span>
-            <span class="c1"># entry.</span>
-            <span class="k">return</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="c1"># Places where there are nan will be set</span>
-            <span class="c1"># to zero</span>
-            <span class="n">data</span><span class="p">[</span><span class="n">isnan</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
-            <span class="k">del</span> <span class="n">isnan</span>
+        <span class="c1"># Places where there are nan will be set</span>
+        <span class="c1"># to zero</span>
+        <span class="n">data</span><span class="p">[</span><span class="n">isnan</span><span class="p">(</span><span class="n">data</span><span class="p">)]</span> <span class="o">=</span> <span class="mi">0</span>
 
         <span class="c1"># Retrieve indices in the 1D data-structure</span>
         <span class="n">index</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_extend</span><span class="p">(</span><span class="n">key</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">key</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
@@ -1134,7 +1151,7 @@
         <span class="k">else</span><span class="p">:</span>
             <span class="c1"># Ensure correct shape</span>
             <span class="k">if</span> <span class="n">data</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-                <span class="n">data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">data</span><span class="p">])</span>
+                <span class="n">data</span> <span class="o">=</span> <span class="n">asarray</span><span class="p">([</span><span class="n">data</span><span class="p">])</span>
                 <span class="n">data</span><span class="o">.</span><span class="n">shape</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="n">data</span><span class="o">.</span><span class="n">shape</span> <span class="o">=</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
@@ -1172,7 +1189,7 @@
                     <span class="n">rows</span><span class="p">[</span><span class="n">j</span><span class="p">:</span><span class="n">j</span><span class="o">+</span><span class="n">N</span><span class="p">]</span> <span class="o">=</span> <span class="n">r</span>
                     <span class="n">j</span> <span class="o">+=</span> <span class="n">N</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="n">row</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">asarrayi</span><span class="p">(</span><span class="n">row</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
+            <span class="n">row</span> <span class="o">=</span> <span class="n">asarrayi</span><span class="p">(</span><span class="n">row</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
             <span class="n">idx</span> <span class="o">=</span> <span class="n">array_arange</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ptr</span><span class="p">[</span><span class="n">row</span><span class="p">],</span> <span class="n">n</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">ncol</span><span class="p">[</span><span class="n">row</span><span class="p">])</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="n">only_col</span><span class="p">:</span>
                 <span class="n">N</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">sumi</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ncol</span><span class="p">[</span><span class="n">row</span><span class="p">])</span>
@@ -1307,7 +1324,7 @@
 <span class="sd">        indices : array_like</span>
 <span class="sd">           the indices of the rows *and* columns that are removed in the sparse pattern</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">indices</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">asarrayi</span><span class="p">(</span><span class="n">indices</span><span class="p">)</span>
+        <span class="n">indices</span> <span class="o">=</span> <span class="n">asarrayi</span><span class="p">(</span><span class="n">indices</span><span class="p">)</span>
 
         <span class="c1"># Check if we have a square matrix or a rectangular one</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]:</span>
@@ -1326,7 +1343,7 @@
 <span class="sd">        indices : array_like</span>
 <span class="sd">           the indices of the rows *and* columns that are retained in the sparse pattern</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">indices</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">asarrayi</span><span class="p">(</span><span class="n">indices</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
+        <span class="n">indices</span> <span class="o">=</span> <span class="n">asarrayi</span><span class="p">(</span><span class="n">indices</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
 
         <span class="c1"># Check if we have a square matrix or a rectangular one</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]:</span>
@@ -1418,7 +1435,7 @@
 <span class="sd">        NotImplementedError : when ``axis = 1``</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">axis</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_D</span><span class="p">)</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_D</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
         <span class="k">if</span> <span class="n">axis</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span> <span class="ow">or</span> <span class="n">axis</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
             <span class="c1"># We simply create a new sparse matrix with only one entry</span>
             <span class="n">ret</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">copy</span><span class="p">([</span><span class="mi">0</span><span class="p">])</span>
@@ -1542,9 +1559,7 @@
                 <span class="n">bcol</span> <span class="o">=</span> <span class="n">other</span><span class="o">.</span><span class="n">col</span><span class="p">[</span><span class="n">bptr</span><span class="p">:</span><span class="n">bptr</span><span class="o">+</span><span class="n">bn</span><span class="p">]</span>
 
                 <span class="c1"># Get positions of b-elements in a:</span>
-                <span class="n">in_a</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">bcol</span><span class="p">)</span>
-                <span class="c1"># remove all -1&#39;s</span>
-                <span class="n">in_a</span> <span class="o">=</span> <span class="n">in_a</span><span class="p">[</span><span class="n">in_a</span> <span class="o">&gt;</span> <span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+                <span class="n">in_a</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_only</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">bcol</span><span class="p">)</span>
                 <span class="c1"># Everything else *must* be zeroes! :)</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">_D</span><span class="p">[</span><span class="n">in_a</span><span class="p">,</span> <span class="p">:]</span> <span class="o">*=</span> <span class="n">other</span><span class="o">.</span><span class="n">_D</span><span class="p">[</span><span class="n">bptr</span><span class="p">:</span><span class="n">bptr</span><span class="o">+</span><span class="n">bn</span><span class="p">,</span> <span class="p">:]</span>
 
@@ -1702,7 +1717,26 @@
 
         <span class="k">else</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_D</span> <span class="o">**=</span> <span class="n">other</span>
-        <span class="k">return</span> <span class="bp">self</span></div>
+        <span class="k">return</span> <span class="bp">self</span>
+
+    <span class="k">def</span> <span class="nf">__getstate__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Return dictionary with the current state &quot;&quot;&quot;</span>
+        <span class="n">d</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="c1"># Reduce array sizes</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">finalize</span><span class="p">()</span>
+        <span class="n">d</span><span class="p">[</span><span class="s1">&#39;shape&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_shape</span><span class="p">[:]</span>
+        <span class="n">d</span><span class="p">[</span><span class="s1">&#39;ncol&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ncol</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">d</span><span class="p">[</span><span class="s1">&#39;col&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">col</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">d</span><span class="p">[</span><span class="s1">&#39;D&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_D</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">d</span>
+
+    <span class="k">def</span> <span class="nf">__setstate__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Reset state of the object &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_shape</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">state</span><span class="p">[</span><span class="s1">&#39;shape&#39;</span><span class="p">][:])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ncol</span> <span class="o">=</span> <span class="n">state</span><span class="p">[</span><span class="s1">&#39;ncol&#39;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ptr</span> <span class="o">=</span> <span class="n">insert</span><span class="p">(</span><span class="n">_a</span><span class="o">.</span><span class="n">cumsumi</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ncol</span><span class="p">),</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">col</span> <span class="o">=</span> <span class="n">state</span><span class="p">[</span><span class="s1">&#39;col&#39;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_D</span> <span class="o">=</span> <span class="n">state</span><span class="p">[</span><span class="s1">&#39;D&#39;</span><span class="p">]</span></div>
 
 
 <span class="k">def</span> <span class="nf">ispmatrix</span><span class="p">(</span><span class="n">matrix</span><span class="p">,</span> <span class="n">map_row</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">map_col</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>

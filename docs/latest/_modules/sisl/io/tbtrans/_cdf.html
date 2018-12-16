@@ -509,23 +509,33 @@
 
 <span class="sd">        &gt;&gt;&gt; p = self.o2p(self.geom.a2o(atom, True)) # doctest: +SKIP</span>
 
+<span class="sd">        Will warn if an atom requested is not in the device list of atoms.</span>
+
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
 <span class="sd">        atom : array_like or int</span>
 <span class="sd">           atomic indices (0-based)</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">orbs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">geom</span><span class="o">.</span><span class="n">a2o</span><span class="p">(</span><span class="n">atom</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">o2p</span><span class="p">(</span><span class="n">orbs</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">o2p</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">geom</span><span class="o">.</span><span class="n">a2o</span><span class="p">(</span><span class="n">atom</span><span class="p">,</span> <span class="kc">True</span><span class="p">))</span>
 
     <span class="k">def</span> <span class="nf">o2p</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">orbital</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Return the pivoting indices (0-based) for the orbitals</span>
+
+<span class="sd">        Will warn if an orbital requested is not in the device list of orbitals.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
 <span class="sd">        orbital : array_like or int</span>
 <span class="sd">           orbital indices (0-based)</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="n">in1d</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pivot</span><span class="p">(),</span> <span class="n">orbital</span><span class="p">)</span><span class="o">.</span><span class="n">nonzero</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="c1"># We need asarray, otherwise taking len of an int will fail</span>
+        <span class="n">orbital</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">orbital</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
+        <span class="n">porb</span> <span class="o">=</span> <span class="n">in1d</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pivot</span><span class="p">(),</span> <span class="n">orbital</span><span class="p">)</span><span class="o">.</span><span class="n">nonzero</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">d</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">orbital</span><span class="p">)</span> <span class="o">-</span> <span class="nb">len</span><span class="p">(</span><span class="n">porb</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">d</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">warn</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">{}</span><span class="s1">.o2p requesting an orbital outside the device region, &#39;</span>
+                 <span class="s1">&#39;</span><span class="si">{}</span><span class="s1"> orbitals will be removed from the returned list&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="p">,</span> <span class="n">d</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">porb</span>
 </pre></div>
 
            </div>

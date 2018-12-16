@@ -224,7 +224,6 @@
 
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">geometry</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">nnzpr</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_geometry</span> <span class="o">=</span> <span class="n">geometry</span>
-
         <span class="bp">self</span><span class="o">.</span><span class="n">_orthogonal</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;orthogonal&#39;</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
 
         <span class="c1"># Get true dimension</span>
@@ -233,13 +232,16 @@
 
         <span class="c1"># Initialize the sparsity pattern</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">reset</span><span class="p">(</span><span class="n">dim</span><span class="p">,</span> <span class="n">dtype</span><span class="p">,</span> <span class="n">nnzpr</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_reset</span><span class="p">()</span>
 
+    <span class="k">def</span> <span class="nf">_reset</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Reset object according to the options, please refer to `SparseOrbital.reset` for details &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">orthogonal</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">Sk</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_Sk_diagonal</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">S_idx</span> <span class="o">=</span> <span class="o">-</span><span class="mi">100</span>
+
         <span class="k">else</span><span class="p">:</span>
-            <span class="n">dim</span> <span class="o">=</span> <span class="n">dim</span> <span class="o">-</span> <span class="mi">1</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">S_idx</span> <span class="o">=</span> <span class="n">dim</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">S_idx</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">Sk</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_Sk</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">dSk</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dSk</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">ddSk</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ddSk</span>
@@ -446,7 +448,7 @@
 <span class="sd">        format : {&#39;csr&#39;, &#39;array&#39;, &#39;matrix&#39;, &#39;coo&#39;, ...}</span>
 <span class="sd">           the returned format of the matrix, defaulting to the ``scipy.sparse.csr_matrix``,</span>
 <span class="sd">           however if one always requires operations on dense matrices, one can always</span>
-<span class="sd">           return in `numpy.ndarray` (`&#39;array&#39;`) or `numpy.matrix` (`&#39;matrix&#39;`).</span>
+<span class="sd">           return in `numpy.ndarray` (`&#39;array&#39;`/`&#39;dense&#39;`/`&#39;matrix&#39;`).</span>
 
 <span class="sd">        See Also</span>
 <span class="sd">        --------</span>
@@ -468,10 +470,8 @@
         <span class="c1"># the matrix only describes neighbouring couplings it is vital</span>
         <span class="c1"># to not return anything</span>
         <span class="c1"># TODO</span>
-        <span class="k">if</span> <span class="nb">format</span> <span class="o">==</span> <span class="s1">&#39;array&#39;</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">format</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;array&#39;</span><span class="p">,</span> <span class="s1">&#39;matrix&#39;</span><span class="p">,</span> <span class="s1">&#39;dense&#39;</span><span class="p">]:</span>
             <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">no</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">))</span>
-        <span class="k">elif</span> <span class="nb">format</span> <span class="o">==</span> <span class="s1">&#39;matrix&#39;</span> <span class="ow">or</span> <span class="nb">format</span> <span class="o">==</span> <span class="s1">&#39;dense&#39;</span><span class="p">:</span>
-            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">no</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">))</span><span class="o">.</span><span class="n">asmatrix</span><span class="p">()</span>
         <span class="n">S</span> <span class="o">=</span> <span class="n">csr_matrix</span><span class="p">((</span><span class="n">no</span><span class="p">,</span> <span class="n">no</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span>
         <span class="n">S</span><span class="o">.</span><span class="n">setdiag</span><span class="p">(</span><span class="mf">1.</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">S</span><span class="o">.</span><span class="n">asformat</span><span class="p">(</span><span class="nb">format</span><span class="p">)</span>
@@ -527,7 +527,7 @@
 <span class="sd">        format : {&#39;csr&#39;, &#39;array&#39;, &#39;matrix&#39;, &#39;coo&#39;, ...}</span>
 <span class="sd">           the returned format of the matrix, defaulting to the ``scipy.sparse.csr_matrix``,</span>
 <span class="sd">           however if one always requires operations on dense matrices, one can always</span>
-<span class="sd">           return in `numpy.ndarray` (`&#39;array&#39;`) or `numpy.matrix` (`&#39;matrix&#39;`).</span>
+<span class="sd">           return in `numpy.ndarray` (`&#39;array&#39;`/`&#39;dense&#39;`/`&#39;matrix&#39;`).</span>
 
 <span class="sd">        See Also</span>
 <span class="sd">        --------</span>
@@ -591,7 +591,7 @@
 <span class="sd">        format : {&#39;csr&#39;, &#39;array&#39;, &#39;matrix&#39;, &#39;coo&#39;, ...}</span>
 <span class="sd">           the returned format of the matrix, defaulting to the ``scipy.sparse.csr_matrix``,</span>
 <span class="sd">           however if one always requires operations on dense matrices, one can always</span>
-<span class="sd">           return in `numpy.ndarray` (`&#39;array&#39;`) or `numpy.matrix` (`&#39;matrix&#39;`).</span>
+<span class="sd">           return in `numpy.ndarray` (`&#39;array&#39;`/`&#39;dense&#39;`/`&#39;matrix&#39;`).</span>
 
 <span class="sd">        See Also</span>
 <span class="sd">        --------</span>
@@ -671,7 +671,18 @@
         <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">orthogonal</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;The sparsity pattern is non-orthogonal, you cannot use the Arnoldi procedure with scipy&quot;</span><span class="p">)</span>
 
-        <span class="k">return</span> <span class="n">lin</span><span class="o">.</span><span class="n">eigsh</span><span class="p">(</span><span class="n">P</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="n">n</span><span class="p">,</span> <span class="n">return_eigenvectors</span><span class="o">=</span><span class="ow">not</span> <span class="n">eigvals_only</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div></div>
+        <span class="k">return</span> <span class="n">lin</span><span class="o">.</span><span class="n">eigsh</span><span class="p">(</span><span class="n">P</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="n">n</span><span class="p">,</span> <span class="n">return_eigenvectors</span><span class="o">=</span><span class="ow">not</span> <span class="n">eigvals_only</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
+
+    <span class="k">def</span> <span class="nf">__getstate__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">d</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">d</span><span class="p">[</span><span class="s1">&#39;sparseorbitalbz&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">super</span><span class="p">(</span><span class="n">SparseOrbitalBZ</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__getstate__</span><span class="p">()</span>
+        <span class="n">d</span><span class="p">[</span><span class="s1">&#39;orthogonal&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_orthogonal</span>
+        <span class="k">return</span> <span class="n">d</span>
+
+    <span class="k">def</span> <span class="nf">__setstate__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_orthogonal</span> <span class="o">=</span> <span class="n">state</span><span class="p">[</span><span class="s1">&#39;orthogonal&#39;</span><span class="p">]</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">SparseOrbitalBZ</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__setstate__</span><span class="p">(</span><span class="n">state</span><span class="p">[</span><span class="s1">&#39;sparseorbitalbz&#39;</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_reset</span><span class="p">()</span></div>
 
 
 <div class="viewcode-block" id="SparseOrbitalBZSpin"><a class="viewcode-back" href="../../../api-generated/sisl.physics.SparseOrbitalBZSpin.html#sisl.physics.SparseOrbitalBZSpin">[docs]</a><span class="k">class</span> <span class="nc">SparseOrbitalBZSpin</span><span class="p">(</span><span class="n">SparseOrbitalBZ</span><span class="p">):</span>
@@ -724,6 +735,11 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_spin</span> <span class="o">=</span> <span class="n">Spin</span><span class="p">(</span><span class="n">spin</span><span class="p">,</span> <span class="n">dtype</span><span class="p">)</span>
 
         <span class="nb">super</span><span class="p">(</span><span class="n">SparseOrbitalBZSpin</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">geometry</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">spin</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">spin</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">nnzpr</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_reset</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">_reset</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Reset object according to the options, please refer to `SparseOrbital.reset` for details &quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">SparseOrbitalBZSpin</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">_reset</span><span class="p">()</span>
 
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">spin</span><span class="o">.</span><span class="n">is_unpolarized</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">UP</span> <span class="o">=</span> <span class="mi">0</span>
@@ -732,6 +748,7 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">Sk</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_Sk</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">dPk</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dPk_unpolarized</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">dSk</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dSk</span>
+
         <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">spin</span><span class="o">.</span><span class="n">is_polarized</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">UP</span> <span class="o">=</span> <span class="mi">0</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">DOWN</span> <span class="o">=</span> <span class="mi">1</span>
@@ -739,6 +756,7 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">dPk</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dPk_polarized</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">Sk</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_Sk</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">dSk</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dSk</span>
+
         <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">spin</span><span class="o">.</span><span class="n">is_noncolinear</span><span class="p">:</span>
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">spin</span><span class="o">.</span><span class="n">dkind</span> <span class="o">==</span> <span class="s1">&#39;f&#39;</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">M11</span> <span class="o">=</span> <span class="mi">0</span>
@@ -754,6 +772,7 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">Sk</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_Sk_non_colinear</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">dPk</span> <span class="o">=</span> <span class="kc">None</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">dSk</span> <span class="o">=</span> <span class="kc">None</span>
+
         <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">spin</span><span class="o">.</span><span class="n">is_spinorbit</span><span class="p">:</span>
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">spin</span><span class="o">.</span><span class="n">dkind</span> <span class="o">==</span> <span class="s1">&#39;f&#39;</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">M11r</span> <span class="o">=</span> <span class="mi">0</span>
@@ -1006,7 +1025,21 @@
         <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">orthogonal</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;The sparsity pattern is non-orthogonal, you cannot use the Arnoldi procedure with scipy&quot;</span><span class="p">)</span>
 
-        <span class="k">return</span> <span class="n">lin</span><span class="o">.</span><span class="n">eigsh</span><span class="p">(</span><span class="n">P</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="n">n</span><span class="p">,</span> <span class="n">return_eigenvectors</span><span class="o">=</span><span class="ow">not</span> <span class="n">eigvals_only</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div></div>
+        <span class="k">return</span> <span class="n">lin</span><span class="o">.</span><span class="n">eigsh</span><span class="p">(</span><span class="n">P</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="n">n</span><span class="p">,</span> <span class="n">return_eigenvectors</span><span class="o">=</span><span class="ow">not</span> <span class="n">eigvals_only</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
+
+    <span class="k">def</span> <span class="nf">__getstate__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">d</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">d</span><span class="p">[</span><span class="s1">&#39;sparseorbitalbzspin&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">super</span><span class="p">(</span><span class="n">SparseOrbitalBZSpin</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__getstate__</span><span class="p">()</span>
+        <span class="n">d</span><span class="p">[</span><span class="s1">&#39;spin&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_spin</span><span class="o">.</span><span class="n">__getstate__</span><span class="p">()</span>
+        <span class="n">d</span><span class="p">[</span><span class="s1">&#39;orthogonal&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_orthogonal</span>
+        <span class="k">return</span> <span class="n">d</span>
+
+    <span class="k">def</span> <span class="nf">__setstate__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_orthogonal</span> <span class="o">=</span> <span class="n">state</span><span class="p">[</span><span class="s1">&#39;orthogonal&#39;</span><span class="p">]</span>
+        <span class="n">spin</span> <span class="o">=</span> <span class="n">Spin</span><span class="p">()</span>
+        <span class="n">spin</span><span class="o">.</span><span class="n">__setstate__</span><span class="p">(</span><span class="n">state</span><span class="p">[</span><span class="s1">&#39;spin&#39;</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_spin</span> <span class="o">=</span> <span class="n">spin</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">SparseOrbitalBZSpin</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__setstate__</span><span class="p">(</span><span class="n">state</span><span class="p">[</span><span class="s1">&#39;sparseorbitalbzspin&#39;</span><span class="p">])</span></div>
 </pre></div>
 
            </div>

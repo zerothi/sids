@@ -182,6 +182,8 @@
 <span class="sd">   fermi_dirac</span>
 <span class="sd">   bose_einstein</span>
 <span class="sd">   cold</span>
+<span class="sd">   step_function</span>
+<span class="sd">   heaviside</span>
 
 
 <span class="sd">.. autofunction:: gaussian</span>
@@ -194,6 +196,10 @@
 <span class="sd">   :noindex:</span>
 <span class="sd">.. autofunction:: cold</span>
 <span class="sd">   :noindex:</span>
+<span class="sd">.. autofunction:: step_function</span>
+<span class="sd">   :noindex:</span>
+<span class="sd">.. autofunction:: heaviside</span>
+<span class="sd">   :noindex:</span>
 
 <span class="sd">&quot;&quot;&quot;</span>
 <span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">print_function</span><span class="p">,</span> <span class="n">division</span>
@@ -201,12 +207,14 @@
 <span class="kn">from</span> <span class="nn">functools</span> <span class="k">import</span> <span class="n">partial</span>
 
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">exp</span>
 <span class="kn">from</span> <span class="nn">scipy.special</span> <span class="k">import</span> <span class="n">erf</span>
 <span class="n">_pi</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span>
 <span class="n">_sqrt_2pi</span> <span class="o">=</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">_pi</span><span class="p">)</span> <span class="o">**</span> <span class="mf">0.5</span>
 
 <span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;get_distribution&#39;</span><span class="p">,</span> <span class="s1">&#39;gaussian&#39;</span><span class="p">,</span> <span class="s1">&#39;lorentzian&#39;</span><span class="p">]</span>
 <span class="n">__all__</span> <span class="o">+=</span> <span class="p">[</span><span class="s1">&#39;fermi_dirac&#39;</span><span class="p">,</span> <span class="s1">&#39;bose_einstein&#39;</span><span class="p">,</span> <span class="s1">&#39;cold&#39;</span><span class="p">]</span>
+<span class="n">__all__</span> <span class="o">+=</span> <span class="p">[</span><span class="s1">&#39;step_function&#39;</span><span class="p">,</span> <span class="s1">&#39;heaviside&#39;</span><span class="p">]</span>
 
 
 <div class="viewcode-block" id="get_distribution"><a class="viewcode-back" href="../../../api-generated/sisl.physics.get_distribution.html#sisl.physics.get_distribution">[docs]</a><span class="k">def</span> <span class="nf">get_distribution</span><span class="p">(</span><span class="n">method</span><span class="p">,</span> <span class="n">smearing</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">x0</span><span class="o">=</span><span class="mf">0.</span><span class="p">):</span>
@@ -216,12 +224,12 @@
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    method: {&#39;gaussian&#39;, &#39;lorentzian&#39;}</span>
+<span class="sd">    method: {&#39;gaussian&#39;, &#39;lorentzian&#39;, &#39;fermi_dirac&#39;, &#39;bose_einstein&#39;, &#39;step_function&#39;, &#39;heaviside&#39;}</span>
 <span class="sd">       distribution function</span>
 <span class="sd">    smearing: float, optional</span>
-<span class="sd">       smearing parameter for the method (:math:`\sigma` for Gaussian, :math:`\gamma` for Lorenztian etc.)</span>
+<span class="sd">       smearing parameter for methods that have a smearing</span>
 <span class="sd">    x0: float, optional</span>
-<span class="sd">       maximum of the distribution function</span>
+<span class="sd">       maximum/middle of the distribution function</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
@@ -233,12 +241,16 @@
         <span class="k">return</span> <span class="n">partial</span><span class="p">(</span><span class="n">gaussian</span><span class="p">,</span> <span class="n">sigma</span><span class="o">=</span><span class="n">smearing</span><span class="p">,</span> <span class="n">x0</span><span class="o">=</span><span class="n">x0</span><span class="p">)</span>
     <span class="k">elif</span> <span class="n">m</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;lorentz&#39;</span><span class="p">,</span> <span class="s1">&#39;lorentzian&#39;</span><span class="p">]:</span>
         <span class="k">return</span> <span class="n">partial</span><span class="p">(</span><span class="n">lorentzian</span><span class="p">,</span> <span class="n">gamma</span><span class="o">=</span><span class="n">smearing</span><span class="p">,</span> <span class="n">x0</span><span class="o">=</span><span class="n">x0</span><span class="p">)</span>
-    <span class="k">elif</span> <span class="n">m</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;fd&#39;</span><span class="p">,</span> <span class="s1">&#39;fermi_dirac&#39;</span><span class="p">]:</span>
+    <span class="k">elif</span> <span class="n">m</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;fd&#39;</span><span class="p">,</span> <span class="s1">&#39;fermi&#39;</span><span class="p">,</span> <span class="s1">&#39;fermi_dirac&#39;</span><span class="p">]:</span>
         <span class="k">return</span> <span class="n">partial</span><span class="p">(</span><span class="n">fermi_dirac</span><span class="p">,</span> <span class="n">kT</span><span class="o">=</span><span class="n">smearing</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="n">x0</span><span class="p">)</span>
-    <span class="k">elif</span> <span class="n">m</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;bose_einstein&#39;</span><span class="p">]:</span>
+    <span class="k">elif</span> <span class="n">m</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;be&#39;</span><span class="p">,</span> <span class="s1">&#39;bose_einstein&#39;</span><span class="p">]:</span>
         <span class="k">return</span> <span class="n">partial</span><span class="p">(</span><span class="n">bose_einstein</span><span class="p">,</span> <span class="n">kT</span><span class="o">=</span><span class="n">smearing</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="n">x0</span><span class="p">)</span>
     <span class="k">elif</span> <span class="n">m</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;cold&#39;</span><span class="p">]:</span>
         <span class="k">return</span> <span class="n">partial</span><span class="p">(</span><span class="n">cold</span><span class="p">,</span> <span class="n">kT</span><span class="o">=</span><span class="n">smearing</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="n">x0</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">m</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;step&#39;</span><span class="p">,</span> <span class="s1">&#39;step_function&#39;</span><span class="p">]:</span>
+        <span class="k">return</span> <span class="n">partial</span><span class="p">(</span><span class="n">step_function</span><span class="p">,</span> <span class="n">x0</span><span class="o">=</span><span class="n">x0</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">m</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;heavi&#39;</span><span class="p">,</span> <span class="s1">&#39;heavy&#39;</span><span class="p">,</span> <span class="s1">&#39;heaviside&#39;</span><span class="p">]:</span>
+        <span class="k">return</span> <span class="n">partial</span><span class="p">(</span><span class="n">heaviside</span><span class="p">,</span> <span class="n">x0</span><span class="o">=</span><span class="n">x0</span><span class="p">)</span>
     <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;get_distribution does not implement the </span><span class="si">{}</span><span class="s2"> distribution function, have you mispelled?&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">method</span><span class="p">))</span></div>
 
 
@@ -262,7 +274,7 @@
 <span class="sd">    numpy.ndarray</span>
 <span class="sd">        the Gaussian distribution, same length as `x`</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="p">(</span><span class="n">x</span> <span class="o">-</span> <span class="n">x0</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">sigma</span> <span class="o">**</span> <span class="mi">2</span><span class="p">))</span> <span class="o">/</span> <span class="p">(</span><span class="n">_sqrt_2pi</span> <span class="o">*</span> <span class="n">sigma</span><span class="p">)</span></div>
+    <span class="k">return</span> <span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="p">(</span><span class="n">x</span> <span class="o">-</span> <span class="n">x0</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">sigma</span> <span class="o">*</span> <span class="n">sigma</span><span class="p">))</span> <span class="o">/</span> <span class="p">(</span><span class="n">_sqrt_2pi</span> <span class="o">*</span> <span class="n">sigma</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="lorentzian"><a class="viewcode-back" href="../../../api-generated/sisl.physics.lorentzian.html#sisl.physics.lorentzian">[docs]</a><span class="k">def</span> <span class="nf">lorentzian</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">gamma</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">x0</span><span class="o">=</span><span class="mf">0.</span><span class="p">):</span>
@@ -285,7 +297,7 @@
 <span class="sd">    numpy.ndarray</span>
 <span class="sd">        the Lorentzian distribution, same length as `x`</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">return</span> <span class="p">(</span><span class="n">gamma</span> <span class="o">/</span> <span class="n">_pi</span><span class="p">)</span> <span class="o">/</span> <span class="p">((</span><span class="n">x</span> <span class="o">-</span> <span class="n">x0</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="n">gamma</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span></div>
+    <span class="k">return</span> <span class="p">(</span><span class="n">gamma</span> <span class="o">/</span> <span class="n">_pi</span><span class="p">)</span> <span class="o">/</span> <span class="p">((</span><span class="n">x</span> <span class="o">-</span> <span class="n">x0</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="n">gamma</span> <span class="o">*</span> <span class="n">gamma</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="fermi_dirac"><a class="viewcode-back" href="../../../api-generated/sisl.physics.fermi_dirac.html#sisl.physics.fermi_dirac">[docs]</a><span class="k">def</span> <span class="nf">fermi_dirac</span><span class="p">(</span><span class="n">E</span><span class="p">,</span> <span class="n">kT</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="mf">0.</span><span class="p">):</span>
@@ -308,7 +320,7 @@
 <span class="sd">    numpy.ndarray</span>
 <span class="sd">        the Fermi-Dirac distribution, same length as `E`</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">return</span> <span class="mf">1.</span> <span class="o">/</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">((</span><span class="n">E</span> <span class="o">-</span> <span class="n">mu</span><span class="p">)</span> <span class="o">/</span> <span class="n">kT</span><span class="p">)</span> <span class="o">+</span> <span class="mf">1.</span><span class="p">)</span></div>
+    <span class="k">return</span> <span class="mf">1.</span> <span class="o">/</span> <span class="p">(</span><span class="n">exp</span><span class="p">((</span><span class="n">E</span> <span class="o">-</span> <span class="n">mu</span><span class="p">)</span> <span class="o">/</span> <span class="n">kT</span><span class="p">)</span> <span class="o">+</span> <span class="mf">1.</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="bose_einstein"><a class="viewcode-back" href="../../../api-generated/sisl.physics.distribution.bose_einstein.html#sisl.physics.bose_einstein">[docs]</a><span class="k">def</span> <span class="nf">bose_einstein</span><span class="p">(</span><span class="n">E</span><span class="p">,</span> <span class="n">kT</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="mf">0.</span><span class="p">):</span>
@@ -331,15 +343,16 @@
 <span class="sd">    numpy.ndarray</span>
 <span class="sd">        the Bose-Einstein distribution, same length as `E`</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">return</span> <span class="mf">1.</span> <span class="o">/</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">((</span><span class="n">E</span> <span class="o">-</span> <span class="n">mu</span><span class="p">)</span> <span class="o">/</span> <span class="n">kT</span><span class="p">)</span> <span class="o">-</span> <span class="mf">1.</span><span class="p">)</span></div>
+    <span class="k">return</span> <span class="mf">1.</span> <span class="o">/</span> <span class="p">(</span><span class="n">exp</span><span class="p">((</span><span class="n">E</span> <span class="o">-</span> <span class="n">mu</span><span class="p">)</span> <span class="o">/</span> <span class="n">kT</span><span class="p">)</span> <span class="o">-</span> <span class="mf">1.</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="cold"><a class="viewcode-back" href="../../../api-generated/sisl.physics.distribution.cold.html#sisl.physics.cold">[docs]</a><span class="k">def</span> <span class="nf">cold</span><span class="p">(</span><span class="n">E</span><span class="p">,</span> <span class="n">kT</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="mf">0.</span><span class="p">):</span>
     <span class="sa">r</span><span class="sd">&quot;&quot;&quot; Cold smearing function, Marzari-Vanderbilt, PRL 82, 16, 1999</span>
 
 <span class="sd">    .. math::</span>
-<span class="sd">        C(E,k_BT,\mu) = \frac12 + \mathrm{erf}\Big(-\frac{E-\mu}{k_BT}-\frac1{\sqrt2}\Big)</span>
-<span class="sd">        + \frac1{\sqrt{2\pi}} \exp\Bigg\{-\Big[\frac{E-\mu}{k_BT}+\frac1{\sqrt2}\Big]^2\Bigg\}</span>
+<span class="sd">        C(E,k_BT,\mu) = \frac12 &amp;+ \mathrm{erf}\Big(-\frac{E-\mu}{k_BT}-\frac1{\sqrt2}\Big)</span>
+<span class="sd">        \\</span>
+<span class="sd">        &amp;+ \frac1{\sqrt{2\pi}} \exp\Bigg\{-\Big[\frac{E-\mu}{k_BT}+\frac1{\sqrt2}\Big]^2\Bigg\}</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -356,7 +369,77 @@
 <span class="sd">        the Cold smearing distribution function, same length as `E`</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">x</span> <span class="o">=</span> <span class="o">-</span> <span class="p">(</span><span class="n">E</span> <span class="o">-</span> <span class="n">mu</span><span class="p">)</span> <span class="o">/</span> <span class="n">kT</span> <span class="o">-</span> <span class="mi">1</span> <span class="o">/</span> <span class="mi">2</span> <span class="o">**</span> <span class="mf">0.5</span>
-    <span class="k">return</span> <span class="mf">0.5</span> <span class="o">+</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">erf</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span> <span class="o">/</span> <span class="n">_sqrt_2pi</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">x</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span></div>
+    <span class="k">return</span> <span class="mf">0.5</span> <span class="o">+</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">erf</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">+</span> <span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">x</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span> <span class="o">/</span> <span class="n">_sqrt_2pi</span></div>
+
+
+<div class="viewcode-block" id="heaviside"><a class="viewcode-back" href="../../../api-generated/sisl.physics.heaviside.html#sisl.physics.heaviside">[docs]</a><span class="k">def</span> <span class="nf">heaviside</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">x0</span><span class="o">=</span><span class="mf">0.</span><span class="p">):</span>
+    <span class="sa">r</span><span class="sd">&quot;&quot;&quot; Heaviside step function</span>
+
+<span class="sd">    .. math::</span>
+<span class="sd">      :nowrap:</span>
+
+<span class="sd">       \begin{align}</span>
+<span class="sd">        H(x,x_0) = \left\{\begin{aligned}0&amp;\quad \text{for }x &lt; x_0</span>
+<span class="sd">               \\</span>
+<span class="sd">               0.5&amp;\quad \text{for }x = x_0</span>
+<span class="sd">               \\</span>
+<span class="sd">               1&amp;\quad \text{for }x&gt;x_0</span>
+<span class="sd">             \end{aligned}\right.</span>
+<span class="sd">       \end{align}</span>
+
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    x: array_like</span>
+<span class="sd">        points at which the Heaviside step distribution is calculated</span>
+<span class="sd">    x0: float, optional</span>
+<span class="sd">        step position</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    numpy.ndarray</span>
+<span class="sd">        the Heaviside step function distribution, same length as `x`</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">H</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+    <span class="n">H</span><span class="p">[</span><span class="n">x</span> <span class="o">&gt;</span> <span class="n">x0</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.</span>
+    <span class="n">H</span><span class="p">[</span><span class="n">x</span> <span class="o">==</span> <span class="n">x0</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.5</span>
+    <span class="k">return</span> <span class="n">H</span></div>
+
+
+<div class="viewcode-block" id="step_function"><a class="viewcode-back" href="../../../api-generated/sisl.physics.step_function.html#sisl.physics.step_function">[docs]</a><span class="k">def</span> <span class="nf">step_function</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">x0</span><span class="o">=</span><span class="mf">0.</span><span class="p">):</span>
+    <span class="sa">r</span><span class="sd">&quot;&quot;&quot; Distribution using the step function, also known as :math:`1 - H(x)`</span>
+
+<span class="sd">    This function equals one minus the Heaviside step function</span>
+
+<span class="sd">    .. math::</span>
+<span class="sd">      :nowrap:</span>
+
+<span class="sd">       \begin{align}</span>
+<span class="sd">        S(x,x_0) = \left\{\begin{aligned}1&amp;\quad \text{for }x &lt; x_0</span>
+<span class="sd">               \\</span>
+<span class="sd">               0.5&amp;\quad \text{for }x = x_0</span>
+<span class="sd">               \\</span>
+<span class="sd">               0&amp;\quad \text{for }x&gt;x_0</span>
+<span class="sd">             \end{aligned}\right.</span>
+<span class="sd">       \end{align}</span>
+
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    x: array_like</span>
+<span class="sd">        points at which the step distribution is calculated</span>
+<span class="sd">    x0: float, optional</span>
+<span class="sd">        step position</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    numpy.ndarray</span>
+<span class="sd">        the step function distribution, same length as `x`</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">s</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones_like</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+    <span class="n">s</span><span class="p">[</span><span class="n">x</span> <span class="o">&gt;</span> <span class="n">x0</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.</span>
+    <span class="n">s</span><span class="p">[</span><span class="n">x</span> <span class="o">==</span> <span class="n">x0</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.5</span>
+    <span class="k">return</span> <span class="n">s</span></div>
 </pre></div>
 
            </div>
