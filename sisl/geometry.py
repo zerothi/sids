@@ -10,9 +10,8 @@ import numpy as np
 from numpy import int32
 from numpy import dot, square, sqrt
 
-import sisl._plot as plt
-import sisl._array as _a
-
+from . import _plot as plt
+from . import _array as _a
 from ._math_small import is_ascending
 from ._indices import indices_in_sphere_with_dist, indices_le, indices_gt_le
 from .messages import info, warn, SislError
@@ -27,7 +26,6 @@ from .quaternion import Quaternion
 from .supercell import SuperCell, SuperCellChild
 from .atom import Atom, Atoms
 from .shape import Shape, Sphere, Cube
-from .sparse_geometry import SparseAtom
 from ._namedindex import NamedIndex
 
 __all__ = ['Geometry', 'sgeom']
@@ -123,7 +121,7 @@ class Geometry(SuperCellChild):
             atom = Atom('H')
 
         # Create the local Atoms object
-        self._atom = Atoms(atom, na=self.na)
+        self._atoms = Atoms(atom, na=self.na)
 
         # Assign a group specifier
         self._names = NamedIndex()
@@ -189,7 +187,7 @@ class Geometry(SuperCellChild):
     @property
     def atoms(self):
         """ Atoms for the geometry (`Atoms` object) """
-        return self._atom
+        return self._atoms
 
     # Backwards compatability (do not use)
     atom = atoms
@@ -202,7 +200,7 @@ class Geometry(SuperCellChild):
     @property
     def q0(self):
         """ Total initial charge in this geometry (sum of q0 in all atoms) """
-        return self._atom.q0.sum()
+        return self._atoms.q0.sum()
 
     def maxR(self, all=False):
         """ Maximum orbital range of the atoms """
@@ -390,7 +388,7 @@ class Geometry(SuperCellChild):
         -----
         This is an in-place operation.
         """
-        self._atom = self._atom.reorder(in_place=True)
+        self._atoms = self._atoms.reorder(in_place=True)
 
     def reduce(self):
         """ Remove all atoms not currently used in the ``self.atom`` object
@@ -399,7 +397,7 @@ class Geometry(SuperCellChild):
         -----
         This is an in-place operation.
         """
-        self._atom = self._atom.reduce(in_place=True)
+        self._atoms = self._atoms.reduce(in_place=True)
 
     def rij(self, ia, ja):
         r""" Distance between atom `ia` and `ja`, atoms can be in super-cell indices
@@ -584,10 +582,10 @@ class Geometry(SuperCellChild):
         """
         if atom is None:
             for ia in self:
-                yield ia, self.atom[ia], self.atoms.specie[ia]
+                yield ia, self.atoms[ia], self.atoms.specie[ia]
         else:
             for ia in _a.asarrayi(atom).ravel():
-                yield ia, self.atom[ia], self.atoms.specie[ia]
+                yield ia, self.atoms[ia], self.atoms.specie[ia]
 
     def iter_orbitals(self, atom=None, local=True):
         """
@@ -1883,7 +1881,7 @@ class Geometry(SuperCellChild):
                 raise ValueError(self.__class__.__name__ + ".attach, `axis` has not been specified, please specify the axis when using a distance")
 
             # This is the empirical distance between the atoms
-            d = self.atom[s_idx].radius(dist) + other.atom[o_idx].radius(dist)
+            d = self.atoms[s_idx].radius(dist) + other.atoms[o_idx].radius(dist)
             if isinstance(axis, Integral):
                 v = self.cell[axis, :]
             else:
@@ -2488,8 +2486,8 @@ class Geometry(SuperCellChild):
                 rad = float(method)
             except Exception:
                 # get radius
-                rad = self.atom[idx].radius(method) \
-                      + self.atom[ia].radius(method)
+                rad = self.atoms[idx].radius(method) \
+                      + self.atoms[ia].radius(method)
 
             # Update the coordinate
             self.xyz[ia, :] = c + bv / d * rad
@@ -2827,7 +2825,8 @@ class Geometry(SuperCellChild):
         """
         return self.sc.offset(self.o2isc(o))
 
-    def __plot__(self, axis=None, supercell=True, axes=False, *args, **kwargs):
+    def __plot__(self, axis=None, supercell=True, axes=False,
+                 atom_indices=False, *args, **kwargs):
         """ Plot the geometry in a specified ``matplotlib.Axes`` object.
 
         Parameters
@@ -2836,6 +2835,8 @@ class Geometry(SuperCellChild):
            only plot a subset of the axis, defaults to all axis
         supercell : bool, optional
            If `True` also plot the supercell structure
+        atom_indices : bool, optional
+           if true, also add atomic numbering in the plot (0-based)
         axes : bool or matplotlib.Axes, optional
            the figure axes to plot in (if ``matplotlib.Axes`` object).
            If `True` it will create a new figure to plot in.
@@ -2843,6 +2844,14 @@ class Geometry(SuperCellChild):
         """
         # Default dictionary for passing to newly created figures
         d = dict()
+
+        colors = np.linspace(0, 1, num=self.atoms.nspecie, endpoint=False)
+        colors = colors[self.atoms.specie]
+        if 's' in kwargs:
+            area = kwargs.pop('s')
+        else:
+            area = _a.arrayd(self.atoms.Z)
+            area[:] *= 20 * np.pi / area.min()
 
         # Start by plotting the supercell
         if supercell:
@@ -2865,21 +2874,22 @@ class Geometry(SuperCellChild):
         elif axes is True:
             axes = plt.mlibplt.figure().add_subplot(111, **d)
 
-        colors = np.linspace(0, 1, num=len(self.atoms.atom), endpoint=False)
-        colors = colors[self.atoms.specie]
-        area = np.array([a.Z for a in self.atoms.atom], np.float64)
-        ma = np.min(area)
-        area[:] *= 20 * np.pi / ma
-        area = area[self.atoms.specie]
-
+        # Create short-hand
         xyz = self.xyz
 
         if isinstance(axes, plt.mlib3d.Axes3D):
             # We should plot in 3D plots
             axes.scatter(xyz[:, 0], xyz[:, 1], xyz[:, 2], s=area, c=colors, alpha=0.8)
             axes.set_zlabel('Ang')
+            if atom_indices:
+                for i, loc in enumerate(xyz):
+                    axes.text(loc[0], loc[1], loc[2], str(i), verticalalignment='bottom')
+
         else:
             axes.scatter(xyz[:, axis[0]], xyz[:, axis[1]], s=area, c=colors, alpha=0.8)
+            if atom_indices:
+                for i, loc in enumerate(xyz):
+                    axes.text(loc[axis[0]], loc[axis[1]], str(i), verticalalignment='bottom')
 
         axes.set_xlabel('Ang')
         axes.set_ylabel('Ang')
@@ -2962,6 +2972,7 @@ class Geometry(SuperCellChild):
         iter_block : the method for looping the atoms
         distance : create a list of distances
         """
+        from .sparse_geometry import SparseAtom
         rij = SparseAtom(self, nnzpr=20, dtype=dtype)
 
         # Get R
@@ -3723,7 +3734,7 @@ lattice vector.
         print('  {0:d} {1:d} {2:d}'.format(*g.nsc))
         print(' {:>10s} {:>10s} {:>10s}  {:>3s}'.format('x', 'y', 'z', 'Z'))
         for ia in g:
-            print(' {1:10.6f} {2:10.6f} {3:10.6f}  {0:3d}'.format(g.atom[ia].Z,
+            print(' {1:10.6f} {2:10.6f} {3:10.6f}  {0:3d}'.format(g.atoms[ia].Z,
                                                                   *g.xyz[ia, :]))
 
     if ret_geometry:

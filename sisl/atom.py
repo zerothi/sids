@@ -8,8 +8,8 @@ from numbers import Integral, Real
 import numpy as np
 
 from .messages import info
+from . import _array as _a
 from ._help import array_fill_repeat, _str
-import sisl._array as _a
 from .shape import Sphere
 from .orbital import Orbital
 
@@ -1332,12 +1332,17 @@ class Atoms(object):
 
     @property
     def atom(self):
-        """ Return the unique atoms list """
+        """ List of unique atoms in this group of atoms """
         return self._atom
 
     @property
+    def nspecie(self):
+        """ Number of different species """
+        return len(self._atom)
+
+    @property
     def specie(self):
-        """ Return the specie list """
+        """ Atomic specie list """
         return self._specie
 
     @property

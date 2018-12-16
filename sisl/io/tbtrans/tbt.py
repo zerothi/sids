@@ -247,10 +247,18 @@ class tbtncSileTBtrans(_devncSileTBtrans):
             return 0. # unknown!
 
     def transmission(self, elec_from=0, elec_to=1, kavg=True):
-        """ Transmission from `elec_from` to `elec_to`.
+        r""" Transmission from `elec_from` to `elec_to`.
 
         The transmission between two electrodes may be retrieved
         from the `Sile`.
+
+        The transmission is calculated as:
+
+        .. math::
+
+            T(E) = \mathrm{Tr}[\mathbf{G}\boldsymbol\Gamma_{\mathrm{from}}\mathbf{G}^\dagger\boldsymbol\Gamma_{\mathrm{to}}]
+
+        where all quantities are energy dependent.
 
         Parameters
         ----------
@@ -266,6 +274,7 @@ class tbtncSileTBtrans(_devncSileTBtrans):
         --------
         transmission_eig : the transmission decomposed in eigenchannels
         transmission_bulk : the total transmission in a periodic lead
+        reflection : total reflection back into the electrode
         """
         elec_from = self._elec(elec_from)
         elec_to = self._elec(elec_to)
@@ -273,6 +282,58 @@ class tbtncSileTBtrans(_devncSileTBtrans):
             raise ValueError(self.__class__.__name__ + ".transmission elec_from and elec_to must not be the same.")
 
         return self._value_avg(elec_to + '.T', elec_from, kavg=kavg)
+
+    def reflection(self, elec=0, kavg=True, from_single=False):
+        r""" Reflection into electrode `elec`
+
+        The reflection into electrode `elec` is calculated as:
+
+        .. math::
+
+             R(E) = T_{\mathrm{bulk}}(E) - \sum_{\mathrm{to}} T_{\mathrm{elec}\to\mathrm{to}}(E)
+
+        Another way of calculating the reflection is via:
+
+        .. math::
+
+             R(E) = T_{\mathrm{bulk}}(E) - \big\{i \mathrm{Tr}[(\mathbf G-\mathbf G^\dagger)\boldsymbol\Gamma_{\mathrm{elec}}]
+                   - \mathrm{Tr}[\mathbf G\boldsymbol\Gamma_{\mathrm{elec}}\mathbf G^\dagger\boldsymbol\Gamma_{\mathrm{elec}}]\big\}
+
+        Both are identical, however, numerically they may be different. Particularly when the bulk transmission
+        is very large compared to the transmission to the other electrodes one should prefer the first equation.
+
+        Parameters
+        ----------
+        elec: str, int, optional
+           the backscattered electrode
+        kavg: bool, int, optional
+           whether the returned reflection is k-averaged, or an explicit (unweighed) k-point
+           is returned
+        from_single: bool, optional
+           whether the reflection is calculated using the Green function and a
+           single scattering matrix Eq. (2) above (true), otherwise Eq. (1) will be used (false).
+
+        See Also
+        --------
+        transmission : the total transmission
+        transmission_eig : the transmission decomposed in eigenchannels
+        transmission_bulk : the total transmission in a periodic lead
+        """
+        elec = self._elec(elec)
+        BT = self.transmission_bulk(elec, kavg=kavg)
+
+        # Find full transmission out of electrode
+        if from_single:
+            T = self._value_avg(elec + '.T', elec, kavg=kavg) - self._value_avg(elec + '.C', elec, kavg=kavg)
+        else:
+            T = 0.
+            for to in self.elecs:
+                to = self._elec(to)
+                if elec == to:
+                    continue
+                T = T + self.transmission(elec, to, kavg=kavg)
+
+        return BT - T
 
     def transmission_eig(self, elec_from=0, elec_to=1, kavg=True):
         """ Transmission eigenvalues from `elec_from` to `elec_to`.
@@ -317,6 +378,7 @@ class tbtncSileTBtrans(_devncSileTBtrans):
         --------
         transmission : the total transmission
         transmission_eig : the transmission decomposed in eigenchannels
+        reflection : total reflection back into the electrode
         """
         return self._value_avg('T', self._elec(elec), kavg=kavg)
 
@@ -360,6 +422,7 @@ class tbtncSileTBtrans(_devncSileTBtrans):
         else:
             raise ValueError(self.__class__.__name__ + '.norm error on norm keyword in when requesting normalization!')
 
+        # If the user simply requests a specific norm
         if atom is None and orbital is None:
             return NORM
 
@@ -375,9 +438,15 @@ class tbtncSileTBtrans(_devncSileTBtrans):
                 NORM = float(_a.sumi(geom.firsto[a+1] - geom.firsto[a]))
             return NORM
 
-        # atom is specified
+        if not orbital is None:
+            raise ValueError(self.__class__.__name__ + '.norm both atom and orbital cannot be specified!')
+
+        # atom is specified, this will result in the same normalization
+        # regardless of norm == [orbital, atom] since it is all orbitals
+        # on the given atoms.
         if norm in ['orbital', 'atom']:
-            NORM = float(len(self.o2p(atom)))
+            NORM = float(len(self.a2p(atom)))
+
         return NORM
 
     def _DOS(self, DOS, atom, orbital, sum, norm):
@@ -469,7 +538,7 @@ class tbtncSileTBtrans(_devncSileTBtrans):
 
         # Sum for new return stuff
         for i, a in enumerate(atom):
-            pvt = self.o2p(geom.a2o(a, True))
+            pvt = self.a2p(a)
             if len(pvt) == 0:
                 nDOS[..., i] = 0.
             else:
@@ -2157,8 +2226,8 @@ class tbtncSileTBtrans(_devncSileTBtrans):
                 atoms = [None] * len(old_g)
                 for a, idx in g.atom:
                     for i in idx:
-                        atoms[i] = a.copy(orbital=old_g.atom[i].R)
-                g._atom = Atoms(atoms)
+                        atoms[i] = a.copy(orbital=old_g.atoms[i].R)
+                g._atoms = Atoms(atoms)
 
                 ns._geometry = g
         p.add_argument('--geometry', '-G',

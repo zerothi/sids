@@ -41,7 +41,10 @@ class EnergyDensityMatrix(_realspace_DensityMatrix):
 
     def __init__(self, geometry, dim=1, dtype=None, nnzpr=None, **kwargs):
         super(EnergyDensityMatrix, self).__init__(geometry, dim, dtype, nnzpr, **kwargs)
+        self._reset()
 
+    def _reset(self):
+        super(EnergyDensityMatrix, self)._reset()
         self.Ek = self.Pk
         self.dEk = self.dPk
         self.ddEk = self.ddPk
@@ -82,7 +85,7 @@ class EnergyDensityMatrix(_realspace_DensityMatrix):
         format : {'csr', 'array', 'dense', 'coo', ...}
            the returned format of the matrix, defaulting to the ``scipy.sparse.csr_matrix``,
            however if one always requires operations on dense matrices, one can always
-           return in `numpy.ndarray` (`'array'`) or `numpy.matrix` (`'dense'`).
+           return in `numpy.ndarray` (`'array'`/`'dense'`/`'matrix'`).
         spin : int, optional
            if the energy density matrix is a spin polarized one can extract the specific spin direction
            matrix by passing an integer (0 or 1). If the energy density matrix is not `Spin.POLARIZED`
@@ -136,7 +139,7 @@ class EnergyDensityMatrix(_realspace_DensityMatrix):
         format : {'csr', 'array', 'dense', 'coo', ...}
            the returned format of the matrix, defaulting to the ``scipy.sparse.csr_matrix``,
            however if one always requires operations on dense matrices, one can always
-           return in `numpy.ndarray` (`'array'`) or `numpy.matrix` (`'dense'`).
+           return in `numpy.ndarray` (`'array'`/`'dense'`/`'matrix'`).
         spin : int, optional
            if the energy density matrix is a spin polarized one can extract the specific spin direction
            matrix by passing an integer (0 or 1). If the energy density matrix is not `Spin.POLARIZED`
@@ -190,7 +193,7 @@ class EnergyDensityMatrix(_realspace_DensityMatrix):
         format : {'csr', 'array', 'dense', 'coo', ...}
            the returned format of the matrix, defaulting to the ``scipy.sparse.csr_matrix``,
            however if one always requires operations on dense matrices, one can always
-           return in `numpy.ndarray` (`'array'`) or `numpy.matrix` (`'dense'`).
+           return in `numpy.ndarray` (`'array'`/`'dense'`/`'matrix'`).
         spin : int, optional
            if the energy density matrix is a spin polarized one can extract the specific spin direction
            matrix by passing an integer (0 or 1). If the energy density matrix is not `Spin.POLARIZED`

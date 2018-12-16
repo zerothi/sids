@@ -23,6 +23,13 @@ class DynamicalMatrix(SparseOrbitalBZ):
 
     def __init__(self, geometry, dim=1, dtype=None, nnzpr=None, **kwargs):
         super(DynamicalMatrix, self).__init__(geometry, dim, dtype, nnzpr, **kwargs)
+        self._reset()
+
+    def _reset(self):
+        super(DynamicalMatrix, self)._reset()
+        self.Dk = self.Pk
+        self.dDk = self.dPk
+        self.ddDk = self.ddPk
 
         self.Dk = self._Pk
         self.dDk = self.dPk
@@ -64,7 +71,7 @@ class DynamicalMatrix(SparseOrbitalBZ):
         format : {'csr', 'array', 'dense', 'coo', ...}
            the returned format of the matrix, defaulting to the ``scipy.sparse.csr_matrix``,
            however if one always requires operations on dense matrices, one can always
-           return in `numpy.ndarray` (`'array'`) or `numpy.matrix` (`'dense'`).
+           return in `numpy.ndarray` (`'array'`/`'dense'`/`'matrix'`).
 
         See Also
         --------
@@ -114,7 +121,7 @@ class DynamicalMatrix(SparseOrbitalBZ):
         format : {'csr', 'array', 'dense', 'coo', ...}
            the returned format of the matrix, defaulting to the ``scipy.sparse.csr_matrix``,
            however if one always requires operations on dense matrices, one can always
-           return in `numpy.ndarray` (`'array'`) or `numpy.matrix` (`'dense'`).
+           return in `numpy.ndarray` (`'array'`/`'dense'`/`'matrix'`).
 
         See Also
         --------
@@ -164,7 +171,7 @@ class DynamicalMatrix(SparseOrbitalBZ):
         format : {'csr', 'array', 'dense', 'coo', ...}
            the returned format of the matrix, defaulting to the ``scipy.sparse.csr_matrix``,
            however if one always requires operations on dense matrices, one can always
-           return in `numpy.ndarray` (`'array'`) or `numpy.matrix` (`'dense'`).
+           return in `numpy.ndarray` (`'array'`/`'dense'`/`'matrix'`).
 
         See Also
         --------

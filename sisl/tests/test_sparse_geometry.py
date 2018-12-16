@@ -46,8 +46,9 @@ class TestSparseAtom(object):
         assert setup.s1.nnz == 6
         setup.s1.empty()
         assert setup.s1.nnz == 0
+        # nan produces zeros
         setup.s1[0, 0] = np.nan
-        assert setup.s1.nnz == 0
+        assert setup.s1.nnz == 1
         setup.s1.empty()
 
     def test_create2(self, setup):
@@ -426,3 +427,16 @@ class TestSparseAtom(object):
 
         # Ensure that one does not mix everything.
         SparseAtom.fromsp(setup.g.copy(), [csr1, csr2])
+
+    def test_pickle(self, setup):
+        import pickle as p
+
+        g = setup.g.repeat(2, 0).tile(2, 1)
+        csr1 = sc.sparse.csr_matrix((g.na, g.na_s), dtype=np.int32)
+        csr2 = sc.sparse.csr_matrix((g.na, g.na_s), dtype=np.int32)
+        csr1[0, [1, 2, 3]] = 1
+        csr2[1, [2, 4, 1]] = 2
+        S = SparseAtom.fromsp(g, [csr1, csr2])
+        n = p.dumps(S)
+        s = p.loads(n)
+        assert s.spsame(S)

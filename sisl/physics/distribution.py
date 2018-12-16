@@ -15,6 +15,8 @@ Various distributions using different smearing techniques.
    fermi_dirac
    bose_einstein
    cold
+   step_function
+   heaviside
 
 
 .. autofunction:: gaussian
@@ -27,6 +29,10 @@ Various distributions using different smearing techniques.
    :noindex:
 .. autofunction:: cold
    :noindex:
+.. autofunction:: step_function
+   :noindex:
+.. autofunction:: heaviside
+   :noindex:
 
 """
 from __future__ import print_function, division
@@ -34,12 +40,14 @@ from __future__ import print_function, division
 from functools import partial
 
 import numpy as np
+from numpy import exp
 from scipy.special import erf
 _pi = np.pi
 _sqrt_2pi = (2 * _pi) ** 0.5
 
 __all__ = ['get_distribution', 'gaussian', 'lorentzian']
 __all__ += ['fermi_dirac', 'bose_einstein', 'cold']
+__all__ += ['step_function', 'heaviside']
 
 
 def get_distribution(method, smearing=0.1, x0=0.):
@@ -49,12 +57,12 @@ def get_distribution(method, smearing=0.1, x0=0.):
 
     Parameters
     ----------
-    method: {'gaussian', 'lorentzian'}
+    method: {'gaussian', 'lorentzian', 'fermi_dirac', 'bose_einstein', 'step_function', 'heaviside'}
        distribution function
     smearing: float, optional
-       smearing parameter for the method (:math:`\sigma` for Gaussian, :math:`\gamma` for Lorenztian etc.)
+       smearing parameter for methods that have a smearing
     x0: float, optional
-       maximum of the distribution function
+       maximum/middle of the distribution function
 
     Returns
     -------
@@ -66,12 +74,16 @@ def get_distribution(method, smearing=0.1, x0=0.):
         return partial(gaussian, sigma=smearing, x0=x0)
     elif m in ['lorentz', 'lorentzian']:
         return partial(lorentzian, gamma=smearing, x0=x0)
-    elif m in ['fd', 'fermi_dirac']:
+    elif m in ['fd', 'fermi', 'fermi_dirac']:
         return partial(fermi_dirac, kT=smearing, mu=x0)
-    elif m in ['bose_einstein']:
+    elif m in ['be', 'bose_einstein']:
         return partial(bose_einstein, kT=smearing, mu=x0)
     elif m in ['cold']:
         return partial(cold, kT=smearing, mu=x0)
+    elif m in ['step', 'step_function']:
+        return partial(step_function, x0=x0)
+    elif m in ['heavi', 'heavy', 'heaviside']:
+        return partial(heaviside, x0=x0)
     raise ValueError("get_distribution does not implement the {} distribution function, have you mispelled?".format(method))
 
 
@@ -95,7 +107,7 @@ def gaussian(x, sigma=0.1, x0=0.):
     numpy.ndarray
         the Gaussian distribution, same length as `x`
     """
-    return np.exp(-(x - x0) ** 2 / (2 * sigma ** 2)) / (_sqrt_2pi * sigma)
+    return exp(-(x - x0) ** 2 / (2 * sigma * sigma)) / (_sqrt_2pi * sigma)
 
 
 def lorentzian(x, gamma=0.1, x0=0.):
@@ -118,7 +130,7 @@ def lorentzian(x, gamma=0.1, x0=0.):
     numpy.ndarray
         the Lorentzian distribution, same length as `x`
     """
-    return (gamma / _pi) / ((x - x0) ** 2 + gamma ** 2)
+    return (gamma / _pi) / ((x - x0) ** 2 + gamma * gamma)
 
 
 def fermi_dirac(E, kT=0.1, mu=0.):
@@ -141,7 +153,7 @@ def fermi_dirac(E, kT=0.1, mu=0.):
     numpy.ndarray
         the Fermi-Dirac distribution, same length as `E`
     """
-    return 1. / (np.exp((E - mu) / kT) + 1.)
+    return 1. / (exp((E - mu) / kT) + 1.)
 
 
 def bose_einstein(E, kT=0.1, mu=0.):
@@ -164,7 +176,7 @@ def bose_einstein(E, kT=0.1, mu=0.):
     numpy.ndarray
         the Bose-Einstein distribution, same length as `E`
     """
-    return 1. / (np.exp((E - mu) / kT) - 1.)
+    return 1. / (exp((E - mu) / kT) - 1.)
 
 
 def cold(E, kT=0.1, mu=0.):
@@ -189,4 +201,63 @@ def cold(E, kT=0.1, mu=0.):
         the Cold smearing distribution function, same length as `E`
     """
     x = - (E - mu) / kT - 1 / 2 ** 0.5
-    return 0.5 + 0.5 * erf(x) + 1 / _sqrt_2pi * np.exp(-x**2)
+    return 0.5 + 0.5 * erf(x) + exp(-x**2) / _sqrt_2pi
+
+
+def heaviside(x, x0=0.):
+    r""" Heaviside step function
+
+    .. math::
+        H(x,x_0) = \left\{\begin{array}0\quad \text{for }x < x_0
+               \\
+               0.5\quad \text{for }x = x_0
+               \\
+               1\quad \text{for }x>x_0
+             \end{array}
+
+    Parameters
+    ----------
+    x: array_like
+        points at which the Heaviside step distribution is calculated
+    x0: float, optional
+        step position
+
+    Returns
+    -------
+    numpy.ndarray
+        the Heaviside step function distribution, same length as `x`
+    """
+    H = np.zeros_like(x)
+    H[x > x0] = 1.
+    H[x == x0] = 0.5
+    return H
+
+
+def step_function(x, x0=0.):
+    r""" Distribution using the step function, also known as :math:`1 - H(x)`
+
+    This function equals one minus the Heaviside step function
+
+    .. math::
+        S(x,x_0) = \left\{\begin{array}1\quad \text{for }x < x_0
+               \\
+               0.5\quad \text{for }x = x_0
+               \\
+               0\quad \text{for }x>x_0
+
+    Parameters
+    ----------
+    x: array_like
+        points at which the step distribution is calculated
+    x0: float, optional
+        step position
+
+    Returns
+    -------
+    numpy.ndarray
+        the step function distribution, same length as `x`
+    """
+    s = np.ones_like(x)
+    s[x > x0] = 0.
+    s[x == x0] = 0.5
+    return s

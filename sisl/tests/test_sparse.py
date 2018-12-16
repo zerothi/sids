@@ -184,7 +184,8 @@ class TestSparseCSR(object):
         setup.s1d.empty()
         assert setup.s1d.nnz == 0
         setup.s1d[0, 0] = np.nan
-        assert setup.s1d.nnz == 0
+        # nan produces zeros
+        assert setup.s1d.nnz == 1
         setup.s1d.empty()
 
     def test_create2(self, setup):
@@ -924,3 +925,13 @@ class TestSparseCSR(object):
         S1[2, 0] = [1, 2]
         S1[2, 2] = [1, 2]
         S1.sum(1)
+
+    def test_pickle(self, setup):
+        import pickle as p
+        S = SparseCSR((10, 10, 2), dtype=np.int32)
+        S[0, 0] = [1, 2]
+        S[2, 0] = [1, 2]
+        S[2, 2] = [1, 2]
+        n = p.dumps(S)
+        s = p.loads(n)
+        assert s.spsame(S)

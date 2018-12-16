@@ -3,6 +3,7 @@ from __future__ import print_function
 
 import pytest
 import numpy as np
+import warnings
 
 import sisl
 
@@ -135,6 +136,9 @@ def test_1_graphene_all_content(sisl_files):
     assert np.allclose(tbt.transmission(left, right, kavg=False),
                        tbt.transmission(right, left, kavg=False))
 
+    # Both methods should be identical for simple bulk systems
+    assert np.allclose(tbt.reflection(left), tbt.reflection(left, from_single=True), atol=1e-5)
+
     # Also check for each k
     for ik in range(nk):
         assert np.allclose(tbt.transmission(left, right, ik),
@@ -176,29 +180,32 @@ def test_1_graphene_all_content(sisl_files):
     with pytest.warns(sisl.SislWarning):
         tbt.current_parameter(left, -10., 0.0025, right, 10., 0.0025)
 
-    # Since this is a perfect system there should be *no* QM shot-noise
-    # Also, the shot-noise is related to the applied bias, so NO shot-noise
-    assert np.allclose((tbt.shot_noise(left, right, kavg=False) * tbt.wkpt.reshape(-1, 1)).sum(0), 0.)
-    assert np.allclose(tbt.shot_noise(left, right), 0.)
-    assert np.allclose(tbt.shot_noise(right, left), 0.)
-    assert np.allclose(tbt.shot_noise(left, right, kavg=1), 0.)
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore')
 
-    # Since the data-file does not contain all T-eigs (only the first two)
-    # we can't correctly calculate the fano factors
-    # This is a pristine system, hence all fano-factors should be more or less zero
-    # All transmissions are step-functions, however close to band-edges there is some
-    # smearing.
-    # When calculating the Fano factor it is extremely important that the zero_T is *sufficient*
-    # I don't now which value is *good*
-    assert np.all((tbt.fano(left, right, kavg=False) * tbt.wkpt.reshape(-1, 1)).sum(0) <= 1)
-    assert np.all(tbt.fano(left, right) <= 1)
-    assert np.all(tbt.fano(right, left) <= 1)
-    assert np.all(tbt.fano(left, right, kavg=0) <= 1)
+        # Since this is a perfect system there should be *no* QM shot-noise
+        # Also, the shot-noise is related to the applied bias, so NO shot-noise
+        assert np.allclose((tbt.shot_noise(left, right, kavg=False) * tbt.wkpt.reshape(-1, 1)).sum(0), 0.)
+        assert np.allclose(tbt.shot_noise(left, right), 0.)
+        assert np.allclose(tbt.shot_noise(right, left), 0.)
+        assert np.allclose(tbt.shot_noise(left, right, kavg=1), 0.)
 
-    # Neither should the noise_power exist
-    assert (tbt.noise_power(right, left, kavg=False) * tbt.wkpt).sum() == pytest.approx(0.)
-    assert tbt.noise_power(right, left) == pytest.approx(0.)
-    assert tbt.noise_power(right, left, kavg=0) == pytest.approx(0.)
+        # Since the data-file does not contain all T-eigs (only the first two)
+        # we can't correctly calculate the fano factors
+        # This is a pristine system, hence all fano-factors should be more or less zero
+        # All transmissions are step-functions, however close to band-edges there is some
+        # smearing.
+        # When calculating the Fano factor it is extremely important that the zero_T is *sufficient*
+        # I don't now which value is *good*
+        assert np.all((tbt.fano(left, right, kavg=False) * tbt.wkpt.reshape(-1, 1)).sum(0) <= 1)
+        assert np.all(tbt.fano(left, right) <= 1)
+        assert np.all(tbt.fano(right, left) <= 1)
+        assert np.all(tbt.fano(left, right, kavg=0) <= 1)
+
+        # Neither should the noise_power exist
+        assert (tbt.noise_power(right, left, kavg=False) * tbt.wkpt).sum() == pytest.approx(0.)
+        assert tbt.noise_power(right, left) == pytest.approx(0.)
+        assert tbt.noise_power(right, left, kavg=0) == pytest.approx(0.)
 
     # Check specific DOS queries
     DOS = tbt.DOS
@@ -437,3 +444,17 @@ def test_1_graphene_all_ArgumentParser(sisl_files, sisl_tmp):
     out = p.parse_args(['--transmission', 'Left', 'Right',
                         '--transmission-bulk', 'Left',
                         '--plot', f], namespace=copy(ns))
+
+
+# Requesting an orbital outside of the device region
+def test_1_graphene_all_warn_orbital(sisl_files):
+    tbt = sisl.get_sile(sisl_files(_dir, '1_graphene_all.TBT.nc'))
+    with pytest.warns(sisl.SislWarning):
+        tbt.o2p(1)
+
+
+# Requesting an atom outside of the device region
+def test_1_graphene_all_warn_atom(sisl_files):
+    tbt = sisl.get_sile(sisl_files(_dir, '1_graphene_all.TBT.nc'))
+    with pytest.warns(sisl.SislWarning):
+        tbt.a2p(1)

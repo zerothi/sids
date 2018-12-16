@@ -10,7 +10,7 @@ from numpy import floor, dot, add, cos, sin
 from numpy import ogrid, take
 from scipy.sparse import diags as sp_diags
 
-import sisl._array as _a
+from . import _array as _a
 from ._help import dtype_complex_to_real
 from .shape import Shape
 from .utils import default_ArgumentParser, default_namespace
@@ -223,7 +223,7 @@ class Grid(SuperCellChild):
         """
         if not boundary is None:
             if isinstance(boundary, Integral):
-                self.bc = _a.arrayi([[boundary] * 2] * 3)
+                self.bc = _a.fulli([3, 2], boundary)
             else:
                 self.bc = _a.asarrayi(boundary)
         if not a is None:

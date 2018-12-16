@@ -1,6 +1,8 @@
 from __future__ import print_function, division
 
+import math as ma
 import numpy as np
+from scipy.interpolate import CubicSpline
 
 from sisl._help import _range as range
 import sisl._array as _a
@@ -46,7 +48,10 @@ class Hamiltonian(SparseOrbitalBZSpin):
     def __init__(self, geometry, dim=1, dtype=None, nnzpr=None, **kwargs):
         """ Initialize Hamiltonian """
         super(Hamiltonian, self).__init__(geometry, dim, dtype, nnzpr, **kwargs)
+        self._reset()
 
+    def _reset(self):
+        super(Hamiltonian, self)._reset()
         self.Hk = self.Pk
         self.dHk = self.dPk
         self.ddHk = self.ddPk
@@ -87,7 +92,7 @@ class Hamiltonian(SparseOrbitalBZSpin):
         format : {'csr', 'array', 'dense', 'coo', ...}
            the returned format of the matrix, defaulting to the ``scipy.sparse.csr_matrix``,
            however if one always requires operations on dense matrices, one can always
-           return in `numpy.ndarray` (`'array'`) or `numpy.matrix` (`'dense'`).
+           return in `numpy.ndarray` (`'array'`/`'dense'`/`'matrix'`).
         spin : int, optional
            if the Hamiltonian is a spin polarized one can extract the specific spin direction
            matrix by passing an integer (0 or 1). If the Hamiltonian is not `Spin.POLARIZED`
@@ -141,7 +146,7 @@ class Hamiltonian(SparseOrbitalBZSpin):
         format : {'csr', 'array', 'dense', 'coo', ...}
            the returned format of the matrix, defaulting to the ``scipy.sparse.csr_matrix``,
            however if one always requires operations on dense matrices, one can always
-           return in `numpy.ndarray` (`'array'`) or `numpy.matrix` (`'dense'`).
+           return in `numpy.ndarray` (`'array'`/`'dense'`/`'matrix'`).
         spin : int, optional
            if the Hamiltonian is a spin polarized one can extract the specific spin direction
            matrix by passing an integer (0 or 1). If the Hamiltonian is not `Spin.POLARIZED`
@@ -195,7 +200,7 @@ class Hamiltonian(SparseOrbitalBZSpin):
         format : {'csr', 'array', 'dense', 'coo', ...}
            the returned format of the matrix, defaulting to the ``scipy.sparse.csr_matrix``,
            however if one always requires operations on dense matrices, one can always
-           return in `numpy.ndarray` (`'array'`) or `numpy.matrix` (`'dense'`).
+           return in `numpy.ndarray` (`'array'`/`'dense'`/`'matrix'`).
         spin : int, optional
            if the Hamiltonian is a spin polarized one can extract the specific spin direction
            matrix by passing an integer (0 or 1). If the Hamiltonian is not `Spin.POLARIZED`
@@ -423,7 +428,7 @@ class Hamiltonian(SparseOrbitalBZSpin):
         """
         return self.eigenstate(k, **kwargs).PDOS(E, distribution)
 
-    def fermi_level(self, bz, distribution='fermi_dirac', q=None, q_tol=1e-10):
+    def fermi_level(self, bz=None, q=None, distribution='fermi_dirac', q_tol=1e-12):
         """ Calculate the Fermi-level using a Brillouinzone sampling and a target charge
 
         The Fermi-level will be calculated using an iterative approach by first calculating all eigenvalues
@@ -431,51 +436,95 @@ class Hamiltonian(SparseOrbitalBZSpin):
 
         Parameters
         ----------
-        bz : Brillouinzone
+        bz : Brillouinzone, optional
             sampled k-points and weights, the ``bz.parent`` will be equal to this object upon return
-        distribution : str, func
+            default to Gamma-point
+        q : float, list of float, optional
+            seeked charge, if not set will be equal to ``self.geometry.q0``. If a list of two is passed
+            there will be calculated a Fermi-level per spin-channel. If the Hamiltonian is not spin-polarized
+            the sum of the list will be used and only a single fermi-level will be returned.
+        distribution : str, func, optional
             used distribution, must accept the keyword ``mu`` as parameter for the Fermi-level
-        q : float, optional
-            seeked charge, if not set will be equal to ``self.geometry.q0``.
         q_tol : float, optional
             tolerance of charge for finding the Fermi-level
 
         Returns
         -------
-        fermi-level : the Fermi-level of the system.
+        fermi-level : the Fermi-level of the system (or two if two different charges are passed)
         """
-        # Overwrite the parent in bz
-        bz.set_parent(self)
+        if bz is None:
+            # Gamma-point only
+            from .brillouinzone import BrillouinZone
+            bz = BrillouinZone(self)
+        else:
+            # Overwrite the parent in bz
+            bz.set_parent(self)
+        # Ensure we are using asarray
+        bz.asarray()
 
         if q is None:
             q = self.geometry.q0
+        # Ensure we have an "array" in case of spin-polarized calculations
+        q = np.asarray(q)
 
         if isinstance(distribution, str):
             distribution = get_distribution(distribution)
 
-        # We have two cases, either a spin-polarized calculation, or all others.
-        spin = bz.parent.spin
-        if spin.is_polarized:
-            # We need both spin eigenvalues
-            eig = np.stack([bz.asarray().eigh(spin=0),
-                            bz.asarray().eigh(spin=1)], axis=1)
-        else:
-            eig = bz.asarray().eigh()
+        # B-cast for easier weights
         w = bz.weight.reshape(-1, 1)
 
-        # Find Fermi-level
-        E_min = eig.min()
-        E_max = eig.max()
+        # Internal class to calculate the Fermi-level
+        def _Ef(q, eig):
+            # We could reduce it depending on the temperature,
+            # however the distribution does not have the kT
+            # parameter available.
+            Ef = np.average(eig[:, int(q)])
 
-        # We start by guessing on 10 (so we can faster move down)
-        Ef = 10.
-        qt = (distribution(eig, mu=Ef) * w).sum()
-        while abs(qt - q) > q_tol:
-            if qt > q:
-                E_max = Ef
-            elif qt < q:
-                E_min = Ef
-            Ef = (E_min + E_max) / 2
+            l_Ef = []
+            l_q = []
+            def list_append(q, Ef):
+                l_q.append(q)
+                l_Ef.append(Ef)
+
+            # Calculate guessed charge
             qt = (distribution(eig, mu=Ef) * w).sum()
+
+            while abs(qt - q) > q_tol:
+                # Add to cubic-spline
+                list_append(qt, Ef)
+
+                # Estimate new Fermi-level
+                if len(l_q) > 1:
+                    # We can do a spline interpolation
+                    lq = np.array(l_q)
+                    idx = np.argsort(lq)
+                    lEf = np.array(l_Ef)
+                    Ef = CubicSpline(lq[idx], lEf[idx], extrapolate=True)(q)
+                else:
+                    # Update limits
+                    if qt > q:
+                        Ef = Ef - 0.5
+                    elif qt < q:
+                        Ef = Ef + 0.5
+
+                # Calculate new guessed charge
+                qt = (distribution(eig, mu=Ef) * w).sum()
+
+            return Ef
+
+        if self.spin.is_polarized and q.size == 2:
+            # We need to do Fermi-level separately since the user requests
+            # separate fillings
+            Ef = _a.emptyd(2)
+            Ef[0] = _Ef(q[0], bz.eigh(spin=0))
+            Ef[1] = _Ef(q[1], bz.eigh(spin=1))
+        else:
+            # Ensure a single charge
+            q = q.sum()
+            if self.spin.is_polarized:
+                Ef = _Ef(q, np.concatenate([bz.eigh(spin=0),
+                                            bz.eigh(spin=1)], axis=1))
+            else:
+                Ef = _Ef(q, bz.eigh())
 
         return Ef

@@ -232,7 +232,7 @@ class _realspace_DensityMatrix(SparseOrbitalBZSpin):
             # Create the actual geometry that encompass the grid
             ia, xyz, _ = geometry.within_inf(sc, periodic=pbc)
             if len(ia) > 0:
-                grid.set_geometry(Geometry(xyz, geometry.atom[ia], sc=sc))
+                grid.set_geometry(Geometry(xyz, geometry.atoms[ia], sc=sc))
 
         # Instead of looping all atoms in the supercell we find the exact atoms
         # and their supercell indices.
@@ -518,7 +518,10 @@ class DensityMatrix(_realspace_DensityMatrix):
     def __init__(self, geometry, dim=1, dtype=None, nnzpr=None, **kwargs):
         """ Initialize density matrix """
         super(DensityMatrix, self).__init__(geometry, dim, dtype, nnzpr, **kwargs)
+        self._reset()
 
+    def _reset(self):
+        super(DensityMatrix, self)._reset()
         self.Dk = self.Pk
         self.dDk = self.dPk
         self.ddDk = self.ddPk
@@ -559,7 +562,7 @@ class DensityMatrix(_realspace_DensityMatrix):
         format : {'csr', 'array', 'dense', 'coo', ...}
            the returned format of the matrix, defaulting to the ``scipy.sparse.csr_matrix``,
            however if one always requires operations on dense matrices, one can always
-           return in `numpy.ndarray` (`'array'`) or `numpy.matrix` (`'dense'`).
+           return in `numpy.ndarray` (`'array'`/`'dense'`/`'matrix'`).
         spin : int, optional
            if the density matrix is a spin polarized one can extract the specific spin direction
            matrix by passing an integer (0 or 1). If the density matrix is not `Spin.POLARIZED`
@@ -613,7 +616,7 @@ class DensityMatrix(_realspace_DensityMatrix):
         format : {'csr', 'array', 'dense', 'coo', ...}
            the returned format of the matrix, defaulting to the ``scipy.sparse.csr_matrix``,
            however if one always requires operations on dense matrices, one can always
-           return in `numpy.ndarray` (`'array'`) or `numpy.matrix` (`'dense'`).
+           return in `numpy.ndarray` (`'array'`/`'dense'`/`'matrix'`).
         spin : int, optional
            if the density matrix is a spin polarized one can extract the specific spin direction
            matrix by passing an integer (0 or 1). If the density matrix is not `Spin.POLARIZED`
@@ -667,7 +670,7 @@ class DensityMatrix(_realspace_DensityMatrix):
         format : {'csr', 'array', 'dense', 'coo', ...}
            the returned format of the matrix, defaulting to the ``scipy.sparse.csr_matrix``,
            however if one always requires operations on dense matrices, one can always
-           return in `numpy.ndarray` (`'array'`) or `numpy.matrix` (`'dense'`).
+           return in `numpy.ndarray` (`'array'`/`'dense'`/`'matrix'`).
         spin : int, optional
            if the density matrix is a spin polarized one can extract the specific spin direction
            matrix by passing an integer (0 or 1). If the density matrix is not `Spin.POLARIZED`

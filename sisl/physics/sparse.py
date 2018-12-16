@@ -57,7 +57,6 @@ class SparseOrbitalBZ(SparseOrbital):
 
     def __init__(self, geometry, dim=1, dtype=None, nnzpr=None, **kwargs):
         self._geometry = geometry
-
         self._orthogonal = kwargs.get('orthogonal', True)
 
         # Get true dimension
@@ -66,13 +65,16 @@ class SparseOrbitalBZ(SparseOrbital):
 
         # Initialize the sparsity pattern
         self.reset(dim, dtype, nnzpr)
+        self._reset()
 
+    def _reset(self):
+        """ Reset object according to the options, please refer to `SparseOrbital.reset` for details """
         if self.orthogonal:
             self.Sk = self._Sk_diagonal
             self.S_idx = -100
+
         else:
-            dim = dim - 1
-            self.S_idx = dim
+            self.S_idx = self.shape[-1] - 1
             self.Sk = self._Sk
             self.dSk = self._dSk
             self.ddSk = self._ddSk
@@ -279,7 +281,7 @@ class SparseOrbitalBZ(SparseOrbital):
         format : {'csr', 'array', 'matrix', 'coo', ...}
            the returned format of the matrix, defaulting to the ``scipy.sparse.csr_matrix``,
            however if one always requires operations on dense matrices, one can always
-           return in `numpy.ndarray` (`'array'`) or `numpy.matrix` (`'matrix'`).
+           return in `numpy.ndarray` (`'array'`/`'dense'`/`'matrix'`).
 
         See Also
         --------
@@ -301,10 +303,8 @@ class SparseOrbitalBZ(SparseOrbital):
         # the matrix only describes neighbouring couplings it is vital
         # to not return anything
         # TODO
-        if format == 'array':
+        if format in ['array', 'matrix', 'dense']:
             return np.diag(np.ones(no, dtype=dtype))
-        elif format == 'matrix' or format == 'dense':
-            return np.diag(np.ones(no, dtype=dtype)).asmatrix()
         S = csr_matrix((no, no), dtype=dtype)
         S.setdiag(1.)
         return S.asformat(format)
@@ -360,7 +360,7 @@ class SparseOrbitalBZ(SparseOrbital):
         format : {'csr', 'array', 'matrix', 'coo', ...}
            the returned format of the matrix, defaulting to the ``scipy.sparse.csr_matrix``,
            however if one always requires operations on dense matrices, one can always
-           return in `numpy.ndarray` (`'array'`) or `numpy.matrix` (`'matrix'`).
+           return in `numpy.ndarray` (`'array'`/`'dense'`/`'matrix'`).
 
         See Also
         --------
@@ -424,7 +424,7 @@ class SparseOrbitalBZ(SparseOrbital):
         format : {'csr', 'array', 'matrix', 'coo', ...}
            the returned format of the matrix, defaulting to the ``scipy.sparse.csr_matrix``,
            however if one always requires operations on dense matrices, one can always
-           return in `numpy.ndarray` (`'array'`) or `numpy.matrix` (`'matrix'`).
+           return in `numpy.ndarray` (`'array'`/`'dense'`/`'matrix'`).
 
         See Also
         --------
@@ -506,6 +506,17 @@ class SparseOrbitalBZ(SparseOrbital):
 
         return lin.eigsh(P, k=n, return_eigenvectors=not eigvals_only, **kwargs)
 
+    def __getstate__(self):
+        d = {}
+        d['sparseorbitalbz'] = super(SparseOrbitalBZ, self).__getstate__()
+        d['orthogonal'] = self._orthogonal
+        return d
+
+    def __setstate__(self, state):
+        self._orthogonal = state['orthogonal']
+        super(SparseOrbitalBZ, self).__setstate__(state['sparseorbitalbz'])
+        self._reset()
+
 
 class SparseOrbitalBZSpin(SparseOrbitalBZ):
     """ Sparse object containing the orbital connections in a Brillouin zone with possible spin-components
@@ -557,6 +568,11 @@ class SparseOrbitalBZSpin(SparseOrbitalBZ):
         self._spin = Spin(spin, dtype)
 
         super(SparseOrbitalBZSpin, self).__init__(geometry, len(self.spin), self.spin.dtype, nnzpr, **kwargs)
+        self._reset()
+
+    def _reset(self):
+        """ Reset object according to the options, please refer to `SparseOrbital.reset` for details """
+        super(SparseOrbitalBZSpin, self)._reset()
 
         if self.spin.is_unpolarized:
             self.UP = 0
@@ -565,6 +581,7 @@ class SparseOrbitalBZSpin(SparseOrbitalBZ):
             self.Sk = self._Sk
             self.dPk = self._dPk_unpolarized
             self.dSk = self._dSk
+
         elif self.spin.is_polarized:
             self.UP = 0
             self.DOWN = 1
@@ -572,6 +589,7 @@ class SparseOrbitalBZSpin(SparseOrbitalBZ):
             self.dPk = self._dPk_polarized
             self.Sk = self._Sk
             self.dSk = self._dSk
+
         elif self.spin.is_noncolinear:
             if self.spin.dkind == 'f':
                 self.M11 = 0
@@ -587,6 +605,7 @@ class SparseOrbitalBZSpin(SparseOrbitalBZ):
             self.Sk = self._Sk_non_colinear
             self.dPk = None
             self.dSk = None
+
         elif self.spin.is_spinorbit:
             if self.spin.dkind == 'f':
                 self.M11r = 0
@@ -840,3 +859,17 @@ class SparseOrbitalBZSpin(SparseOrbitalBZ):
             raise ValueError("The sparsity pattern is non-orthogonal, you cannot use the Arnoldi procedure with scipy")
 
         return lin.eigsh(P, k=n, return_eigenvectors=not eigvals_only, **kwargs)
+
+    def __getstate__(self):
+        d = {}
+        d['sparseorbitalbzspin'] = super(SparseOrbitalBZSpin, self).__getstate__()
+        d['spin'] = self._spin.__getstate__()
+        d['orthogonal'] = self._orthogonal
+        return d
+
+    def __setstate__(self, state):
+        self._orthogonal = state['orthogonal']
+        spin = Spin()
+        spin.__setstate__(state['spin'])
+        self._spin = spin
+        super(SparseOrbitalBZSpin, self).__setstate__(state['sparseorbitalbzspin'])
