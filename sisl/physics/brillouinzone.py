@@ -73,7 +73,7 @@ to use `~sisl.oplist` to handle cases of `BrillouinZone.asaverage` and `Brilloui
 ...    return oplist([DOS, PDOS, v])
 >>> DOS, PDOS, v = mp.asaverage().eigenstate(wrap=wrap_multiple, eta=True)
 
-Which does all averaging etc. using `~sisl.oplist`.
+Which does mathematical operations (averaging/summing) using `~sisl.oplist`.
 
 .. autosummary::
    :toctree:
@@ -92,6 +92,7 @@ from numpy import pi
 import numpy as np
 from numpy import sum, dot, cross
 
+from sisl.oplist import oplist
 from sisl.unit import units
 from sisl.quaternion import Quaternion
 from sisl.utils.mathematics import cart2spher, fnorm
@@ -458,7 +459,7 @@ class BrillouinZone(object):
         ...    PDOS = es.PDOS(E, distribution=dist)
         ...    occ = es.occupation()
         ...    spin_moment = (es.spin_moment(E, distribution=dist) * occ.reshape(-1, 1)).sum(0)
-        ...    return oplist(DOS, PDOS, spin_moment)
+        ...    return oplist([DOS, PDOS, spin_moment])
         >>> bz = BrillouinZone(hamiltonian)
         >>> DOS, PDOS, spin_moment = bz.asaverage().eigenstate(wrap=wrap)
 
@@ -674,13 +675,20 @@ class BrillouinZone(object):
 
         Examples
         --------
-        >>> obj = BrillouinZone(Hamiltonian) # doctest: +SKIP
-        >>> obj.asaverage().DOS(np.linspace(-2, 2, 100)) # doctest: +SKIP
+        >>> obj = BrillouinZone(Hamiltonian)
+        >>> obj.asaverage().DOS(np.linspace(-2, 2, 100))
 
-        >>> obj = BrillouinZone(Hamiltonian) # doctest: +SKIP
-        >>> obj.asaverage() # doctest: +SKIP
-        >>> obj.DOS(np.linspace(-2, 2, 100)) # doctest: +SKIP
-        >>> obj.PDOS(np.linspace(-2, 2, 100), eta=True) # doctest: +SKIP
+        >>> obj = BrillouinZone(Hamiltonian)
+        >>> obj.asaverage()
+        >>> obj.DOS(np.linspace(-2, 2, 100))
+        >>> obj.PDOS(np.linspace(-2, 2, 100), eta=True)
+
+        >>> obj = BrillouinZone(Hamiltonian)
+        >>> obj.asaverage()
+        >>> E = np.linspace(-2, 2, 100)
+        >>> def wrap(es):
+        ...    return es.DOS(E), es.PDOS(E)
+        >>> DOS, PDOS = obj.eigenstate(wrap=wrap)
 
         See Also
         --------
@@ -735,13 +743,13 @@ class BrillouinZone(object):
 
         Examples
         --------
-        >>> obj = BrillouinZone(Hamiltonian) # doctest: +SKIP
-        >>> obj.assum().DOS(np.linspace(-2, 2, 100)) # doctest: +SKIP
+        >>> obj = BrillouinZone(Hamiltonian)
+        >>> obj.assum().DOS(np.linspace(-2, 2, 100))
 
-        >>> obj = BrillouinZone(Hamiltonian) # doctest: +SKIP
-        >>> obj.assum() # doctest: +SKIP
-        >>> obj.DOS(np.linspace(-2, 2, 100)) # doctest: +SKIP
-        >>> obj.PDOS(np.linspace(-2, 2, 100), eta=True) # doctest: +SKIP
+        >>> obj = BrillouinZone(Hamiltonian)
+        >>> obj.assum()
+        >>> obj.DOS(np.linspace(-2, 2, 100))
+        >>> obj.PDOS(np.linspace(-2, 2, 100), eta=True)
 
         >>> E = np.linspace(-2, 2, 100)
         >>> dist = get_distribution('gaussian', smearing=0.1)
@@ -750,7 +758,7 @@ class BrillouinZone(object):
         ...    PDOS = es.PDOS(E, distribution=dist) * weight
         ...    occ = es.occupation()
         ...    spin_moment = (es.spin_moment(E, distribution=dist) * occ.reshape(-1, 1)).sum(0) * weight
-        ...    return oplist(DOS, PDOS, spin_moment)
+        ...    return oplist([DOS, PDOS, spin_moment])
         >>> bz = BrillouinZone(hamiltonian)
         >>> DOS, PDOS, spin_moment = bz.assum().eigenstate(wrap=wrap)
 
@@ -774,12 +782,16 @@ class BrillouinZone(object):
             w = self.weight
             if has_wrap:
                 v = wrap(func(*args, k=k[0], **kwargs), parent=parent, k=k[0], weight=w[0])
+                if isinstance(v, tuple):
+                    v = oplist(v)
                 eta.update()
                 for i in range(1, len(k)):
                     v += wrap(func(*args, k=k[i], **kwargs), parent=parent, k=k[i], weight=w[i])
                     eta.update()
             else:
                 v = func(*args, k=k[0], **kwargs)
+                if isinstance(v, tuple):
+                    v = oplist(v)
                 eta.update()
                 for i in range(1, len(k)):
                     v += func(*args, k=k[i], **kwargs)
@@ -988,8 +1000,8 @@ class MonkhorstPack(BrillouinZone):
 
         Examples
         --------
-        >>> obj = MonkhorstPack(Hamiltonian, [10, 1, 10]) # doctest: +SKIP
-        >>> grid = obj.asgrid().eigh(data_axis=1) # doctest: +SKIP
+        >>> obj = MonkhorstPack(Hamiltonian, [10, 1, 10])
+        >>> grid = obj.asgrid().eigh(data_axis=1)
 
         See Also
         --------
@@ -1434,17 +1446,17 @@ class BandStructure(BrillouinZone):
         Examples
         --------
 
-        >>> p = BandStructure(...) # doctest: +SKIP
-        >>> eigs = Hamiltonian.eigh(p) # doctest: +SKIP
-        >>> for i in range(len(Hamiltonian)): # doctest: +SKIP
-        ...     plt.plot(p.lineark(), eigs[:, i]) # doctest: +SKIP
+        >>> p = BandStructure(...)
+        >>> eigs = Hamiltonian.eigh(p)
+        >>> for i in range(len(Hamiltonian)):
+        ...     plt.plot(p.lineark(), eigs[:, i])
 
-        >>> p = BandStructure(...) # doctest: +SKIP
-        >>> eigs = Hamiltonian.eigh(p) # doctest: +SKIP
-        >>> lk, kt, kl = p.lineark(True) # doctest: +SKIP
-        >>> plt.xticks(kt, kl) # doctest: +SKIP
-        >>> for i in range(len(Hamiltonian)): # doctest: +SKIP
-        ...     plt.plot(lk, eigs[:, i]) # doctest: +SKIP
+        >>> p = BandStructure(...)
+        >>> eigs = Hamiltonian.eigh(p)
+        >>> lk, kt, kl = p.lineark(True)
+        >>> plt.xticks(kt, kl)
+        >>> for i in range(len(Hamiltonian)):
+        ...     plt.plot(lk, eigs[:, i])
 
         Parameters
         ----------
