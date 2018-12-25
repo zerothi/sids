@@ -389,16 +389,14 @@ Download IPython notebook <a href="https://raw.githubusercontent.com/zerothi/sis
 <div class="section" id="Electronic-structure-calculation----a-walk-through">
 <h1>Electronic structure calculation – a walk-through<a class="headerlink" href="#Electronic-structure-calculation----a-walk-through" title="Permalink to this headline">¶</a></h1>
 <p>This tutorial will describe a complete walk-through of a large fraction
-of the <code class="docutils literal notranslate"><span class="pre">sisl</span></code> functionalities.</p>
+of the <code class="docutils literal notranslate"><span class="pre">sisl</span></code> functionalities. It will show you how to generated
+default geometries, constructing Hamiltonians, calculating eigenstates
+and plotting various physical quantities.</p>
 <div class="section" id="Creating-the-geometry-to-investigate">
 <h2>Creating the geometry to investigate<a class="headerlink" href="#Creating-the-geometry-to-investigate" title="Permalink to this headline">¶</a></h2>
-<div class="line-block">
-<div class="line">Our system of interest will be the graphene system. Instead of simply
-creating a graphene flake, or the primary unit-cell of graphene we
-will try and create a geometry with a defect, i.e. one less Carbon
-atom.</div>
-<div class="line">We will start by creating a graphene flake</div>
-</div>
+<p>Our system of interest will be graphene. Instead of creating a graphene
+flake, or the primary unit-cell of graphene, we will create a vacancy in
+graphene. We will start by creating a graphene flake</p>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre>
 <span></span>In [2]:
@@ -412,12 +410,11 @@ atom.</div>
 <p>This does <em>a lot</em> of things behind the scenes:</p>
 <ol class="arabic simple">
 <li><code class="docutils literal notranslate"><span class="pre">geom.graphene</span></code>:<ul>
-<li>create the atomic coordinates of pristine graphene with a default
+<li>create atomic coordinates of pristine graphene with a default
 bond-length of <span class="math notranslate nohighlight">\(1.42\,\mathrm{Å}\)</span>.</li>
-<li>create the pristine graphene unit cell, by default this will
-create a supercell with a size <code class="docutils literal notranslate"><span class="pre">3x3</span></code>, i.e. a nearest neighbour
-unit-cell.</li>
-<li>assign a Carbon atom with a default of one orbital per atom as the
+<li>create pristine graphene unit cell, by default this will create a
+supercell with a size <code class="docutils literal notranslate"><span class="pre">3x3</span></code>, i.e. a nearest neighbour unit-cell.</li>
+<li>assign a carbon atom with a default of one orbital per atom as the
 basis</li>
 </ul>
 </li>
@@ -425,9 +422,8 @@ basis</li>
 times along the unit cell axis <code class="docutils literal notranslate"><span class="pre">axis</span></code></li>
 </ol>
 <p>By printing the object one gets basic information regarding the
-geometry, such as 1) number of atoms, 2) species of atoms, 3) number of
-orbitals, 4) orbitals associated with each atom and 5) number of
-supercells.</p>
+geometry, such as 1) number and species of atoms, 2) number of orbitals,
+3) orbitals associated with each atom and 4) number of supercells.</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre>
 <span></span>In [3]:
@@ -455,12 +451,11 @@ Geometry{na: 72, no: 72,
 </pre></div></div>
 </div>
 <p>In this example we have <code class="docutils literal notranslate"><span class="pre">na=72</span></code> atoms, each have one orbital, hence
-the total number of orbitals is <code class="docutils literal notranslate"><span class="pre">no=72</span></code>. Additionally the description
-of the atomic specie in the geometry tells us we have a Carbon atom,
-with a single orbital with a radius of <span class="math notranslate nohighlight">\(1.4342\,\mathrm{Å}\)</span>. The
-number of supercells are <code class="docutils literal notranslate"><span class="pre">[3,</span> <span class="pre">3,</span> <span class="pre">1]</span></code> which means cells
-<code class="docutils literal notranslate"><span class="pre">\{-1,</span> <span class="pre">0,</span> <span class="pre">1\}</span></code> along the first and second lattice are taken into
-account.</p>
+the total number of orbitals is <code class="docutils literal notranslate"><span class="pre">no=72</span></code>. The description of the atomic
+specie in the geometry tells us we have a carbon atom, with a single
+orbital with a radius of <span class="math notranslate nohighlight">\(1.4342\,\mathrm{Å}\)</span>. The number of
+supercells are <code class="docutils literal notranslate"><span class="pre">[3,</span> <span class="pre">3,</span> <span class="pre">1]</span></code> which means cells <code class="docutils literal notranslate"><span class="pre">{-1,</span> <span class="pre">0,</span> <span class="pre">1}</span></code> along the
+first and second lattice are taken into account.</p>
 <p>Later we will look into the details of <em>orbitals</em> associated with
 <em>atoms</em> and how they may be used for wavefunctions etc.</p>
 <p>Lets visualize the atomic positions (here adding atomic indices)</p>
@@ -470,10 +465,7 @@ account.</p>
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
-<span></span><span class="n">plt</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">graphene</span><span class="o">.</span><span class="n">xyz</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">graphene</span><span class="o">.</span><span class="n">xyz</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]);</span>
-<span class="k">for</span> <span class="n">ia</span> <span class="ow">in</span> <span class="n">graphene</span><span class="p">:</span> <span class="c1"># loop over atomic indices</span>
-    <span class="n">plt</span><span class="o">.</span><span class="n">annotate</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">ia</span><span class="p">),</span> <span class="p">(</span><span class="n">graphene</span><span class="o">.</span><span class="n">xyz</span><span class="p">[</span><span class="n">ia</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span><span class="o">+</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">graphene</span><span class="o">.</span><span class="n">xyz</span><span class="p">[</span><span class="n">ia</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span><span class="o">+</span><span class="mf">0.1</span><span class="p">))</span>
-<span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;$x$&#39;</span><span class="p">);</span> <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;$y$&#39;</span><span class="p">);</span>
+<span></span><span class="n">plot</span><span class="p">(</span><span class="n">graphene</span><span class="p">,</span> <span class="n">atom_indices</span><span class="o">=</span><span class="bp">True</span><span class="p">);</span>
 </pre></div>
 </div>
 </div>
@@ -484,10 +476,10 @@ account.</p>
 <img alt="../_images/tutorials_tutorial_es_1_6_0.png" src="../_images/tutorials_tutorial_es_1_6_0.png" />
 </div>
 </div>
-<p>Removing an atom can be done easily with <code class="docutils literal notranslate"><span class="pre">Geometry.remove</span></code>. This
-routine takes an index, or a list of indices of the atoms to be removed.
-For instance removing the first atom with result in the following
-geometry (red atom is the removed atom)</p>
+<p>Removing an atom can be done with <code class="docutils literal notranslate"><span class="pre">Geometry.remove</span></code>. The routine takes
+an index, or a list of indices of the atoms to be removed. For instance
+removing the first atom will result in the following geometry (red atom
+is the removed atom)</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre>
 <span></span>In [5]:
@@ -496,9 +488,9 @@ geometry (red atom is the removed atom)</p>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
 <span></span><span class="n">coord</span> <span class="o">=</span> <span class="n">graphene</span><span class="o">.</span><span class="n">xyz</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="p">:]</span>
 <span class="n">temp</span> <span class="o">=</span> <span class="n">graphene</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
-<span class="n">plt</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">temp</span><span class="o">.</span><span class="n">xyz</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">temp</span><span class="o">.</span><span class="n">xyz</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]);</span>
-<span class="n">plt</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">coord</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">coord</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">c</span><span class="o">=</span><span class="s1">&#39;r&#39;</span><span class="p">);</span>
-<span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;$x$&#39;</span><span class="p">);</span> <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;$y$&#39;</span><span class="p">);</span>
+<span class="n">ax</span> <span class="o">=</span> <span class="n">plot</span><span class="p">(</span><span class="n">temp</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">temp</span><span class="o">.</span><span class="n">xyz</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">temp</span><span class="o">.</span><span class="n">xyz</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]);</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">coord</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">coord</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">c</span><span class="o">=</span><span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">s</span><span class="o">=</span><span class="mi">200</span><span class="p">);</span>
 </pre></div>
 </div>
 </div>
@@ -509,36 +501,33 @@ geometry (red atom is the removed atom)</p>
 <img alt="../_images/tutorials_tutorial_es_1_8_0.png" src="../_images/tutorials_tutorial_es_1_8_0.png" />
 </div>
 </div>
-<p>However, while it doesn’t matter which atom we remove, we will prefer to
-remove an atom in the middle for visualization purposes.</p>
-<p>To remove the (closests) middle atom we can compare positions and figure
-out which index of the atom to remove. Another and easier method is to
-find all atoms near a given position, then remove one of them. The
+<p>For the following it doesn’t matter which atom we remove (since it is
+peridiodic), however for visualization purposes we will remove an atom
+in the middle of the unit cell.</p>
+<p>Using <code class="docutils literal notranslate"><span class="pre">sisl</span></code> it is easy to find atoms close to specific positions. The
 middle of the atomic coordinates is also the <em>center</em> of atomic
-coordinates, here <code class="docutils literal notranslate"><span class="pre">Geometry.center</span></code> is useful. Secondly,
-<code class="docutils literal notranslate"><span class="pre">Geometry.close</span></code> may be used to find all atomic indices close to a
-given position or atom. By default the <code class="docutils literal notranslate"><span class="pre">Geometry.close</span></code> function
-determines all atoms with a radius equal to the maximum orbital radius.
-Here we explicitly set the <em>search radius</em> to <span class="math notranslate nohighlight">\(1.5\,\mathrm{Å}\)</span>,
-it is however not needed as the default radius will be radius of the
-orbital on the Carbon atom.</p>
+coordinates, here <code class="docutils literal notranslate"><span class="pre">Geometry.center</span></code> is useful. The complementary
+method <code class="docutils literal notranslate"><span class="pre">Geometry.close</span></code> finds all atomic indices close to a given
+position or atom. By default, <code class="docutils literal notranslate"><span class="pre">Geometry.close</span></code> determines all atoms
+within a radius equal to the maximum orbital radius. Here we explicitly
+set the <em>search radius</em> to <span class="math notranslate nohighlight">\(1.5\,\mathrm{Å}\)</span>.</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre>
 <span></span>In [6]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
-<span></span><span class="n">xyz_center</span> <span class="o">=</span> <span class="n">graphene</span><span class="o">.</span><span class="n">center</span><span class="p">(</span><span class="n">what</span><span class="o">=</span><span class="s1">&#39;xyz&#39;</span><span class="p">)</span>
-<span class="n">plt</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">xyz_center</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">xyz_center</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="mi">100</span><span class="p">,</span> <span class="n">marker</span><span class="o">=</span><span class="s1">&#39;*&#39;</span><span class="p">,</span> <span class="n">c</span><span class="o">=</span><span class="s1">&#39;k&#39;</span><span class="p">);</span> <span class="c1"># center of geometry</span>
+<span></span><span class="n">ax</span> <span class="o">=</span> <span class="n">plot</span><span class="p">(</span><span class="n">graphene</span><span class="o">.</span><span class="n">sc</span><span class="p">)</span>
+<span class="n">xyz_center</span> <span class="o">=</span> <span class="n">graphene</span><span class="o">.</span><span class="n">center</span><span class="p">(</span><span class="n">what</span><span class="o">=</span><span class="s1">&#39;xyz&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">xyz_center</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">xyz_center</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="mi">100</span><span class="p">,</span> <span class="n">marker</span><span class="o">=</span><span class="s1">&#39;*&#39;</span><span class="p">,</span> <span class="n">c</span><span class="o">=</span><span class="s1">&#39;k&#39;</span><span class="p">);</span> <span class="c1"># center of geometry</span>
 <span class="n">index</span> <span class="o">=</span> <span class="n">graphene</span><span class="o">.</span><span class="n">close</span><span class="p">(</span><span class="n">xyz_center</span><span class="p">,</span> <span class="mf">1.5</span><span class="p">)</span>
 <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">index</span><span class="p">:</span>
-    <span class="n">plt</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">graphene</span><span class="o">.</span><span class="n">xyz</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">graphene</span><span class="o">.</span><span class="n">xyz</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="mi">200</span><span class="p">,</span> <span class="n">marker</span><span class="o">=</span><span class="s1">&#39;s&#39;</span><span class="p">,</span> <span class="n">edgecolors</span><span class="o">=</span><span class="s1">&#39;k&#39;</span><span class="p">,</span> <span class="n">facecolors</span><span class="o">=</span><span class="s1">&#39;none&#39;</span><span class="p">);</span> <span class="c1"># atoms within 1.5 of center</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">graphene</span><span class="o">.</span><span class="n">xyz</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">graphene</span><span class="o">.</span><span class="n">xyz</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="mi">200</span><span class="p">,</span> <span class="n">marker</span><span class="o">=</span><span class="s1">&#39;s&#39;</span><span class="p">,</span> <span class="n">edgecolors</span><span class="o">=</span><span class="s1">&#39;k&#39;</span><span class="p">,</span> <span class="n">facecolors</span><span class="o">=</span><span class="s1">&#39;none&#39;</span><span class="p">);</span> <span class="c1"># atoms within 1.5 of center</span>
 <span class="n">index</span> <span class="o">=</span> <span class="n">index</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
 <span class="n">xyz_remove</span> <span class="o">=</span> <span class="n">graphene</span><span class="o">.</span><span class="n">xyz</span><span class="p">[</span><span class="n">index</span><span class="p">]</span>
-<span class="n">plt</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">xyz_remove</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">xyz_remove</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">c</span><span class="o">=</span><span class="s1">&#39;r&#39;</span><span class="p">);</span> <span class="c1"># plot the removed atom</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">xyz_remove</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">xyz_remove</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">c</span><span class="o">=</span><span class="s1">&#39;r&#39;</span><span class="p">);</span> <span class="c1"># plot the removed atom</span>
 <span class="n">system</span> <span class="o">=</span> <span class="n">graphene</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">index</span><span class="p">)</span>
-<span class="n">plt</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">system</span><span class="o">.</span><span class="n">xyz</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">system</span><span class="o">.</span><span class="n">xyz</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]);</span>
-<span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;$x$&#39;</span><span class="p">);</span> <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;$y$&#39;</span><span class="p">);</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">system</span><span class="o">.</span><span class="n">xyz</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">system</span><span class="o">.</span><span class="n">xyz</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]);</span>
 </pre></div>
 </div>
 </div>
@@ -553,9 +542,8 @@ orbital on the Carbon atom.</p>
 <div class="section" id="Creating-the-electronic-structure">
 <h2>Creating the electronic structure<a class="headerlink" href="#Creating-the-electronic-structure" title="Permalink to this headline">¶</a></h2>
 <p>To calculate eigenstates, DOS and other physical quantities from the
-Hamiltonian we first require to setup the Hamiltonian for this geometry.
-Accomblishing this is done by passing a <code class="docutils literal notranslate"><span class="pre">Geometry</span></code> to a
-<code class="docutils literal notranslate"><span class="pre">Hamiltonian</span></code> class</p>
+Hamiltonian we need to setup the Hamiltonian. Tthis is done by passing a
+<code class="docutils literal notranslate"><span class="pre">Geometry</span></code> to a <code class="docutils literal notranslate"><span class="pre">Hamiltonian</span></code> class</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre>
 <span></span>In [7]:
@@ -587,20 +575,19 @@ Hamiltonian{non-zero: 0, orthogonal: True,
 </pre></div></div>
 </div>
 <div class="line-block">
-<div class="line">In addition to the <code class="docutils literal notranslate"><span class="pre">Geometry</span></code> information it additionally informs us
-that it is an orthogonal basis (sisl also allows non-orthogonal
-basis’). The spin-configuration is an unpolarized configuration (see
-<code class="docutils literal notranslate"><span class="pre">Spin</span></code> for details).</div>
+<div class="line">In addition to the <code class="docutils literal notranslate"><span class="pre">Geometry</span></code> information it informs us that it is
+an orthogonal basis (<code class="docutils literal notranslate"><span class="pre">sisl</span></code> also allows non-orthogonal basis’). The
+spin-configuration is an unpolarized configuration (see <code class="docutils literal notranslate"><span class="pre">Spin</span></code> for
+details).</div>
 <div class="line">Currently <code class="docutils literal notranslate"><span class="pre">non-zero</span> <span class="pre">=</span> <span class="pre">0</span></code> specifies that there are <em>no</em> associated
 Hamiltonian elements stored in this Hamiltonian object.</div>
 </div>
 <div class="line-block">
-<div class="line">Our next concern is to specify the Hamiltonian elements. We will jump
-directly to the easy method by specifying everything via a simple
-routine call <code class="docutils literal notranslate"><span class="pre">Hamiltonian.construct</span></code>. However, know that one may
-interact with the Hamiltonian as though it was a matrix;
-<code class="docutils literal notranslate"><span class="pre">Hamiltonian[0,</span> <span class="pre">1]</span> <span class="pre">=</span> <span class="pre">a</span></code> will set the hopping element from the 0th
-orbital to the 1st orbital to <code class="docutils literal notranslate"><span class="pre">a</span></code>.</div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">Hamiltonian.construct</span></code> lets one specify the Hamiltonian elements in
+a consistent way. However, note that the <code class="docutils literal notranslate"><span class="pre">Hamiltonian</span></code> objet may be
+used as though it was a matrix, i.e. <code class="docutils literal notranslate"><span class="pre">Hamiltonian[0,</span> <span class="pre">1]</span> <span class="pre">=</span> <span class="pre">a</span></code> will
+set the hopping element from the 0th orbital to the 1st orbital to
+<code class="docutils literal notranslate"><span class="pre">a</span></code>.</div>
 <div class="line">We will specify all on-site elements to <span class="math notranslate nohighlight">\(0.\,\mathrm{eV}\)</span>, and
 all nearest neighbour interactions with <span class="math notranslate nohighlight">\(-2.7\,\mathrm{eV}\)</span>,
 this is the most common used graphene tight-binding model.</div>
@@ -690,17 +677,17 @@ object can perform several advanced calculations:</p>
 <ul class="simple">
 <li><code class="docutils literal notranslate"><span class="pre">EigenstateElectron.DOS</span></code>: calculate the DOS at a given set of
 energy values (in eV), additionally one can pass a distribution
-function if the default Gaussian with <span class="math notranslate nohighlight">\(0.1\,\mathrm{eV}\)</span>
-smearing is not wanted.</li>
+function if the default Gaussian with <span class="math notranslate nohighlight">\(\sigma=0.1\,\mathrm{eV}\)</span>
+is not wanted.</li>
 <li><code class="docutils literal notranslate"><span class="pre">EigenstateElectron.PDOS</span></code>: calculate the projected DOS at a given
 set of energy values (in eV), additionally one can pass a
 distribution function if the default Gaussian with
-<span class="math notranslate nohighlight">\(0.1\,\mathrm{eV}\)</span> smearing is not wanted.</li>
+<span class="math notranslate nohighlight">\(\sigma=0.1\,\mathrm{eV}\)</span> is not wanted.</li>
 <li><code class="docutils literal notranslate"><span class="pre">EigenstateElectron.wavefunction</span></code>: add <em>all</em> contained eigenstates
 to a passed real-space grid.</li>
 </ul>
 <p>Lets first try and calculate the DOS for a given set of energies in the
-range <span class="math notranslate nohighlight">\(-4\,\mathrm{eV}\)</span> - <span class="math notranslate nohighlight">\(\mathrm{4}\,\mathrm{eV}\)</span></p>
+range <span class="math notranslate nohighlight">\(-4\,\mathrm{eV}\)</span> : <span class="math notranslate nohighlight">\(\mathrm{4}\,\mathrm{eV}\)</span></p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre>
 <span></span>In [10]:
@@ -769,16 +756,18 @@ calculating the band-structure is as easy as anything else.</div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
 <span></span><span class="n">band</span> <span class="o">=</span> <span class="n">BandStructure</span><span class="p">(</span><span class="n">H</span><span class="p">,</span> <span class="p">[[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span>
-                  <span class="p">[</span><span class="mi">1</span><span class="o">/</span><span class="mi">3</span><span class="p">,</span> <span class="mi">2</span><span class="o">/</span><span class="mi">3</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]],</span>
-              <span class="mi">400</span><span class="p">,</span> <span class="p">[</span><span class="sa">r</span><span class="s1">&#39;$\Gamma$&#39;</span><span class="p">,</span> <span class="sa">r</span><span class="s1">&#39;$M$&#39;</span><span class="p">,</span> <span class="sa">r</span><span class="s1">&#39;$K$&#39;</span><span class="p">,</span> <span class="sa">r</span><span class="s1">&#39;$\Gamma$&#39;</span><span class="p">])</span>
+                         <span class="p">[</span><span class="mi">1</span><span class="o">/</span><span class="mi">3</span><span class="p">,</span> <span class="mi">2</span><span class="o">/</span><span class="mi">3</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]],</span> <span class="mi">400</span><span class="p">,</span>
+                        <span class="p">[</span><span class="sa">r</span><span class="s1">&#39;$\Gamma$&#39;</span><span class="p">,</span> <span class="sa">r</span><span class="s1">&#39;$M$&#39;</span><span class="p">,</span>
+                         <span class="sa">r</span><span class="s1">&#39;$K$&#39;</span><span class="p">,</span> <span class="sa">r</span><span class="s1">&#39;$\Gamma$&#39;</span><span class="p">])</span>
 </pre></div>
 </div>
 </div>
-<p>Note that the last integer determines the total number of
+<p>Note that the integer <code class="docutils literal notranslate"><span class="pre">400</span></code> determines the total number of
 <span class="math notranslate nohighlight">\(k\)</span>-points on the full band. One <em>can</em> define an explicit number
 between the different points, however we highly encourage only
 specifying <em>one</em> integer as the divisions will be determined based on
-the length in the reciprocal space between the points.</p>
+the length in the reciprocal space between the points and thus the
+physical distance in the Brillouin zone will be correct.</p>
 <p>A word of note on the <code class="docutils literal notranslate"><span class="pre">BrillouinZone</span></code> objects.</p>
 <p>The <code class="docutils literal notranslate"><span class="pre">BrillouinZone</span></code> objects are <em>extremely</em> handy because they allow
 to directly call <em>any</em> routine inherent to the passed object. If calling
@@ -804,7 +793,8 @@ usage):</p>
 </pre></div>
 </div>
 <p>Now we can calculate the band structure. A band-structure requires <em>all</em>
-eigenvalues and thus we need the <code class="docutils literal notranslate"><span class="pre">asarray()</span></code>.</p>
+eigenvalues and thus we ask the <code class="docutils literal notranslate"><span class="pre">BrillouinZone</span></code> object to return all
+values using <code class="docutils literal notranslate"><span class="pre">asarray()</span></code>.</p>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre>
 <span></span>In [13]:
@@ -845,9 +835,9 @@ eigenvalues and thus we need the <code class="docutils literal notranslate"><spa
 Hamiltonian. Before proceeding we will note that the Hamiltonian also
 implements the <code class="docutils literal notranslate"><span class="pre">DOS</span></code> and <code class="docutils literal notranslate"><span class="pre">PDOS</span></code> methods (equivalent to
 <code class="docutils literal notranslate"><span class="pre">Hamiltonian.eigenvalue().DOS()</span></code>), hence to calculate these as
-<span class="math notranslate nohighlight">\(k\)</span>-averaged quantities we can simply create a Brillouin zone
-object with proper weights, say a Monkhorst-Pack grid, and calculate the
-averaged quantities.</p>
+<span class="math notranslate nohighlight">\(k\)</span>-averaged quantities we can create a Brillouin zone object with
+proper weights, say a Monkhorst-Pack grid, and calculate the averaged
+quantities.</p>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre>
 <span></span>In [15]:
@@ -855,7 +845,7 @@ averaged quantities.</p>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
 <span></span><span class="n">bz</span> <span class="o">=</span> <span class="n">MonkhorstPack</span><span class="p">(</span><span class="n">H</span><span class="p">,</span> <span class="p">[</span><span class="mi">35</span><span class="p">,</span> <span class="mi">35</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span>
-<span class="n">bz</span><span class="o">.</span><span class="n">asaverage</span><span class="p">();</span> <span class="c1"># specify the Brillouin zone to perform an average</span>
+<span class="n">bz</span><span class="o">.</span><span class="n">asaverage</span><span class="p">();</span> <span class="c1"># specify the Brillouin zone to perform an average of subsequent method calls</span>
 </pre></div>
 </div>
 </div>
@@ -954,13 +944,13 @@ Normalization: 1.0053998295349618
 </div>
 </div>
 <p>To calculate the orbital on a 3D grid, the <code class="docutils literal notranslate"><span class="pre">Orbital.toGrid</span></code> function
-is available. In this case we are creating an orbital with azimuthal
-quantum number <span class="math notranslate nohighlight">\(l=1\)</span> and by default it has angular moment
-<span class="math notranslate nohighlight">\(0\)</span>, i.e. the <span class="math notranslate nohighlight">\(2p_z\)</span> orbital. To create a <span class="math notranslate nohighlight">\(2p_x\)</span> or
-<span class="math notranslate nohighlight">\(2p_y\)</span> orbital requires the use of an <code class="docutils literal notranslate"><span class="pre">AtomicOrbital</span></code> to denote
-the <span class="math notranslate nohighlight">\(m\)</span> quantum number. Below we create the grid that describes
-the <span class="math notranslate nohighlight">\(p_z\)</span> orbital and plot the <span class="math notranslate nohighlight">\(yz\)</span> plane at <span class="math notranslate nohighlight">\(x=0\)</span>
-(with respect to the position of the orbital).</p>
+is available. Here we create an orbital with azimuthal quantum number
+<span class="math notranslate nohighlight">\(l=1\)</span> and by default it has angular moment <span class="math notranslate nohighlight">\(0\)</span>, i.e. the
+<span class="math notranslate nohighlight">\(2p_z\)</span> orbital. To create a <span class="math notranslate nohighlight">\(2p_x\)</span> or <span class="math notranslate nohighlight">\(2p_y\)</span> orbital
+requires the use of an <code class="docutils literal notranslate"><span class="pre">AtomicOrbital</span></code> to denote the <span class="math notranslate nohighlight">\(m\)</span> quantum
+number. Below we create the grid that describes the <span class="math notranslate nohighlight">\(p_z\)</span> orbital
+and plot the <span class="math notranslate nohighlight">\(yz\)</span> plane at <span class="math notranslate nohighlight">\(x=0\)</span> (with respect to the
+position of the orbital).</p>
 <p>Note that the real-space orbital will <em>not</em> be normalized and thus
 <span class="math notranslate nohighlight">\(\int|\psi(\mathbf r)|^2\neq 1\)</span>, as it should. The following
 analysis is thus a qualitative analysis.</p>
