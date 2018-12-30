@@ -110,39 +110,46 @@ def test_sancho_lr(setup):
     assert np.allclose(RB_SER, R_SE)
 
 
-@pytest.mark.parametrize("k_axes", [None, 0, 1])
-@pytest.mark.parametrize("semi_axis", [None, 0, 1])
+def test_sancho_green(setup):
+    SL = RecursiveSI(setup.HS, '-A')
+    SR = RecursiveSI(setup.HS, '+A')
+
+    E = 0.1
+    k = [0, 0.13, 0]
+
+    # Check that left/right are different
+
+    L_SE = SL.self_energy(E, k, bulk=True)
+    R_SE = SR.self_energy(E, k)
+    g = np.linalg.inv(L_SE - R_SE)
+    G = SL.green(E, k)
+    assert np.allclose(g, G)
+    assert np.allclose(SL.green(E, k), SR.green(E, k))
+
+
+@pytest.mark.parametrize("k_axes", [0, 1])
+@pytest.mark.parametrize("semi_axis", [0, 1])
 @pytest.mark.parametrize("trs", [True, False])
 @pytest.mark.parametrize("bz", [None, BrillouinZone([1])])
 @pytest.mark.parametrize("unfold", [1, 2])
 def test_real_space_HS(setup, k_axes, semi_axis, trs, bz, unfold):
     if k_axes == semi_axis:
         return
-    RSE = RealSpaceSE(setup.HS, (unfold, unfold, 1))
-    RSE.update_option(semi_axis=semi_axis, k_axes=k_axes, dk=100, trs=trs, bz=bz)
-    # Initialize and print
-    with warnings.catch_warnings():
-        #warnings.simplefilter('ignore')
-        RSE.initialize()
-
+    RSE = RealSpaceSE(setup.HS, semi_axis, k_axes, (unfold, unfold, 1))
+    RSE.set_options(dk=100, trs=trs, bz=bz)
+    RSE.initialize()
     RSE.green(0.1)
 
 
-@pytest.mark.parametrize("k_axes", [None, 0, 1])
-@pytest.mark.parametrize("semi_axis", [None, 0, 1])
+@pytest.mark.parametrize("k_axes", [0, 1])
+@pytest.mark.parametrize("semi_axis", [0, 1])
 @pytest.mark.parametrize("trs", [True, False])
 @pytest.mark.parametrize("bz", [None, BrillouinZone([1])])
 @pytest.mark.parametrize("unfold", [1, 2])
 def test_real_space_H(setup, k_axes, semi_axis, trs, bz, unfold):
     if k_axes == semi_axis:
         return
-    RSE = RealSpaceSE(setup.H, (unfold, unfold, 1))
-    RSE.update_option(semi_axis=semi_axis, k_axes=k_axes, dk=100, trs=trs, bz=bz)
-    # Initialize and print
-    with warnings.catch_warnings():
-        warnings.simplefilter('ignore')
-        RSE.initialize()
-
+    RSE = RealSpaceSE(setup.H, semi_axis, k_axes, (unfold, unfold, 1), trs=trs, dk=100, bz=bz)
     RSE.green(0.1)
     RSE.self_energy(0.1)
 
@@ -153,16 +160,13 @@ def test_real_space_H_3d():
     geom = Geometry([0] * 3, atom=H, sc=sc)
     H = Hamiltonian(geom)
     H.construct(([0.001, 1.01], (0, -1)))
-    RSE = RealSpaceSE(H, (3, 4, 2))
-    RSE.update_option(semi_axis=0, k_axes=(1, 2), dk=100, trs=True)
-    # Initialize and print
-    with warnings.catch_warnings():
-        warnings.simplefilter('ignore')
-        RSE.initialize()
+    RSE = RealSpaceSE(H, 0, [1, 2], (3, 4, 2))
+    RSE.set_options(dk=100, trs=True)
+    RSE.initialize()
     nk = np.ones(3, np.int32)
-    nk[RSE._options['k_axes']] = 23
+    nk[[1, 2]] = 23
     bz = BrillouinZone(H, nk)
-    RSE.update_option(bz=bz)
+    RSE.set_options(bz=bz)
 
     RSE.green(0.1)
     # Since there is only 2 repetitions along one direction we will have the full matrix
@@ -172,13 +176,7 @@ def test_real_space_H_3d():
 
 
 def test_real_space_H_dtype(setup):
-    RSE = RealSpaceSE(setup.H, (2, 2, 1))
-    RSE.update_option(semi_axis=0, k_axes=1, dk=100)
-
-    with warnings.catch_warnings():
-        warnings.simplefilter('ignore')
-        RSE.initialize()
-
+    RSE = RealSpaceSE(setup.H, 0, 1, (2, 2, 1), dk=100)
     g64 = RSE.green(0.1, dtype=np.complex64)
     g128 = RSE.green(0.1, dtype=np.complex128)
     assert g64.dtype == np.complex64
@@ -194,13 +192,8 @@ def test_real_space_H_dtype(setup):
 
 def test_real_space_H_SE_unfold(setup):
     # check that calculating the real-space Green function is equivalent for two equivalent systems
-    RSE = RealSpaceSE(setup.H, (2, 2, 1), semi_axis=0, k_axes=1, dk=100)
+    RSE = RealSpaceSE(setup.H, 0, 1, (2, 2, 1), dk=100)
     RSE_big = RealSpaceSE(setup.H.tile(2, 0).tile(2, 1), semi_axis=0, k_axes=1, dk=100)
-
-    with warnings.catch_warnings():
-        warnings.simplefilter('ignore')
-        RSE.initialize()
-        RSE_big.initialize()
 
     for E in [0.1, 1.5]:
         G = RSE.green(E)
@@ -214,13 +207,8 @@ def test_real_space_H_SE_unfold(setup):
 
 def test_real_space_HS_SE_unfold(setup):
     # check that calculating the real-space Green function is equivalent for two equivalent systems
-    RSE = RealSpaceSE(setup.HS, (2, 2, 1), semi_axis=0, k_axes=1, dk=100)
+    RSE = RealSpaceSE(setup.HS, 0, 1, (2, 2, 1), dk=100)
     RSE_big = RealSpaceSE(setup.HS.tile(2, 0).tile(2, 1), semi_axis=0, k_axes=1, dk=100)
-
-    with warnings.catch_warnings():
-        warnings.simplefilter('ignore')
-        RSE.initialize()
-        RSE_big.initialize()
 
     for E in [0.1, 1.5]:
         G = RSE.green(E)
@@ -230,3 +218,85 @@ def test_real_space_HS_SE_unfold(setup):
         SE = RSE.self_energy(E)
         SE_big = RSE_big.self_energy(E)
         assert np.allclose(SE, SE_big)
+
+
+def test_real_space_HS_SE_unfold_with_k():
+    # check that calculating the real-space Green function is equivalent for two equivalent systems
+    sq = Geometry([0] * 3, Atom(1, 1.01), [1])
+    sq.set_nsc([3] * 3)
+    H = Hamiltonian(sq)
+    H.construct([(0.1, 1.1), (4, -1)])
+
+    RSE = RealSpaceSE(H, 0, 1, (3, 4, 1), dk=100, trs=False)
+
+    k1 = [0, 0, 0.2]
+    k2 = [0, 0, 0.3]
+    for E in [0.1, 1.5]:
+        G1 = RSE.green(E, k1)
+        G2 = RSE.green(E, k2)
+        assert not np.allclose(G1, G2)
+
+        SE1 = RSE.self_energy(E, k1)
+        SE2 = RSE.self_energy(E, k2)
+        assert not np.allclose(SE1, SE2)
+
+
+@pytest.mark.xfail(raises=ValueError)
+def test_real_space_SE_fail_k():
+    sq = Geometry([0] * 3, Atom(1, 1.01), [1])
+    sq.set_nsc([3] * 3)
+    H = Hamiltonian(sq)
+    H.construct([(0.1, 1.1), (4, -1)])
+
+    RSE = RealSpaceSE(H, 0, 1, (3, 4, 1))
+    RSE.green(0.1, [0, 0, 0.2])
+
+
+@pytest.mark.xfail(raises=ValueError)
+def test_real_space_SE_fail_k_semi_same():
+    sq = Geometry([0] * 3, Atom(1, 1.01), [1])
+    sq.set_nsc([3] * 3)
+    H = Hamiltonian(sq)
+    H.construct([(0.1, 1.1), (4, -1)])
+
+    RSE = RealSpaceSE(H, 0, 0, (3, 4, 1))
+
+
+@pytest.mark.xfail(raises=ValueError)
+def test_real_space_SE_fail_nsc_semi():
+    sq = Geometry([0] * 3, Atom(1, 1.01), [1])
+    sq.set_nsc([5, 3, 1])
+    H = Hamiltonian(sq)
+    H.construct([(0.1, 1.1), (4, -1)])
+
+    RSE = RealSpaceSE(H, 0, 1, (3, 4, 1), dk=100)
+
+
+@pytest.mark.xfail(raises=ValueError)
+def test_real_space_SE_fail_nsc_k():
+    sq = Geometry([0] * 3, Atom(1, 1.01), [1])
+    sq.set_nsc([3, 1, 1])
+    H = Hamiltonian(sq)
+    H.construct([(0.1, 1.1), (4, -1)])
+
+    RSE = RealSpaceSE(H, 0, 1, (3, 4, 1), dk=100)
+
+
+@pytest.mark.xfail(raises=ValueError)
+def test_real_space_SE_fail_nsc_semi():
+    sq = Geometry([0] * 3, Atom(1, 1.01), [1])
+    sq.set_nsc([3, 5, 3])
+    H = Hamiltonian(sq)
+    H.construct([(0.1, 1.1), (4, -1)])
+
+    RSE = RealSpaceSE(H, 1, 0, (3, 4, 1), dk=100)
+
+
+@pytest.mark.xfail(raises=ValueError)
+def test_real_space_SE_fail_unfold_non_axes():
+    sq = Geometry([0] * 3, Atom(1, 1.01), [1])
+    sq.set_nsc([3, 5, 3])
+    H = Hamiltonian(sq)
+    H.construct([(0.1, 1.1), (4, -1)])
+
+    RSE = RealSpaceSE(H, 0, 1, (3, 4, 3), dk=100)
