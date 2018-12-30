@@ -180,8 +180,8 @@
 <span class="kn">from</span> <span class="nn">sisl.messages</span> <span class="k">import</span> <span class="n">warn</span><span class="p">,</span> <span class="n">info</span>
 <span class="kn">from</span> <span class="nn">sisl.utils.mathematics</span> <span class="k">import</span> <span class="n">fnorm</span>
 <span class="kn">from</span> <span class="nn">sisl.utils.ranges</span> <span class="k">import</span> <span class="n">array_arange</span>
+<span class="kn">from</span> <span class="nn">sisl._help</span> <span class="k">import</span> <span class="n">array_replace</span>
 <span class="kn">import</span> <span class="nn">sisl._array</span> <span class="k">as</span> <span class="nn">_a</span>
-<span class="kn">import</span> <span class="nn">sisl.linalg</span> <span class="k">as</span> <span class="nn">lin</span>
 <span class="kn">from</span> <span class="nn">sisl.linalg</span> <span class="k">import</span> <span class="n">solve</span><span class="p">,</span> <span class="n">inv</span>
 <span class="kn">from</span> <span class="nn">sisl.physics.brillouinzone</span> <span class="k">import</span> <span class="n">BrillouinZone</span><span class="p">,</span> <span class="n">MonkhorstPack</span>
 <span class="kn">from</span> <span class="nn">sisl.physics.bloch</span> <span class="k">import</span> <span class="n">Bloch</span>
@@ -208,7 +208,7 @@
         <span class="sd">&quot;&quot;&quot; Class specific setup routine &quot;&quot;&quot;</span>
         <span class="k">pass</span>
 
-<div class="viewcode-block" id="SelfEnergy.self_energy"><a class="viewcode-back" href="../../../api-generated/sisl.physics.SelfEnergy.html#sisl.physics.SelfEnergy.self_energy">[docs]</a>    <span class="k">def</span> <span class="nf">self_energy</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">E</span><span class="p">):</span>
+<div class="viewcode-block" id="SelfEnergy.self_energy"><a class="viewcode-back" href="../../../api-generated/sisl.physics.SelfEnergy.html#sisl.physics.SelfEnergy.self_energy">[docs]</a>    <span class="k">def</span> <span class="nf">self_energy</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="k">raise</span> <span class="ne">NotImplementedError</span></div>
 
     <span class="k">def</span> <span class="nf">__getattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">attr</span><span class="p">):</span>
@@ -261,23 +261,7 @@
         <span class="sd">&quot;&quot;&quot; String representation of SemiInfinite &quot;&quot;&quot;</span>
         <span class="k">return</span>  <span class="s1">&#39;</span><span class="si">{0}</span><span class="s1">{{direction: </span><span class="si">{1}{2}</span><span class="s1">}}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="p">,</span>
                                                   <span class="p">{</span><span class="o">-</span><span class="mi">1</span><span class="p">:</span> <span class="s1">&#39;-&#39;</span><span class="p">,</span> <span class="mi">1</span><span class="p">:</span> <span class="s1">&#39;+&#39;</span><span class="p">}</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">semi_inf_dir</span><span class="p">),</span>
-                                                  <span class="p">{</span><span class="mi">0</span><span class="p">:</span> <span class="s1">&#39;A&#39;</span><span class="p">,</span> <span class="mi">1</span><span class="p">:</span> <span class="s1">&#39;B&#39;</span><span class="p">,</span> <span class="mi">2</span><span class="p">:</span> <span class="s1">&#39;C&#39;</span><span class="p">}</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">semi_inf</span><span class="p">))</span>
-
-    <span class="k">def</span> <span class="nf">_correct_k</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot; Return a corrected k-point</span>
-
-<span class="sd">        Notes</span>
-<span class="sd">        -----</span>
-<span class="sd">        This is strictly not required because any `k` along the semi-infinite direction</span>
-<span class="sd">        is *integrated* out and thus the self-energy is the same for all k along the</span>
-<span class="sd">        semi-infinite direction.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="n">k</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">k</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">zerosd</span><span class="p">([</span><span class="mi">3</span><span class="p">])</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">k</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_fill</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
-            <span class="n">k</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">semi_inf</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.</span>
-        <span class="k">return</span> <span class="n">k</span></div>
+                                                  <span class="p">{</span><span class="mi">0</span><span class="p">:</span> <span class="s1">&#39;A&#39;</span><span class="p">,</span> <span class="mi">1</span><span class="p">:</span> <span class="s1">&#39;B&#39;</span><span class="p">,</span> <span class="mi">2</span><span class="p">:</span> <span class="s1">&#39;C&#39;</span><span class="p">}</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">semi_inf</span><span class="p">))</span></div>
 
 
 <div class="viewcode-block" id="RecursiveSI"><a class="viewcode-back" href="../../../api-generated/sisl.physics.RecursiveSI.html#sisl.physics.RecursiveSI">[docs]</a><span class="k">class</span> <span class="nc">RecursiveSI</span><span class="p">(</span><span class="n">SemiInfinite</span><span class="p">):</span>
@@ -330,7 +314,86 @@
         <span class="c1"># Delete all values in columns, but keep them to retain the supercell information</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">spgeom1</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">delete_columns</span><span class="p">(</span><span class="n">cols</span><span class="p">,</span> <span class="n">keep_shape</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
-<div class="viewcode-block" id="RecursiveSI.self_energy"><a class="viewcode-back" href="../../../api-generated/sisl.physics.RecursiveSI.html#sisl.physics.RecursiveSI.self_energy">[docs]</a>    <span class="k">def</span> <span class="nf">self_energy</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">E</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">eps</span><span class="o">=</span><span class="mf">1e-14</span><span class="p">,</span> <span class="n">bulk</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<div class="viewcode-block" id="RecursiveSI.green"><a class="viewcode-back" href="../../../api-generated/sisl.physics.RecursiveSI.html#sisl.physics.RecursiveSI.green">[docs]</a>    <span class="k">def</span> <span class="nf">green</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">E</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">eps</span><span class="o">=</span><span class="mf">1e-14</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot; Return a dense matrix with the bulk Green function at energy `E` and k-point `k` (default Gamma).</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        E : float/complex</span>
+<span class="sd">          energy at which the calculation will take place</span>
+<span class="sd">        k : array_like, optional</span>
+<span class="sd">          k-point at which the Green function should be evaluated.</span>
+<span class="sd">          the k-point should be in units of the reciprocal lattice vectors.</span>
+<span class="sd">        dtype : numpy.dtype</span>
+<span class="sd">          the resulting data type</span>
+<span class="sd">        eps : float, optional</span>
+<span class="sd">          convergence criteria for the recursion</span>
+<span class="sd">        **kwargs : dict, optional</span>
+<span class="sd">           arguments passed directly to the ``self.parent.Pk`` method (not ``self.parent.Sk``), for instance ``spin``</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        self-energy : the self-energy corresponding to the semi-infinite direction</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">E</span><span class="o">.</span><span class="n">imag</span> <span class="o">==</span> <span class="mf">0.</span><span class="p">:</span>
+            <span class="n">E</span> <span class="o">=</span> <span class="n">E</span><span class="o">.</span><span class="n">real</span> <span class="o">+</span> <span class="mi">1</span><span class="n">j</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">eta</span>
+
+        <span class="c1"># Get k-point</span>
+        <span class="n">k</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">asarrayd</span><span class="p">(</span><span class="n">k</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">dtype</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">dtype</span> <span class="o">=</span> <span class="n">complex128</span>
+
+        <span class="n">sp0</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">spgeom0</span>
+        <span class="n">sp1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">spgeom1</span>
+
+        <span class="c1"># As the SparseGeometry inherently works for</span>
+        <span class="c1"># orthogonal and non-orthogonal basis, there is no</span>
+        <span class="c1"># need to have two algorithms.</span>
+        <span class="n">GB</span> <span class="o">=</span> <span class="n">sp0</span><span class="o">.</span><span class="n">Sk</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s1">&#39;array&#39;</span><span class="p">)</span> <span class="o">*</span> <span class="n">E</span> <span class="o">-</span> <span class="n">sp0</span><span class="o">.</span><span class="n">Pk</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s1">&#39;array&#39;</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="n">n</span> <span class="o">=</span> <span class="n">GB</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="n">ab</span> <span class="o">=</span> <span class="n">empty</span><span class="p">([</span><span class="n">n</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">n</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span>
+        <span class="n">shape</span> <span class="o">=</span> <span class="n">ab</span><span class="o">.</span><span class="n">shape</span>
+
+        <span class="c1"># Get direct arrays</span>
+        <span class="n">alpha</span> <span class="o">=</span> <span class="n">ab</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">,</span> <span class="p">:]</span><span class="o">.</span><span class="n">view</span><span class="p">()</span>
+        <span class="n">beta</span> <span class="o">=</span> <span class="n">ab</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">,</span> <span class="p">:]</span><span class="o">.</span><span class="n">view</span><span class="p">()</span>
+
+        <span class="c1"># Get solve step arary</span>
+        <span class="n">ab2</span> <span class="o">=</span> <span class="n">ab</span><span class="o">.</span><span class="n">view</span><span class="p">()</span>
+        <span class="n">ab2</span><span class="o">.</span><span class="n">shape</span> <span class="o">=</span> <span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">n</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">sp1</span><span class="o">.</span><span class="n">orthogonal</span><span class="p">:</span>
+            <span class="n">alpha</span><span class="p">[:,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">sp1</span><span class="o">.</span><span class="n">Pk</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s1">&#39;array&#39;</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+            <span class="n">beta</span><span class="p">[:,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">conjugate</span><span class="p">(</span><span class="n">alpha</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">P</span> <span class="o">=</span> <span class="n">sp1</span><span class="o">.</span><span class="n">Pk</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s1">&#39;array&#39;</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+            <span class="n">S</span> <span class="o">=</span> <span class="n">sp1</span><span class="o">.</span><span class="n">Sk</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s1">&#39;array&#39;</span><span class="p">)</span>
+            <span class="n">alpha</span><span class="p">[:,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">P</span> <span class="o">-</span> <span class="n">S</span> <span class="o">*</span> <span class="n">E</span>
+            <span class="n">beta</span><span class="p">[:,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">conjugate</span><span class="p">(</span><span class="n">P</span><span class="o">.</span><span class="n">T</span><span class="p">)</span> <span class="o">-</span> <span class="n">conjugate</span><span class="p">(</span><span class="n">S</span><span class="o">.</span><span class="n">T</span><span class="p">)</span> <span class="o">*</span> <span class="n">E</span>
+            <span class="k">del</span> <span class="n">P</span><span class="p">,</span> <span class="n">S</span>
+
+        <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="n">tab</span> <span class="o">=</span> <span class="n">solve</span><span class="p">(</span><span class="n">GB</span><span class="p">,</span> <span class="n">ab2</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">shape</span><span class="p">)</span>
+
+            <span class="c1"># Update bulk Green function</span>
+            <span class="n">subtract</span><span class="p">(</span><span class="n">GB</span><span class="p">,</span> <span class="n">dot</span><span class="p">(</span><span class="n">alpha</span><span class="p">,</span> <span class="n">tab</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">,</span> <span class="p">:]),</span> <span class="n">out</span><span class="o">=</span><span class="n">GB</span><span class="p">)</span>
+            <span class="n">subtract</span><span class="p">(</span><span class="n">GB</span><span class="p">,</span> <span class="n">dot</span><span class="p">(</span><span class="n">beta</span><span class="p">,</span> <span class="n">tab</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">,</span> <span class="p">:]),</span> <span class="n">out</span><span class="o">=</span><span class="n">GB</span><span class="p">)</span>
+
+            <span class="c1"># Update forward/backward</span>
+            <span class="n">alpha</span><span class="p">[:,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">dot</span><span class="p">(</span><span class="n">alpha</span><span class="p">,</span> <span class="n">tab</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">,</span> <span class="p">:])</span>
+            <span class="n">beta</span><span class="p">[:,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">dot</span><span class="p">(</span><span class="n">beta</span><span class="p">,</span> <span class="n">tab</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">,</span> <span class="p">:])</span>
+
+            <span class="c1"># Convergence criteria, it could be stricter</span>
+            <span class="k">if</span> <span class="n">_abs</span><span class="p">(</span><span class="n">alpha</span><span class="p">)</span><span class="o">.</span><span class="n">max</span><span class="p">()</span> <span class="o">&lt;</span> <span class="n">eps</span><span class="p">:</span>
+                <span class="c1"># Return the pristine Green function</span>
+                <span class="k">del</span> <span class="n">ab</span><span class="p">,</span> <span class="n">alpha</span><span class="p">,</span> <span class="n">beta</span><span class="p">,</span> <span class="n">ab2</span><span class="p">,</span> <span class="n">tab</span>
+                <span class="k">return</span> <span class="n">inv</span><span class="p">(</span><span class="n">GB</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="o">+</span><span class="s1">&#39;.green could not converge Green function calculation&#39;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="RecursiveSI.self_energy"><a class="viewcode-back" href="../../../api-generated/sisl.physics.RecursiveSI.html#sisl.physics.RecursiveSI.self_energy">[docs]</a>    <span class="k">def</span> <span class="nf">self_energy</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">E</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">eps</span><span class="o">=</span><span class="mf">1e-14</span><span class="p">,</span> <span class="n">bulk</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="sa">r</span><span class="sd">&quot;&quot;&quot; Return a dense matrix with the self-energy at energy `E` and k-point `k` (default Gamma).</span>
 
 <span class="sd">        Parameters</span>
@@ -339,8 +402,7 @@
 <span class="sd">          energy at which the calculation will take place</span>
 <span class="sd">        k : array_like, optional</span>
 <span class="sd">          k-point at which the self-energy should be evaluated.</span>
-<span class="sd">          the k-point should be in units of the reciprocal lattice vectors, and</span>
-<span class="sd">          the semi-infinite component will be automatically set to zero.</span>
+<span class="sd">          the k-point should be in units of the reciprocal lattice vectors.</span>
 <span class="sd">        dtype : numpy.dtype</span>
 <span class="sd">          the resulting data type</span>
 <span class="sd">        eps : float, optional</span>
@@ -359,7 +421,7 @@
             <span class="n">E</span> <span class="o">=</span> <span class="n">E</span><span class="o">.</span><span class="n">real</span> <span class="o">+</span> <span class="mi">1</span><span class="n">j</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">eta</span>
 
         <span class="c1"># Get k-point</span>
-        <span class="n">k</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_correct_k</span><span class="p">(</span><span class="n">k</span><span class="p">)</span>
+        <span class="n">k</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">asarrayd</span><span class="p">(</span><span class="n">k</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="n">dtype</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">dtype</span> <span class="o">=</span> <span class="n">complex128</span>
@@ -426,7 +488,7 @@
 
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="o">+</span><span class="s1">&#39;: could not converge self-energy calculation&#39;</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="RecursiveSI.self_energy_lr"><a class="viewcode-back" href="../../../api-generated/sisl.physics.RecursiveSI.html#sisl.physics.RecursiveSI.self_energy_lr">[docs]</a>    <span class="k">def</span> <span class="nf">self_energy_lr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">E</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">eps</span><span class="o">=</span><span class="mf">1e-14</span><span class="p">,</span> <span class="n">bulk</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<div class="viewcode-block" id="RecursiveSI.self_energy_lr"><a class="viewcode-back" href="../../../api-generated/sisl.physics.RecursiveSI.html#sisl.physics.RecursiveSI.self_energy_lr">[docs]</a>    <span class="k">def</span> <span class="nf">self_energy_lr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">E</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">eps</span><span class="o">=</span><span class="mf">1e-14</span><span class="p">,</span> <span class="n">bulk</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="sa">r</span><span class="sd">&quot;&quot;&quot; Return two dense matrices with the left/right self-energy at energy `E` and k-point `k` (default Gamma).</span>
 
 <span class="sd">        Note calculating the LR self-energies simultaneously requires that their chemical potentials are the same.</span>
@@ -438,8 +500,7 @@
 <span class="sd">          energy at which the calculation will take place, if complex, the hosting ``eta`` won&#39;t be used.</span>
 <span class="sd">        k : array_like, optional</span>
 <span class="sd">          k-point at which the self-energy should be evaluated.</span>
-<span class="sd">          the k-point should be in units of the reciprocal lattice vectors, and</span>
-<span class="sd">          the semi-infinite component will be automatically set to zero.</span>
+<span class="sd">          the k-point should be in units of the reciprocal lattice vectors.</span>
 <span class="sd">        dtype : numpy.dtype, optional</span>
 <span class="sd">          the resulting data type, default to ``np.complex128``</span>
 <span class="sd">        eps : float, optional</span>
@@ -459,7 +520,7 @@
             <span class="n">E</span> <span class="o">=</span> <span class="n">E</span><span class="o">.</span><span class="n">real</span> <span class="o">+</span> <span class="mi">1</span><span class="n">j</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">eta</span>
 
         <span class="c1"># Get k-point</span>
-        <span class="n">k</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_correct_k</span><span class="p">(</span><span class="n">k</span><span class="p">)</span>
+        <span class="n">k</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">asarrayd</span><span class="p">(</span><span class="n">k</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="n">dtype</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">dtype</span> <span class="o">=</span> <span class="n">complex128</span>
@@ -551,17 +612,15 @@
 <span class="sd">        a physical object from which to calculate the real-space self-energy.</span>
 <span class="sd">        The parent object *must* have only 3 supercells along the direction where</span>
 <span class="sd">        self-energies are used.</span>
-
-<span class="sd">    unfold : (3,) of int</span>
-<span class="sd">        number of times the `parent` structure is tiled along each direction</span>
-<span class="sd">        The resulting Green function/self-energy ordering is always tiled along</span>
-<span class="sd">        the semi-infinite direction first, and then the transverse direction.</span>
-
 <span class="sd">    semi_axis : int</span>
 <span class="sd">        semi-infinite direction (where self-energies are used and thus *exact* precision)</span>
 <span class="sd">    k_axes : array_like of int</span>
 <span class="sd">        the axes where k-points are desired. 1 or 2 values are required and the `semi_axis`</span>
 <span class="sd">        cannot be one of them</span>
+<span class="sd">    unfold : (3,) of int</span>
+<span class="sd">        number of times the `parent` structure is tiled along each direction</span>
+<span class="sd">        The resulting Green function/self-energy ordering is always tiled along</span>
+<span class="sd">        the semi-infinite direction first, and then the transverse direction.</span>
 <span class="sd">    eta : float, optional</span>
 <span class="sd">        imaginary part in the self-energy calculations (default 1e-4 eV)</span>
 <span class="sd">    dk : float, optional</span>
@@ -574,19 +633,12 @@
 <span class="sd">        whether time-reversal symmetry is used in the BrillouinZone integration, default</span>
 <span class="sd">        to true.</span>
 
-<span class="sd">    Notes</span>
-<span class="sd">    -----</span>
-<span class="sd">    Once created it is vital that `initialize` is called before calculating the real-space Green function.</span>
-<span class="sd">    Once done, memory can be saved by issuing `clear`.</span>
-<span class="sd">    The basic procedure is:</span>
-
 <span class="sd">    Examples</span>
 <span class="sd">    --------</span>
 <span class="sd">    &gt;&gt;&gt; graphene = geom.graphene()</span>
 <span class="sd">    &gt;&gt;&gt; H = Hamiltonian(graphene)</span>
 <span class="sd">    &gt;&gt;&gt; H.construct([(0.1, 1.44), (0, -2.7)])</span>
-<span class="sd">    &gt;&gt;&gt; rse = RealSpaceSE(H, (3, 4, 1))</span>
-<span class="sd">    &gt;&gt;&gt; rse.initialize()</span>
+<span class="sd">    &gt;&gt;&gt; rse = RealSpaceSE(H, 0, 1, (3, 4, 1))</span>
 <span class="sd">    &gt;&gt;&gt; rse.green(0.1)</span>
 
 <span class="sd">    The Brillouin zone integration is determined naturally.</span>
@@ -594,8 +646,8 @@
 <span class="sd">    &gt;&gt;&gt; graphene = geom.graphene()</span>
 <span class="sd">    &gt;&gt;&gt; H = Hamiltonian(graphene)</span>
 <span class="sd">    &gt;&gt;&gt; H.construct([(0.1, 1.44), (0, -2.7)])</span>
-<span class="sd">    &gt;&gt;&gt; rse = RealSpaceSE(H, (3, 4, 1))</span>
-<span class="sd">    &gt;&gt;&gt; rse.update_option(semi_axis=0, k_axes=[1], eta=1e-3, bz=MonkhorstPack(H, [1, 1000, 1]))</span>
+<span class="sd">    &gt;&gt;&gt; rse = RealSpaceSE(H, 0, 1, (3, 4, 1))</span>
+<span class="sd">    &gt;&gt;&gt; rse.set_options(eta=1e-3, bz=MonkhorstPack(H, [1, 1000, 1]))</span>
 <span class="sd">    &gt;&gt;&gt; rse.initialize()</span>
 <span class="sd">    &gt;&gt;&gt; rse.green(0.1) # eta = 1e-3</span>
 <span class="sd">    &gt;&gt;&gt; rse.green(0.1 + 1j * 1e-4) # eta = 1e-4</span>
@@ -603,27 +655,39 @@
 <span class="sd">    Manually specify Brillouin zone integration and default :math:`\eta` value.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="p">,</span> <span class="n">unfold</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="o">**</span><span class="n">options</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="p">,</span> <span class="n">semi_axis</span><span class="p">,</span> <span class="n">k_axes</span><span class="p">,</span> <span class="n">unfold</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="o">**</span><span class="n">options</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Initialize real-space self-energy calculator &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">parent</span> <span class="o">=</span> <span class="n">parent</span>
+
+        <span class="c1"># Store axes</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_semi_axis</span> <span class="o">=</span> <span class="n">semi_axis</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_k_axes</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">_a</span><span class="o">.</span><span class="n">asarrayi</span><span class="p">(</span><span class="n">k_axes</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">())</span>
+
+        <span class="c1"># Check axis</span>
+        <span class="n">s_ax</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_semi_axis</span>
+        <span class="n">k_ax</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_k_axes</span>
+        <span class="k">if</span> <span class="n">s_ax</span> <span class="ow">in</span> <span class="n">k_ax</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39; found the self-energy direction to be &#39;</span>
+                             <span class="s1">&#39;the same as one of the k-axes, this is not allowed.&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">nsc</span><span class="p">[</span><span class="n">k_ax</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mi">3</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39; found k-axes without periodicity. &#39;</span>
+                             <span class="s1">&#39;Correct k_axes via .set_options.&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">nsc</span><span class="p">[</span><span class="n">s_ax</span><span class="p">]</span> <span class="o">!=</span> <span class="mi">3</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39; found the self-energy direction to be &#39;</span>
+                             <span class="s1">&#39;incompatible with the parent object. It *must* have 3 supercells along the &#39;</span>
+                             <span class="s1">&#39;semi-infinite direction.&#39;</span><span class="p">)</span>
 
         <span class="c1"># Local variables for the completion of the details</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_unfold</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">arrayi</span><span class="p">([</span><span class="nb">max</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">un</span><span class="p">)</span> <span class="k">for</span> <span class="n">un</span> <span class="ow">in</span> <span class="n">unfold</span><span class="p">])</span>
 
-        <span class="c1"># Guess on the axes used</span>
-        <span class="n">idx</span> <span class="o">=</span> <span class="p">(</span><span class="n">parent</span><span class="o">.</span><span class="n">nsc</span> <span class="o">==</span> <span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">nonzero</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
-        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">idx</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
-            <span class="n">axes</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="n">_a</span><span class="o">.</span><span class="n">arangei</span><span class="p">(</span><span class="mi">3</span><span class="p">),</span> <span class="n">idx</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">axes</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="c1"># Check that the unfold is 1 for the non-k/semi axes</span>
+        <span class="n">check_unfold</span> <span class="o">=</span> <span class="n">array_replace</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_unfold</span><span class="p">,</span> <span class="p">(</span><span class="n">k_ax</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="p">(</span><span class="n">s_ax</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">check_unfold</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39; found unfolding along a non-k, non-semi &#39;</span>
+                             <span class="s1">&#39;direction. Please correct your settings by having all unfolded axes in either &#39;</span>
+                             <span class="s1">&#39;a semi-infinite or k-averaged direction.&#39;</span><span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">_options</span> <span class="o">=</span> <span class="p">{</span>
-            <span class="c1"># the axes to use (semi_direction and k_direction *must* be in this array)</span>
-            <span class="s1">&#39;axes&#39;</span><span class="p">:</span> <span class="n">axes</span><span class="p">,</span>
-            <span class="c1"># the direction of the self-energy (removed in BZ)</span>
-            <span class="s1">&#39;semi_axis&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
-            <span class="c1"># the direction of the k-points (to be integrated), can be one or two axes</span>
-            <span class="s1">&#39;k_axes&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
             <span class="c1"># fineness of the integration k-grid [Ang]</span>
             <span class="s1">&#39;dk&#39;</span><span class="p">:</span> <span class="mi">1000</span><span class="p">,</span>
             <span class="c1"># whether TRS is used (G + G.T) * 0.5</span>
@@ -633,20 +697,16 @@
             <span class="c1"># The BrillouinZone used for integration</span>
             <span class="s1">&#39;bz&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
         <span class="p">}</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">update_option</span><span class="p">(</span><span class="o">**</span><span class="n">options</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_options</span><span class="p">(</span><span class="o">**</span><span class="n">options</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">initialize</span><span class="p">()</span>
 
-    <span class="k">def</span> <span class="nf">update_option</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">options</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">set_options</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">options</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Update options in the real-space self-energy</span>
 
 <span class="sd">        After updating options one should re-call `initialize` for consistency.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
-<span class="sd">        semi_axis : int</span>
-<span class="sd">            semi-infinite direction (where self-energies are used and thus *exact* precision)</span>
-<span class="sd">        k_axes : array_like of int</span>
-<span class="sd">            the axes where k-points are desired. 1 or 2 values are required and the `semi_axis`</span>
-<span class="sd">            cannot be one of them</span>
 <span class="sd">        eta : float, optional</span>
 <span class="sd">            imaginary part in the self-energy calculations (default 1e-4 eV)</span>
 <span class="sd">        dk : float, optional</span>
@@ -660,30 +720,25 @@
 <span class="sd">            to true.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_options</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">options</span><span class="p">)</span>
-        <span class="k">for</span> <span class="n">ax</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;k_axes&#39;</span><span class="p">,</span> <span class="s1">&#39;axes&#39;</span><span class="p">]:</span>
-            <span class="n">opt</span> <span class="o">=</span> <span class="n">options</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
-            <span class="k">if</span> <span class="ow">not</span> <span class="n">opt</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_options</span><span class="p">[</span><span class="n">ax</span><span class="p">]</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">arrayi</span><span class="p">(</span><span class="n">opt</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
 
     <span class="k">def</span> <span class="nf">real_space_parent</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Return the parent object in the real-space unfolded region &quot;&quot;&quot;</span>
-        <span class="n">opt</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_options</span>
-        <span class="n">s_ax</span> <span class="o">=</span> <span class="n">opt</span><span class="p">[</span><span class="s1">&#39;semi_axis&#39;</span><span class="p">]</span>
-        <span class="n">k_ax</span> <span class="o">=</span> <span class="n">opt</span><span class="p">[</span><span class="s1">&#39;k_axes&#39;</span><span class="p">]</span>
+        <span class="n">s_ax</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_semi_axis</span>
+        <span class="n">k_ax</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_k_axes</span>
         <span class="c1"># Always start with the semi-infinite direction, since we</span>
         <span class="c1"># Bloch expand the other directions</span>
         <span class="n">P0</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_unfold</span><span class="p">[</span><span class="n">s_ax</span><span class="p">],</span> <span class="n">s_ax</span><span class="p">)</span>
         <span class="k">for</span> <span class="n">ax</span> <span class="ow">in</span> <span class="n">k_ax</span><span class="p">:</span>
             <span class="n">P0</span> <span class="o">=</span> <span class="n">P0</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_unfold</span><span class="p">[</span><span class="n">ax</span><span class="p">],</span> <span class="n">ax</span><span class="p">)</span>
         <span class="c1"># Only specify the used axis without periodicity</span>
-        <span class="n">ones</span> <span class="o">=</span> <span class="n">P0</span><span class="o">.</span><span class="n">nsc</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
-        <span class="n">ones</span><span class="p">[</span><span class="n">s_ax</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
-        <span class="n">ones</span><span class="p">[</span><span class="n">k_ax</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
-        <span class="n">P0</span><span class="o">.</span><span class="n">set_nsc</span><span class="p">(</span><span class="n">ones</span><span class="p">)</span>
+        <span class="c1"># This will allow one to use the real-space self-energy</span>
+        <span class="c1"># for *circles*</span>
+        <span class="n">nsc</span> <span class="o">=</span> <span class="n">array_replace</span><span class="p">(</span><span class="n">P0</span><span class="o">.</span><span class="n">nsc</span><span class="p">,</span> <span class="p">(</span><span class="n">s_ax</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="p">(</span><span class="n">k_ax</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+        <span class="n">P0</span><span class="o">.</span><span class="n">set_nsc</span><span class="p">(</span><span class="n">nsc</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">P0</span>
 
     <span class="k">def</span> <span class="nf">real_space_coupling</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ret_indices</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot; Return the real-space coupling parent where they fold into the parent real-space unit cell</span>
+        <span class="sd">&quot;&quot;&quot; Real-space coupling parent where sites fold into the parent real-space unit cell</span>
 
 <span class="sd">        The resulting parent object only contains the inner-cell couplings for the elements that couple</span>
 <span class="sd">        out of the real-space matrix.</span>
@@ -698,23 +753,18 @@
 <span class="sd">        parent : parent object only retaining the elements of the atoms that couple out of the primary unit cell</span>
 <span class="sd">        atom_index : indices for the atoms that couple out of the geometry (`ret_indices`)</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">opt</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_options</span>
-        <span class="n">s_ax</span> <span class="o">=</span> <span class="n">opt</span><span class="p">[</span><span class="s1">&#39;semi_axis&#39;</span><span class="p">]</span>
-        <span class="n">k_ax</span> <span class="o">=</span> <span class="n">opt</span><span class="p">[</span><span class="s1">&#39;k_axes&#39;</span><span class="p">]</span>
+        <span class="n">s_ax</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_semi_axis</span>
+        <span class="n">k_ax</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_k_axes</span>
+
+        <span class="c1"># If there are any axes that still has k-point sampling (for e.g. circles)</span>
+        <span class="c1"># we should remove that periodicity before figuring out which atoms that connect out.</span>
+        <span class="c1"># This is because the self-energy should *only* remain on the sites connecting</span>
+        <span class="c1"># out of the self-energy used. The k-axis retains all atoms, per see.</span>
         <span class="n">PC</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_unfold</span><span class="p">[</span><span class="n">s_ax</span><span class="p">],</span> <span class="n">s_ax</span><span class="p">)</span>
         <span class="k">for</span> <span class="n">ax</span> <span class="ow">in</span> <span class="n">k_ax</span><span class="p">:</span>
             <span class="n">PC</span> <span class="o">=</span> <span class="n">PC</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_unfold</span><span class="p">[</span><span class="n">ax</span><span class="p">],</span> <span class="n">ax</span><span class="p">)</span>
 
-        <span class="c1"># If there are any axes that still has k-point sampling (for e.g. circles)</span>
-        <span class="c1"># we should remove that periodicity before figuring out which atoms that connect out.</span>
-        <span class="c1"># This is because the self-energy should *only* remain on the sites connecting</span>
-        <span class="c1"># out of the self-energy used. The k-axis retains all atoms, per see.</span>
-        <span class="n">axes</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">s_ax</span><span class="p">)</span> <span class="o">+</span> <span class="n">k_ax</span>
-        <span class="n">axes</span><span class="o">.</span><span class="n">sort</span><span class="p">()</span>
-        <span class="n">nsc</span> <span class="o">=</span> <span class="n">PC</span><span class="o">.</span><span class="n">nsc</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
-        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">3</span><span class="p">):</span>
-            <span class="k">if</span> <span class="n">i</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">axes</span><span class="p">:</span>
-                <span class="n">nsc</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="n">nsc</span> <span class="o">=</span> <span class="n">array_replace</span><span class="p">(</span><span class="n">PC</span><span class="o">.</span><span class="n">nsc</span><span class="p">,</span> <span class="p">(</span><span class="n">s_ax</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span> <span class="p">(</span><span class="n">k_ax</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span> <span class="n">other</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
         <span class="n">PC</span><span class="o">.</span><span class="n">set_nsc</span><span class="p">(</span><span class="n">nsc</span><span class="p">)</span>
 
         <span class="c1"># Geometry short-hand</span>
@@ -730,515 +780,18 @@
         <span class="c1"># Extract the connecting orbitals and reduce them to unique atomic indices</span>
         <span class="n">orbs</span> <span class="o">=</span> <span class="n">g</span><span class="o">.</span><span class="n">osc2uc</span><span class="p">(</span><span class="n">csr</span><span class="o">.</span><span class="n">col</span><span class="p">[</span><span class="n">array_arange</span><span class="p">(</span><span class="n">csr</span><span class="o">.</span><span class="n">ptr</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">n</span><span class="o">=</span><span class="n">csr</span><span class="o">.</span><span class="n">ncol</span><span class="p">)],</span> <span class="kc">True</span><span class="p">)</span>
         <span class="n">atom_idx</span> <span class="o">=</span> <span class="n">g</span><span class="o">.</span><span class="n">o2a</span><span class="p">(</span><span class="n">orbs</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+
         <span class="c1"># Only retain coupling atoms</span>
-        <span class="n">PC</span> <span class="o">=</span> <span class="n">PC</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="n">atom_idx</span><span class="p">)</span>
-
-        <span class="c1"># Remove all out-of-cell couplings such that we only have inner-cell couplings.</span>
-        <span class="n">nsc</span> <span class="o">=</span> <span class="n">PC</span><span class="o">.</span><span class="n">nsc</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
-        <span class="n">nsc</span><span class="p">[</span><span class="n">s_ax</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
-        <span class="n">nsc</span><span class="p">[</span><span class="n">k_ax</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
-        <span class="n">PC</span><span class="o">.</span><span class="n">set_nsc</span><span class="p">(</span><span class="n">nsc</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">ret_indices</span><span class="p">:</span>
-            <span class="k">return</span> <span class="n">PC</span><span class="p">,</span> <span class="n">atom_idx</span>
-        <span class="k">return</span> <span class="n">PC</span>
-
-    <span class="k">def</span> <span class="nf">initialize</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot; Initialize the internal data-arrays used for efficient calculation of the real-space quantities</span>
-
-<span class="sd">        This method should first be called *after* all options has been specified.</span>
-
-<span class="sd">        If the user hasn&#39;t specified the ``bz`` value as an option this method will update the internal</span>
-<span class="sd">        integration Brillouin zone based on the ``dk`` option.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">def</span> <span class="nf">_ax_str</span><span class="p">(</span><span class="n">axes</span><span class="p">,</span> <span class="n">delim</span><span class="o">=</span><span class="s1">&#39; / &#39;</span><span class="p">):</span>
-            <span class="n">ABC</span> <span class="o">=</span> <span class="s1">&#39;ABC&#39;</span>
-            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">axes</span><span class="p">,</span> <span class="n">Integral</span><span class="p">):</span>
-                <span class="k">return</span> <span class="n">ABC</span><span class="p">[</span><span class="n">axes</span><span class="p">]</span>
-            <span class="n">s</span> <span class="o">=</span> <span class="n">ABC</span><span class="p">[</span><span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span>
-            <span class="k">for</span> <span class="n">ax</span> <span class="ow">in</span> <span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">:]:</span>
-                <span class="n">s</span> <span class="o">+=</span> <span class="n">delim</span> <span class="o">+</span> <span class="n">ABC</span><span class="p">[</span><span class="n">ax</span><span class="p">]</span>
-            <span class="k">return</span> <span class="n">s</span>
-
-        <span class="c1"># Try and guess the directions</span>
-        <span class="n">unfold</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_unfold</span>
-        <span class="n">nsc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">nsc</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
-        <span class="n">axes</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_options</span><span class="p">[</span><span class="s1">&#39;axes&#39;</span><span class="p">]</span>
-        <span class="k">if</span> <span class="n">axes</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">if</span> <span class="n">nsc</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
-                <span class="n">axes</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">arrayi</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span>
-            <span class="k">elif</span> <span class="n">nsc</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
-                <span class="n">axes</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">arrayi</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">])</span>
-            <span class="k">elif</span> <span class="n">nsc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
-                <span class="n">axes</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">arrayi</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">])</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="n">axes</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">arangei</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_options</span><span class="p">[</span><span class="s1">&#39;axes&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">axes</span>
-
-        <span class="c1"># Check that we have periodicity along the chosen axes</span>
-        <span class="n">nsc_sum</span> <span class="o">=</span> <span class="n">nsc</span><span class="p">[</span><span class="n">axes</span><span class="p">]</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
-        <span class="k">if</span> <span class="n">nsc_sum</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39;.initialize found no periodic directions &#39;</span>
-                             <span class="s1">&#39;for the chosen integration axes: </span><span class="si">{}</span><span class="s1">.&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">_ax_str</span><span class="p">(</span><span class="n">axes</span><span class="p">)))</span>
-        <span class="k">elif</span> <span class="n">nsc_sum</span> <span class="o">&lt;</span> <span class="mi">6</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39;.initialize found one periodic direction &#39;</span>
-                              <span class="s1">&#39;out of two for the chosen integration axes: </span><span class="si">{}</span><span class="s1">. &#39;</span>
-                              <span class="s1">&#39;For 1D systems the regular surface self-energy method is appropriate.&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">_ax_str</span><span class="p">(</span><span class="n">axes</span><span class="p">)))</span>
-
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_options</span><span class="p">[</span><span class="s1">&#39;semi_axis&#39;</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">_options</span><span class="p">[</span><span class="s1">&#39;k_axes&#39;</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="c1"># None of the axis has been described</span>
-            <span class="n">sc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">sc</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_unfold</span>
-            <span class="n">i3</span> <span class="o">=</span> <span class="p">(</span><span class="n">nsc</span><span class="p">[</span><span class="n">axes</span><span class="p">]</span> <span class="o">==</span> <span class="mi">3</span><span class="p">)</span><span class="o">.</span><span class="n">nonzero</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
-            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">i3</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39;.initialize could not find a suitable semi-infinite direction, all used directions have nsc != 3&#39;</span><span class="p">)</span>
-            <span class="n">s_ax</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argmin</span><span class="p">(</span><span class="n">fnorm</span><span class="p">(</span><span class="n">sc</span><span class="o">.</span><span class="n">rcell</span><span class="p">)[</span><span class="n">axes</span><span class="p">[</span><span class="n">i3</span><span class="p">]])</span>
-            <span class="c1"># Now determine the k_axes</span>
-            <span class="n">k_ax</span> <span class="o">=</span> <span class="n">axes</span><span class="p">[</span><span class="n">axes</span> <span class="o">!=</span> <span class="n">s_ax</span><span class="p">]</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_options</span><span class="p">[</span><span class="s1">&#39;semi_axis&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">s_ax</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_options</span><span class="p">[</span><span class="s1">&#39;k_axes&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">k_ax</span>
-
-        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">_options</span><span class="p">[</span><span class="s1">&#39;k_axes&#39;</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">s_ax</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_options</span><span class="p">[</span><span class="s1">&#39;semi_axis&#39;</span><span class="p">]</span>
-            <span class="n">k_ax</span> <span class="o">=</span> <span class="n">axes</span><span class="p">[</span><span class="n">axes</span> <span class="o">!=</span> <span class="n">s_ax</span><span class="p">]</span>
-            <span class="k">if</span> <span class="n">k_ax</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39;.initialize could not find suitable k-direction(s).&#39;</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_options</span><span class="p">[</span><span class="s1">&#39;k_axes&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">k_ax</span>
-
-        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">_options</span><span class="p">[</span><span class="s1">&#39;semi_axis&#39;</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">k_ax</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_options</span><span class="p">[</span><span class="s1">&#39;k_axes&#39;</span><span class="p">]</span>
-            <span class="n">s_ax</span> <span class="o">=</span> <span class="kc">None</span>
-            <span class="k">for</span> <span class="n">ax</span> <span class="ow">in</span> <span class="n">axes</span><span class="p">:</span>
-                <span class="k">if</span> <span class="ow">not</span> <span class="n">ax</span> <span class="ow">in</span> <span class="n">k_ax</span><span class="p">:</span>
-                    <span class="n">s_ax</span> <span class="o">=</span> <span class="n">ax</span>
-            <span class="k">if</span> <span class="n">s_ax</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39;.initialize could not find a suitable semi-infinite direction, the k-axis seems to utilize all directions?&#39;</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_options</span><span class="p">[</span><span class="s1">&#39;semi_axis&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">s_ax</span>
-
-        <span class="c1"># The k-axis HAS to be sorted because this is the way the Bloch expansion works</span>
-        <span class="n">k_ax</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_options</span><span class="p">[</span><span class="s1">&#39;k_axes&#39;</span><span class="p">])</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_options</span><span class="p">[</span><span class="s1">&#39;k_axes&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">k_ax</span>
-        <span class="n">s_ax</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_options</span><span class="p">[</span><span class="s1">&#39;semi_axis&#39;</span><span class="p">]</span>
-        <span class="k">if</span> <span class="n">s_ax</span> <span class="ow">in</span> <span class="n">k_ax</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39;.initialize found the self-energy direction to be &#39;</span>
-                             <span class="s1">&#39;the same as one of the k-axes, this is not allowed.&#39;</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">nsc</span><span class="p">[</span><span class="n">s_ax</span><span class="p">]</span> <span class="o">!=</span> <span class="mi">3</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39;.initialize found the self-energy direction to be &#39;</span>
-                             <span class="s1">&#39;incompatible with the parent object. It *must* have 3 supercells along the &#39;</span>
-                             <span class="s1">&#39;semi-infinite direction.&#39;</span><span class="p">)</span>
-
-        <span class="n">P0</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">real_space_parent</span><span class="p">()</span>
-        <span class="n">V_atoms</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">real_space_coupling</span><span class="p">(</span><span class="kc">True</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_calc</span> <span class="o">=</span> <span class="p">{</span>
-            <span class="c1"># The below algorithm requires the direction to be negative</span>
-            <span class="c1"># if changed, B, C should be reversed below</span>
-            <span class="s1">&#39;SE&#39;</span><span class="p">:</span> <span class="n">RecursiveSI</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span> <span class="s1">&#39;-&#39;</span> <span class="o">+</span> <span class="s1">&#39;ABC&#39;</span><span class="p">[</span><span class="n">s_ax</span><span class="p">],</span> <span class="n">eta</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_options</span><span class="p">[</span><span class="s1">&#39;eta&#39;</span><span class="p">]),</span>
-            <span class="c1"># Used to calculate the real-space self-energy</span>
-            <span class="s1">&#39;P0&#39;</span><span class="p">:</span> <span class="n">P0</span><span class="o">.</span><span class="n">Pk</span><span class="p">,</span>
-            <span class="s1">&#39;S0&#39;</span><span class="p">:</span> <span class="n">P0</span><span class="o">.</span><span class="n">Sk</span><span class="p">,</span>
-            <span class="c1"># Orbitals in the coupling atoms</span>
-            <span class="s1">&#39;orbs&#39;</span><span class="p">:</span> <span class="n">P0</span><span class="o">.</span><span class="n">a2o</span><span class="p">(</span><span class="n">V_atoms</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
-        <span class="p">}</span>
-
-        <span class="c1"># Update the BrillouinZone integration grid in case it isn&#39;t specified</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_options</span><span class="p">[</span><span class="s1">&#39;bz&#39;</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="c1"># Update the integration grid</span>
-            <span class="c1"># Note this integration grid is based on the big system.</span>
-            <span class="n">sc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">sc</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_unfold</span>
-            <span class="n">rcell</span> <span class="o">=</span> <span class="n">fnorm</span><span class="p">(</span><span class="n">sc</span><span class="o">.</span><span class="n">rcell</span><span class="p">)[</span><span class="n">k_ax</span><span class="p">]</span>
-            <span class="n">nk</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">onesi</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
-            <span class="n">nk</span><span class="p">[</span><span class="n">k_ax</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_options</span><span class="p">[</span><span class="s1">&#39;dk&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="n">rcell</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_options</span><span class="p">[</span><span class="s1">&#39;bz&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">MonkhorstPack</span><span class="p">(</span><span class="n">sc</span><span class="p">,</span> <span class="n">nk</span><span class="p">,</span> <span class="n">trs</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_options</span><span class="p">[</span><span class="s1">&#39;trs&#39;</span><span class="p">])</span>
-            <span class="n">info</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39;.initialize determined the number of k-points: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="s1">&#39; / &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="n">nk</span><span class="p">[</span><span class="n">k_ax</span><span class="p">]))))</span>
-
-    <span class="k">def</span> <span class="nf">self_energy</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">E</span><span class="p">,</span> <span class="n">bulk</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">coupling</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-        <span class="sa">r</span><span class="sd">&quot;&quot;&quot; Calculate the real-space self-energy</span>
-
-<span class="sd">        The real space self-energy is calculated via:</span>
-
-<span class="sd">        .. math::</span>
-<span class="sd">            \boldsymbol\Sigma^{\mathcal{R}}(E) = \mathbf S^{\mathcal{R}} E - \mathbf H^{\mathcal{R}}</span>
-<span class="sd">               - \sum_{\mathbf k} \mathbf G_{\mathbf k}(E)</span>
-
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        E : float/complex</span>
-<span class="sd">           energy to evaluate the real-space self-energy at</span>
-<span class="sd">        bulk : bool, optional</span>
-<span class="sd">           if true, :math:`\mathbf S^{\mathcal{R}} E - \mathbf H^{\mathcal{R}} - \boldsymbol\Sigma^\mathcal{R}`</span>
-<span class="sd">           is returned, otherwise :math:`\boldsymbol\Sigma^\mathcal{R}` is returned</span>
-<span class="sd">        dtype : numpy.dtype, optional</span>
-<span class="sd">          the resulting data type, default to ``np.complex128``</span>
-<span class="sd">        coupling: bool, optional</span>
-<span class="sd">           if True, only the self-energy terms located on the coupling geometry (`coupling_geometry`)</span>
-<span class="sd">           are returned</span>
-<span class="sd">        **kwargs : dict, optional</span>
-<span class="sd">           arguments passed directly to the ``self.parent.Pk`` method (not ``self.parent.Sk``), for instance ``spin``</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="n">dtype</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">dtype</span> <span class="o">=</span> <span class="n">complex128</span>
-        <span class="k">if</span> <span class="n">E</span><span class="o">.</span><span class="n">imag</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="n">E</span> <span class="o">=</span> <span class="n">E</span><span class="o">.</span><span class="n">real</span> <span class="o">+</span> <span class="mi">1</span><span class="n">j</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_options</span><span class="p">[</span><span class="s1">&#39;eta&#39;</span><span class="p">]</span>
-        <span class="n">G</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">green</span><span class="p">(</span><span class="n">E</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">coupling</span><span class="p">:</span>
-            <span class="n">orbs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_calc</span><span class="p">[</span><span class="s1">&#39;orbs&#39;</span><span class="p">]</span>
-            <span class="n">iorbs</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">arangei</span><span class="p">(</span><span class="n">orbs</span><span class="o">.</span><span class="n">size</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
-            <span class="n">I</span> <span class="o">=</span> <span class="n">zeros</span><span class="p">([</span><span class="n">G</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">orbs</span><span class="o">.</span><span class="n">size</span><span class="p">],</span> <span class="n">dtype</span><span class="p">)</span>
-            <span class="c1"># Set diagonal</span>
-            <span class="n">I</span><span class="p">[</span><span class="n">orbs</span><span class="o">.</span><span class="n">ravel</span><span class="p">(),</span> <span class="n">iorbs</span><span class="o">.</span><span class="n">ravel</span><span class="p">()]</span> <span class="o">=</span> <span class="mf">1.</span>
-            <span class="k">if</span> <span class="n">bulk</span><span class="p">:</span>
-                <span class="k">return</span> <span class="n">solve</span><span class="p">(</span><span class="n">G</span><span class="p">,</span> <span class="n">I</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="kc">True</span><span class="p">)[</span><span class="n">orbs</span><span class="p">,</span> <span class="n">iorbs</span><span class="p">]</span>
-            <span class="k">return</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_calc</span><span class="p">[</span><span class="s1">&#39;S0&#39;</span><span class="p">](</span><span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span> <span class="o">*</span> <span class="n">E</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">_calc</span><span class="p">[</span><span class="s1">&#39;P0&#39;</span><span class="p">](</span><span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">))[</span><span class="n">orbs</span><span class="p">,</span> <span class="n">orbs</span><span class="o">.</span><span class="n">T</span><span class="p">]</span><span class="o">.</span><span class="n">toarray</span><span class="p">()</span> \
-                <span class="o">-</span> <span class="n">solve</span><span class="p">(</span><span class="n">G</span><span class="p">,</span> <span class="n">I</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="kc">True</span><span class="p">)[</span><span class="n">orbs</span><span class="p">,</span> <span class="n">iorbs</span><span class="p">]</span>
-        <span class="k">if</span> <span class="n">bulk</span><span class="p">:</span>
-            <span class="k">return</span> <span class="n">inv</span><span class="p">(</span><span class="n">G</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
-        <span class="k">return</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_calc</span><span class="p">[</span><span class="s1">&#39;S0&#39;</span><span class="p">](</span><span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span> <span class="o">*</span> <span class="n">E</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">_calc</span><span class="p">[</span><span class="s1">&#39;P0&#39;</span><span class="p">](</span><span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">))</span><span class="o">.</span><span class="n">toarray</span><span class="p">()</span> <span class="o">-</span> <span class="n">inv</span><span class="p">(</span><span class="n">G</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
-
-    <span class="k">def</span> <span class="nf">green</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">E</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-        <span class="sa">r</span><span class="sd">&quot;&quot;&quot; Calculate the real-space Green function</span>
-
-<span class="sd">        The real space Green function is calculated via:</span>
-
-<span class="sd">        .. math::</span>
-<span class="sd">            \mathbf G^\mathcal{R}(E) = \sum_{\mathbf k} \mathbf G_{\mathbf k}(E)</span>
-
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        E : float/complex</span>
-<span class="sd">           energy to evaluate the real-space Green function at</span>
-<span class="sd">        dtype : numpy.dtype, optional</span>
-<span class="sd">          the resulting data type, default to ``np.complex128``</span>
-<span class="sd">        **kwargs : dict, optional</span>
-<span class="sd">           arguments passed directly to the ``self.parent.Pk`` method (not ``self.parent.Sk``), for instance ``spin``</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">opt</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_options</span>
-
-        <span class="c1"># Retrieve integration k-grid</span>
-        <span class="n">bz</span> <span class="o">=</span> <span class="n">opt</span><span class="p">[</span><span class="s1">&#39;bz&#39;</span><span class="p">]</span>
-        <span class="k">try</span><span class="p">:</span>
-            <span class="c1"># If the BZ implements TRS (MonkhorstPack) then force it</span>
-            <span class="n">trs</span> <span class="o">=</span> <span class="n">bz</span><span class="o">.</span><span class="n">_trs</span>
-        <span class="k">except</span><span class="p">:</span>
-            <span class="n">trs</span> <span class="o">=</span> <span class="n">opt</span><span class="p">[</span><span class="s1">&#39;trs&#39;</span><span class="p">]</span>
-
-        <span class="k">if</span> <span class="n">dtype</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">dtype</span> <span class="o">=</span> <span class="n">complex128</span>
-
-        <span class="c1"># Now we are to calculate the real-space self-energy</span>
-        <span class="k">if</span> <span class="n">E</span><span class="o">.</span><span class="n">imag</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="n">E</span> <span class="o">=</span> <span class="n">E</span><span class="o">.</span><span class="n">real</span> <span class="o">+</span> <span class="mi">1</span><span class="n">j</span> <span class="o">*</span> <span class="n">opt</span><span class="p">[</span><span class="s1">&#39;eta&#39;</span><span class="p">]</span>
-
-        <span class="c1"># Used axes</span>
-        <span class="n">s_ax</span> <span class="o">=</span> <span class="n">opt</span><span class="p">[</span><span class="s1">&#39;semi_axis&#39;</span><span class="p">]</span>
-
-        <span class="c1"># Calculate both left and right at the same time.</span>
-        <span class="n">SE</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_calc</span><span class="p">[</span><span class="s1">&#39;SE&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">self_energy_lr</span>
-
-        <span class="c1"># Define Bloch unfolding routine and number of tiles along the semi-inf direction</span>
-        <span class="n">unfold</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_unfold</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
-        <span class="n">tile</span> <span class="o">=</span> <span class="n">unfold</span><span class="p">[</span><span class="n">s_ax</span><span class="p">]</span>
-        <span class="n">unfold</span><span class="p">[</span><span class="n">s_ax</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
-        <span class="n">bloch</span> <span class="o">=</span> <span class="n">Bloch</span><span class="p">(</span><span class="n">unfold</span><span class="p">)</span>
-
-        <span class="k">if</span> <span class="n">tile</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
-            <span class="c1"># When not tiling, it can be simplified quite a bit</span>
-            <span class="n">M0</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_calc</span><span class="p">[</span><span class="s1">&#39;SE&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">spgeom0</span>
-            <span class="n">M0Pk</span> <span class="o">=</span> <span class="n">M0</span><span class="o">.</span><span class="n">Pk</span>
-            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">orthogonal</span><span class="p">:</span>
-                <span class="c1"># Orthogonal *always* identity</span>
-                <span class="n">S0E</span> <span class="o">=</span> <span class="n">identity</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">M0</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span> <span class="o">*</span> <span class="n">E</span>
-                <span class="k">def</span> <span class="nf">_calc_green</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">no</span><span class="p">,</span> <span class="n">tile</span><span class="p">,</span> <span class="n">idx0</span><span class="p">):</span>
-                    <span class="n">SL</span><span class="p">,</span> <span class="n">SR</span> <span class="o">=</span> <span class="n">SE</span><span class="p">(</span><span class="n">E</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
-                    <span class="k">return</span> <span class="n">inv</span><span class="p">(</span><span class="n">S0E</span> <span class="o">-</span> <span class="n">M0Pk</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s1">&#39;array&#39;</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-</span> <span class="n">SL</span> <span class="o">-</span> <span class="n">SR</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="n">M0Sk</span> <span class="o">=</span> <span class="n">M0</span><span class="o">.</span><span class="n">Sk</span>
-                <span class="k">def</span> <span class="nf">_calc_green</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">no</span><span class="p">,</span> <span class="n">tile</span><span class="p">,</span> <span class="n">idx0</span><span class="p">):</span>
-                    <span class="n">SL</span><span class="p">,</span> <span class="n">SR</span> <span class="o">=</span> <span class="n">SE</span><span class="p">(</span><span class="n">E</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
-                    <span class="k">return</span> <span class="n">inv</span><span class="p">(</span><span class="n">M0Sk</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s1">&#39;array&#39;</span><span class="p">)</span> <span class="o">*</span> <span class="n">E</span> <span class="o">-</span> <span class="n">M0Pk</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s1">&#39;array&#39;</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-</span> <span class="n">SL</span> <span class="o">-</span> <span class="n">SR</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
-
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">M1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_calc</span><span class="p">[</span><span class="s1">&#39;SE&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">spgeom1</span>
-            <span class="n">M1Pk</span> <span class="o">=</span> <span class="n">M1</span><span class="o">.</span><span class="n">Pk</span>
-            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">orthogonal</span><span class="p">:</span>
-                <span class="k">def</span> <span class="nf">_calc_green</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">no</span><span class="p">,</span> <span class="n">tile</span><span class="p">,</span> <span class="n">idx0</span><span class="p">):</span>
-                    <span class="c1"># Calculate left/right self-energies</span>
-                    <span class="n">Gf</span><span class="p">,</span> <span class="n">A2</span> <span class="o">=</span> <span class="n">SE</span><span class="p">(</span><span class="n">E</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">,</span> <span class="n">bulk</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="c1"># A1 == Gf, because of memory usage</span>
-                    <span class="n">B</span> <span class="o">=</span> <span class="o">-</span> <span class="n">M1Pk</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s1">&#39;array&#39;</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
-                    <span class="c1"># C = conjugate(B.T)</span>
-
-                    <span class="n">tY</span> <span class="o">=</span> <span class="o">-</span> <span class="n">solve</span><span class="p">(</span><span class="n">Gf</span><span class="p">,</span> <span class="n">conjugate</span><span class="p">(</span><span class="n">B</span><span class="o">.</span><span class="n">T</span><span class="p">),</span> <span class="kc">True</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
-                    <span class="n">Gf</span> <span class="o">=</span> <span class="n">inv</span><span class="p">(</span><span class="n">A2</span> <span class="o">+</span> <span class="n">dot</span><span class="p">(</span><span class="n">B</span><span class="p">,</span> <span class="n">tY</span><span class="p">),</span> <span class="kc">True</span><span class="p">)</span>
-                    <span class="n">tX</span> <span class="o">=</span> <span class="o">-</span> <span class="n">solve</span><span class="p">(</span><span class="n">A2</span><span class="p">,</span> <span class="n">B</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
-
-                    <span class="c1"># Since this is the pristine case, we know that</span>
-                    <span class="c1"># G11 and G22 are the same:</span>
-                    <span class="c1">#  G = [A1 + C.tX]^-1 == [A2 + B.tY]^-1</span>
-
-                    <span class="n">G</span> <span class="o">=</span> <span class="n">empty</span><span class="p">([</span><span class="n">tile</span><span class="p">,</span> <span class="n">no</span><span class="p">,</span> <span class="n">tile</span><span class="p">,</span> <span class="n">no</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span>
-                    <span class="n">G</span><span class="p">[</span><span class="n">idx0</span><span class="p">,</span> <span class="p">:,</span> <span class="n">idx0</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">Gf</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">no</span><span class="p">,</span> <span class="n">no</span><span class="p">)</span>
-                    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">tile</span><span class="p">):</span>
-                        <span class="n">G</span><span class="p">[</span><span class="n">idx0</span><span class="p">[</span><span class="n">i</span><span class="p">:],</span> <span class="p">:,</span> <span class="n">idx0</span><span class="p">[:</span><span class="o">-</span><span class="n">i</span><span class="p">],</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">dot</span><span class="p">(</span><span class="n">tX</span><span class="p">,</span> <span class="n">G</span><span class="p">[</span><span class="n">i</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="p">:,</span> <span class="mi">0</span><span class="p">,</span> <span class="p">:])</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">no</span><span class="p">,</span> <span class="n">no</span><span class="p">)</span>
-                        <span class="n">G</span><span class="p">[</span><span class="n">idx0</span><span class="p">[:</span><span class="o">-</span><span class="n">i</span><span class="p">],</span> <span class="p">:,</span> <span class="n">idx0</span><span class="p">[</span><span class="n">i</span><span class="p">:],</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">dot</span><span class="p">(</span><span class="n">tY</span><span class="p">,</span> <span class="n">G</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="p">:,</span> <span class="n">i</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="p">:])</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">no</span><span class="p">,</span> <span class="n">no</span><span class="p">)</span>
-                    <span class="k">return</span> <span class="n">G</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">tile</span> <span class="o">*</span> <span class="n">no</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
-
-            <span class="k">else</span><span class="p">:</span>
-                <span class="n">M1Sk</span> <span class="o">=</span> <span class="n">M1</span><span class="o">.</span><span class="n">Sk</span>
-                <span class="k">def</span> <span class="nf">_calc_green</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">no</span><span class="p">,</span> <span class="n">tile</span><span class="p">,</span> <span class="n">idx0</span><span class="p">):</span>
-                    <span class="n">Gf</span><span class="p">,</span> <span class="n">A2</span> <span class="o">=</span> <span class="n">SE</span><span class="p">(</span><span class="n">E</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">,</span> <span class="n">bulk</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="c1"># A1 == Gf, because of memory usage</span>
-                    <span class="n">tY</span> <span class="o">=</span> <span class="n">M1Sk</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s1">&#39;array&#39;</span><span class="p">)</span> <span class="c1"># S</span>
-                    <span class="n">tX</span> <span class="o">=</span> <span class="n">M1Pk</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s1">&#39;array&#39;</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="c1"># H</span>
-                    <span class="n">B</span> <span class="o">=</span> <span class="n">tY</span> <span class="o">*</span> <span class="n">E</span> <span class="o">-</span> <span class="n">tX</span>
-                    <span class="c1"># C = _conj(tY.T) * E - _conj(tX.T)</span>
-
-                    <span class="n">tY</span> <span class="o">=</span> <span class="o">-</span> <span class="n">solve</span><span class="p">(</span><span class="n">Gf</span><span class="p">,</span> <span class="n">conjugate</span><span class="p">(</span><span class="n">tY</span><span class="o">.</span><span class="n">T</span><span class="p">)</span> <span class="o">*</span> <span class="n">E</span> <span class="o">-</span> <span class="n">conjugate</span><span class="p">(</span><span class="n">tX</span><span class="o">.</span><span class="n">T</span><span class="p">),</span> <span class="kc">True</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
-                    <span class="n">Gf</span> <span class="o">=</span> <span class="n">inv</span><span class="p">(</span><span class="n">A2</span> <span class="o">+</span> <span class="n">dot</span><span class="p">(</span><span class="n">B</span><span class="p">,</span> <span class="n">tY</span><span class="p">),</span> <span class="kc">True</span><span class="p">)</span>
-                    <span class="n">tX</span> <span class="o">=</span> <span class="o">-</span> <span class="n">solve</span><span class="p">(</span><span class="n">A2</span><span class="p">,</span> <span class="n">B</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
-
-                    <span class="n">G</span> <span class="o">=</span> <span class="n">empty</span><span class="p">([</span><span class="n">tile</span><span class="p">,</span> <span class="n">no</span><span class="p">,</span> <span class="n">tile</span><span class="p">,</span> <span class="n">no</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span>
-                    <span class="n">G</span><span class="p">[</span><span class="n">idx0</span><span class="p">,</span> <span class="p">:,</span> <span class="n">idx0</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">Gf</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">no</span><span class="p">,</span> <span class="n">no</span><span class="p">)</span>
-                    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">tile</span><span class="p">):</span>
-                        <span class="n">G</span><span class="p">[</span><span class="n">idx0</span><span class="p">[</span><span class="n">i</span><span class="p">:],</span> <span class="p">:,</span> <span class="n">idx0</span><span class="p">[:</span><span class="o">-</span><span class="n">i</span><span class="p">],</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">dot</span><span class="p">(</span><span class="n">tX</span><span class="p">,</span> <span class="n">G</span><span class="p">[</span><span class="n">i</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="p">:,</span> <span class="mi">0</span><span class="p">,</span> <span class="p">:])</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">no</span><span class="p">,</span> <span class="n">no</span><span class="p">)</span>
-                        <span class="n">G</span><span class="p">[</span><span class="n">idx0</span><span class="p">[:</span><span class="o">-</span><span class="n">i</span><span class="p">],</span> <span class="p">:,</span> <span class="n">idx0</span><span class="p">[</span><span class="n">i</span><span class="p">:],</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">dot</span><span class="p">(</span><span class="n">tY</span><span class="p">,</span> <span class="n">G</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="p">:,</span> <span class="n">i</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="p">:])</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">no</span><span class="p">,</span> <span class="n">no</span><span class="p">)</span>
-                    <span class="k">return</span> <span class="n">G</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">tile</span> <span class="o">*</span> <span class="n">no</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
-
-        <span class="c1"># Create functions used to calculate the real-space Green function</span>
-        <span class="c1"># For TRS we only-calculate +k and average by using G(k) = G(-k)^T</span>
-        <span class="c1"># The extra arguments is because the internal decorator is actually pretty slow</span>
-        <span class="c1"># to filter out unused arguments.</span>
-
-        <span class="c1"># If using Bloch&#39;s theorem we need to wrap the Green function calculation</span>
-        <span class="c1"># as the method call.</span>
-        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">bloch</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
-            <span class="k">def</span> <span class="nf">_func_bloch</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">no</span><span class="p">,</span> <span class="n">tile</span><span class="p">,</span> <span class="n">idx0</span><span class="p">,</span> <span class="n">weight</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">parent</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-                <span class="k">return</span> <span class="n">bloch</span><span class="p">(</span><span class="n">_calc_green</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">no</span><span class="o">=</span><span class="n">no</span><span class="p">,</span> <span class="n">tile</span><span class="o">=</span><span class="n">tile</span><span class="p">,</span> <span class="n">idx0</span><span class="o">=</span><span class="n">idx0</span><span class="p">)</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">_func_bloch</span> <span class="o">=</span> <span class="n">_calc_green</span>
-
-        <span class="c1"># Tiling indices</span>
-        <span class="n">idx0</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">arangei</span><span class="p">(</span><span class="n">tile</span><span class="p">)</span>
-        <span class="n">no</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="p">)</span>
-
-        <span class="c1"># calculate the Green function</span>
-        <span class="n">G</span> <span class="o">=</span> <span class="n">bz</span><span class="o">.</span><span class="n">asaverage</span><span class="p">()</span><span class="o">.</span><span class="n">call</span><span class="p">(</span><span class="n">_func_bloch</span><span class="p">,</span> <span class="n">no</span><span class="o">=</span><span class="n">no</span><span class="p">,</span> <span class="n">tile</span><span class="o">=</span><span class="n">tile</span><span class="p">,</span> <span class="n">idx0</span><span class="o">=</span><span class="n">idx0</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">trs</span><span class="p">:</span>
-            <span class="c1"># Faster to do it once, than per G</span>
-            <span class="k">return</span> <span class="p">(</span><span class="n">G</span> <span class="o">+</span> <span class="n">G</span><span class="o">.</span><span class="n">T</span><span class="p">)</span> <span class="o">*</span> <span class="mf">0.5</span>
-        <span class="k">return</span> <span class="n">G</span>
-
-    <span class="k">def</span> <span class="nf">clear</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot; Clears the internal arrays created in `initialize` &quot;&quot;&quot;</span>
-        <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">_calc</span>
-
-
-<span class="k">class</span> <span class="nc">RealSpaceSI</span><span class="p">(</span><span class="n">SelfEnergy</span><span class="p">):</span>
-    <span class="sa">r</span><span class="sd">&quot;&quot;&quot; Calculate real-space surface self-energy (or Green function) for a given physical object with limited periodicity</span>
-
-<span class="sd">    The real-space self-energy is calculated via the k-averaged Green function:</span>
-
-<span class="sd">    .. math::</span>
-<span class="sd">        \boldsymbol\Sigma^\mathcal{R}(E) = \mathbf S^\mathcal{R} (E+i\eta) - \mathbf H^\mathcal{R}</span>
-<span class="sd">             - \sum_{\mathbf k} \mathbf G_{\mathbf k}(E)</span>
-
-<span class="sd">    The method actually used is relying on `RecursiveSI` and `~sisl.physics.Bloch` objects.</span>
-
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    semi : SemiInfinite</span>
-<span class="sd">        physical object which contains the semi-infinite direction, it is from</span>
-<span class="sd">        this object we calculate the self-energy to be put into the surface.</span>
-<span class="sd">        a physical object from which to calculate the real-space self-energy.</span>
-<span class="sd">        `semi` and `surface` must have parallel lattice vectors.</span>
-<span class="sd">    surface : SparseOrbitalBZ</span>
-<span class="sd">        parent object containing the surface of system. `semi` is attached into this</span>
-<span class="sd">        object via the overlapping regions, the atoms that overlap `semi` and `surface`</span>
-<span class="sd">        are determined in the `initialize` routine.</span>
-<span class="sd">        `semi` and `surface` must have parallel lattice vectors.</span>
-
-<span class="sd">    unfold : (3,) of int</span>
-<span class="sd">        number of times the `surface` structure is tiled along each direction</span>
-<span class="sd">        The resulting Green function/self-energy ordering is always tiled along</span>
-<span class="sd">        the semi-infinite direction first, and then the transverse direction. Since this is</span>
-<span class="sd">        a surface there will maximally be 2 unfolds being non-unity.</span>
-
-<span class="sd">    k_axes : array_like of int</span>
-<span class="sd">        axes where k-points are desired. 1 or 2 values are required. The axis cannot be a direction</span>
-<span class="sd">        along the `semi` semi-infinite direction.</span>
-<span class="sd">    eta : float, optional</span>
-<span class="sd">        imaginary part in the self-energy calculations (default 1e-4 eV)</span>
-<span class="sd">    dk : float, optional</span>
-<span class="sd">        fineness of the default integration grid, specified in units of Ang, default to 1000 which</span>
-<span class="sd">        translates to 1000 k-points along reciprocal cells of length 1. Ang^-1.</span>
-<span class="sd">    bz : BrillouinZone, optional</span>
-<span class="sd">        integration k-points, if not passed the number of k-points will be determined using</span>
-<span class="sd">        `dk` and time-reversal symmetry will be determined by `trs`</span>
-<span class="sd">    trs: bool, optional</span>
-<span class="sd">        whether time-reversal symmetry is used in the BrillouinZone integration, default</span>
-<span class="sd">        to true.</span>
-
-<span class="sd">    Notes</span>
-<span class="sd">    -----</span>
-<span class="sd">    Once created it is vital that `initialize` is called before calculating the real-space Green function.</span>
-<span class="sd">    Once done, memory can be saved by issuing `clear`.</span>
-<span class="sd">    The basic procedure is:</span>
-
-<span class="sd">    Examples</span>
-<span class="sd">    --------</span>
-<span class="sd">    &gt;&gt;&gt; graphene = geom.graphene()</span>
-<span class="sd">    &gt;&gt;&gt; H = Hamiltonian(graphene)</span>
-<span class="sd">    &gt;&gt;&gt; H.construct([(0.1, 1.44), (0, -2.7)])</span>
-<span class="sd">    &gt;&gt;&gt; se = RecursiveSI(H, &#39;-A&#39;)</span>
-<span class="sd">    &gt;&gt;&gt; Hsurf = H.tile(3, 0)</span>
-<span class="sd">    &gt;&gt;&gt; Hsurf.set_nsc(a=1)</span>
-<span class="sd">    &gt;&gt;&gt; rsi = RealSpaceSI(se, Hsurf, (1, 4, 1))</span>
-<span class="sd">    &gt;&gt;&gt; rsi.initialize()</span>
-<span class="sd">    &gt;&gt;&gt; rsi.green(0.1)</span>
-
-<span class="sd">    The Brillouin zone integration is determined naturally.</span>
-
-<span class="sd">    &gt;&gt;&gt; graphene = geom.graphene()</span>
-<span class="sd">    &gt;&gt;&gt; H = Hamiltonian(graphene)</span>
-<span class="sd">    &gt;&gt;&gt; H.construct([(0.1, 1.44), (0, -2.7)])</span>
-<span class="sd">    &gt;&gt;&gt; se = RecursiveSI(H, &#39;-A&#39;)</span>
-<span class="sd">    &gt;&gt;&gt; Hsurf = H.tile(3, 0)</span>
-<span class="sd">    &gt;&gt;&gt; Hsurf.set_nsc(a=1)</span>
-<span class="sd">    &gt;&gt;&gt; rsi = RealSpaceSI(se, Hsurf, (1, 4, 1))</span>
-<span class="sd">    &gt;&gt;&gt; rsi.update_option(k_axes=[1], eta=1e-3, bz=MonkhorstPack(H, [1, 1000, 1]))</span>
-<span class="sd">    &gt;&gt;&gt; rsi.initialize()</span>
-<span class="sd">    &gt;&gt;&gt; rsi.green(0.1) # eta = 1e-3</span>
-<span class="sd">    &gt;&gt;&gt; rsi.green(0.1 + 1j * 1e-4) # eta = 1e-4</span>
-
-<span class="sd">    Manually specify Brillouin zone integration and default :math:`\eta` value.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-
-    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">semi</span><span class="p">,</span> <span class="n">surface</span><span class="p">,</span> <span class="n">unfold</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="o">**</span><span class="n">options</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot; Initialize real-space self-energy calculator &quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">semi</span> <span class="o">=</span> <span class="n">semi</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">surface</span> <span class="o">=</span> <span class="n">surface</span>
-
-        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">semi</span><span class="o">.</span><span class="n">sc</span><span class="o">.</span><span class="n">parallel</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">surface</span><span class="o">.</span><span class="n">sc</span><span class="p">):</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39; requires semi and surface to have parallel &#39;</span>
-                             <span class="s1">&#39;lattice vectors.&#39;</span><span class="p">)</span>
-
-        <span class="c1"># Local variables for the completion of the details</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_unfold</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">arrayi</span><span class="p">([</span><span class="nb">max</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">un</span><span class="p">)</span> <span class="k">for</span> <span class="n">un</span> <span class="ow">in</span> <span class="n">unfold</span><span class="p">])</span>
-
-        <span class="k">if</span> <span class="n">surface</span><span class="o">.</span><span class="n">nsc</span><span class="p">[</span><span class="n">semi</span><span class="o">.</span><span class="n">semi_inf</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">surface</span> <span class="o">=</span> <span class="n">surface</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
-            <span class="n">nsc</span> <span class="o">=</span> <span class="n">surface</span><span class="o">.</span><span class="n">nsc</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
-            <span class="n">nsc</span><span class="p">[</span><span class="n">semi</span><span class="o">.</span><span class="n">semi_inf</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">surface</span><span class="o">.</span><span class="n">set_nsc</span><span class="p">(</span><span class="n">nsc</span><span class="p">)</span>
-
-        <span class="bp">self</span><span class="o">.</span><span class="n">_options</span> <span class="o">=</span> <span class="p">{</span>
-            <span class="c1"># the direction of the k-points (to be integrated), can be one or two axes</span>
-            <span class="s1">&#39;k_axes&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
-            <span class="c1"># fineness of the integration k-grid [Ang]</span>
-            <span class="s1">&#39;dk&#39;</span><span class="p">:</span> <span class="mi">1000</span><span class="p">,</span>
-            <span class="c1"># whether TRS is used (G + G.T) * 0.5</span>
-            <span class="s1">&#39;trs&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
-            <span class="c1"># imaginary part used in the Green function calculation (unless an imaginary energy is passed)</span>
-            <span class="s1">&#39;eta&#39;</span><span class="p">:</span> <span class="mf">1e-4</span><span class="p">,</span>
-            <span class="c1"># The BrillouinZone used for integration</span>
-            <span class="s1">&#39;bz&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
-        <span class="p">}</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">update_option</span><span class="p">(</span><span class="o">**</span><span class="n">options</span><span class="p">)</span>
-
-    <span class="k">def</span> <span class="nf">update_option</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">options</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot; Update options in the real-space self-energy</span>
-
-<span class="sd">        After updating options one should re-call `initialize` for consistency.</span>
-
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        k_axes : array_like of int</span>
-<span class="sd">            axes where k-points are desired. 1 or 2 values are required. The axis cannot be a direction</span>
-<span class="sd">            along the `semi` semi-infinite direction.</span>
-<span class="sd">        eta : float, optional</span>
-<span class="sd">            imaginary part in the self-energy calculations (default 1e-4 eV)</span>
-<span class="sd">        dk : float, optional</span>
-<span class="sd">            fineness of the default integration grid, specified in units of Ang, default to 1000 which</span>
-<span class="sd">            translates to 1000 k-points along reciprocal cells of length 1. Ang^-1.</span>
-<span class="sd">        bz : BrillouinZone, optional</span>
-<span class="sd">            integration k-points, if not passed the number of k-points will be determined using</span>
-<span class="sd">            `dk` and time-reversal symmetry will be determined by `trs`</span>
-<span class="sd">        trs: bool, optional</span>
-<span class="sd">            whether time-reversal symmetry is used in the BrillouinZone integration, default</span>
-<span class="sd">            to true.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_options</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">options</span><span class="p">)</span>
-        <span class="k">for</span> <span class="n">ax</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;k_axes&#39;</span><span class="p">,</span> <span class="s1">&#39;axes&#39;</span><span class="p">]:</span>
-            <span class="n">opt</span> <span class="o">=</span> <span class="n">options</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
-            <span class="k">if</span> <span class="ow">not</span> <span class="n">opt</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_options</span><span class="p">[</span><span class="n">ax</span><span class="p">]</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">arrayi</span><span class="p">(</span><span class="n">opt</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
-
-    <span class="k">def</span> <span class="nf">real_space_parent</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot; Fully expanded real-space surface parent &quot;&quot;&quot;</span>
-        <span class="n">opt</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_options</span>
-        <span class="n">k_ax</span> <span class="o">=</span> <span class="n">opt</span><span class="p">[</span><span class="s1">&#39;k_axes&#39;</span><span class="p">]</span>
-        <span class="c1"># Always start with the semi-infinite direction, since we</span>
-        <span class="c1"># Bloch expand the other directions</span>
-        <span class="n">P0</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">surface</span>
-        <span class="k">for</span> <span class="n">ax</span> <span class="ow">in</span> <span class="n">k_ax</span><span class="p">:</span>
-            <span class="n">P0</span> <span class="o">=</span> <span class="n">P0</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_unfold</span><span class="p">[</span><span class="n">ax</span><span class="p">],</span> <span class="n">ax</span><span class="p">)</span>
-        <span class="n">ones</span> <span class="o">=</span> <span class="n">P0</span><span class="o">.</span><span class="n">nsc</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
-        <span class="n">ones</span><span class="p">[</span><span class="n">k_ax</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
-        <span class="n">P0</span><span class="o">.</span><span class="n">set_nsc</span><span class="p">(</span><span class="n">ones</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">P0</span>
-
-    <span class="k">def</span> <span class="nf">real_space_coupling</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ret_indices</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot; Real-space coupling surafec where the outside fold into the surface real-space unit cell</span>
-
-<span class="sd">        The resulting parent object only contains the inner-cell couplings for the elements that couple</span>
-<span class="sd">        out of the real-space matrix.</span>
-
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        ret_indices : bool, optional</span>
-<span class="sd">           if true, also return the atomic indices (corresponding to `real_space_parent`) that encompass the coupling matrix</span>
-
-<span class="sd">        Returns</span>
-<span class="sd">        -------</span>
-<span class="sd">        parent : parent object only retaining the elements of the atoms that couple out of the primary unit cell</span>
-<span class="sd">        atom_index : indices for the atoms that couple out of the geometry (`ret_indices`)</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">NotImplemented</span>
-
-        <span class="n">opt</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_options</span>
-        <span class="n">k_ax</span> <span class="o">=</span> <span class="n">opt</span><span class="p">[</span><span class="s1">&#39;k_axes&#39;</span><span class="p">]</span>
-        <span class="n">PC</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">surface</span>
+        <span class="c1"># Remove all out-of-cell couplings such that we only have inner-cell couplings</span>
+        <span class="c1"># Or, if we retain periodicity along a given direction, we will retain those</span>
+        <span class="c1"># as well.</span>
+        <span class="n">PC</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_unfold</span><span class="p">[</span><span class="n">s_ax</span><span class="p">],</span> <span class="n">s_ax</span><span class="p">)</span>
         <span class="k">for</span> <span class="n">ax</span> <span class="ow">in</span> <span class="n">k_ax</span><span class="p">:</span>
             <span class="n">PC</span> <span class="o">=</span> <span class="n">PC</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_unfold</span><span class="p">[</span><span class="n">ax</span><span class="p">],</span> <span class="n">ax</span><span class="p">)</span>
-
-        <span class="c1"># TODO also add sites from self.semi, these are required since self.surface</span>
-        <span class="c1"># does not contain the couplings along the semi-inf direction!</span>
-
-        <span class="c1"># If there are any axes that still has k-point sampling (for e.g. circles)</span>
-        <span class="c1"># we should remove that periodicity before figuring out which atoms that connect out.</span>
-        <span class="c1"># This is because the self-energy should *only* remain on the sites connecting</span>
-        <span class="c1"># out of the self-energy used. The k-axis retains all atoms, per see.</span>
-        <span class="n">nsc</span> <span class="o">=</span> <span class="n">PC</span><span class="o">.</span><span class="n">nsc</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
-        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">3</span><span class="p">):</span>
-            <span class="k">if</span> <span class="n">i</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">k_ax</span><span class="p">:</span>
-                <span class="n">nsc</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
-        <span class="n">PC</span><span class="o">.</span><span class="n">set_nsc</span><span class="p">(</span><span class="n">nsc</span><span class="p">)</span>
-
-        <span class="c1"># Geometry short-hand</span>
-        <span class="n">g</span> <span class="o">=</span> <span class="n">PC</span><span class="o">.</span><span class="n">geometry</span>
-        <span class="c1"># Remove all inner-cell couplings (0, 0, 0) to figure out the</span>
-        <span class="c1"># elements that couple out of the real-space region</span>
-        <span class="n">n</span> <span class="o">=</span> <span class="n">PC</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-        <span class="n">idx</span> <span class="o">=</span> <span class="n">g</span><span class="o">.</span><span class="n">sc</span><span class="o">.</span><span class="n">sc_index</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">])</span>
-        <span class="n">cols</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">arangei</span><span class="p">(</span><span class="n">idx</span> <span class="o">*</span> <span class="n">n</span><span class="p">,</span> <span class="p">(</span><span class="n">idx</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">n</span><span class="p">)</span>
-        <span class="n">csr</span> <span class="o">=</span> <span class="n">PC</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">copy</span><span class="p">([</span><span class="mi">0</span><span class="p">])</span> <span class="c1"># we just want the sparse pattern, so forget about the other elements</span>
-        <span class="n">csr</span><span class="o">.</span><span class="n">delete_columns</span><span class="p">(</span><span class="n">cols</span><span class="p">,</span> <span class="n">keep_shape</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-        <span class="c1"># Now PC only contains couplings along the k and semi-inf directions</span>
-        <span class="c1"># Extract the connecting orbitals and reduce them to unique atomic indices</span>
-        <span class="n">orbs</span> <span class="o">=</span> <span class="n">g</span><span class="o">.</span><span class="n">osc2uc</span><span class="p">(</span><span class="n">csr</span><span class="o">.</span><span class="n">col</span><span class="p">[</span><span class="n">array_arange</span><span class="p">(</span><span class="n">csr</span><span class="o">.</span><span class="n">ptr</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">n</span><span class="o">=</span><span class="n">csr</span><span class="o">.</span><span class="n">ncol</span><span class="p">)],</span> <span class="kc">True</span><span class="p">)</span>
-        <span class="n">atom_idx</span> <span class="o">=</span> <span class="n">g</span><span class="o">.</span><span class="n">o2a</span><span class="p">(</span><span class="n">orbs</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
-        <span class="c1"># Only retain coupling atoms</span>
         <span class="n">PC</span> <span class="o">=</span> <span class="n">PC</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="n">atom_idx</span><span class="p">)</span>
 
-        <span class="c1"># Remove all out-of-cell couplings such that we only have inner-cell couplings.</span>
-        <span class="n">nsc</span> <span class="o">=</span> <span class="n">PC</span><span class="o">.</span><span class="n">nsc</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
-        <span class="n">nsc</span><span class="p">[</span><span class="n">s_ax</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
-        <span class="n">nsc</span><span class="p">[</span><span class="n">k_ax</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="c1"># Truncate nsc along the repititions</span>
+        <span class="n">nsc</span> <span class="o">=</span> <span class="n">array_replace</span><span class="p">(</span><span class="n">PC</span><span class="o">.</span><span class="n">nsc</span><span class="p">,</span> <span class="p">(</span><span class="n">s_ax</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="p">(</span><span class="n">k_ax</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
         <span class="n">PC</span><span class="o">.</span><span class="n">set_nsc</span><span class="p">(</span><span class="n">nsc</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">ret_indices</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">PC</span><span class="p">,</span> <span class="n">atom_idx</span>
@@ -1250,83 +803,13 @@
 <span class="sd">        This method should first be called *after* all options has been specified.</span>
 
 <span class="sd">        If the user hasn&#39;t specified the ``bz`` value as an option this method will update the internal</span>
-<span class="sd">        integration Brillouin zone based on the ``dk`` option.</span>
+<span class="sd">        integration Brillouin zone based on ``dk`` and ``trs`` options.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">def</span> <span class="nf">_ax_str</span><span class="p">(</span><span class="n">axes</span><span class="p">,</span> <span class="n">delim</span><span class="o">=</span><span class="s1">&#39; / &#39;</span><span class="p">):</span>
-            <span class="n">ABC</span> <span class="o">=</span> <span class="s1">&#39;ABC&#39;</span>
-            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">axes</span><span class="p">,</span> <span class="n">Integral</span><span class="p">):</span>
-                <span class="k">return</span> <span class="n">ABC</span><span class="p">[</span><span class="n">axes</span><span class="p">]</span>
-            <span class="n">s</span> <span class="o">=</span> <span class="n">ABC</span><span class="p">[</span><span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span>
-            <span class="k">for</span> <span class="n">ax</span> <span class="ow">in</span> <span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">:]:</span>
-                <span class="n">s</span> <span class="o">+=</span> <span class="n">delim</span> <span class="o">+</span> <span class="n">ABC</span><span class="p">[</span><span class="n">ax</span><span class="p">]</span>
-            <span class="k">return</span> <span class="n">s</span>
+        <span class="n">s_ax</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_semi_axis</span>
+        <span class="n">k_ax</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_k_axes</span>
 
-        <span class="c1"># Try and guess the directions</span>
-        <span class="n">unfold</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_unfold</span>
-        <span class="n">nsc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">nsc</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
-        <span class="n">k_axes</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_options</span><span class="p">[</span><span class="s1">&#39;k_axes&#39;</span><span class="p">]</span>
-        <span class="k">if</span> <span class="n">k_axes</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">k_axes</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="n">_a</span><span class="o">.</span><span class="n">arangei</span><span class="p">(</span><span class="mi">3</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">semi</span><span class="o">.</span><span class="n">semi_inf</span><span class="p">)</span>
-            <span class="k">if</span> <span class="n">nsc</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
-                <span class="n">axes</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">arrayi</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span>
-            <span class="k">elif</span> <span class="n">nsc</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
-                <span class="n">axes</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">arrayi</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">])</span>
-            <span class="k">elif</span> <span class="n">nsc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
-                <span class="n">axes</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">arrayi</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">])</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="n">axes</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">arangei</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
-
-        <span class="c1"># Check that we have periodicity along the chosen axes</span>
-        <span class="n">nsc_sum</span> <span class="o">=</span> <span class="n">nsc</span><span class="p">[</span><span class="n">axes</span><span class="p">]</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
-        <span class="k">if</span> <span class="n">nsc_sum</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39;.initialize found no periodic directions &#39;</span>
-                             <span class="s1">&#39;for the chosen integration axes: </span><span class="si">{}</span><span class="s1">.&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">_ax_str</span><span class="p">(</span><span class="n">axes</span><span class="p">)))</span>
-        <span class="k">elif</span> <span class="n">nsc_sum</span> <span class="o">&lt;</span> <span class="mi">6</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39;.initialize found one periodic direction &#39;</span>
-                              <span class="s1">&#39;out of two for the chosen integration axes: </span><span class="si">{}</span><span class="s1">. &#39;</span>
-                              <span class="s1">&#39;For 1D systems the regular surface self-energy method is appropriate.&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">_ax_str</span><span class="p">(</span><span class="n">axes</span><span class="p">)))</span>
-
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_options</span><span class="p">[</span><span class="s1">&#39;semi_axis&#39;</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">_options</span><span class="p">[</span><span class="s1">&#39;k_axes&#39;</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="c1"># None of the axis has been described</span>
-            <span class="n">sc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">sc</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_unfold</span>
-            <span class="n">i3</span> <span class="o">=</span> <span class="p">(</span><span class="n">nsc</span><span class="p">[</span><span class="n">axes</span><span class="p">]</span> <span class="o">==</span> <span class="mi">3</span><span class="p">)</span><span class="o">.</span><span class="n">nonzero</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
-            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">i3</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39;.initialize could not find a suitable semi-infinite direction, all used directions have nsc != 3&#39;</span><span class="p">)</span>
-            <span class="n">s_ax</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argmin</span><span class="p">(</span><span class="n">fnorm</span><span class="p">(</span><span class="n">sc</span><span class="o">.</span><span class="n">rcell</span><span class="p">)[</span><span class="n">axes</span><span class="p">[</span><span class="n">i3</span><span class="p">]])</span>
-            <span class="c1"># Now determine the k_axes</span>
-            <span class="n">k_ax</span> <span class="o">=</span> <span class="n">axes</span><span class="p">[</span><span class="n">axes</span> <span class="o">!=</span> <span class="n">s_ax</span><span class="p">]</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_options</span><span class="p">[</span><span class="s1">&#39;semi_axis&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">s_ax</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_options</span><span class="p">[</span><span class="s1">&#39;k_axes&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">k_ax</span>
-
-        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">_options</span><span class="p">[</span><span class="s1">&#39;k_axes&#39;</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">s_ax</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_options</span><span class="p">[</span><span class="s1">&#39;semi_axis&#39;</span><span class="p">]</span>
-            <span class="n">k_ax</span> <span class="o">=</span> <span class="n">axes</span><span class="p">[</span><span class="n">axes</span> <span class="o">!=</span> <span class="n">s_ax</span><span class="p">]</span>
-            <span class="k">if</span> <span class="n">k_ax</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39;.initialize could not find suitable k-direction(s).&#39;</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_options</span><span class="p">[</span><span class="s1">&#39;k_axes&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">k_ax</span>
-
-        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">_options</span><span class="p">[</span><span class="s1">&#39;semi_axis&#39;</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">k_ax</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_options</span><span class="p">[</span><span class="s1">&#39;k_axes&#39;</span><span class="p">]</span>
-            <span class="n">s_ax</span> <span class="o">=</span> <span class="kc">None</span>
-            <span class="k">for</span> <span class="n">ax</span> <span class="ow">in</span> <span class="n">axes</span><span class="p">:</span>
-                <span class="k">if</span> <span class="ow">not</span> <span class="n">ax</span> <span class="ow">in</span> <span class="n">k_ax</span><span class="p">:</span>
-                    <span class="n">s_ax</span> <span class="o">=</span> <span class="n">ax</span>
-            <span class="k">if</span> <span class="n">s_ax</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39;.initialize could not find a suitable semi-infinite direction, the k-axis seems to utilize all directions?&#39;</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_options</span><span class="p">[</span><span class="s1">&#39;semi_axis&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">s_ax</span>
-
-        <span class="c1"># The k-axis HAS to be sorted because this is the way the Bloch expansion works</span>
-        <span class="n">k_ax</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_options</span><span class="p">[</span><span class="s1">&#39;k_axes&#39;</span><span class="p">])</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_options</span><span class="p">[</span><span class="s1">&#39;k_axes&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">k_ax</span>
-        <span class="n">s_ax</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_options</span><span class="p">[</span><span class="s1">&#39;semi_axis&#39;</span><span class="p">]</span>
-        <span class="k">if</span> <span class="n">s_ax</span> <span class="ow">in</span> <span class="n">k_ax</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39;.initialize found the self-energy direction to be &#39;</span>
-                             <span class="s1">&#39;the same as one of the k-axes, this is not allowed.&#39;</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">nsc</span><span class="p">[</span><span class="n">s_ax</span><span class="p">]</span> <span class="o">!=</span> <span class="mi">3</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39;.initialize found the self-energy direction to be &#39;</span>
-                             <span class="s1">&#39;incompatible with the parent object. It *must* have 3 supercells along the &#39;</span>
-                             <span class="s1">&#39;semi-infinite direction.&#39;</span><span class="p">)</span>
-
+        <span class="c1"># Create temporary access elements in the calculation dictionary</span>
+        <span class="c1"># to be used in .green and .self_energy</span>
         <span class="n">P0</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">real_space_parent</span><span class="p">()</span>
         <span class="n">V_atoms</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">real_space_coupling</span><span class="p">(</span><span class="kc">True</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_calc</span> <span class="o">=</span> <span class="p">{</span>
@@ -1349,9 +832,8 @@
             <span class="n">nk</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">onesi</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
             <span class="n">nk</span><span class="p">[</span><span class="n">k_ax</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_options</span><span class="p">[</span><span class="s1">&#39;dk&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="n">rcell</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_options</span><span class="p">[</span><span class="s1">&#39;bz&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">MonkhorstPack</span><span class="p">(</span><span class="n">sc</span><span class="p">,</span> <span class="n">nk</span><span class="p">,</span> <span class="n">trs</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_options</span><span class="p">[</span><span class="s1">&#39;trs&#39;</span><span class="p">])</span>
-            <span class="n">info</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39;.initialize determined the number of k-points: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="s1">&#39; / &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="n">nk</span><span class="p">[</span><span class="n">k_ax</span><span class="p">]))))</span>
 
-    <span class="k">def</span> <span class="nf">self_energy</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">E</span><span class="p">,</span> <span class="n">bulk</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">coupling</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">self_energy</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">E</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="n">bulk</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">coupling</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="sa">r</span><span class="sd">&quot;&quot;&quot; Calculate the real-space self-energy</span>
 
 <span class="sd">        The real space self-energy is calculated via:</span>
@@ -1364,6 +846,9 @@
 <span class="sd">        ----------</span>
 <span class="sd">        E : float/complex</span>
 <span class="sd">           energy to evaluate the real-space self-energy at</span>
+<span class="sd">        k : array_like, optional</span>
+<span class="sd">           only viable for 3D bulk systems with real-space self-energies along 2 directions.</span>
+<span class="sd">           I.e. this would correspond to circular self-energies.</span>
 <span class="sd">        bulk : bool, optional</span>
 <span class="sd">           if true, :math:`\mathbf S^{\mathcal{R}} E - \mathbf H^{\mathcal{R}} - \boldsymbol\Sigma^\mathcal{R}`</span>
 <span class="sd">           is returned, otherwise :math:`\boldsymbol\Sigma^\mathcal{R}` is returned</span>
@@ -1379,7 +864,10 @@
             <span class="n">dtype</span> <span class="o">=</span> <span class="n">complex128</span>
         <span class="k">if</span> <span class="n">E</span><span class="o">.</span><span class="n">imag</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
             <span class="n">E</span> <span class="o">=</span> <span class="n">E</span><span class="o">.</span><span class="n">real</span> <span class="o">+</span> <span class="mi">1</span><span class="n">j</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_options</span><span class="p">[</span><span class="s1">&#39;eta&#39;</span><span class="p">]</span>
-        <span class="n">G</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">green</span><span class="p">(</span><span class="n">E</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span>
+
+        <span class="c1"># Calculate the Green function</span>
+        <span class="n">G</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">green</span><span class="p">(</span><span class="n">E</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span>
+
         <span class="k">if</span> <span class="n">coupling</span><span class="p">:</span>
             <span class="n">orbs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_calc</span><span class="p">[</span><span class="s1">&#39;orbs&#39;</span><span class="p">]</span>
             <span class="n">iorbs</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">arangei</span><span class="p">(</span><span class="n">orbs</span><span class="o">.</span><span class="n">size</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
@@ -1388,13 +876,13 @@
             <span class="n">I</span><span class="p">[</span><span class="n">orbs</span><span class="o">.</span><span class="n">ravel</span><span class="p">(),</span> <span class="n">iorbs</span><span class="o">.</span><span class="n">ravel</span><span class="p">()]</span> <span class="o">=</span> <span class="mf">1.</span>
             <span class="k">if</span> <span class="n">bulk</span><span class="p">:</span>
                 <span class="k">return</span> <span class="n">solve</span><span class="p">(</span><span class="n">G</span><span class="p">,</span> <span class="n">I</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="kc">True</span><span class="p">)[</span><span class="n">orbs</span><span class="p">,</span> <span class="n">iorbs</span><span class="p">]</span>
-            <span class="k">return</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_calc</span><span class="p">[</span><span class="s1">&#39;S0&#39;</span><span class="p">](</span><span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span> <span class="o">*</span> <span class="n">E</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">_calc</span><span class="p">[</span><span class="s1">&#39;P0&#39;</span><span class="p">](</span><span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">))[</span><span class="n">orbs</span><span class="p">,</span> <span class="n">orbs</span><span class="o">.</span><span class="n">T</span><span class="p">]</span><span class="o">.</span><span class="n">toarray</span><span class="p">()</span> \
+            <span class="k">return</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_calc</span><span class="p">[</span><span class="s1">&#39;S0&#39;</span><span class="p">](</span><span class="n">k</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span> <span class="o">*</span> <span class="n">E</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">_calc</span><span class="p">[</span><span class="s1">&#39;P0&#39;</span><span class="p">](</span><span class="n">k</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">))[</span><span class="n">orbs</span><span class="p">,</span> <span class="n">orbs</span><span class="o">.</span><span class="n">T</span><span class="p">]</span><span class="o">.</span><span class="n">toarray</span><span class="p">()</span> \
                 <span class="o">-</span> <span class="n">solve</span><span class="p">(</span><span class="n">G</span><span class="p">,</span> <span class="n">I</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="kc">True</span><span class="p">)[</span><span class="n">orbs</span><span class="p">,</span> <span class="n">iorbs</span><span class="p">]</span>
         <span class="k">if</span> <span class="n">bulk</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">inv</span><span class="p">(</span><span class="n">G</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
-        <span class="k">return</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_calc</span><span class="p">[</span><span class="s1">&#39;S0&#39;</span><span class="p">](</span><span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span> <span class="o">*</span> <span class="n">E</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">_calc</span><span class="p">[</span><span class="s1">&#39;P0&#39;</span><span class="p">](</span><span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">))</span><span class="o">.</span><span class="n">toarray</span><span class="p">()</span> <span class="o">-</span> <span class="n">inv</span><span class="p">(</span><span class="n">G</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_calc</span><span class="p">[</span><span class="s1">&#39;S0&#39;</span><span class="p">](</span><span class="n">k</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span> <span class="o">*</span> <span class="n">E</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">_calc</span><span class="p">[</span><span class="s1">&#39;P0&#39;</span><span class="p">](</span><span class="n">k</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">))</span><span class="o">.</span><span class="n">toarray</span><span class="p">()</span> <span class="o">-</span> <span class="n">inv</span><span class="p">(</span><span class="n">G</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">green</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">E</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">green</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">E</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="sa">r</span><span class="sd">&quot;&quot;&quot; Calculate the real-space Green function</span>
 
 <span class="sd">        The real space Green function is calculated via:</span>
@@ -1406,6 +894,9 @@
 <span class="sd">        ----------</span>
 <span class="sd">        E : float/complex</span>
 <span class="sd">           energy to evaluate the real-space Green function at</span>
+<span class="sd">        k : array_like, optional</span>
+<span class="sd">           only viable for 3D bulk systems with real-space Green functions along 2 directions.</span>
+<span class="sd">           I.e. this would correspond to a circular real-space Green function</span>
 <span class="sd">        dtype : numpy.dtype, optional</span>
 <span class="sd">          the resulting data type, default to ``np.complex128``</span>
 <span class="sd">        **kwargs : dict, optional</span>
@@ -1417,7 +908,7 @@
         <span class="n">bz</span> <span class="o">=</span> <span class="n">opt</span><span class="p">[</span><span class="s1">&#39;bz&#39;</span><span class="p">]</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="c1"># If the BZ implements TRS (MonkhorstPack) then force it</span>
-            <span class="n">trs</span> <span class="o">=</span> <span class="n">bz</span><span class="o">.</span><span class="n">_trs</span>
+            <span class="n">trs</span> <span class="o">=</span> <span class="n">bz</span><span class="o">.</span><span class="n">_trs</span> <span class="o">&gt;=</span> <span class="mi">0</span>
         <span class="k">except</span><span class="p">:</span>
             <span class="n">trs</span> <span class="o">=</span> <span class="n">opt</span><span class="p">[</span><span class="s1">&#39;trs&#39;</span><span class="p">]</span>
 
@@ -1429,7 +920,19 @@
             <span class="n">E</span> <span class="o">=</span> <span class="n">E</span><span class="o">.</span><span class="n">real</span> <span class="o">+</span> <span class="mi">1</span><span class="n">j</span> <span class="o">*</span> <span class="n">opt</span><span class="p">[</span><span class="s1">&#39;eta&#39;</span><span class="p">]</span>
 
         <span class="c1"># Used axes</span>
-        <span class="n">s_ax</span> <span class="o">=</span> <span class="n">opt</span><span class="p">[</span><span class="s1">&#39;semi_axis&#39;</span><span class="p">]</span>
+        <span class="n">s_ax</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_semi_axis</span>
+        <span class="n">k_ax</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_k_axes</span>
+
+        <span class="n">k</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">asarrayd</span><span class="p">(</span><span class="n">k</span><span class="p">)</span>
+        <span class="n">is_k</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">k</span> <span class="o">!=</span> <span class="mf">0.</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">is_k</span><span class="p">:</span>
+            <span class="n">axes</span> <span class="o">=</span> <span class="p">[</span><span class="n">s_ax</span><span class="p">]</span> <span class="o">+</span> <span class="n">k_ax</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">k</span><span class="p">[</span><span class="n">axes</span><span class="p">]</span> <span class="o">!=</span> <span class="mf">0.</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">{}</span><span class="s1">.green requires the k-point to be zero along the integrated axes.&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="p">))</span>
+            <span class="k">if</span> <span class="n">trs</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">{}</span><span class="s1">.green requires a k-point sampled Green function to not use time reversal symmetry.&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="p">))</span>
+            <span class="c1"># Shift k-points to get the correct k-point in the larger one.</span>
+            <span class="n">bz</span><span class="o">.</span><span class="n">_k</span> <span class="o">+=</span> <span class="n">k</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
 
         <span class="c1"># Calculate both left and right at the same time.</span>
         <span class="n">SE</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_calc</span><span class="p">[</span><span class="s1">&#39;SE&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">self_energy_lr</span>
@@ -1509,7 +1012,7 @@
         <span class="c1"># If using Bloch&#39;s theorem we need to wrap the Green function calculation</span>
         <span class="c1"># as the method call.</span>
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">bloch</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
-            <span class="k">def</span> <span class="nf">_func_bloch</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">no</span><span class="p">,</span> <span class="n">tile</span><span class="p">,</span> <span class="n">idx0</span><span class="p">,</span> <span class="n">weight</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">parent</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+            <span class="k">def</span> <span class="nf">_func_bloch</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">no</span><span class="p">,</span> <span class="n">tile</span><span class="p">,</span> <span class="n">idx0</span><span class="p">):</span>
                 <span class="k">return</span> <span class="n">bloch</span><span class="p">(</span><span class="n">_calc_green</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">no</span><span class="o">=</span><span class="n">no</span><span class="p">,</span> <span class="n">tile</span><span class="o">=</span><span class="n">tile</span><span class="p">,</span> <span class="n">idx0</span><span class="o">=</span><span class="n">idx0</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">_func_bloch</span> <span class="o">=</span> <span class="n">_calc_green</span>
@@ -1520,6 +1023,11 @@
 
         <span class="c1"># calculate the Green function</span>
         <span class="n">G</span> <span class="o">=</span> <span class="n">bz</span><span class="o">.</span><span class="n">asaverage</span><span class="p">()</span><span class="o">.</span><span class="n">call</span><span class="p">(</span><span class="n">_func_bloch</span><span class="p">,</span> <span class="n">no</span><span class="o">=</span><span class="n">no</span><span class="p">,</span> <span class="n">tile</span><span class="o">=</span><span class="n">tile</span><span class="p">,</span> <span class="n">idx0</span><span class="o">=</span><span class="n">idx0</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">is_k</span><span class="p">:</span>
+            <span class="c1"># Revert k-points</span>
+            <span class="n">bz</span><span class="o">.</span><span class="n">_k</span> <span class="o">-=</span> <span class="n">k</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+
         <span class="k">if</span> <span class="n">trs</span><span class="p">:</span>
             <span class="c1"># Faster to do it once, than per G</span>
             <span class="k">return</span> <span class="p">(</span><span class="n">G</span> <span class="o">+</span> <span class="n">G</span><span class="o">.</span><span class="n">T</span><span class="p">)</span> <span class="o">*</span> <span class="mf">0.5</span>
