@@ -482,7 +482,12 @@
         <span class="c1"># Make sure we delete all column values where we have put fake values</span>
         <span class="n">delete</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">arangei</span><span class="p">(</span><span class="n">sc</span><span class="o">.</span><span class="n">n_s</span> <span class="o">*</span> <span class="n">size</span><span class="p">,</span> <span class="nb">max</span><span class="p">(</span><span class="n">max_n</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">delete</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">delete_columns</span><span class="p">(</span><span class="n">delete</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">delete_columns</span><span class="p">(</span><span class="n">delete</span><span class="p">,</span> <span class="n">keep_shape</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+        <span class="c1"># Ensure the shape is correct</span>
+        <span class="n">shape</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+        <span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">size</span> <span class="o">*</span> <span class="n">sc</span><span class="o">.</span><span class="n">n_s</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">_shape</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">shape</span><span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">set_nsc</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 
@@ -1259,16 +1264,17 @@
         <span class="n">isc</span> <span class="o">=</span> <span class="n">geom</span><span class="o">.</span><span class="n">a2isc</span><span class="p">(</span><span class="n">col</span><span class="p">)</span>
         <span class="c1"># resulting atom in the new geometry (without wrapping</span>
         <span class="c1"># for correct supercell, that will happen below)</span>
-        <span class="n">JA</span> <span class="o">=</span> <span class="n">col</span> <span class="o">%</span> <span class="n">na</span> <span class="o">+</span> <span class="n">na</span> <span class="o">*</span> <span class="n">isc</span><span class="p">[:,</span> <span class="n">axis</span><span class="p">]</span> <span class="o">-</span> <span class="n">na</span>
+        <span class="n">JA</span> <span class="o">=</span> <span class="n">col</span> <span class="o">%</span> <span class="n">na</span> <span class="o">+</span> <span class="n">na</span> <span class="o">*</span> <span class="n">isc</span><span class="p">[:,</span> <span class="n">axis</span><span class="p">]</span>
 
         <span class="c1"># Create repetitions</span>
         <span class="k">for</span> <span class="n">rep</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">reps</span><span class="p">):</span>
-            <span class="c1"># Figure out the JA atoms</span>
-            <span class="n">JA</span> <span class="o">+=</span> <span class="n">na</span>
             <span class="c1"># Correct the supercell information</span>
             <span class="n">isc</span><span class="p">[:,</span> <span class="n">axis</span><span class="p">]</span> <span class="o">=</span> <span class="n">JA</span> <span class="o">//</span> <span class="n">na_n</span>
 
             <span class="n">indices</span><span class="p">[</span><span class="n">rep</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">JA</span> <span class="o">%</span> <span class="n">na_n</span> <span class="o">+</span> <span class="n">sc_index</span><span class="p">(</span><span class="n">isc</span><span class="p">)</span> <span class="o">*</span> <span class="n">na_n</span>
+
+            <span class="c1"># Step atoms</span>
+            <span class="n">JA</span> <span class="o">+=</span> <span class="n">na</span>
 
         <span class="c1"># Clean-up</span>
         <span class="k">del</span> <span class="n">isc</span><span class="p">,</span> <span class="n">JA</span>
@@ -1918,16 +1924,17 @@
         <span class="n">isc</span> <span class="o">=</span> <span class="n">geom</span><span class="o">.</span><span class="n">o2isc</span><span class="p">(</span><span class="n">col</span><span class="p">)</span>
         <span class="c1"># resulting atom in the new geometry (without wrapping</span>
         <span class="c1"># for correct supercell, that will happen below)</span>
-        <span class="n">JO</span> <span class="o">=</span> <span class="n">col</span> <span class="o">%</span> <span class="n">no</span> <span class="o">+</span> <span class="n">no</span> <span class="o">*</span> <span class="n">isc</span><span class="p">[:,</span> <span class="n">axis</span><span class="p">]</span> <span class="o">-</span> <span class="n">no</span>
+        <span class="n">JO</span> <span class="o">=</span> <span class="n">col</span> <span class="o">%</span> <span class="n">no</span> <span class="o">+</span> <span class="n">no</span> <span class="o">*</span> <span class="n">isc</span><span class="p">[:,</span> <span class="n">axis</span><span class="p">]</span>
 
         <span class="c1"># Create repetitions</span>
         <span class="k">for</span> <span class="n">rep</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">reps</span><span class="p">):</span>
-            <span class="c1"># Figure out the JO orbitals</span>
-            <span class="n">JO</span> <span class="o">+=</span> <span class="n">no</span>
             <span class="c1"># Correct the supercell information</span>
             <span class="n">isc</span><span class="p">[:,</span> <span class="n">axis</span><span class="p">]</span> <span class="o">=</span> <span class="n">JO</span> <span class="o">//</span> <span class="n">no_n</span>
 
             <span class="n">indices</span><span class="p">[</span><span class="n">rep</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">JO</span> <span class="o">%</span> <span class="n">no_n</span> <span class="o">+</span> <span class="n">sc_index</span><span class="p">(</span><span class="n">isc</span><span class="p">)</span> <span class="o">*</span> <span class="n">no_n</span>
+
+            <span class="c1"># Step orbitals</span>
+            <span class="n">JO</span> <span class="o">+=</span> <span class="n">no</span>
 
         <span class="c1"># Clean-up</span>
         <span class="k">del</span> <span class="n">isc</span><span class="p">,</span> <span class="n">JO</span>

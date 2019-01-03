@@ -790,6 +790,32 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_k</span> <span class="o">=</span> <span class="n">k</span>
         <span class="k">return</span> <span class="n">nspin</span><span class="p">,</span> <span class="n">no_u</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">E</span> <span class="o">*</span> <span class="n">Ry2eV</span>
 
+    <span class="k">def</span> <span class="nf">disk_usage</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Calculate the estimated size of the resulting file</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        estimated disk-space used in GB</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">is_open</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_is_open</span><span class="p">()</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">is_open</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">read_header</span><span class="p">()</span>
+
+        <span class="c1"># HS are only stored per k-point</span>
+        <span class="n">HS</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_nspin</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_k</span><span class="p">)</span>
+        <span class="n">SE</span> <span class="o">=</span> <span class="n">HS</span> <span class="o">/</span> <span class="mi">2</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_E</span><span class="p">)</span>
+
+        <span class="c1"># Now calculate the full size</span>
+        <span class="c1"># no_u ** 2 = matrix size</span>
+        <span class="c1"># 16 = bytes in double complex</span>
+        <span class="c1"># 1024 ** 3 = B -&gt; GB</span>
+        <span class="n">mem</span> <span class="o">=</span> <span class="p">(</span><span class="n">HS</span> <span class="o">+</span> <span class="n">SE</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_no_u</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">*</span> <span class="mi">16</span> <span class="o">/</span> <span class="mi">1024</span> <span class="o">**</span> <span class="mi">3</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">is_open</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_close_gf</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="n">mem</span>
+
     <span class="k">def</span> <span class="nf">read_hamiltonian</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Return current Hamiltonian and overlap matrix from the GF file</span>
 
@@ -841,14 +867,14 @@
         <span class="k">if</span> <span class="n">obj</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">obj</span> <span class="o">=</span> <span class="n">bz</span><span class="o">.</span><span class="n">parent</span>
         <span class="n">nspin</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">obj</span><span class="o">.</span><span class="n">spin</span><span class="p">)</span>
-        <span class="n">cell</span> <span class="o">=</span> <span class="n">obj</span><span class="o">.</span><span class="n">geom</span><span class="o">.</span><span class="n">sc</span><span class="o">.</span><span class="n">cell</span> <span class="o">*</span> <span class="n">Ang2Bohr</span>
-        <span class="n">na_u</span> <span class="o">=</span> <span class="n">obj</span><span class="o">.</span><span class="n">geom</span><span class="o">.</span><span class="n">na</span>
-        <span class="n">no_u</span> <span class="o">=</span> <span class="n">obj</span><span class="o">.</span><span class="n">geom</span><span class="o">.</span><span class="n">no</span>
-        <span class="n">xa</span> <span class="o">=</span> <span class="n">obj</span><span class="o">.</span><span class="n">geom</span><span class="o">.</span><span class="n">xyz</span> <span class="o">*</span> <span class="n">Ang2Bohr</span>
+        <span class="n">cell</span> <span class="o">=</span> <span class="n">obj</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">sc</span><span class="o">.</span><span class="n">cell</span> <span class="o">*</span> <span class="n">Ang2Bohr</span>
+        <span class="n">na_u</span> <span class="o">=</span> <span class="n">obj</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">na</span>
+        <span class="n">no_u</span> <span class="o">=</span> <span class="n">obj</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">no</span>
+        <span class="n">xa</span> <span class="o">=</span> <span class="n">obj</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">xyz</span> <span class="o">*</span> <span class="n">Ang2Bohr</span>
         <span class="c1"># The lasto in siesta requires lasto(0) == 0</span>
         <span class="c1"># and secondly, the Python index to fortran</span>
         <span class="c1"># index makes firsto behave like fortran lasto</span>
-        <span class="n">lasto</span> <span class="o">=</span> <span class="n">obj</span><span class="o">.</span><span class="n">geom</span><span class="o">.</span><span class="n">firsto</span>
+        <span class="n">lasto</span> <span class="o">=</span> <span class="n">obj</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">firsto</span>
         <span class="n">bloch</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">onesi</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
         <span class="n">mu</span> <span class="o">=</span> <span class="n">mu</span> <span class="o">*</span> <span class="n">eV2Ry</span>
         <span class="n">NE</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">E</span><span class="p">)</span>
@@ -867,6 +893,10 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_nspin</span> <span class="o">=</span> <span class="n">nspin</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_E</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">E</span><span class="p">)</span> <span class="o">*</span> <span class="n">eV2Ry</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_k</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">k</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_nspin</span> <span class="o">&gt;</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_no_u</span> <span class="o">=</span> <span class="n">no_u</span> <span class="o">*</span> <span class="mi">2</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_no_u</span> <span class="o">=</span> <span class="n">no_u</span>
 
         <span class="c1"># Ensure it is open (in write mode)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_close_gf</span><span class="p">()</span>
@@ -919,6 +949,9 @@
 
         <span class="bp">self</span><span class="o">.</span><span class="n">_ie</span> <span class="o">+=</span> <span class="mi">1</span>
 
+    <span class="k">def</span> <span class="nf">__len__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_E</span><span class="p">)</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_k</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_nspin</span>
+
     <span class="k">def</span> <span class="nf">__iter__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Iterate through the energies and k-points that this GF file is associated with</span>
 
@@ -954,6 +987,9 @@
 <span class="k">def</span> <span class="nf">_type</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">obj</span><span class="p">,</span> <span class="n">dic</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
     <span class="k">if</span> <span class="n">dic</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">dic</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="c1"># Always pass the docstring</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="s1">&#39;__doc__&#39;</span> <span class="ow">in</span> <span class="n">dic</span><span class="p">:</span>
+        <span class="n">dic</span><span class="p">[</span><span class="s1">&#39;__doc__&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">obj</span><span class="o">.</span><span class="vm">__doc__</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">obj</span><span class="o">.</span><span class="vm">__name__</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
     <span class="k">return</span> <span class="nb">type</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="p">),</span> <span class="n">dic</span><span class="p">)</span>
 
 <span class="c1"># Faster than class ... \ pass</span>
