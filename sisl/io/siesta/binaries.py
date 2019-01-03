@@ -623,6 +623,32 @@ class _gfSileSiesta(SileBinSiesta):
         self._k = k
         return nspin, no_u, k, E * Ry2eV
 
+    def disk_usage(self):
+        """ Calculate the estimated size of the resulting file
+
+        Returns
+        -------
+        estimated disk-space used in GB
+        """
+        is_open = self._is_open()
+        if not is_open:
+            self.read_header()
+
+        # HS are only stored per k-point
+        HS = 2 * self._nspin * len(self._k)
+        SE = HS / 2 * len(self._E)
+
+        # Now calculate the full size
+        # no_u ** 2 = matrix size
+        # 16 = bytes in double complex
+        # 1024 ** 3 = B -> GB
+        mem = (HS + SE) * self._no_u ** 2 * 16 / 1024 ** 3
+
+        if not is_open:
+            self._close_gf()
+
+        return mem
+
     def read_hamiltonian(self):
         """ Return current Hamiltonian and overlap matrix from the GF file
 
@@ -674,14 +700,14 @@ class _gfSileSiesta(SileBinSiesta):
         if obj is None:
             obj = bz.parent
         nspin = len(obj.spin)
-        cell = obj.geom.sc.cell * Ang2Bohr
-        na_u = obj.geom.na
-        no_u = obj.geom.no
-        xa = obj.geom.xyz * Ang2Bohr
+        cell = obj.geometry.sc.cell * Ang2Bohr
+        na_u = obj.geometry.na
+        no_u = obj.geometry.no
+        xa = obj.geometry.xyz * Ang2Bohr
         # The lasto in siesta requires lasto(0) == 0
         # and secondly, the Python index to fortran
         # index makes firsto behave like fortran lasto
-        lasto = obj.geom.firsto
+        lasto = obj.geometry.firsto
         bloch = _a.onesi(3)
         mu = mu * eV2Ry
         NE = len(E)
@@ -700,6 +726,10 @@ class _gfSileSiesta(SileBinSiesta):
         self._nspin = nspin
         self._E = np.copy(E) * eV2Ry
         self._k = np.copy(k)
+        if self._nspin > 2:
+            self._no_u = no_u * 2
+        else:
+            self._no_u = no_u
 
         # Ensure it is open (in write mode)
         self._close_gf()
@@ -752,6 +782,9 @@ class _gfSileSiesta(SileBinSiesta):
 
         self._ie += 1
 
+    def __len__(self):
+        return len(self._E) * len(self._k) * self._nspin
+
     def __iter__(self):
         """ Iterate through the energies and k-points that this GF file is associated with
 
@@ -787,6 +820,9 @@ class _gfSileSiesta(SileBinSiesta):
 def _type(name, obj, dic=None):
     if dic is None:
         dic = {}
+    # Always pass the docstring
+    if not '__doc__' in dic:
+        dic['__doc__'] = obj.__doc__.replace(obj.__name__, name)
     return type(name, (obj, ), dic)
 
 # Faster than class ... \ pass
