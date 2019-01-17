@@ -172,14 +172,14 @@
 <span class="kn">from</span> <span class="nn">numbers</span> <span class="k">import</span> <span class="n">Integral</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">int32</span>
-<span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">unique</span><span class="p">,</span> <span class="n">insert</span><span class="p">,</span> <span class="n">take</span>
-<span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">tile</span><span class="p">,</span> <span class="n">repeat</span>
+<span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">insert</span><span class="p">,</span> <span class="n">unique</span><span class="p">,</span> <span class="n">take</span><span class="p">,</span> <span class="n">argsort</span>
+<span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">tile</span><span class="p">,</span> <span class="n">repeat</span><span class="p">,</span> <span class="n">concatenate</span>
 
 <span class="kn">from</span> <span class="nn">.</span> <span class="k">import</span> <span class="n">_array</span> <span class="k">as</span> <span class="n">_a</span>
 <span class="kn">from</span> <span class="nn">.atom</span> <span class="k">import</span> <span class="n">Atom</span>
 <span class="kn">from</span> <span class="nn">.geometry</span> <span class="k">import</span> <span class="n">Geometry</span>
 <span class="kn">from</span> <span class="nn">.messages</span> <span class="k">import</span> <span class="n">warn</span><span class="p">,</span> <span class="n">SislError</span><span class="p">,</span> <span class="n">SislWarning</span><span class="p">,</span> <span class="n">tqdm_eta</span>
-<span class="kn">from</span> <span class="nn">._indices</span> <span class="k">import</span> <span class="n">index_sorted</span>
+<span class="kn">from</span> <span class="nn">._indices</span> <span class="k">import</span> <span class="n">index_sorted</span><span class="p">,</span> <span class="n">indices_only</span>
 <span class="kn">from</span> <span class="nn">._help</span> <span class="k">import</span> <span class="n">get_dtype</span>
 <span class="kn">from</span> <span class="nn">._help</span> <span class="k">import</span> <span class="n">_zip</span> <span class="k">as</span> <span class="nb">zip</span><span class="p">,</span> <span class="n">_range</span> <span class="k">as</span> <span class="nb">range</span><span class="p">,</span> <span class="n">_map</span> <span class="k">as</span> <span class="nb">map</span>
 <span class="kn">from</span> <span class="nn">.utils.ranges</span> <span class="k">import</span> <span class="n">array_arange</span>
@@ -491,53 +491,107 @@
 
         <span class="bp">self</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">set_nsc</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 
+    <span class="k">def</span> <span class="nf">transpose</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Create the transposed sparse geometry by interchanging supercell indices</span>
+
+<span class="sd">        Sparse geometries are (typically) relying on symmetry in the supercell picture.</span>
+<span class="sd">        Thus when one transposes a sparse geometry one should *ideally* get the same</span>
+<span class="sd">        matrix. This is true for the Hamiltonian, density matrix, etc.</span>
+
+<span class="sd">        This routine transposes all rows and columns such that any interaction between</span>
+<span class="sd">        row, `r`, and column `c` in a given supercell `(i,j,k)` will be transposed</span>
+<span class="sd">        into row `c`, column `r` in the supercell `(-i,-j,-k)`.</span>
+
+<span class="sd">        Notes</span>
+<span class="sd">        -----</span>
+<span class="sd">        For Hamiltonians with non-collinear or spin-orbit there is no transposing of the</span>
+<span class="sd">        sub-spin matrix box. This needs to be done *manually*.</span>
+
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
+
+<span class="sd">        Force a sparse geometry to be Hermitian:</span>
+
+<span class="sd">        &gt;&gt;&gt; sp = SparseOrbital(...)</span>
+<span class="sd">        &gt;&gt;&gt; sp = (sp + sp.transpose()) * 0.5</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        an equivalent sparse geometry with transposed matrix elements</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Create a temporary copy to put data into</span>
+        <span class="n">T</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">T</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">ptr</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="n">T</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">col</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="n">T</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">ncol</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="n">T</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">_D</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="c1"># Short-linkes</span>
+        <span class="n">sc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">sc</span>
+
+        <span class="c1"># Create &quot;DOK&quot; format indices</span>
+        <span class="n">csr</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span>
+        <span class="c1"># Number of rows (used for converting to supercell indices)</span>
+        <span class="n">size</span> <span class="o">=</span> <span class="n">csr</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="c1"># First extract the actual data</span>
+        <span class="n">ncol</span> <span class="o">=</span> <span class="n">csr</span><span class="o">.</span><span class="n">ncol</span><span class="o">.</span><span class="n">view</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">csr</span><span class="o">.</span><span class="n">finalized</span><span class="p">:</span>
+            <span class="n">ptr</span> <span class="o">=</span> <span class="n">csr</span><span class="o">.</span><span class="n">ptr</span><span class="o">.</span><span class="n">view</span><span class="p">()</span>
+            <span class="n">col</span> <span class="o">=</span> <span class="n">csr</span><span class="o">.</span><span class="n">col</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">idx</span> <span class="o">=</span> <span class="n">array_arange</span><span class="p">(</span><span class="n">csr</span><span class="o">.</span><span class="n">ptr</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">n</span><span class="o">=</span><span class="n">ncol</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">int32</span><span class="p">)</span>
+            <span class="n">ptr</span> <span class="o">=</span> <span class="n">insert</span><span class="p">(</span><span class="n">_a</span><span class="o">.</span><span class="n">cumsumi</span><span class="p">(</span><span class="n">ncol</span><span class="p">),</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+            <span class="n">col</span> <span class="o">=</span> <span class="n">csr</span><span class="o">.</span><span class="n">col</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span>
+            <span class="k">del</span> <span class="n">idx</span>
+
+        <span class="c1"># Create an array ready for holding all transposed columns</span>
+        <span class="n">row</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">zerosi</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">col</span><span class="p">))</span>
+        <span class="n">row</span><span class="p">[</span><span class="n">ptr</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">]]</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="n">_a</span><span class="o">.</span><span class="n">cumsumi</span><span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="n">out</span><span class="o">=</span><span class="n">row</span><span class="p">)</span>
+        <span class="n">D</span> <span class="o">=</span> <span class="n">csr</span><span class="o">.</span><span class="n">_D</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+
+        <span class="c1"># Now we have the DOK format</span>
+        <span class="c1">#  row, col, _D</span>
+
+        <span class="c1"># Retrieve all sc-indices in the new transposed array</span>
+        <span class="n">new_sc_off</span> <span class="o">=</span> <span class="n">sc</span><span class="o">.</span><span class="n">sc_index</span><span class="p">(</span><span class="o">-</span> <span class="n">sc</span><span class="o">.</span><span class="n">sc_off</span><span class="p">)</span>
+
+        <span class="c1"># Calculate the row-offsets in the new sparse geometry</span>
+        <span class="n">row</span> <span class="o">+=</span> <span class="n">new_sc_off</span><span class="p">[</span><span class="n">sc</span><span class="o">.</span><span class="n">sc_index</span><span class="p">(</span><span class="n">sc</span><span class="o">.</span><span class="n">sc_off</span><span class="p">[</span><span class="n">col</span> <span class="o">//</span> <span class="n">size</span><span class="p">,</span> <span class="p">:])]</span> <span class="o">*</span> <span class="n">size</span>
+
+        <span class="c1"># Now convert columns into unit-cell</span>
+        <span class="n">col</span> <span class="o">%=</span> <span class="n">size</span>
+
+        <span class="c1"># Now we can re-create the sparse matrix</span>
+        <span class="c1"># All we need is to count the number of non-zeros per column.</span>
+        <span class="n">_</span><span class="p">,</span> <span class="n">nrow</span> <span class="o">=</span> <span class="n">unique</span><span class="p">(</span><span class="n">col</span><span class="p">,</span> <span class="n">return_counts</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+        <span class="c1"># Now we have everything ready...</span>
+        <span class="c1"># Simply figure out how to sort the columns</span>
+        <span class="c1"># such that we have them unified.</span>
+        <span class="n">idx</span> <span class="o">=</span> <span class="n">argsort</span><span class="p">(</span><span class="n">col</span><span class="p">)</span>
+
+        <span class="c1"># Our new data will then be</span>
+        <span class="n">T</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">col</span> <span class="o">=</span> <span class="n">take</span><span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="n">idx</span><span class="p">,</span> <span class="n">out</span><span class="o">=</span><span class="n">row</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">int32</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="k">del</span> <span class="n">row</span>
+        <span class="n">T</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">_D</span> <span class="o">=</span> <span class="n">take</span><span class="p">(</span><span class="n">D</span><span class="p">,</span> <span class="n">idx</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="k">del</span> <span class="n">D</span>
+        <span class="n">T</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">ncol</span> <span class="o">=</span> <span class="n">nrow</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">int32</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="n">T</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">ptr</span> <span class="o">=</span> <span class="n">insert</span><span class="p">(</span><span class="n">_a</span><span class="o">.</span><span class="n">cumsumi</span><span class="p">(</span><span class="n">nrow</span><span class="p">),</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+
+        <span class="c1"># For-sure we haven&#39;t sorted the columns.</span>
+        <span class="c1"># We haven&#39;t changed the number of non-zeros</span>
+        <span class="n">T</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">_finalized</span> <span class="o">=</span> <span class="kc">False</span>
+
+        <span class="k">return</span> <span class="n">T</span>
+
     <span class="k">def</span> <span class="nf">spalign</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; See :meth:`~sisl.sparse.SparseCSR.align` for details &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">SparseCSR</span><span class="p">):</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">align</span><span class="p">(</span><span class="n">other</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">align</span><span class="p">(</span><span class="n">other</span><span class="o">.</span><span class="n">_csr</span><span class="p">)</span>
-
-    <span class="k">def</span> <span class="nf">make_hermitian</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot; Ensures the matrix is Hermitian by doing an *in-place* symmetrization &quot;&quot;&quot;</span>
-        <span class="n">geom</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">geometry</span>
-        <span class="n">na</span> <span class="o">=</span> <span class="n">geom</span><span class="o">.</span><span class="n">na</span>
-        <span class="n">sc</span> <span class="o">=</span> <span class="n">geom</span><span class="o">.</span><span class="n">sc</span>
-        <span class="n">arangei</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">arangei</span>
-
-        <span class="c1"># We finalize to make searching faster</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">finalize</span><span class="p">()</span>
-
-        <span class="c1"># Loop on all atoms</span>
-        <span class="n">ptr</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">ptr</span>
-        <span class="n">ncol</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">ncol</span>
-        <span class="n">col</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">col</span>
-        <span class="n">D</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">_D</span>
-
-        <span class="k">for</span> <span class="n">ia</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
-            <span class="k">if</span> <span class="n">ncol</span><span class="p">[</span><span class="n">ia</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-                <span class="k">continue</span>
-
-            <span class="n">c</span> <span class="o">=</span> <span class="n">col</span><span class="p">[</span><span class="n">ptr</span><span class="p">[</span><span class="n">ia</span><span class="p">]:</span><span class="n">ptr</span><span class="p">[</span><span class="n">ia</span><span class="p">]</span> <span class="o">+</span> <span class="n">ncol</span><span class="p">[</span><span class="n">ia</span><span class="p">]]</span>
-            <span class="n">ja</span> <span class="o">=</span> <span class="n">c</span> <span class="o">%</span> <span class="n">na</span>
-            <span class="n">h_col</span> <span class="o">=</span> <span class="p">(</span><span class="n">sc</span><span class="o">.</span><span class="n">sc_index</span><span class="p">(</span><span class="o">-</span><span class="n">geom</span><span class="o">.</span><span class="n">a2isc</span><span class="p">(</span><span class="n">c</span><span class="p">))</span> <span class="o">*</span> <span class="n">na</span> <span class="o">+</span> <span class="n">ia</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">int32</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
-            <span class="n">h_idx</span> <span class="o">=</span> <span class="n">arangei</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">h_col</span><span class="p">))</span>
-            <span class="c1"># Now we have the Hermitian column indices</span>
-            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">ja</span><span class="p">):</span>
-                <span class="n">idx</span> <span class="o">=</span> <span class="n">index_sorted</span><span class="p">(</span><span class="n">col</span><span class="p">[</span><span class="n">ptr</span><span class="p">[</span><span class="n">j</span><span class="p">]:</span><span class="n">ptr</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="o">+</span><span class="n">ncol</span><span class="p">[</span><span class="n">j</span><span class="p">]],</span> <span class="n">h_col</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
-                <span class="k">if</span> <span class="n">idx</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
-                    <span class="bp">self</span><span class="p">[</span><span class="n">j</span><span class="p">,</span> <span class="n">h_col</span><span class="p">[</span><span class="n">i</span><span class="p">]]</span> <span class="o">=</span> <span class="mf">0.</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">finalize</span><span class="p">()</span>
-                    <span class="n">ptr</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">ptr</span>
-                    <span class="n">ncol</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">ncol</span>
-                    <span class="n">col</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">col</span>
-                    <span class="n">D</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">_D</span>
-                    <span class="n">idx</span> <span class="o">=</span> <span class="n">index_sorted</span><span class="p">(</span><span class="n">col</span><span class="p">[</span><span class="n">ptr</span><span class="p">[</span><span class="n">j</span><span class="p">]:</span><span class="n">ptr</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="o">+</span><span class="n">ncol</span><span class="p">[</span><span class="n">j</span><span class="p">]],</span> <span class="n">h_col</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
-                <span class="n">h_idx</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">ptr</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">+</span> <span class="n">idx</span>
-            <span class="c1"># Now make it hermitian</span>
-            <span class="n">idx</span> <span class="o">=</span> <span class="nb">slice</span><span class="p">(</span><span class="n">ptr</span><span class="p">[</span><span class="n">ia</span><span class="p">],</span> <span class="n">ptr</span><span class="p">[</span><span class="n">ia</span><span class="p">]</span> <span class="o">+</span> <span class="n">ncol</span><span class="p">[</span><span class="n">ia</span><span class="p">])</span>
-            <span class="n">D</span><span class="p">[</span><span class="n">idx</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="p">(</span><span class="n">D</span><span class="p">[</span><span class="n">idx</span><span class="p">,</span> <span class="p">:]</span> <span class="o">+</span> <span class="n">D</span><span class="p">[</span><span class="n">h_idx</span><span class="p">,</span> <span class="p">:]</span><span class="o">.</span><span class="n">conj</span><span class="p">())</span> <span class="o">/</span> <span class="mi">2</span>
-            <span class="n">D</span><span class="p">[</span><span class="n">h_idx</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">D</span><span class="p">[</span><span class="n">idx</span><span class="p">,</span> <span class="p">:]</span>
 
     <span class="k">def</span> <span class="nf">eliminate_zeros</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">atol</span><span class="o">=</span><span class="mf">0.</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Removes all zero elements from the sparse matrix</span>
@@ -547,7 +601,7 @@
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
 <span class="sd">        atol : float, optional</span>
-<span class="sd">            absolute tolerance below this value will be considered 0.</span>
+<span class="sd">            absolute tolerance equal or below this value will be considered 0.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">eliminate_zeros</span><span class="p">(</span><span class="n">atol</span><span class="p">)</span>
 
@@ -1091,7 +1145,7 @@
         <span class="c1"># First we need to figure out how long the interaction range is</span>
         <span class="c1"># in the cut-direction</span>
         <span class="c1"># We initialize to be the same as the parent direction</span>
-        <span class="n">nsc</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">arrayi</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nsc</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="o">//</span> <span class="mi">2</span>
+        <span class="n">nsc</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">arrayi</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nsc</span> <span class="o">//</span> <span class="mi">2</span><span class="p">)</span>
         <span class="n">nsc</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>  <span class="c1"># we count the new direction</span>
         <span class="n">isc</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">zerosi</span><span class="p">([</span><span class="mi">3</span><span class="p">])</span>
         <span class="n">isc</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span> <span class="o">-=</span> <span class="mi">1</span>
@@ -1138,7 +1192,7 @@
 
         <span class="k">def</span> <span class="nf">_sca2sca</span><span class="p">(</span><span class="n">M</span><span class="p">,</span> <span class="n">a</span><span class="p">,</span> <span class="n">m</span><span class="p">,</span> <span class="n">seps</span><span class="p">,</span> <span class="n">axis</span><span class="p">):</span>
             <span class="c1"># Converts an o from M to m</span>
-            <span class="n">isc</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">arrayi</span><span class="p">(</span><span class="n">M</span><span class="o">.</span><span class="n">a2isc</span><span class="p">(</span><span class="n">a</span><span class="p">),</span> <span class="n">copy</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="n">isc</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">arrayi</span><span class="p">(</span><span class="n">M</span><span class="o">.</span><span class="n">a2isc</span><span class="p">(</span><span class="n">a</span><span class="p">))</span>
             <span class="n">isc</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span> <span class="o">=</span> <span class="n">isc</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span> <span class="o">*</span> <span class="n">seps</span>
             <span class="c1"># Correct for cell-offset</span>
             <span class="n">isc</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span> <span class="o">=</span> <span class="n">isc</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span> <span class="o">+</span> <span class="p">(</span><span class="n">a</span> <span class="o">%</span> <span class="n">M</span><span class="o">.</span><span class="n">na</span><span class="p">)</span> <span class="o">//</span> <span class="n">m</span><span class="o">.</span><span class="n">na</span>
@@ -1183,7 +1237,6 @@
 <span class="sd">        Geometry.sub : equivalent to the resulting `Geometry` from this routine</span>
 <span class="sd">        remove : the negative of `sub`, i.e. remove a subset of atoms</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="sd">&quot;&quot;&quot; Atomic indices &quot;&quot;&quot;</span>
         <span class="n">atom</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sc2uc</span><span class="p">(</span><span class="n">atom</span><span class="p">)</span>
         <span class="n">geom</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="n">atom</span><span class="p">)</span>
 
@@ -1522,48 +1575,6 @@
             <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">nonzero</span><span class="p">(</span><span class="n">only_col</span><span class="o">=</span><span class="n">only_col</span><span class="p">)</span>
         <span class="n">row</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">a2o</span><span class="p">(</span><span class="n">atom</span><span class="p">,</span> <span class="nb">all</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">nonzero</span><span class="p">(</span><span class="n">row</span><span class="o">=</span><span class="n">row</span><span class="p">,</span> <span class="n">only_col</span><span class="o">=</span><span class="n">only_col</span><span class="p">)</span></div>
-
-<div class="viewcode-block" id="SparseOrbital.make_hermitian"><a class="viewcode-back" href="../../api-generated/sisl.SparseOrbital.html#sisl.SparseOrbital.make_hermitian">[docs]</a>    <span class="k">def</span> <span class="nf">make_hermitian</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot; Ensures the matrix is Hermitian by doing an *in-place* symmetrization &quot;&quot;&quot;</span>
-        <span class="n">geom</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">geometry</span>
-        <span class="n">no</span> <span class="o">=</span> <span class="n">geom</span><span class="o">.</span><span class="n">no</span>
-        <span class="n">sc</span> <span class="o">=</span> <span class="n">geom</span><span class="o">.</span><span class="n">sc</span>
-        <span class="n">arangei</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">arangei</span>
-
-        <span class="c1"># We finalize to make searching faster</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">finalize</span><span class="p">()</span>
-
-        <span class="c1"># Loop on all orbitals</span>
-        <span class="n">ptr</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">ptr</span>
-        <span class="n">ncol</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">ncol</span>
-        <span class="n">col</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">col</span>
-        <span class="n">D</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">_D</span>
-
-        <span class="k">for</span> <span class="n">io</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
-            <span class="k">if</span> <span class="n">ncol</span><span class="p">[</span><span class="n">io</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-                <span class="k">continue</span>
-
-            <span class="n">c</span> <span class="o">=</span> <span class="n">col</span><span class="p">[</span><span class="n">ptr</span><span class="p">[</span><span class="n">io</span><span class="p">]:</span><span class="n">ptr</span><span class="p">[</span><span class="n">io</span><span class="p">]</span> <span class="o">+</span> <span class="n">ncol</span><span class="p">[</span><span class="n">io</span><span class="p">]]</span>
-            <span class="n">jo</span> <span class="o">=</span> <span class="n">c</span> <span class="o">%</span> <span class="n">no</span>
-            <span class="n">h_col</span> <span class="o">=</span> <span class="p">(</span><span class="n">sc</span><span class="o">.</span><span class="n">sc_index</span><span class="p">(</span><span class="o">-</span><span class="n">geom</span><span class="o">.</span><span class="n">o2isc</span><span class="p">(</span><span class="n">c</span><span class="p">))</span> <span class="o">*</span> <span class="n">no</span> <span class="o">+</span> <span class="n">io</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">int32</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
-            <span class="n">h_idx</span> <span class="o">=</span> <span class="n">arangei</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">h_col</span><span class="p">))</span>
-            <span class="c1"># Now we have the Hermitian column indices</span>
-            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">jo</span><span class="p">):</span>
-                <span class="n">idx</span> <span class="o">=</span> <span class="n">index_sorted</span><span class="p">(</span><span class="n">col</span><span class="p">[</span><span class="n">ptr</span><span class="p">[</span><span class="n">j</span><span class="p">]:</span><span class="n">ptr</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="o">+</span><span class="n">ncol</span><span class="p">[</span><span class="n">j</span><span class="p">]],</span> <span class="n">h_col</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
-                <span class="k">if</span> <span class="n">idx</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
-                    <span class="c1"># Add a new element</span>
-                    <span class="bp">self</span><span class="p">[</span><span class="n">j</span><span class="p">,</span> <span class="n">h_col</span><span class="p">[</span><span class="n">i</span><span class="p">]]</span> <span class="o">=</span> <span class="mf">0.</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">finalize</span><span class="p">()</span>
-                    <span class="n">ptr</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">ptr</span>
-                    <span class="n">ncol</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">ncol</span>
-                    <span class="n">col</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">col</span>
-                    <span class="n">D</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">_D</span>
-                    <span class="n">idx</span> <span class="o">=</span> <span class="n">index_sorted</span><span class="p">(</span><span class="n">col</span><span class="p">[</span><span class="n">ptr</span><span class="p">[</span><span class="n">j</span><span class="p">]:</span><span class="n">ptr</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="o">+</span><span class="n">ncol</span><span class="p">[</span><span class="n">j</span><span class="p">]],</span> <span class="n">h_col</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
-                <span class="n">h_idx</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">ptr</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">+</span> <span class="n">idx</span>
-            <span class="c1"># Now make it hermitian</span>
-            <span class="n">idx</span> <span class="o">=</span> <span class="nb">slice</span><span class="p">(</span><span class="n">ptr</span><span class="p">[</span><span class="n">io</span><span class="p">],</span> <span class="n">ptr</span><span class="p">[</span><span class="n">io</span><span class="p">]</span> <span class="o">+</span> <span class="n">ncol</span><span class="p">[</span><span class="n">io</span><span class="p">])</span>
-            <span class="n">D</span><span class="p">[</span><span class="n">idx</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="p">(</span><span class="n">D</span><span class="p">[</span><span class="n">idx</span><span class="p">,</span> <span class="p">:]</span> <span class="o">+</span> <span class="n">D</span><span class="p">[</span><span class="n">h_idx</span><span class="p">,</span> <span class="p">:]</span><span class="o">.</span><span class="n">conj</span><span class="p">())</span> <span class="o">/</span> <span class="mi">2</span>
-            <span class="n">D</span><span class="p">[</span><span class="n">h_idx</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">D</span><span class="p">[</span><span class="n">idx</span><span class="p">,</span> <span class="p">:]</span></div>
 
 <div class="viewcode-block" id="SparseOrbital.iter_nnz"><a class="viewcode-back" href="../../api-generated/sisl.SparseOrbital.html#sisl.SparseOrbital.iter_nnz">[docs]</a>    <span class="k">def</span> <span class="nf">iter_nnz</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">atom</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">orbital</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Iterations of the non-zero elements</span>
@@ -2145,24 +2156,413 @@
 
         <span class="k">return</span> <span class="n">R</span></div>
 
-<div class="viewcode-block" id="SparseOrbital.toSparseAtom"><a class="viewcode-back" href="../../api-generated/sisl.SparseOrbital.html#sisl.SparseOrbital.toSparseAtom">[docs]</a>    <span class="k">def</span> <span class="nf">toSparseAtom</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<div class="viewcode-block" id="SparseOrbital.prepend"><a class="viewcode-back" href="../../api-generated/sisl.SparseOrbital.html#sisl.SparseOrbital.prepend">[docs]</a>    <span class="k">def</span> <span class="nf">prepend</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">,</span> <span class="n">axis</span><span class="p">,</span> <span class="n">eps</span><span class="o">=</span><span class="mf">0.01</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; See `append` for details</span>
+
+<span class="sd">        This is currently equivalent to:</span>
+
+<span class="sd">        &gt;&gt;&gt; other.append(self, axis, eps)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">other</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">axis</span><span class="p">,</span> <span class="n">eps</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="SparseOrbital.append"><a class="viewcode-back" href="../../api-generated/sisl.SparseOrbital.html#sisl.SparseOrbital.append">[docs]</a>    <span class="k">def</span> <span class="nf">append</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">,</span> <span class="n">axis</span><span class="p">,</span> <span class="n">eps</span><span class="o">=</span><span class="mf">0.01</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Append `other` along `axis` to construct a new connected sparse matrix</span>
+
+<span class="sd">        This method tries to append two sparse geometry objects together by</span>
+<span class="sd">        the following these steps:</span>
+
+<span class="sd">        1. Create the new extended geometry</span>
+<span class="sd">        2. Use neighbor cell couplings from `self` as the couplings to `other`</span>
+<span class="sd">           This *may* cause problems if the coupling atoms are not exactly equi-positioned.</span>
+<span class="sd">           If the coupling coordinates and the coordinates in `other` differ by more than</span>
+<span class="sd">           0.001 Ang, a warning will be issued.</span>
+<span class="sd">           If this difference is above `eps` the couplings will be removed.</span>
+
+<span class="sd">        When appending sparse matrices made up of atoms, this method assumes that</span>
+<span class="sd">        the orbitals on the overlapping atoms have the same orbitals, as well as the</span>
+<span class="sd">        same orbital ordering.</span>
+
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
+<span class="sd">        &gt;&gt;&gt; sporb = SparseOrbital(....)</span>
+<span class="sd">        &gt;&gt;&gt; forced_hermitian = (sporb + sporb.transpose()) * 0.5</span>
+
+<span class="sd">        Notes</span>
+<span class="sd">        -----</span>
+<span class="sd">        This routine and how it is functioning may change in future releases.</span>
+<span class="sd">        There are many design choices in how to assign the matrix elements when</span>
+<span class="sd">        combining two models and it is not clear what is the best procedure.</span>
+
+<span class="sd">        The current implentation does not preserve the hermiticity of the matrix.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        other : object</span>
+<span class="sd">            must be an object of the same type as `self`</span>
+<span class="sd">        axis : int</span>
+<span class="sd">            axis to append the two sparse geometries along</span>
+<span class="sd">        eps : float, optional</span>
+<span class="sd">            tolerance that all coordinates *must* be within to allow an append.</span>
+<span class="sd">            It is important that this value is smaller than half the distance between</span>
+<span class="sd">            the two closests atoms such that there is no ambiguity in selecting</span>
+<span class="sd">            equivalent atoms. An internal stricter eps is used as a baseline, see above.</span>
+
+<span class="sd">        See Also</span>
+<span class="sd">        --------</span>
+<span class="sd">        prepend : equivalent scheme as this method</span>
+<span class="sd">        transpose : ensure hermiticity by using this routine</span>
+<span class="sd">        Geometry.append</span>
+<span class="sd">        Geometry.prepend</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        ValueError if atomic coordinates does not overlap within `eps`</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        a new object with the two sparse matrix elements appended together</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="ow">is</span> <span class="nb">type</span><span class="p">(</span><span class="n">other</span><span class="p">)):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39;.append requires other to be of same type: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">other</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="p">))</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">nsc</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">3</span> <span class="ow">or</span> <span class="n">other</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">nsc</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">3</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39;.append requires sparse-geometries to maximally &#39;</span>
+                             <span class="s1">&#39;have 3 supercells along appending axis.&#39;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">nsc</span> <span class="o">!=</span> <span class="n">other</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">nsc</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39;.append requires sparse-geometries to have the same &#39;</span>
+                             <span class="s1">&#39;number of supercells along all directions.&#39;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dim</span> <span class="o">!=</span> <span class="n">other</span><span class="o">.</span><span class="n">dim</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39;.append requires the same number of dimensions in the matrix&#39;</span><span class="p">)</span>
+
+        <span class="c1"># Create sparsity pattern in the atomic picture.</span>
+        <span class="c1"># This makes it easier to find the coupling elements along axis.</span>
+        <span class="c1"># It could also be done in the orbital space...</span>
+
+        <span class="k">def</span> <span class="nf">_sep_connections</span><span class="p">(</span><span class="n">spO</span><span class="p">,</span> <span class="n">direction</span><span class="p">):</span>
+            <span class="sd">&quot;&quot;&quot; Finds atoms that has connections crossing the `axis` along `direction`</span>
+
+<span class="sd">            Returns</span>
+<span class="sd">            -------</span>
+<span class="sd">            self_connect : atoms in `spO` which connects across `direction`</span>
+<span class="sd">            other_connect : atoms in `spO` which self_connect connects to along `direction`</span>
+<span class="sd">            &quot;&quot;&quot;</span>
+            <span class="n">geom</span> <span class="o">=</span> <span class="n">spO</span><span class="o">.</span><span class="n">geometry</span>
+            <span class="c1"># We need to copy since we are deleting elements below</span>
+            <span class="n">csr</span> <span class="o">=</span> <span class="n">spO</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">copy</span><span class="p">([</span><span class="mi">0</span><span class="p">])</span>
+
+            <span class="c1"># We will retain all connections crossing along the given direction</span>
+            <span class="n">n</span> <span class="o">=</span> <span class="n">spO</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+            <span class="c1"># Figure out the matrix columns we should retain</span>
+            <span class="n">nsc</span> <span class="o">=</span> <span class="p">[</span><span class="kc">None</span><span class="p">]</span> <span class="o">*</span> <span class="mi">3</span>
+            <span class="n">nsc</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span> <span class="o">=</span> <span class="n">direction</span>
+
+            <span class="c1"># Get all supercell indices that we should delete from the column specifications</span>
+            <span class="n">idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="n">_a</span><span class="o">.</span><span class="n">arangei</span><span class="p">(</span><span class="n">geom</span><span class="o">.</span><span class="n">sc</span><span class="o">.</span><span class="n">n_s</span><span class="p">),</span> <span class="n">geom</span><span class="o">.</span><span class="n">sc</span><span class="o">.</span><span class="n">sc_index</span><span class="p">(</span><span class="n">nsc</span><span class="p">))</span> <span class="o">*</span> <span class="n">n</span>
+
+            <span class="c1"># Calculate columns to delete</span>
+            <span class="n">cols</span> <span class="o">=</span> <span class="n">array_arange</span><span class="p">(</span><span class="n">idx</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="n">_a</span><span class="o">.</span><span class="n">fulli</span><span class="p">(</span><span class="n">idx</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">n</span><span class="p">))</span>
+
+            <span class="c1"># Delete all values in columns, but keep them to retain the supercell information</span>
+            <span class="n">csr</span><span class="o">.</span><span class="n">delete_columns</span><span class="p">(</span><span class="n">cols</span><span class="p">,</span> <span class="n">keep_shape</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="c1"># Now we are in a position to find the indices along the append direction</span>
+            <span class="n">self_connect</span> <span class="o">=</span> <span class="n">geom</span><span class="o">.</span><span class="n">sc2uc</span><span class="p">(</span><span class="n">geom</span><span class="o">.</span><span class="n">o2a</span><span class="p">((</span><span class="n">csr</span><span class="o">.</span><span class="n">ncol</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">nonzero</span><span class="p">()[</span><span class="mi">0</span><span class="p">],</span> <span class="kc">True</span><span class="p">),</span> <span class="kc">True</span><span class="p">)</span>
+
+            <span class="c1"># Retrieve the connected atoms in the other structure</span>
+            <span class="n">other_connect</span> <span class="o">=</span> <span class="n">geom</span><span class="o">.</span><span class="n">sc2uc</span><span class="p">(</span><span class="n">geom</span><span class="o">.</span><span class="n">o2a</span><span class="p">(</span><span class="n">csr</span><span class="o">.</span><span class="n">col</span><span class="p">[</span><span class="n">array_arange</span><span class="p">(</span><span class="n">csr</span><span class="o">.</span><span class="n">ptr</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">n</span><span class="o">=</span><span class="n">csr</span><span class="o">.</span><span class="n">ncol</span><span class="p">)],</span> <span class="kc">True</span><span class="p">),</span> <span class="kc">True</span><span class="p">)</span>
+
+            <span class="k">return</span> <span class="n">self_connect</span><span class="p">,</span> <span class="n">other_connect</span>
+
+        <span class="c1"># Naming convention:</span>
+        <span class="c1">#  P_01 -&gt; [0] -&gt; [1]</span>
+        <span class="c1">#  P_10 -&gt; [1] -&gt; [0]</span>
+        <span class="c1">#  M_01 -&gt; [0] -&gt; [-1]</span>
+        <span class="c1">#  M_10 -&gt; [-1] -&gt; [0]</span>
+        <span class="n">self_P_01</span><span class="p">,</span> <span class="n">self_P_10</span> <span class="o">=</span> <span class="n">_sep_connections</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">+</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">self_M_01</span><span class="p">,</span> <span class="n">self_M_10</span> <span class="o">=</span> <span class="n">_sep_connections</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">other_P_01</span><span class="p">,</span> <span class="n">other_P_10</span> <span class="o">=</span> <span class="n">_sep_connections</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="o">+</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">other_M_01</span><span class="p">,</span> <span class="n">other_M_10</span> <span class="o">=</span> <span class="n">_sep_connections</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+
+        <span class="c1"># I.e. the connections in the supercell picture will be:</span>
+        <span class="c1"># Note that all indices are not in any supercell (which is why we need to</span>
+        <span class="c1"># translate them anyhow).</span>
+
+        <span class="k">def</span> <span class="nf">_find_overlap</span><span class="p">(</span><span class="n">g1</span><span class="p">,</span> <span class="n">g1_idx</span><span class="p">,</span> <span class="n">isc1</span><span class="p">,</span> <span class="n">g2</span><span class="p">,</span> <span class="n">g2_idx</span><span class="p">,</span> <span class="n">isc2</span><span class="p">,</span> <span class="n">R</span><span class="p">):</span>
+            <span class="sd">&quot;&quot;&quot; Finds `g1_idx` atoms in `g2_idx` &quot;&quot;&quot;</span>
+            <span class="n">xyz1</span> <span class="o">=</span> <span class="n">g1</span><span class="o">.</span><span class="n">axyz</span><span class="p">(</span><span class="n">g1_idx</span><span class="p">,</span> <span class="n">isc</span><span class="o">=</span><span class="n">isc1</span><span class="p">)</span>
+            <span class="n">g1_g2</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="n">warn_atoms</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">ia</span><span class="p">,</span> <span class="n">xyz</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">g1_idx</span><span class="p">,</span> <span class="n">xyz1</span><span class="p">):</span>
+                <span class="c1"># Only search in the index</span>
+                <span class="n">idx</span> <span class="o">=</span> <span class="n">g2</span><span class="o">.</span><span class="n">close_sc</span><span class="p">(</span><span class="n">xyz</span><span class="p">,</span> <span class="n">isc2</span><span class="p">,</span> <span class="n">R</span><span class="o">=</span><span class="n">R</span><span class="p">,</span> <span class="n">idx</span><span class="o">=</span><span class="n">g2_idx</span><span class="p">)</span>
+                <span class="n">g1_g2</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">_check</span><span class="p">(</span><span class="n">idx</span><span class="p">,</span> <span class="n">ia</span><span class="p">,</span> <span class="n">warn_atoms</span><span class="p">))</span>
+            <span class="k">return</span> <span class="n">_a</span><span class="o">.</span><span class="n">arrayi</span><span class="p">(</span><span class="n">g1_g2</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">(),</span> <span class="n">warn_atoms</span>
+
+        <span class="k">def</span> <span class="nf">_check</span><span class="p">(</span><span class="n">idx</span><span class="p">,</span> <span class="n">atom</span><span class="p">,</span> <span class="n">warn_atoms</span><span class="p">):</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">idx</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">warn_atoms</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">atom</span><span class="p">)</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">idx</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39;.append found incompatible self/other within the given eps value.&#39;</span><span class="p">)</span>
+                <span class="n">idx</span> <span class="o">=</span> <span class="n">idx</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">idx</span> <span class="o">=</span> <span class="n">idx</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">idx</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39;.append found two atoms close to a mirror atom, a too high eps value was given.&#39;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">idx</span>
+
+        <span class="c1"># Radius to use as precision array</span>
+        <span class="n">R</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">arrayd</span><span class="p">([</span><span class="mf">0.001</span><span class="p">,</span> <span class="n">eps</span><span class="p">])</span>
+
+        <span class="c1"># Initialize arrays for checking</span>
+        <span class="n">self_isc</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="mi">3</span>
+        <span class="n">other_isc</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="mi">3</span>
+
+        <span class="k">def</span> <span class="nf">_2</span><span class="p">(</span><span class="n">spg1</span><span class="p">,</span> <span class="n">spg1_idx</span><span class="p">,</span> <span class="n">spg1_isc</span><span class="p">,</span> <span class="n">spg2</span><span class="p">,</span> <span class="n">spg2_idx</span><span class="p">,</span> <span class="n">spg2_isc</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+            <span class="n">_error</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39;.append(</span><span class="si">{}</span><span class="s1">) &#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+            <span class="n">idx</span><span class="p">,</span> <span class="n">warn_atoms</span> <span class="o">=</span> <span class="n">_find_overlap</span><span class="p">(</span><span class="n">spg1</span><span class="o">.</span><span class="n">geometry</span><span class="p">,</span> <span class="n">spg1_idx</span><span class="p">,</span> <span class="n">spg1_isc</span><span class="p">,</span>
+                                            <span class="n">spg2</span><span class="o">.</span><span class="n">geometry</span><span class="p">,</span> <span class="n">spg2_idx</span><span class="p">,</span> <span class="n">spg2_isc</span><span class="p">,</span> <span class="n">R</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">spg1_idx</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">spg2_idx</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">_error</span> <span class="o">+</span> <span class="s1">&#39;did not find an equivalent overlap atoms between the two geometries.&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">idx</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">spg2_idx</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">_error</span> <span class="o">+</span> <span class="s1">&#39;did not find all overlapping atoms.&#39;</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">warn_atoms</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="c1"># Sort them and ensure they are a list</span>
+                <span class="n">warn_atoms</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">warn_atoms</span><span class="p">)</span><span class="o">.</span><span class="n">tolist</span><span class="p">())</span>
+                <span class="n">warn</span><span class="p">(</span><span class="n">_error</span> <span class="o">+</span> <span class="s1">&#39;atoms farther than 0.001 Ang: </span><span class="si">{}</span><span class="s1">.&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">warn_atoms</span><span class="p">))</span>
+
+            <span class="c1"># Now we have the atomic indices that we know are &quot;dublicated&quot;</span>
+            <span class="c1"># Ensure the number of orbitals are the same in both geometries</span>
+            <span class="c1"># (we don&#39;t check explicitly names etc. since this should be the users</span>
+            <span class="c1">#  responsibility)</span>
+            <span class="n">s1</span> <span class="o">=</span> <span class="n">spg1</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">atoms</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="n">spg1_idx</span><span class="p">)</span><span class="o">.</span><span class="n">reorder</span><span class="p">()</span><span class="o">.</span><span class="n">firsto</span>
+            <span class="n">s2</span> <span class="o">=</span> <span class="n">spg2</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">atoms</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="n">idx</span><span class="p">)</span><span class="o">.</span><span class="n">reorder</span><span class="p">()</span><span class="o">.</span><span class="n">firsto</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">s1</span> <span class="o">==</span> <span class="n">s2</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">_error</span> <span class="o">+</span> <span class="s1">&#39;requires geometries to have the same &#39;</span>
+                                 <span class="s1">&#39;number of orbitals in the overlapping region.&#39;</span><span class="p">)</span>
+
+            <span class="k">return</span> <span class="n">idx</span>
+
+        <span class="c1"># in the full sparse geometry:</span>
+        <span class="c1"># [0] &lt;-&gt; [0]</span>
+        <span class="n">self_isc</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">other_isc</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">self_P_10_to_other_M_01</span> <span class="o">=</span> <span class="n">_2</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">self_P_10</span><span class="p">,</span> <span class="n">self_isc</span><span class="p">,</span>
+                                     <span class="n">other</span><span class="p">,</span> <span class="n">other_M_01</span><span class="p">,</span> <span class="n">other_isc</span><span class="p">,</span> <span class="s1">&#39;self[0] -&gt; other[0]&#39;</span><span class="p">)</span>
+
+        <span class="n">self_isc</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+        <span class="n">other_isc</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+        <span class="n">other_M_10_to_self_P_01</span> <span class="o">=</span> <span class="n">_2</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">other_M_10</span><span class="p">,</span> <span class="n">other_isc</span><span class="p">,</span>
+                                     <span class="bp">self</span><span class="p">,</span> <span class="n">self_P_01</span><span class="p">,</span> <span class="n">self_isc</span><span class="p">,</span> <span class="s1">&#39;other[0] -&gt; self[0]&#39;</span><span class="p">)</span>
+
+        <span class="c1"># [0] -&gt; [-1]</span>
+        <span class="n">self_isc</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+        <span class="n">other_isc</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+        <span class="n">self_M_10_to_other_P_01</span> <span class="o">=</span> <span class="n">_2</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">self_M_10</span><span class="p">,</span> <span class="n">self_isc</span><span class="p">,</span>
+                                     <span class="n">other</span><span class="p">,</span> <span class="n">other_P_01</span><span class="p">,</span> <span class="n">other_isc</span><span class="p">,</span> <span class="s1">&#39;self[0] -&gt; other[-1]&#39;</span><span class="p">)</span>
+
+        <span class="c1"># [0] -&gt; [1]</span>
+        <span class="n">self_isc</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">other_isc</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">other_P_10_to_self_M_01</span> <span class="o">=</span> <span class="n">_2</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">other_P_10</span><span class="p">,</span> <span class="n">other_isc</span><span class="p">,</span>
+                                     <span class="bp">self</span><span class="p">,</span> <span class="n">self_M_01</span><span class="p">,</span> <span class="n">self_isc</span><span class="p">,</span> <span class="s1">&#39;other[0] -&gt; self[1]&#39;</span><span class="p">)</span>
+
+        <span class="c1"># Clean-up</span>
+        <span class="k">del</span> <span class="n">self_isc</span><span class="p">,</span> <span class="n">other_isc</span>
+
+        <span class="c1"># Now we have the following operations to perform</span>
+        <span class="n">self_no</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">no</span>
+        <span class="n">other_no</span> <span class="o">=</span> <span class="n">other</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">no</span>
+        <span class="n">total_no</span> <span class="o">=</span> <span class="n">self_no</span> <span class="o">+</span> <span class="n">other_no</span>
+
+        <span class="c1"># Now create the combined geometry + sparse matrix</span>
+        <span class="n">total_geom</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">axis</span><span class="p">)</span>
+        <span class="n">sc</span> <span class="o">=</span> <span class="n">total_geom</span><span class="o">.</span><span class="n">sc</span>
+
+        <span class="c1"># 1. create a copy of the sparse-geometries</span>
+        <span class="c1"># 2. translate old columns to new columns</span>
+        <span class="c1"># 3. merge the two</span>
+        <span class="c1"># 4. insert the overlapping stuff (both +/-)</span>
+        <span class="n">self_o2n</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">arangei</span><span class="p">(</span><span class="n">self_no</span><span class="p">)</span>
+        <span class="n">self_o2n</span><span class="o">.</span><span class="n">shape</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">self_o2n</span> <span class="o">=</span> <span class="n">self_o2n</span> <span class="o">+</span> <span class="n">sc</span><span class="o">.</span><span class="n">sc_index</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">sc</span><span class="o">.</span><span class="n">sc_off</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">total_no</span>
+        <span class="n">self_o2n</span><span class="o">.</span><span class="n">shape</span> <span class="o">=</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,)</span>
+
+        <span class="n">other_o2n</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">arangei</span><span class="p">(</span><span class="n">other_no</span><span class="p">)</span> <span class="o">+</span> <span class="n">self_no</span>
+        <span class="n">other_o2n</span><span class="o">.</span><span class="n">shape</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">other_o2n</span> <span class="o">=</span> <span class="n">other_o2n</span> <span class="o">+</span> <span class="n">sc</span><span class="o">.</span><span class="n">sc_index</span><span class="p">(</span><span class="n">other</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">sc</span><span class="o">.</span><span class="n">sc_off</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">total_no</span>
+        <span class="n">other_o2n</span><span class="o">.</span><span class="n">shape</span> <span class="o">=</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,)</span>
+
+        <span class="c1"># Create a template new sparse matrix</span>
+        <span class="n">self_csr</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span>
+        <span class="n">other_csr</span> <span class="o">=</span> <span class="n">other</span><span class="o">.</span><span class="n">_csr</span>
+
+        <span class="n">total</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="c1"># Overwrite geometry</span>
+        <span class="n">total</span><span class="o">.</span><span class="n">_geometry</span> <span class="o">=</span> <span class="n">total_geom</span>
+        <span class="n">n_s</span> <span class="o">=</span> <span class="n">sc</span><span class="o">.</span><span class="n">n_s</span>
+
+        <span class="c1"># Correct the new csr shape</span>
+        <span class="n">csr</span> <span class="o">=</span> <span class="n">total</span><span class="o">.</span><span class="n">_csr</span>
+        <span class="n">csr</span><span class="o">.</span><span class="n">_shape</span> <span class="o">=</span> <span class="p">(</span><span class="n">total_no</span><span class="p">,</span> <span class="n">total_no</span> <span class="o">*</span> <span class="n">n_s</span><span class="p">,</span> <span class="n">csr</span><span class="o">.</span><span class="n">dim</span><span class="p">)</span>
+
+        <span class="c1"># Fix columns in the self part</span>
+        <span class="n">idx</span> <span class="o">=</span> <span class="n">array_arange</span><span class="p">(</span><span class="n">csr</span><span class="o">.</span><span class="n">ptr</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">n</span><span class="o">=</span><span class="n">csr</span><span class="o">.</span><span class="n">ncol</span><span class="p">)</span>
+        <span class="n">csr</span><span class="o">.</span><span class="n">col</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">self_o2n</span><span class="p">[</span><span class="n">csr</span><span class="o">.</span><span class="n">col</span><span class="p">[</span><span class="n">idx</span><span class="p">]]</span>
+
+        <span class="c1"># Now add the `other` sparse data while fixing the supercell indices</span>
+        <span class="n">csr</span><span class="o">.</span><span class="n">ptr</span> <span class="o">=</span> <span class="n">concatenate</span><span class="p">((</span><span class="n">csr</span><span class="o">.</span><span class="n">ptr</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">csr</span><span class="o">.</span><span class="n">ptr</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">other_csr</span><span class="o">.</span><span class="n">ptr</span><span class="p">))</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">int32</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="n">csr</span><span class="o">.</span><span class="n">ncol</span> <span class="o">=</span> <span class="n">concatenate</span><span class="p">((</span><span class="n">csr</span><span class="o">.</span><span class="n">ncol</span><span class="p">,</span> <span class="n">other_csr</span><span class="o">.</span><span class="n">ncol</span><span class="p">))</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">int32</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="c1"># We use take since other_csr.col may contain non-finalized elements (i.e. too large values)</span>
+        <span class="c1"># In this case we use take to *clip* the indices to the largest available one.</span>
+        <span class="c1"># This may be done since col elements not touched by the .ptr + .ncol will never</span>
+        <span class="c1"># be used.</span>
+        <span class="n">csr</span><span class="o">.</span><span class="n">col</span> <span class="o">=</span> <span class="n">concatenate</span><span class="p">((</span><span class="n">csr</span><span class="o">.</span><span class="n">col</span><span class="p">,</span> <span class="n">take</span><span class="p">(</span><span class="n">other_o2n</span><span class="p">,</span> <span class="n">other_csr</span><span class="o">.</span><span class="n">col</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;clip&#39;</span><span class="p">)))</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">int32</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="n">csr</span><span class="o">.</span><span class="n">_D</span> <span class="o">=</span> <span class="n">concatenate</span><span class="p">((</span><span class="n">csr</span><span class="o">.</span><span class="n">_D</span><span class="p">,</span> <span class="n">other_csr</span><span class="o">.</span><span class="n">_D</span><span class="p">),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+        <span class="c1"># Small clean-up</span>
+        <span class="k">del</span> <span class="n">self_o2n</span><span class="p">,</span> <span class="n">other_o2n</span><span class="p">,</span> <span class="n">idx</span>
+
+        <span class="c1"># At this point `csr` contains all data.</span>
+        <span class="c1"># but the columns are incorrect. I.e. self -&gt; self along the append axis</span>
+        <span class="c1"># where it should connect to `other`.</span>
+
+        <span class="c1"># Below we are correcting the column indices such that they</span>
+        <span class="c1"># connect to the proper things.</span>
+        <span class="c1"># Since some systems has crossings over diagonal supercells we need</span>
+        <span class="c1"># all supercells with a non-zero component along the axis</span>
+        <span class="n">isc</span> <span class="o">=</span> <span class="p">[</span><span class="kc">None</span><span class="p">]</span> <span class="o">*</span> <span class="mi">3</span>
+
+        <span class="k">def</span> <span class="nf">_transfer_indices</span><span class="p">(</span><span class="n">csr</span><span class="p">,</span> <span class="n">rows</span><span class="p">,</span> <span class="n">old_col</span><span class="p">,</span> <span class="n">new_col</span><span class="p">):</span>
+            <span class="s2">&quot; Transfer indices in col to the equivalent column indices &quot;</span>
+            <span class="k">if</span> <span class="n">old_col</span><span class="o">.</span><span class="n">size</span> <span class="o">!=</span> <span class="n">new_col</span><span class="o">.</span><span class="n">size</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39;.append requires the overlapping basis to &#39;</span>
+                                 <span class="s1">&#39;be equivalent. We found different number of hopping elements between &#39;</span>
+                                 <span class="s1">&#39;the two regions.&#39;</span><span class="p">)</span>
+
+            <span class="n">col_idx</span> <span class="o">=</span> <span class="n">array_arange</span><span class="p">(</span><span class="n">csr</span><span class="o">.</span><span class="n">ptr</span><span class="p">[</span><span class="n">rows</span><span class="p">],</span> <span class="n">n</span><span class="o">=</span><span class="n">csr</span><span class="o">.</span><span class="n">ncol</span><span class="p">[</span><span class="n">rows</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">int32</span><span class="p">)</span>
+            <span class="n">col_idx</span> <span class="o">=</span> <span class="n">col_idx</span><span class="p">[</span><span class="n">indices_only</span><span class="p">(</span><span class="n">csr</span><span class="o">.</span><span class="n">col</span><span class="p">[</span><span class="n">col_idx</span><span class="p">],</span> <span class="n">old_col</span><span class="p">)]</span>
+
+            <span class="c1"># Indices are now the indices in csr.col such that</span>
+            <span class="c1">#   col[col_idx] in old_col</span>
+            <span class="c1"># Now we need to find the indices (in order)</span>
+            <span class="c1"># such that</span>
+            <span class="c1">#   col[col_idx] == old_col[old_idx]</span>
+            <span class="c1"># This will let us do:</span>
+            <span class="c1">#   col[col_idx] = new_col[old_idx]</span>
+            <span class="c1"># since old_col and new_col have the same order</span>
+            <span class="c1"># Since indices does not return a sorted index list</span>
+            <span class="c1"># but only indices of elements in other list</span>
+            <span class="c1"># we need to sort them correctly</span>
+            <span class="c1"># Create the linear index that transfers from old -&gt; new</span>
+            <span class="c1"># Since old_col/new_col does not contain the full supercell picture</span>
+            <span class="c1"># we need to create a fake indexing converter</span>
+            <span class="n">min_col</span> <span class="o">=</span> <span class="p">(</span><span class="n">old_col</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">//</span> <span class="n">csr</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">*</span> <span class="n">csr</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">max_col</span> <span class="o">=</span> <span class="p">(</span><span class="n">old_col</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">//</span> <span class="n">csr</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">csr</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">new_col_idx</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">arangei</span><span class="p">(</span><span class="n">max_col</span> <span class="o">-</span> <span class="n">min_col</span><span class="p">)</span>
+            <span class="n">new_col_idx</span><span class="p">[</span><span class="n">old_col</span> <span class="o">-</span> <span class="n">min_col</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_col</span>
+            <span class="n">csr</span><span class="o">.</span><span class="n">col</span><span class="p">[</span><span class="n">col_idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_col_idx</span><span class="p">[</span><span class="n">csr</span><span class="o">.</span><span class="n">col</span><span class="p">[</span><span class="n">col_idx</span><span class="p">]</span> <span class="o">-</span> <span class="n">min_col</span><span class="p">]</span>
+
+        <span class="c1">## nomenclature in new supercell</span>
+        <span class="c1"># self[0] -&gt; other[0]</span>
+
+        <span class="c1"># Now we have the two matrices merged.</span>
+        <span class="c1"># We now need to fix connections crossing the border</span>
+        <span class="n">isc</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="n">rows</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">a2o</span><span class="p">(</span><span class="n">self_P_01</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+        <span class="c1"># We have to store isc_off since we require a one2one correspondance</span>
+        <span class="c1"># of the new supercells. Also we require the supercell indices to be</span>
+        <span class="c1"># sorted, and hence we sort the sc-indices (just in case)</span>
+        <span class="n">isc_off</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">sc</span><span class="o">.</span><span class="n">sc_index</span><span class="p">(</span><span class="n">isc</span><span class="p">))</span>
+        <span class="n">sc_off</span> <span class="o">=</span> <span class="n">isc_off</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">total_no</span>
+        <span class="c1"># These columns should have a one-to-one correspondance</span>
+        <span class="n">old_col</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">a2o</span><span class="p">(</span><span class="n">self_P_10</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">+</span> <span class="n">sc_off</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">int32</span><span class="p">)</span>
+        <span class="c1"># Since we are appending we actually move it into the primary cell (this is where the</span>
+        <span class="c1"># requirement of nsc == 3 comes from...)</span>
+        <span class="c1"># Shift all supercell indices to the primary one (along the append axis)</span>
+        <span class="n">sc_off</span> <span class="o">=</span> <span class="n">sc</span><span class="o">.</span><span class="n">sc_off</span><span class="p">[</span><span class="n">isc_off</span><span class="p">,</span> <span class="p">:]</span>
+        <span class="n">sc_off</span><span class="p">[:,</span> <span class="n">axis</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">sc_off</span> <span class="o">=</span> <span class="n">sc</span><span class="o">.</span><span class="n">sc_index</span><span class="p">(</span><span class="n">sc_off</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">total_no</span> <span class="o">+</span> <span class="n">self_no</span>
+        <span class="n">new_col</span> <span class="o">=</span> <span class="p">(</span><span class="n">other</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">a2o</span><span class="p">(</span><span class="n">self_P_10_to_other_M_01</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">+</span> <span class="n">sc_off</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">int32</span><span class="p">)</span>
+
+        <span class="c1"># Find columns in `rows` and transfer</span>
+        <span class="c1"># the elements with values `old_col` -&gt; `new_col`</span>
+        <span class="c1"># Since this should catch *all* elements that cross the</span>
+        <span class="c1"># boundary we will only have elements that are actually used</span>
+        <span class="c1"># So we need simply to reduce idx to the indices that contain the elements</span>
+        <span class="c1"># in `old_col`</span>
+        <span class="n">_transfer_indices</span><span class="p">(</span><span class="n">csr</span><span class="p">,</span> <span class="n">rows</span><span class="p">,</span> <span class="n">old_col</span><span class="p">,</span> <span class="n">new_col</span><span class="p">)</span>
+
+        <span class="c1">##</span>
+        <span class="c1"># other[0] -&gt; self[0]</span>
+        <span class="n">isc</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+        <span class="n">rows</span> <span class="o">=</span> <span class="n">other</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">a2o</span><span class="p">(</span><span class="n">other_M_01</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span> <span class="o">+</span> <span class="n">self_no</span>
+        <span class="n">isc_off</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">sc</span><span class="o">.</span><span class="n">sc_index</span><span class="p">(</span><span class="n">isc</span><span class="p">))</span>
+        <span class="n">sc_off</span> <span class="o">=</span> <span class="n">isc_off</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">total_no</span> <span class="o">+</span> <span class="n">self_no</span>
+        <span class="n">old_col</span> <span class="o">=</span> <span class="p">(</span><span class="n">other</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">a2o</span><span class="p">(</span><span class="n">other_M_10</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">+</span> <span class="n">sc_off</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">int32</span><span class="p">)</span>
+        <span class="n">sc_off</span> <span class="o">=</span> <span class="n">sc</span><span class="o">.</span><span class="n">sc_off</span><span class="p">[</span><span class="n">isc_off</span><span class="p">,</span> <span class="p">:]</span>
+        <span class="n">sc_off</span><span class="p">[:,</span> <span class="n">axis</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">sc_off</span> <span class="o">=</span> <span class="n">sc</span><span class="o">.</span><span class="n">sc_index</span><span class="p">(</span><span class="n">sc_off</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">total_no</span>
+        <span class="n">new_col</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">a2o</span><span class="p">(</span><span class="n">other_M_10_to_self_P_01</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">+</span> <span class="n">sc_off</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">int32</span><span class="p">)</span>
+        <span class="n">_transfer_indices</span><span class="p">(</span><span class="n">csr</span><span class="p">,</span> <span class="n">rows</span><span class="p">,</span> <span class="n">old_col</span><span class="p">,</span> <span class="n">new_col</span><span class="p">)</span>
+
+        <span class="c1">##</span>
+        <span class="c1"># self[0] -&gt; other[-1]</span>
+        <span class="n">isc</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+        <span class="n">rows</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">a2o</span><span class="p">(</span><span class="n">self_M_01</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+        <span class="n">isc_off</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">sc</span><span class="o">.</span><span class="n">sc_index</span><span class="p">(</span><span class="n">isc</span><span class="p">))</span>
+        <span class="n">sc_off</span> <span class="o">=</span> <span class="n">isc_off</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">total_no</span>
+        <span class="n">old_col</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">a2o</span><span class="p">(</span><span class="n">self_M_10</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">+</span> <span class="n">sc_off</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">int32</span><span class="p">)</span>
+        <span class="c1">#sc_off = sc.sc_off[isc_off, :]</span>
+        <span class="c1">#sc_off[:, axis] = -1</span>
+        <span class="c1">#sc_off = sc.sc_index(sc_off).reshape(-1, 1) * total_no</span>
+        <span class="n">new_col</span> <span class="o">=</span> <span class="p">(</span><span class="n">other</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">a2o</span><span class="p">(</span><span class="n">self_M_10_to_other_P_01</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">+</span> <span class="n">self_no</span> <span class="o">+</span> <span class="n">sc_off</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">int32</span><span class="p">)</span>
+        <span class="n">_transfer_indices</span><span class="p">(</span><span class="n">csr</span><span class="p">,</span> <span class="n">rows</span><span class="p">,</span> <span class="n">old_col</span><span class="p">,</span> <span class="n">new_col</span><span class="p">)</span>
+
+        <span class="c1">##</span>
+        <span class="c1"># other[0] -&gt; self[1]</span>
+        <span class="n">isc</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="n">rows</span> <span class="o">=</span> <span class="n">other</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">a2o</span><span class="p">(</span><span class="n">other_P_01</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span> <span class="o">+</span> <span class="n">self_no</span>
+        <span class="n">isc_off</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">sc</span><span class="o">.</span><span class="n">sc_index</span><span class="p">(</span><span class="n">isc</span><span class="p">))</span>
+        <span class="n">sc_off</span> <span class="o">=</span> <span class="n">isc_off</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">total_no</span>
+        <span class="n">old_col</span> <span class="o">=</span> <span class="p">(</span><span class="n">other</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">a2o</span><span class="p">(</span><span class="n">other_P_10</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">+</span> <span class="n">self_no</span> <span class="o">+</span> <span class="n">sc_off</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">int32</span><span class="p">)</span>
+        <span class="c1">#sc_off = sc.sc_off[isc_off, :]</span>
+        <span class="c1">#sc_off[:, axis] = 1</span>
+        <span class="c1">#sc_off = sc.sc_index(sc_off).reshape(-1, 1) * total_no</span>
+        <span class="n">new_col</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">a2o</span><span class="p">(</span><span class="n">other_P_10_to_self_M_01</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">+</span> <span class="n">sc_off</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">int32</span><span class="p">)</span>
+        <span class="n">_transfer_indices</span><span class="p">(</span><span class="n">csr</span><span class="p">,</span> <span class="n">rows</span><span class="p">,</span> <span class="n">old_col</span><span class="p">,</span> <span class="n">new_col</span><span class="p">)</span>
+
+        <span class="c1"># Finally figure out the number of non-zero elements</span>
+        <span class="n">csr</span><span class="o">.</span><span class="n">_nnz</span> <span class="o">=</span> <span class="n">csr</span><span class="o">.</span><span class="n">ncol</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+        <span class="n">csr</span><span class="o">.</span><span class="n">_finalized</span> <span class="o">=</span> <span class="kc">False</span>
+
+        <span class="k">return</span> <span class="n">total</span></div>
+
+<div class="viewcode-block" id="SparseOrbital.toSparseAtom"><a class="viewcode-back" href="../../api-generated/sisl.SparseOrbital.html#sisl.SparseOrbital.toSparseAtom">[docs]</a>    <span class="k">def</span> <span class="nf">toSparseAtom</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Convert the sparse object (without data) to a new sparse object with equivalent but reduced sparse pattern</span>
 
 <span class="sd">        This converts the orbital sparse pattern to an atomic sparse pattern.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
+<span class="sd">        dim : int, optional</span>
+<span class="sd">           number of dimensions allocated in the SparseAtom object, default to the same</span>
 <span class="sd">        dtype: numpy.dtype, optional</span>
-<span class="sd">           the data-container for the sparse object. Defaults to the same.</span>
+<span class="sd">           used data-type for the sparse object. Defaults to the same.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">dim</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">dim</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
         <span class="k">if</span> <span class="n">dtype</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">dtype</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dtype</span>
 
         <span class="n">geom</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">geometry</span>
+
         <span class="c1"># Create a conversion vector</span>
         <span class="n">orb2atom</span> <span class="o">=</span> <span class="n">tile</span><span class="p">(</span><span class="n">geom</span><span class="o">.</span><span class="n">o2a</span><span class="p">(</span><span class="n">_a</span><span class="o">.</span><span class="n">arangei</span><span class="p">(</span><span class="n">geom</span><span class="o">.</span><span class="n">no</span><span class="p">)),</span> <span class="n">geom</span><span class="o">.</span><span class="n">n_s</span><span class="p">)</span>
-        <span class="n">orb2atom</span><span class="o">.</span><span class="n">shape</span> <span class="o">=</span> <span class="p">(</span><span class="n">geom</span><span class="o">.</span><span class="n">no</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
-        <span class="n">orb2atom</span> <span class="o">+=</span> <span class="n">_a</span><span class="o">.</span><span class="n">arangei</span><span class="p">(</span><span class="n">geom</span><span class="o">.</span><span class="n">n_s</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">geom</span><span class="o">.</span><span class="n">na</span>
+        <span class="n">orb2atom</span><span class="o">.</span><span class="n">shape</span> <span class="o">=</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">geom</span><span class="o">.</span><span class="n">no</span><span class="p">)</span>
+        <span class="n">orb2atom</span> <span class="o">+=</span> <span class="n">_a</span><span class="o">.</span><span class="n">arangei</span><span class="p">(</span><span class="n">geom</span><span class="o">.</span><span class="n">n_s</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">geom</span><span class="o">.</span><span class="n">na</span>
         <span class="n">orb2atom</span><span class="o">.</span><span class="n">shape</span> <span class="o">=</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,)</span>
 
         <span class="c1"># First convert all rows to the same</span>
@@ -2188,11 +2588,11 @@
 
         <span class="c1"># Now we can create the sparse atomic</span>
         <span class="n">col</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span><span class="n">col</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">int32</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
-        <span class="n">spAtom</span> <span class="o">=</span> <span class="n">SparseAtom</span><span class="p">(</span><span class="n">geom</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">,</span> <span class="n">nnzpr</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">spAtom</span> <span class="o">=</span> <span class="n">SparseAtom</span><span class="p">(</span><span class="n">geom</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="n">dim</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">,</span> <span class="n">nnzpr</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
         <span class="n">spAtom</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">ptr</span><span class="p">[:]</span> <span class="o">=</span> <span class="n">ptr</span><span class="p">[:]</span>
         <span class="n">spAtom</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">ncol</span><span class="p">[:]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">ptr</span><span class="p">)</span>
         <span class="n">spAtom</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">col</span> <span class="o">=</span> <span class="n">col</span>
-        <span class="n">spAtom</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">_D</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">([</span><span class="nb">len</span><span class="p">(</span><span class="n">col</span><span class="p">),</span> <span class="mi">1</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span>
+        <span class="n">spAtom</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">_D</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">([</span><span class="nb">len</span><span class="p">(</span><span class="n">col</span><span class="p">),</span> <span class="n">dim</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span>
         <span class="n">spAtom</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">_nnz</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">col</span><span class="p">)</span>
         <span class="n">spAtom</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">_finalized</span> <span class="o">=</span> <span class="kc">True</span> <span class="c1"># unique returns sorted elements</span>
         <span class="k">return</span> <span class="n">spAtom</span></div></div>
@@ -2233,7 +2633,9 @@
         <script type="text/javascript" src="../../_static/jquery.js"></script>
         <script type="text/javascript" src="../../_static/underscore.js"></script>
         <script type="text/javascript" src="../../_static/doctools.js"></script>
-        <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+        <script type="text/javascript" src="../../_static/language_data.js"></script>
+        <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+        <script type="text/x-mathjax-config">MathJax.Hub.Config({"tex2jax": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true, "ignoreClass": "document", "processClass": "math|output_area"}})</script>
     
 
   

@@ -168,7 +168,6 @@
 <span></span><span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">print_function</span><span class="p">,</span> <span class="n">division</span>
 
 <span class="kn">from</span> <span class="nn">numbers</span> <span class="k">import</span> <span class="n">Integral</span>
-<span class="kn">from</span> <span class="nn">collections</span> <span class="k">import</span> <span class="n">Iterable</span>
 
 <span class="c1"># To speed up the extension algorithm we limit</span>
 <span class="c1"># the lookup table</span>
@@ -193,7 +192,7 @@
 <span class="kn">from</span> <span class="nn">._array</span> <span class="k">import</span> <span class="n">asarrayi</span><span class="p">,</span> <span class="n">arrayi</span>
 <span class="kn">from</span> <span class="nn">._indices</span> <span class="k">import</span> <span class="n">indices</span><span class="p">,</span> <span class="n">indices_only</span><span class="p">,</span> <span class="n">sorted_unique</span>
 <span class="kn">from</span> <span class="nn">.messages</span> <span class="k">import</span> <span class="n">warn</span><span class="p">,</span> <span class="n">SislError</span>
-<span class="kn">from</span> <span class="nn">._help</span> <span class="k">import</span> <span class="n">array_fill_repeat</span><span class="p">,</span> <span class="n">get_dtype</span>
+<span class="kn">from</span> <span class="nn">._help</span> <span class="k">import</span> <span class="n">array_fill_repeat</span><span class="p">,</span> <span class="n">get_dtype</span><span class="p">,</span> <span class="n">isiterable</span>
 <span class="kn">from</span> <span class="nn">._help</span> <span class="k">import</span> <span class="n">_range</span> <span class="k">as</span> <span class="nb">range</span><span class="p">,</span> <span class="n">_zip</span> <span class="k">as</span> <span class="nb">zip</span><span class="p">,</span> <span class="n">_map</span> <span class="k">as</span> <span class="nb">map</span>
 <span class="kn">from</span> <span class="nn">.utils.ranges</span> <span class="k">import</span> <span class="n">array_arange</span>
 
@@ -342,9 +341,9 @@
                                   <span class="n">nnz</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 
                 <span class="c1"># Copy data to the arrays</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">ptr</span> <span class="o">=</span> <span class="n">arg1</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">ptr</span> <span class="o">=</span> <span class="n">arg1</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">int32</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">ncol</span> <span class="o">=</span> <span class="n">diff</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ptr</span><span class="p">)</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">col</span> <span class="o">=</span> <span class="n">arg1</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">col</span> <span class="o">=</span> <span class="n">arg1</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">int32</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">_nnz</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">col</span><span class="p">)</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">_D</span> <span class="o">=</span> <span class="n">empty</span><span class="p">([</span><span class="nb">len</span><span class="p">(</span><span class="n">arg1</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]],</span> <span class="n">dtype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
                 <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">arg1</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
@@ -397,7 +396,7 @@
         <span class="c1"># Create pointer array</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">ptr</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">cumsumi</span><span class="p">(</span><span class="n">arrayi</span><span class="p">([</span><span class="n">nnzpr</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="n">M</span><span class="o">+</span><span class="mi">1</span><span class="p">)))</span> <span class="o">-</span> <span class="n">nnzpr</span>
         <span class="c1"># Create column array</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">col</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">emptyi</span><span class="p">(</span><span class="n">nnz</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">col</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">zerosi</span><span class="p">(</span><span class="n">nnz</span><span class="p">)</span>
         <span class="c1"># Store current number of non-zero elements</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_nnz</span> <span class="o">=</span> <span class="mi">0</span>
 
@@ -601,8 +600,10 @@
         <span class="c1"># Create column indices</span>
         <span class="n">edges</span> <span class="o">=</span> <span class="n">unique</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">col</span><span class="p">[</span><span class="n">array_arange</span><span class="p">(</span><span class="n">ptr</span><span class="p">[</span><span class="n">row</span><span class="p">],</span> <span class="n">n</span><span class="o">=</span><span class="n">ncol</span><span class="p">[</span><span class="n">row</span><span class="p">])])</span>
 
-        <span class="c1"># Return the difference to the exclude region, we know both are unique</span>
-        <span class="k">return</span> <span class="n">setdiff1d</span><span class="p">(</span><span class="n">edges</span><span class="p">,</span> <span class="n">exclude</span><span class="p">,</span> <span class="n">assume_unique</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span></div>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">exclude</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="c1"># Return the difference to the exclude region, we know both are unique</span>
+            <span class="k">return</span> <span class="n">setdiff1d</span><span class="p">(</span><span class="n">edges</span><span class="p">,</span> <span class="n">exclude</span><span class="p">,</span> <span class="n">assume_unique</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">edges</span></div>
 
 <div class="viewcode-block" id="SparseCSR.delete_columns"><a class="viewcode-back" href="../../api-generated/sisl.SparseCSR.html#sisl.SparseCSR.delete_columns">[docs]</a>    <span class="k">def</span> <span class="nf">delete_columns</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">columns</span><span class="p">,</span> <span class="n">keep_shape</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Delete all columns in `columns`</span>
@@ -722,7 +723,7 @@
         <span class="c1"># We are *only* deleting columns, so if it is finalized,</span>
         <span class="c1"># it will still be</span>
 
-<div class="viewcode-block" id="SparseCSR.translate_columns"><a class="viewcode-back" href="../../api-generated/sisl.SparseCSR.html#sisl.SparseCSR.translate_columns">[docs]</a>    <span class="k">def</span> <span class="nf">translate_columns</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">old</span><span class="p">,</span> <span class="n">new</span><span class="p">):</span>
+<div class="viewcode-block" id="SparseCSR.translate_columns"><a class="viewcode-back" href="../../api-generated/sisl.SparseCSR.html#sisl.SparseCSR.translate_columns">[docs]</a>    <span class="k">def</span> <span class="nf">translate_columns</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">old</span><span class="p">,</span> <span class="n">new</span><span class="p">,</span> <span class="n">clean</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Takes all `old` columns and translates them to `new`.</span>
 
 <span class="sd">        Parameters</span>
@@ -731,6 +732,8 @@
 <span class="sd">           old column indices</span>
 <span class="sd">        new : int or array_like</span>
 <span class="sd">           new column indices</span>
+<span class="sd">        clean : bool, optional</span>
+<span class="sd">           whether the new translated columns, outside the shape, should be deleted or not (default delete)</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">old</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">asarrayi</span><span class="p">(</span><span class="n">old</span><span class="p">)</span>
         <span class="n">new</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">asarrayi</span><span class="p">(</span><span class="n">new</span><span class="p">)</span>
@@ -758,8 +761,9 @@
 
         <span class="c1"># After translation, set to not finalized</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_finalized</span> <span class="o">=</span> <span class="kc">False</span>
-        <span class="k">if</span> <span class="n">np_any</span><span class="p">(</span><span class="n">new</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_clean_columns</span><span class="p">()</span></div>
+        <span class="k">if</span> <span class="n">clean</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">np_any</span><span class="p">(</span><span class="n">new</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_clean_columns</span><span class="p">()</span></div>
 
 <div class="viewcode-block" id="SparseCSR.spsame"><a class="viewcode-back" href="../../api-generated/sisl.SparseCSR.html#sisl.SparseCSR.spsame">[docs]</a>    <span class="k">def</span> <span class="nf">spsame</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Check whether two sparse matrices have the same non-zero elements</span>
@@ -952,7 +956,7 @@
 
             <span class="c1"># Insert new empty elements in the column index</span>
             <span class="c1"># after the column</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">col</span> <span class="o">=</span> <span class="n">insert</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">col</span><span class="p">,</span> <span class="n">ncol_ptr_i</span><span class="p">,</span> <span class="n">empty</span><span class="p">(</span><span class="n">ns</span><span class="p">,</span> <span class="n">col</span><span class="o">.</span><span class="n">dtype</span><span class="p">))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">col</span> <span class="o">=</span> <span class="n">insert</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">col</span><span class="p">,</span> <span class="n">ncol_ptr_i</span><span class="p">,</span> <span class="n">zeros</span><span class="p">(</span><span class="n">ns</span><span class="p">,</span> <span class="n">col</span><span class="o">.</span><span class="n">dtype</span><span class="p">))</span>
 
             <span class="c1"># update reference</span>
             <span class="n">col</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">col</span>
@@ -1038,7 +1042,7 @@
         <span class="c1"># Get indices of sparse data (-1 if non-existing)</span>
         <span class="n">key</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
         <span class="n">key</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_slice2list</span><span class="p">(</span><span class="n">key</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="mi">0</span><span class="p">)</span>
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">key</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">Iterable</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">isiterable</span><span class="p">(</span><span class="n">key</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
             <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">key</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
                 <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">key</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
                     <span class="k">del</span> <span class="bp">self</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">key</span><span class="p">[</span><span class="mi">1</span><span class="p">]]</span>
@@ -1285,7 +1289,7 @@
         <span class="n">new</span><span class="o">.</span><span class="n">_nnz</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nnz</span>
 
         <span class="k">if</span> <span class="n">dims</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">new</span><span class="o">.</span><span class="n">_D</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_D</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">dtype</span><span class="p">)</span>
+            <span class="n">new</span><span class="o">.</span><span class="n">_D</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_D</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">dtype</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">new</span><span class="o">.</span><span class="n">_D</span> <span class="o">=</span> <span class="n">empty</span><span class="p">([</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">col</span><span class="p">),</span> <span class="n">dim</span><span class="p">],</span> <span class="n">dtype</span><span class="p">)</span>
             <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">dim</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">dims</span><span class="p">):</span>
@@ -1297,23 +1301,28 @@
         <span class="k">return</span> <span class="n">new</span></div>
 
 <div class="viewcode-block" id="SparseCSR.tocsr"><a class="viewcode-back" href="../../api-generated/sisl.SparseCSR.html#sisl.SparseCSR.tocsr">[docs]</a>    <span class="k">def</span> <span class="nf">tocsr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot; Return the data in :class:`~scipy.sparse.csr_matrix` format</span>
+        <span class="sd">&quot;&quot;&quot; Convert dimension `dim` into a :class:`~scipy.sparse.csr_matrix` format</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
 <span class="sd">        dim: int, optional</span>
-<span class="sd">           the dimension of the data to create the sparse matrix</span>
+<span class="sd">           dimension of the data returned in a scipy sparse matrix format</span>
 <span class="sd">        **kwargs:</span>
 <span class="sd">           arguments passed to the :class:`~scipy.sparse.csr_matrix` routine</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="c1"># We finalize because we do not expect the sparse pattern to change once</span>
-        <span class="c1"># we request a csr matrix in another format.</span>
-        <span class="c1"># Otherwise we *could* do array_arange</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">finalize</span><span class="p">()</span>
-
         <span class="n">shape</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[:</span><span class="mi">2</span><span class="p">]</span>
-        <span class="k">return</span> <span class="n">csr_matrix</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">_D</span><span class="p">[:,</span> <span class="n">dim</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">(),</span> <span class="bp">self</span><span class="o">.</span><span class="n">col</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">),</span>
-                           <span class="bp">self</span><span class="o">.</span><span class="n">ptr</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)),</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">finalized</span><span class="p">:</span>
+            <span class="c1"># Easy case...</span>
+            <span class="k">return</span> <span class="n">csr_matrix</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">_D</span><span class="p">[:,</span> <span class="n">dim</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">(),</span>
+                               <span class="bp">self</span><span class="o">.</span><span class="n">col</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">int32</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">ptr</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">int32</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">True</span><span class="p">)),</span>
+                              <span class="n">shape</span><span class="o">=</span><span class="n">shape</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="c1"># Use array_arange</span>
+        <span class="n">idx</span> <span class="o">=</span> <span class="n">array_arange</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ptr</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">n</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">ncol</span><span class="p">)</span>
+        <span class="c1"># create new pointer</span>
+        <span class="n">ptr</span> <span class="o">=</span> <span class="n">insert</span><span class="p">(</span><span class="n">_a</span><span class="o">.</span><span class="n">cumsumi</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ncol</span><span class="p">),</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">csr_matrix</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">_D</span><span class="p">[</span><span class="n">idx</span><span class="p">,</span> <span class="n">dim</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">(),</span> <span class="bp">self</span><span class="o">.</span><span class="n">col</span><span class="p">[</span><span class="n">idx</span><span class="p">],</span> <span class="n">ptr</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">int32</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">False</span><span class="p">)),</span>
                           <span class="n">shape</span><span class="o">=</span><span class="n">shape</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="SparseCSR.remove"><a class="viewcode-back" href="../../api-generated/sisl.SparseCSR.html#sisl.SparseCSR.remove">[docs]</a>    <span class="k">def</span> <span class="nf">remove</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">indices</span><span class="p">):</span>
@@ -1775,8 +1784,8 @@
     <span class="n">map_row</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vectorize</span><span class="p">(</span><span class="n">map_row</span><span class="p">)</span>
     <span class="n">map_col</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vectorize</span><span class="p">(</span><span class="n">map_col</span><span class="p">)</span>
 
-    <span class="n">nrow</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">unique</span><span class="p">(</span><span class="n">map_row</span><span class="p">(</span><span class="n">arange</span><span class="p">(</span><span class="n">matrix</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">))))</span>
-    <span class="n">ncol</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">unique</span><span class="p">(</span><span class="n">map_col</span><span class="p">(</span><span class="n">arange</span><span class="p">(</span><span class="n">matrix</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">))))</span>
+    <span class="n">nrow</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">unique</span><span class="p">(</span><span class="n">map_row</span><span class="p">(</span><span class="n">arange</span><span class="p">(</span><span class="n">matrix</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">int32</span><span class="p">))))</span>
+    <span class="n">ncol</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">unique</span><span class="p">(</span><span class="n">map_col</span><span class="p">(</span><span class="n">arange</span><span class="p">(</span><span class="n">matrix</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">int32</span><span class="p">))))</span>
     <span class="n">rows</span> <span class="o">=</span> <span class="n">zeros</span><span class="p">(</span><span class="n">nrow</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">bool_</span><span class="p">)</span>
     <span class="n">cols</span> <span class="o">=</span> <span class="n">zeros</span><span class="p">(</span><span class="n">ncol</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">bool_</span><span class="p">)</span>
 
@@ -1980,7 +1989,9 @@
         <script type="text/javascript" src="../../_static/jquery.js"></script>
         <script type="text/javascript" src="../../_static/underscore.js"></script>
         <script type="text/javascript" src="../../_static/doctools.js"></script>
-        <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+        <script type="text/javascript" src="../../_static/language_data.js"></script>
+        <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+        <script type="text/x-mathjax-config">MathJax.Hub.Config({"tex2jax": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true, "ignoreClass": "document", "processClass": "math|output_area"}})</script>
     
 
   
