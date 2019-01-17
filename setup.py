@@ -33,7 +33,7 @@ Topic :: Utilities
 MAJOR = 0
 MINOR = 9
 MICRO = 5
-ISRELEASED = True
+ISRELEASED = False
 VERSION = '%d.%d.%d' % (MAJOR, MINOR, MICRO)
 GIT_REVISION = "305080f5119b26cedaf5513ec6f9ea1389334ab9"
 REVISION_YEAR = 2018
@@ -87,7 +87,8 @@ metadata = dict(
         'console_scripts':
         ['sgeom = sisl.geometry:sgeom',
          'sgrid = sisl.grid:sgrid',
-         'sdata = sisl.utils.sdata:sdata']
+         'sdata = sisl.utils.sdata:sdata',
+         'sisl = sisl.utils.sdata:sdata']
     },
     classifiers=[_f.strip() for _f in CLASSIFIERS.split('\n') if _f],
     platforms=['Unix', 'Linux', 'Mac OS-X', 'Windows'],

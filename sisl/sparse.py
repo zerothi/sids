@@ -1,7 +1,6 @@
 from __future__ import print_function, division
 
 from numbers import Integral
-from collections import Iterable
 
 # To speed up the extension algorithm we limit
 # the lookup table
@@ -26,7 +25,7 @@ from . import _array as _a
 from ._array import asarrayi, arrayi
 from ._indices import indices, indices_only, sorted_unique
 from .messages import warn, SislError
-from ._help import array_fill_repeat, get_dtype
+from ._help import array_fill_repeat, get_dtype, isiterable
 from ._help import _range as range, _zip as zip, _map as map
 from .utils.ranges import array_arange
 
@@ -175,9 +174,9 @@ class SparseCSR(object):
                                   nnz=1, **kwargs)
 
                 # Copy data to the arrays
-                self.ptr = arg1[2].astype(np.int32, copy=False)
+                self.ptr = arg1[2].astype(int32, copy=False)
                 self.ncol = diff(self.ptr)
-                self.col = arg1[1].astype(np.int32, copy=False)
+                self.col = arg1[1].astype(int32, copy=False)
                 self._nnz = len(self.col)
                 self._D = empty([len(arg1[1]), self.shape[-1]], dtype=self.dtype)
                 if len(arg1[0].shape) == 2:
@@ -230,7 +229,7 @@ class SparseCSR(object):
         # Create pointer array
         self.ptr = _a.cumsumi(arrayi([nnzpr] * (M+1))) - nnzpr
         # Create column array
-        self.col = _a.emptyi(nnz)
+        self.col = _a.zerosi(nnz)
         # Store current number of non-zero elements
         self._nnz = 0
 
@@ -434,8 +433,10 @@ class SparseCSR(object):
         # Create column indices
         edges = unique(self.col[array_arange(ptr[row], n=ncol[row])])
 
-        # Return the difference to the exclude region, we know both are unique
-        return setdiff1d(edges, exclude, assume_unique=True)
+        if len(exclude) > 0:
+            # Return the difference to the exclude region, we know both are unique
+            return setdiff1d(edges, exclude, assume_unique=True)
+        return edges
 
     def delete_columns(self, columns, keep_shape=False):
         """ Delete all columns in `columns`
@@ -555,7 +556,7 @@ class SparseCSR(object):
         # We are *only* deleting columns, so if it is finalized,
         # it will still be
 
-    def translate_columns(self, old, new):
+    def translate_columns(self, old, new, clean=True):
         """ Takes all `old` columns and translates them to `new`.
 
         Parameters
@@ -564,6 +565,8 @@ class SparseCSR(object):
            old column indices
         new : int or array_like
            new column indices
+        clean : bool, optional
+           whether the new translated columns, outside the shape, should be deleted or not (default delete)
         """
         old = _a.asarrayi(old)
         new = _a.asarrayi(new)
@@ -591,8 +594,9 @@ class SparseCSR(object):
 
         # After translation, set to not finalized
         self._finalized = False
-        if np_any(new >= self.shape[1]):
-            self._clean_columns()
+        if clean:
+            if np_any(new >= self.shape[1]):
+                self._clean_columns()
 
     def spsame(self, other):
         """ Check whether two sparse matrices have the same non-zero elements
@@ -785,7 +789,7 @@ class SparseCSR(object):
 
             # Insert new empty elements in the column index
             # after the column
-            self.col = insert(self.col, ncol_ptr_i, empty(ns, col.dtype))
+            self.col = insert(self.col, ncol_ptr_i, zeros(ns, col.dtype))
 
             # update reference
             col = self.col
@@ -871,7 +875,7 @@ class SparseCSR(object):
         # Get indices of sparse data (-1 if non-existing)
         key = list(key)
         key[0] = self._slice2list(key[0], 0)
-        if isinstance(key[0], Iterable):
+        if isiterable(key[0]):
             if len(key) == 2:
                 for i in key[0]:
                     del self[i, key[1]]
@@ -1118,7 +1122,7 @@ class SparseCSR(object):
         new._nnz = self.nnz
 
         if dims is None:
-            new._D = self._D.astype(dtype)
+            new._D = self._D.astype(dtype, copy=True)
         else:
             new._D = empty([len(self.col), dim], dtype)
             for i, dim in enumerate(dims):
@@ -1130,23 +1134,28 @@ class SparseCSR(object):
         return new
 
     def tocsr(self, dim=0, **kwargs):
-        """ Return the data in :class:`~scipy.sparse.csr_matrix` format
+        """ Convert dimension `dim` into a :class:`~scipy.sparse.csr_matrix` format
 
         Parameters
         ----------
         dim: int, optional
-           the dimension of the data to create the sparse matrix
+           dimension of the data returned in a scipy sparse matrix format
         **kwargs:
            arguments passed to the :class:`~scipy.sparse.csr_matrix` routine
         """
-        # We finalize because we do not expect the sparse pattern to change once
-        # we request a csr matrix in another format.
-        # Otherwise we *could* do array_arange
-        self.finalize()
-
         shape = self.shape[:2]
-        return csr_matrix((self._D[:, dim].copy(), self.col.astype(np.int32),
-                           self.ptr.astype(np.int32)),
+        if self.finalized:
+            # Easy case...
+            return csr_matrix((self._D[:, dim].copy(),
+                               self.col.astype(int32, copy=True), self.ptr.astype(int32, copy=True)),
+                              shape=shape, **kwargs)
+
+        # Use array_arange
+        idx = array_arange(self.ptr[:-1], n=self.ncol)
+        # create new pointer
+        ptr = insert(_a.cumsumi(self.ncol), 0, 0)
+
+        return csr_matrix((self._D[idx, dim].copy(), self.col[idx], ptr.astype(int32, copy=False)),
                           shape=shape, **kwargs)
 
     def remove(self, indices):
@@ -1608,8 +1617,8 @@ def ispmatrix(matrix, map_row=None, map_col=None):
     map_row = np.vectorize(map_row)
     map_col = np.vectorize(map_col)
 
-    nrow = len(unique(map_row(arange(matrix.shape[0], dtype=np.int32))))
-    ncol = len(unique(map_col(arange(matrix.shape[1], dtype=np.int32))))
+    nrow = len(unique(map_row(arange(matrix.shape[0], dtype=int32))))
+    ncol = len(unique(map_col(arange(matrix.shape[1], dtype=int32))))
     rows = zeros(nrow, dtype=np.bool_)
     cols = zeros(ncol, dtype=np.bool_)
 

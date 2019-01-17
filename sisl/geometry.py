@@ -2254,12 +2254,12 @@ class Geometry(SuperCellChild):
 
         # Get atomic coordinate in principal cell
         if idx_xyz is None:
-            dxa = np.add(self.axyz(idx), foff.reshape(1, 3))
+            dxa = self.axyz(idx) + foff.reshape(1, 3)
         else:
             # For extremely large systems re-using the
             # idx_xyz is faster than indexing
             # a very large array
-            dxa = np.add(idx_xyz, foff.reshape(1, 3))
+            dxa = idx_xyz + foff.reshape(1, 3)
 
         # Immediately downscale by easy checking
         # This will reduce the computation of the vector-norm
@@ -2876,7 +2876,7 @@ class Geometry(SuperCellChild):
         # Create short-hand
         xyz = self.xyz
 
-        if isinstance(axes, plt.mlib3d.Axes3D):
+        if axes.__class__.__name__.startswith('Axes3D'):
             # We should plot in 3D plots
             axes.scatter(xyz[:, 0], xyz[:, 1], xyz[:, 2], s=area, c=colors, alpha=0.8)
             axes.set_zlabel('Ang')
