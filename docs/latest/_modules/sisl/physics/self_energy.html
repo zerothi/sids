@@ -167,11 +167,8 @@
   <h1>Source code for sisl.physics.self_energy</h1><div class="highlight"><pre>
 <span></span><span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">print_function</span><span class="p">,</span> <span class="n">division</span>
 
-<span class="kn">from</span> <span class="nn">numbers</span> <span class="k">import</span> <span class="n">Integral</span>
-<span class="kn">from</span> <span class="nn">functools</span> <span class="k">import</span> <span class="n">partial</span>
-
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-<span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">dot</span><span class="p">,</span> <span class="n">amax</span><span class="p">,</span> <span class="n">conjugate</span>
+<span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">dot</span><span class="p">,</span> <span class="n">conjugate</span>
 <span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">subtract</span>
 <span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">empty</span><span class="p">,</span> <span class="n">zeros</span><span class="p">,</span> <span class="n">identity</span>
 <span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">zeros_like</span><span class="p">,</span> <span class="n">empty_like</span>
@@ -184,7 +181,7 @@
 <span class="kn">from</span> <span class="nn">sisl._help</span> <span class="k">import</span> <span class="n">array_replace</span>
 <span class="kn">import</span> <span class="nn">sisl._array</span> <span class="k">as</span> <span class="nn">_a</span>
 <span class="kn">from</span> <span class="nn">sisl.linalg</span> <span class="k">import</span> <span class="n">solve</span><span class="p">,</span> <span class="n">inv</span>
-<span class="kn">from</span> <span class="nn">sisl.physics.brillouinzone</span> <span class="k">import</span> <span class="n">BrillouinZone</span><span class="p">,</span> <span class="n">MonkhorstPack</span>
+<span class="kn">from</span> <span class="nn">sisl.physics.brillouinzone</span> <span class="k">import</span> <span class="n">MonkhorstPack</span>
 <span class="kn">from</span> <span class="nn">sisl.physics.bloch</span> <span class="k">import</span> <span class="n">Bloch</span>
 
 
@@ -695,6 +692,18 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">set_options</span><span class="p">(</span><span class="o">**</span><span class="n">options</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">initialize</span><span class="p">()</span>
 
+    <span class="k">def</span> <span class="nf">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; String representation of RealSpaceSE &quot;&quot;&quot;</span>
+        <span class="n">d</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;class&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="p">}</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">3</span><span class="p">):</span>
+            <span class="n">d</span><span class="p">[</span><span class="s1">&#39;u</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">i</span><span class="p">)]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_unfold</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+        <span class="n">d</span><span class="p">[</span><span class="s1">&#39;semi&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_semi_axis</span>
+        <span class="n">d</span><span class="p">[</span><span class="s1">&#39;k&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_k_axes</span><span class="p">))</span>
+        <span class="n">d</span><span class="p">[</span><span class="s1">&#39;parent&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">,</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1"> &#39;</span><span class="p">)</span>
+        <span class="k">return</span>  <span class="p">(</span><span class="s1">&#39;</span><span class="si">{class}</span><span class="s1">{{unfold: [</span><span class="si">{u0}</span><span class="s1">, </span><span class="si">{u1}</span><span class="s1">, </span><span class="si">{u2}</span><span class="s1">],</span><span class="se">\n</span><span class="s1"> &#39;</span>
+                 <span class="s1">&#39;semi-axis: </span><span class="si">{semi}</span><span class="s1">, k-axes: </span><span class="si">{k}</span><span class="s1">,</span><span class="se">\n</span><span class="s1"> &#39;</span>
+                 <span class="s1">&#39;</span><span class="si">{parent}</span><span class="se">\n</span><span class="s1">}}&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="o">**</span><span class="n">d</span><span class="p">)</span>
+
     <span class="k">def</span> <span class="nf">set_options</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">options</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Update options in the real-space self-energy</span>
 
@@ -1188,6 +1197,19 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">set_options</span><span class="p">(</span><span class="o">**</span><span class="n">options</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">initialize</span><span class="p">()</span>
 
+    <span class="k">def</span> <span class="nf">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; String representation of RealSpaceSI &quot;&quot;&quot;</span>
+        <span class="n">d</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;class&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="p">}</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">3</span><span class="p">):</span>
+            <span class="n">d</span><span class="p">[</span><span class="s1">&#39;u</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">i</span><span class="p">)]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_unfold</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+        <span class="n">d</span><span class="p">[</span><span class="s1">&#39;k&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_k_axes</span><span class="p">))</span>
+        <span class="n">d</span><span class="p">[</span><span class="s1">&#39;semi&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">semi</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">,</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">  &#39;</span><span class="p">)</span>
+        <span class="n">d</span><span class="p">[</span><span class="s1">&#39;surface&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">surface</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">,</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">  &#39;</span><span class="p">)</span>
+        <span class="k">return</span>  <span class="p">(</span><span class="s1">&#39;</span><span class="si">{class}</span><span class="s1">{{unfold: [</span><span class="si">{u0}</span><span class="s1">, </span><span class="si">{u1}</span><span class="s1">, </span><span class="si">{u2}</span><span class="s1">],</span><span class="se">\n</span><span class="s1"> &#39;</span>
+                 <span class="s1">&#39;k-axes: </span><span class="si">{k}</span><span class="s1">,</span><span class="se">\n</span><span class="s1"> &#39;</span>
+                 <span class="s1">&#39;semi-infinite:</span><span class="se">\n</span><span class="s1">  </span><span class="si">{semi}</span><span class="s1">,</span><span class="se">\n</span><span class="s1"> &#39;</span>
+                 <span class="s1">&#39;surface:</span><span class="se">\n</span><span class="s1">  </span><span class="si">{surface}</span><span class="se">\n</span><span class="s1">}}&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="o">**</span><span class="n">d</span><span class="p">)</span>
+
     <span class="k">def</span> <span class="nf">set_options</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">options</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Update options in the real-space self-energy</span>
 
@@ -1242,7 +1264,6 @@
 <span class="sd">        parent : parent object only retaining the elements of the atoms that couple out of the primary unit cell</span>
 <span class="sd">        atom_index : indices for the atoms that couple out of the geometry (`ret_indices`)</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">opt</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_options</span>
         <span class="n">k_ax</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_k_axes</span>
         <span class="n">n_unfold</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_unfold</span><span class="p">)</span>
 
