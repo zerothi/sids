@@ -727,7 +727,13 @@ class SparseCSR(object):
         -------
         index : array_like
            the indicies of the existing/added elements
+
+        Raises
+        ------
+        IndexError for indices out of bounds
         """
+        if i < 0:
+            raise IndexError('row index is out-of-bounds')
         i1 = int(i) + 1
         # We skip this check and let sisl die if wrong input is given...
         #if not isinstance(i, Integral):
@@ -739,6 +745,8 @@ class SparseCSR(object):
         j = asarrayi(j).ravel()
         if len(j) == 0:
             return arrayi([])
+        if np.any(j < 0) or np.any(j > self.shape[1]):
+            raise IndexError('column index is out-of-bounds')
 
         # fast reference
         ptr = self.ptr
@@ -1178,7 +1186,9 @@ class SparseCSR(object):
         return self.sub(rindices)
 
     def sub(self, indices):
-        """ Return a new sparse CSR matrix with the data only for the given indices
+        """ Create a new sparse CSR matrix with the data only for the given rows and columns
+
+        All rows and columns in `indices` are retained, everything else is removed.
 
         Parameters
         ----------

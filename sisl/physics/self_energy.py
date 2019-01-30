@@ -1,10 +1,7 @@
 from __future__ import print_function, division
 
-from numbers import Integral
-from functools import partial
-
 import numpy as np
-from numpy import dot, amax, conjugate
+from numpy import dot, conjugate
 from numpy import subtract
 from numpy import empty, zeros, identity
 from numpy import zeros_like, empty_like
@@ -17,7 +14,7 @@ from sisl.utils.ranges import array_arange
 from sisl._help import array_replace
 import sisl._array as _a
 from sisl.linalg import solve, inv
-from sisl.physics.brillouinzone import BrillouinZone, MonkhorstPack
+from sisl.physics.brillouinzone import MonkhorstPack
 from sisl.physics.bloch import Bloch
 
 
@@ -528,6 +525,18 @@ class RealSpaceSE(SelfEnergy):
         self.set_options(**options)
         self.initialize()
 
+    def __str__(self):
+        """ String representation of RealSpaceSE """
+        d = {'class': self.__class__.__name__}
+        for i in range(3):
+            d['u{}'.format(i)] = self._unfold[i]
+        d['semi'] = self._semi_axis
+        d['k'] = str(list(self._k_axes))
+        d['parent'] = str(self.parent).replace('\n', '\n ')
+        return  ('{class}{{unfold: [{u0}, {u1}, {u2}],\n '
+                 'semi-axis: {semi}, k-axes: {k},\n '
+                 '{parent}\n}}').format(**d)
+
     def set_options(self, **options):
         """ Update options in the real-space self-energy
 
@@ -1021,6 +1030,19 @@ class RealSpaceSI(SelfEnergy):
         self.set_options(**options)
         self.initialize()
 
+    def __str__(self):
+        """ String representation of RealSpaceSI """
+        d = {'class': self.__class__.__name__}
+        for i in range(3):
+            d['u{}'.format(i)] = self._unfold[i]
+        d['k'] = str(list(self._k_axes))
+        d['semi'] = str(self.semi).replace('\n', '\n  ')
+        d['surface'] = str(self.surface).replace('\n', '\n  ')
+        return  ('{class}{{unfold: [{u0}, {u1}, {u2}],\n '
+                 'k-axes: {k},\n '
+                 'semi-infinite:\n  {semi},\n '
+                 'surface:\n  {surface}\n}}').format(**d)
+
     def set_options(self, **options):
         """ Update options in the real-space self-energy
 
@@ -1075,7 +1097,6 @@ class RealSpaceSI(SelfEnergy):
         parent : parent object only retaining the elements of the atoms that couple out of the primary unit cell
         atom_index : indices for the atoms that couple out of the geometry (`ret_indices`)
         """
-        opt = self._options
         k_ax = self._k_axes
         n_unfold = np.prod(self._unfold)
 

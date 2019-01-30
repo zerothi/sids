@@ -95,16 +95,16 @@ class TestSparseCSR(object):
                 assert s.dim == 3
 
     def test_init3(self, setup):
-        csr = sc.sparse.csr_matrix((10, 10), dtype=np.int32)
-        csr[0, 1] = 1
-        csr[0, 2] = 2
-        sp = SparseCSR(csr)
+        lil = sc.sparse.lil_matrix((10, 10), dtype=np.int32)
+        lil[0, 1] = 1
+        lil[0, 2] = 2
+        sp = SparseCSR(lil)
         assert sp.dtype == np.int32
         assert sp.shape, (10, 10 == 1)
         assert sp.nnz == 2
         assert sp[0, 1] == 1
         assert sp[0, 2] == 2
-        sp = SparseCSR(csr, dtype=np.float64)
+        sp = SparseCSR(lil, dtype=np.float64)
         assert sp.shape, (10, 10 == 1)
         assert sp.dtype == np.float64
         assert sp.nnz == 2
@@ -112,9 +112,10 @@ class TestSparseCSR(object):
         assert sp[0, 2] == 2
 
     def test_init4(self, setup):
-        csr = sc.sparse.csr_matrix((10, 10), dtype=np.int32)
-        csr[0, 1] = 1
-        csr[0, 2] = 2
+        lil = sc.sparse.lil_matrix((10, 10), dtype=np.int32)
+        lil[0, 1] = 1
+        lil[0, 2] = 2
+        csr = lil.tocsr()
         sp = SparseCSR((csr.data, csr.indices, csr.indptr))
         assert sp.dtype == np.int32
         assert sp.shape, (10, 10 == 1)
@@ -935,3 +936,17 @@ class TestSparseCSR(object):
         n = p.dumps(S)
         s = p.loads(n)
         assert s.spsame(S)
+
+
+@pytest.mark.xfail(raises=IndexError)
+@pytest.mark.parametrize("i", [-1, 10])
+def test_sparse_row_out_of_bounds(i):
+    S = SparseCSR((10, 10, 1), dtype=np.int32)
+    S[i, 0] = 1
+
+
+@pytest.mark.xfail(raises=IndexError)
+@pytest.mark.parametrize("j", [-1, 10])
+def test_sparse_column_out_of_bounds(j):
+    S = SparseCSR((10, 10, 1), dtype=np.int32)
+    S[0, j] = 1
