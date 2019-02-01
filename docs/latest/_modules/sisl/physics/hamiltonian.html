@@ -173,7 +173,7 @@
 <span class="kn">from</span> <span class="nn">sisl._help</span> <span class="k">import</span> <span class="n">_range</span> <span class="k">as</span> <span class="nb">range</span>
 <span class="kn">import</span> <span class="nn">sisl._array</span> <span class="k">as</span> <span class="nn">_a</span>
 <span class="kn">from</span> <span class="nn">.distribution</span> <span class="k">import</span> <span class="n">get_distribution</span>
-<span class="kn">from</span> <span class="nn">.electron</span> <span class="k">import</span> <span class="n">EigenvalueElectron</span><span class="p">,</span> <span class="n">EigenstateElectron</span>
+<span class="kn">from</span> <span class="nn">.electron</span> <span class="k">import</span> <span class="n">EigenvalueElectron</span><span class="p">,</span> <span class="n">EigenstateElectron</span><span class="p">,</span> <span class="n">spin_squared</span>
 <span class="kn">from</span> <span class="nn">.sparse</span> <span class="k">import</span> <span class="n">SparseOrbitalBZSpin</span>
 
 <span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;Hamiltonian&#39;</span><span class="p">]</span>
@@ -528,6 +528,32 @@
         <span class="k">else</span><span class="p">:</span>
             <span class="k">with</span> <span class="n">get_sile</span><span class="p">(</span><span class="n">sile</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">fh</span><span class="p">:</span>
                 <span class="n">fh</span><span class="o">.</span><span class="n">write_hamiltonian</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Hamiltonian.spin_squared"><a class="viewcode-back" href="../../../api-generated/sisl.physics.Hamiltonian.html#sisl.physics.Hamiltonian.spin_squared">[docs]</a>    <span class="k">def</span> <span class="nf">spin_squared</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="n">n_up</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">n_down</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot; Calculate spin-squared expectation value, see `~sisl.physics.electron.spin_squared` for details</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        k : array_like, optional</span>
+<span class="sd">            k-point at which the spin-squared expectation value is</span>
+<span class="sd">        n_up : int, optional</span>
+<span class="sd">            number of states for spin up configuration, default to all. All states up to and including</span>
+<span class="sd">            `n_up`.</span>
+<span class="sd">        n_down : int, optional</span>
+<span class="sd">            same as `n_up` but for the spin-down configuration</span>
+<span class="sd">        **kwargs: optional</span>
+<span class="sd">            additional parameters passed to the `eigenstate` routine</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">spin</span><span class="o">.</span><span class="n">is_polarized</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39;.spin_squared requires as spin-polarized system&#39;</span><span class="p">)</span>
+        <span class="n">es_alpha</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">eigenstate</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">spin</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">n_up</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">es_alpha</span> <span class="o">=</span> <span class="n">es_alpha</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">n_up</span><span class="p">))</span>
+        <span class="n">es_beta</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">eigenstate</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">spin</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">n_down</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">es_beta</span> <span class="o">=</span> <span class="n">es_beta</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">n_down</span><span class="p">))</span>
+        <span class="c1"># es_alpha.Sk should equal es_beta.Sk, so just pass one of them</span>
+        <span class="k">return</span> <span class="n">spin_squared</span><span class="p">(</span><span class="n">es_alpha</span><span class="o">.</span><span class="n">state</span><span class="p">,</span> <span class="n">es_beta</span><span class="o">.</span><span class="n">state</span><span class="p">,</span> <span class="n">es_alpha</span><span class="o">.</span><span class="n">Sk</span><span class="p">())</span></div>
 
 <div class="viewcode-block" id="Hamiltonian.velocity"><a class="viewcode-back" href="../../../api-generated/sisl.physics.Hamiltonian.html#sisl.physics.Hamiltonian.velocity">[docs]</a>    <span class="k">def</span> <span class="nf">velocity</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="sa">r</span><span class="sd">&quot;&quot;&quot; Calculate the velocity for the eigenstates for a given `k` point</span>
