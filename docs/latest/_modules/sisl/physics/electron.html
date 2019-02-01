@@ -496,18 +496,20 @@
 
 
 <div class="viewcode-block" id="spin_squared"><a class="viewcode-back" href="../../../api-generated/sisl.physics.electron.spin_squared.html#sisl.physics.spin_squared">[docs]</a><span class="k">def</span> <span class="nf">spin_squared</span><span class="p">(</span><span class="n">state_alpha</span><span class="p">,</span> <span class="n">state_beta</span><span class="p">,</span> <span class="n">S</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-    <span class="sa">r</span><span class="sd">&quot;&quot;&quot; Calculate the spin squared expectation value between states :math:`\langle S ^2\rangle`</span>
+    <span class="sa">r</span><span class="sd">&quot;&quot;&quot; Calculate the spin squared expectation value between two spin states</span>
 
 <span class="sd">    This calculation only makes sense for spin-polarized calculations.</span>
 
 <span class="sd">    The expectation value is calculated using the following formula:</span>
 
 <span class="sd">    .. math::</span>
-<span class="sd">       \mathbf{S}^2_{\alpha,i} &amp;= \sum_j |\langle \psi_j^\beta | \mathbf S | \psi_i^\alpha \rangle|^2</span>
+<span class="sd">       S^2_{\alpha,i} &amp;= \sum_j |\langle \psi_j^\beta | \mathbf S | \psi_i^\alpha \rangle|^2</span>
 <span class="sd">       \\</span>
-<span class="sd">       \mathbf{S}^2_{\beta,i} &amp;= \sum_j |\langle \psi_j^\alpha | \mathbf S | \psi_i^\beta \rangle|^2</span>
+<span class="sd">       S^2_{\beta,j} &amp;= \sum_i |\langle \psi_i^\alpha | \mathbf S | \psi_j^\beta \rangle|^2</span>
 
 <span class="sd">    where :math:`\alpha` and :math:`\beta` are different spin-components.</span>
+
+<span class="sd">    The arrays :math:`\mathbf S^2_\alpha` and :math:`\mathbf S^2_\beta` are returned.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -522,18 +524,18 @@
 
 <span class="sd">    Notes</span>
 <span class="sd">    -----</span>
-<span class="sd">    `state_alpha` and `state_beta` need not have the same number of states. The results returned are not the </span>
+<span class="sd">    `state_alpha` and `state_beta` need not have the same number of states.</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
-<span class="sd">    numpy.ndarray</span>
-<span class="sd">        spin squared expectation value per state for both spin-channels with final dimension ``(max(state_alpha.shape[0], state_beta.shape[0]), 2)``.</span>
+<span class="sd">    tuple of spin squared expectation value per state, ``(S^2_alpha, S^2_beta)``</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">if</span> <span class="n">state_alpha</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
         <span class="k">if</span> <span class="n">state_beta</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
-            <span class="k">return</span> <span class="n">spin_squared</span><span class="p">(</span><span class="n">state_alpha</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">),</span> <span class="n">state_beta</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">),</span> <span class="n">S</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
+            <span class="n">Sup</span><span class="p">,</span> <span class="n">Sdn</span> <span class="o">=</span> <span class="n">spin_squared</span><span class="p">(</span><span class="n">state_alpha</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">),</span> <span class="n">state_beta</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">),</span> <span class="n">S</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">Sup</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">Sdn</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
         <span class="k">return</span> <span class="n">spin_squared</span><span class="p">(</span><span class="n">state_alpha</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">),</span> <span class="n">state_beta</span><span class="p">,</span> <span class="n">S</span><span class="p">)</span>
-    <span class="k">if</span> <span class="n">state_beta</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+    <span class="k">elif</span> <span class="n">state_beta</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">spin_squared</span><span class="p">(</span><span class="n">state_alpha</span><span class="p">,</span> <span class="n">state_beta</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">),</span> <span class="n">S</span><span class="p">)</span>
 
     <span class="k">if</span> <span class="n">state_alpha</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">!=</span> <span class="n">state_beta</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]:</span>
@@ -552,7 +554,8 @@
     <span class="n">n_max</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">n_alpha</span><span class="p">,</span> <span class="n">n_beta</span><span class="p">)</span>
 
     <span class="c1"># Initialize</span>
-    <span class="n">s</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">([</span><span class="n">n_max</span><span class="p">,</span> <span class="mi">2</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype_complex_to_real</span><span class="p">(</span><span class="n">state_alpha</span><span class="o">.</span><span class="n">dtype</span><span class="p">))</span>
+    <span class="n">Sa</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">([</span><span class="n">n_alpha</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype_complex_to_real</span><span class="p">(</span><span class="n">state_alpha</span><span class="o">.</span><span class="n">dtype</span><span class="p">))</span>
+    <span class="n">Sb</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">([</span><span class="n">n_beta</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype_complex_to_real</span><span class="p">(</span><span class="n">state_alpha</span><span class="o">.</span><span class="n">dtype</span><span class="p">))</span>
 
     <span class="k">if</span> <span class="n">n_alpha</span> <span class="o">&gt;</span> <span class="n">n_beta</span><span class="p">:</span>
         <span class="c1"># Loop beta...</span>
@@ -560,8 +563,8 @@
         <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_beta</span><span class="p">):</span>
             <span class="n">D</span> <span class="o">=</span> <span class="n">dot</span><span class="p">(</span><span class="n">state_alpha</span><span class="p">,</span> <span class="n">S</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">state_beta</span><span class="p">[</span><span class="n">i</span><span class="p">]))</span>
             <span class="n">D</span> <span class="o">*=</span> <span class="n">conj</span><span class="p">(</span><span class="n">D</span><span class="p">)</span>
-            <span class="n">s</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">+=</span> <span class="n">D</span><span class="o">.</span><span class="n">real</span>
-            <span class="n">s</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">+=</span> <span class="n">D</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span><span class="o">.</span><span class="n">real</span>
+            <span class="n">Sa</span> <span class="o">+=</span> <span class="n">D</span><span class="o">.</span><span class="n">real</span>
+            <span class="n">Sb</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">+=</span> <span class="n">D</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span><span class="o">.</span><span class="n">real</span>
 
     <span class="k">else</span><span class="p">:</span>
         <span class="c1"># Loop alpha</span>
@@ -569,10 +572,10 @@
         <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_alpha</span><span class="p">):</span>
             <span class="n">D</span> <span class="o">=</span> <span class="n">dot</span><span class="p">(</span><span class="n">state_beta</span><span class="p">,</span> <span class="n">S</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">state_alpha</span><span class="p">[</span><span class="n">i</span><span class="p">]))</span>
             <span class="n">D</span> <span class="o">*=</span> <span class="n">conj</span><span class="p">(</span><span class="n">D</span><span class="p">)</span>
-            <span class="n">s</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">+=</span> <span class="n">D</span><span class="o">.</span><span class="n">real</span>
-            <span class="n">s</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">+=</span> <span class="n">D</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span><span class="o">.</span><span class="n">real</span>
+            <span class="n">Sb</span> <span class="o">+=</span> <span class="n">D</span><span class="o">.</span><span class="n">real</span>
+            <span class="n">Sa</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">+=</span> <span class="n">D</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span><span class="o">.</span><span class="n">real</span>
 
-    <span class="k">return</span> <span class="n">s</span></div>
+    <span class="k">return</span> <span class="n">Sa</span><span class="p">,</span> <span class="n">Sb</span></div>
 
 
 <div class="viewcode-block" id="velocity"><a class="viewcode-back" href="../../../api-generated/sisl.physics.electron.velocity.html#sisl.physics.velocity">[docs]</a><span class="k">def</span> <span class="nf">velocity</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">dHk</span><span class="p">,</span> <span class="n">energy</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">dSk</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">degenerate</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
