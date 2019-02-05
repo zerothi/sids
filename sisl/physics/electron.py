@@ -52,6 +52,7 @@ from __future__ import print_function, division
 from functools import reduce
 import numpy as np
 from numpy import find_common_type
+from numpy import zeros, empty
 from numpy import floor, ceil
 from numpy import conj, dot, ogrid
 from numpy import cos, sin, pi
@@ -62,6 +63,7 @@ from sisl import units, constant
 from sisl.supercell import SuperCell
 from sisl.geometry import Geometry
 from sisl._indices import indices_le
+from sisl.oplist import oplist
 from sisl._math_small import xyz_to_spherical_cos_phi
 import sisl._array as _a
 from sisl.linalg import svd_destroy, eigvals_destroy
@@ -342,7 +344,7 @@ def spin_squared(state_alpha, state_beta, S=None):
 
     where :math:`\alpha` and :math:`\beta` are different spin-components.
 
-    The arrays :math:`\mathbf S^2_\alpha` and :math:`\mathbf S^2_\beta` are returned.
+    The arrays :math:`S^2_\alpha` and :math:`S^2_\beta` are returned.
 
     Parameters
     ----------
@@ -361,12 +363,12 @@ def spin_squared(state_alpha, state_beta, S=None):
 
     Returns
     -------
-    tuple of spin squared expectation value per state, ``(S^2_alpha, S^2_beta)``
+    `~sisl.oplist.oplist` with spin squared expectation value per state, ``(S^2_alpha, S^2_beta)``
     """
     if state_alpha.ndim == 1:
         if state_beta.ndim == 1:
-            Sup, Sdn = spin_squared(state_alpha.reshape(1, -1), state_beta.reshape(1, -1), S)
-            return Sup[0], Sdn[0]
+            Sa, Sb = spin_squared(state_alpha.reshape(1, -1), state_beta.reshape(1, -1), S)
+            return oplist((Sa[0], Sb[0]))
         return spin_squared(state_alpha.reshape(1, -1), state_beta, S)
     elif state_beta.ndim == 1:
         return spin_squared(state_alpha, state_beta.reshape(1, -1), S)
@@ -384,31 +386,32 @@ def spin_squared(state_alpha, state_beta, S=None):
 
     n_alpha = state_alpha.shape[0]
     n_beta = state_beta.shape[0]
-    n_max = max(n_alpha, n_beta)
-
-    # Initialize
-    Sa = np.zeros([n_alpha], dtype=dtype_complex_to_real(state_alpha.dtype))
-    Sb = np.zeros([n_beta], dtype=dtype_complex_to_real(state_alpha.dtype))
 
     if n_alpha > n_beta:
         # Loop beta...
-        state_alpha = conj(state_alpha)
+        Sa = zeros([n_alpha], dtype=dtype_complex_to_real(state_alpha.dtype))
+        Sb = empty([n_beta], dtype=Sa.dtype)
+
+        S_state_alpha = S.dot(state_alpha.T)
         for i in range(n_beta):
-            D = dot(state_alpha, S.dot(state_beta[i]))
+            D = dot(conj(state_beta[i]), S_state_alpha)
             D *= conj(D)
             Sa += D.real
-            Sb[i] += D.sum().real
+            Sb[i] = D.sum().real
 
     else:
-        # Loop alpha
-        state_beta = conj(state_beta)
+        # Loop alpha...
+        Sa = empty([n_alpha], dtype=dtype_complex_to_real(state_alpha.dtype))
+        Sb = zeros([n_beta], dtype=Sa.dtype)
+
+        S_state_beta = S.dot(state_beta.T)
         for i in range(n_alpha):
-            D = dot(state_beta, S.dot(state_alpha[i]))
+            D = dot(conj(state_alpha[i]), S_state_beta)
             D *= conj(D)
             Sb += D.real
-            Sa[i] += D.sum().real
+            Sa[i] = D.sum().real
 
-    return Sa, Sb
+    return oplist((Sa, Sb))
 
 
 def velocity(state, dHk, energy=None, dSk=None, degenerate=None):
