@@ -150,26 +150,32 @@ class Grid(SuperCellChild):
         from scipy.interpolate import RegularGridInterpolator
 
         # Get current grid spacing
-        flinspace = partial(np.linspace, dtype=np.float32)
         dold = (
-            flinspace(0, 1, self.shape[0]),
-            flinspace(0, 1, self.shape[1]),
-            flinspace(0, 1, self.shape[2])
+            _a.linspacef(0, 1, self.shape[0]),
+            _a.linspacef(0, 1, self.shape[1]),
+            _a.linspacef(0, 1, self.shape[2])
         )
 
         # Create new grid and clean-up to reduce memory
         grid = self.copy()
         del grid.grid
 
-        # Create new mesh-grid (this will sadly be 3 times the size of the new shape)
-        # There are ways around it, but perhaps this is fine for now?
-        dnew = np.mgrid[0:1:shape[0] * 1j, 0:1:shape[1] * 1j, 0:1:shape[2] * 1j].astype(np.float32).reshape(3, -1).T
-
+        # Create the interpolator!
         f = RegularGridInterpolator(dold, self.grid, method=method)
         del dold
-        grid.grid = f(dnew).reshape(shape)
 
-        # immediately delete the dnew (which is VERY large)
+        # Create new interpolation points
+        dnew = (
+            _a.linspacef(0, 1, shape[0]),
+            _a.linspacef(0, 1, shape[1]),
+            _a.linspacef(0, 1, shape[2])
+        )
+
+        grid.grid = np.empty(shape, dtype=self.dtype)
+        for iz, dz in enumerate(dnew[2]):
+            dnew = np.mgrid[0:1:shape[0] * 1j, 0:1:shape[1] * 1j, dz:dz*1.0001:1j].reshape(3, -1).T
+            grid.grid[:, :, iz] = f(dnew).reshape((shape[0], shape[1]))
+
         del dnew
 
         return grid
@@ -493,7 +499,7 @@ class Grid(SuperCellChild):
 
         Returns
         -------
-        numpy.ndarray:
+        numpy.ndarray
            coordinates of the indices with respect to this grid spacing
         """
         return dot(np.asarray(index), self.dcell)
@@ -515,7 +521,8 @@ class Grid(SuperCellChild):
 
         Returns
         -------
-        indices : all indices are then within the shape of the grid
+        numpy.ndarray
+            all indices are then within the shape of the grid
         """
         index = _a.asarrayi(index)
         ndim = index.ndim
@@ -903,7 +910,8 @@ class Grid(SuperCellChild):
 
         Returns
         -------
-        indices : (:, 3), linear indices for each of the sliced values
+        numpy.ndarray
+            linear indices for each of the sliced values, shape ``(*, 3)``
         """
         if len(slices) == 1:
             g = np.mgrid[slices[0]]
@@ -926,7 +934,8 @@ class Grid(SuperCellChild):
 
         Returns
         -------
-        pyamg linear indices for the matrix
+        numpy.ndarray
+            linear indices for the matrix
 
         See Also
         --------
@@ -1112,8 +1121,10 @@ class Grid(SuperCellChild):
 
         Returns
         -------
-        A : scipy.sparse.csr_matrix which contains the grid stencil for a `pyamg` solver.
-        b : numpy.ndarray containing RHS of the linear system of equations.
+        scipy.sparse.csr_matrix
+            the stencil for the `pyamg` solver
+        numpy.ndarray
+            RHS of the linear system of equations
 
         Examples
         --------

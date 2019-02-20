@@ -119,7 +119,7 @@ class SuperCell(object):
         return Cuboid(cmax - cmin, self.center() + self.origo)
 
     def parameters(self, rad=False):
-        r""" Return the cell-parameters of this cell
+        r""" Cell parameters of this cell in 3 lengths and 3 angles
 
         Notes
         -----
@@ -134,12 +134,18 @@ class SuperCell(object):
 
         Returns
         -------
-        a : length of first lattice vector
-        b : length of second lattice vector
-        c : length of third lattice vector
-        alpha : angle between b and c vectors
-        beta : angle between a and c vectors
-        gamma : angle between a and b vectors
+        float
+            length of first lattice vector
+        float
+            length of second lattice vector
+        float
+            length of third lattice vector
+        float
+            angle between b and c vectors
+        float
+            angle between a and c vectors
+        float
+            angle between a and b vectors
         """
         if rad:
             f = 1.
@@ -285,7 +291,7 @@ class SuperCell(object):
             yield i, sc
 
     def copy(self, cell=None, origo=None):
-        """ Returns a copy of the object with possibly some quantities overwritten
+        """ A deepcopy of the object
 
         Parameters
         ----------
@@ -377,7 +383,7 @@ class SuperCell(object):
         return self.copy(cell)
 
     def swapaxes(self, a, b):
-        """ Returns `SuperCell` with swapped axis
+        """ Swap axis `a` and `b` in a new `SuperCell`
 
         If ``swapaxes(0,1)`` it returns the 0 in the 1 values.
         """
@@ -405,9 +411,9 @@ class SuperCell(object):
 
         Returns
         -------
-        n : array_like
+        numpy.ndarray
            planes normal vector (pointing outwards with regards to the cell)
-        p : array_like
+        numpy.ndarray
            a point on the plane
 
         Examples
@@ -473,7 +479,8 @@ class SuperCell(object):
 
         Returns
         -------
-        supercell : the enlarged supercell
+        SuperCell
+             enlarged supercell
         """
         # Simple form
         if isinstance(m, Integral):
@@ -513,7 +520,8 @@ class SuperCell(object):
 
         Returns
         -------
-        cell : cell-vectors with prescribed length
+        numpy.ndarray
+             cell-vectors with prescribed length
         """
         length = _a.asarrayd(length)
         if length.size == 1:

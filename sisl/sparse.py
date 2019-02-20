@@ -607,7 +607,8 @@ class SparseCSR(object):
 
         Returns
         -------
-        True if the same non-zero elements are in the matrices (but not necessarily the same values)
+        bool
+           true if the same non-zero elements are in the matrices (but not necessarily the same values)
         """
         if self.shape[:2] != other.shape[:2]:
             return False
@@ -725,8 +726,8 @@ class SparseCSR(object):
 
         Returns
         -------
-        index : array_like
-           the indicies of the existing/added elements
+        numpy.ndarray
+           indices of existing/added elements
 
         Raises
         ------
@@ -740,12 +741,11 @@ class SparseCSR(object):
         #    raise ValueError("Retrieving/Setting elements in a sparse matrix"
         #                     " must only be performed at one row-element at a time.\n"
         #                     "However, multiple columns at a time are allowed.")
-
         # Ensure flattened array...
         j = asarrayi(j).ravel()
         if len(j) == 0:
             return arrayi([])
-        if np.any(j < 0) or np.any(j > self.shape[1]):
+        if np_any(j < 0) or np_any(j >= self.shape[1]):
             raise IndexError('column index is out-of-bounds')
 
         # fast reference
@@ -846,7 +846,8 @@ class SparseCSR(object):
 
         Returns
         -------
-        numpy.ndarray : indicies of the existing elements
+        numpy.ndarray
+            indices of the existing elements
         """
         # Ensure flattened array...
         j = asarrayi(j).ravel()
@@ -868,7 +869,8 @@ class SparseCSR(object):
 
         Returns
         -------
-        numpy.ndarray : indicies of the existing elements
+        numpy.ndarray
+            indices of existing elements
         """
         # Ensure flattened array...
         j = asarrayi(j).ravel()
@@ -1095,7 +1097,7 @@ class SparseCSR(object):
             D = self._D
 
     def copy(self, dims=None, dtype=None):
-        """ Returns an exact copy of the sparse matrix
+        """ A deepcopy of the sparse matrix
 
         Parameters
         ----------
