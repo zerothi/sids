@@ -5,6 +5,7 @@ This module implements the base-class which allows named indices
 >>> nidx = NamedIndex('hello', [1, 2])
 """
 import numpy as np
+from numpy import ndarray, bool_
 
 from ._indices import indices_only
 from ._array import arrayi
@@ -14,9 +15,14 @@ from .utils.ranges import list2str
 
 
 class NamedIndex(object):
-    __slots__ = ['_name', '_index']
+    __slots__ = ('_name', '_index')
 
     def __init__(self, name=None, index=None):
+        if isinstance(name, dict):
+            # Also allow dictionary inputs!
+            self.__init__(name.keys(), name.values())
+            return
+
         # Initialize lists
         self._name = []
         self._index = []
@@ -26,6 +32,16 @@ class NamedIndex(object):
         elif not name is None:
             for n, i in zip(name, index):
                 self.add_name(n, i)
+
+    @property
+    def names(self):
+        """ All names contained """
+        return self._name
+
+    def clear(self):
+        """ Clear all names in this object, no names will exist after this call (in-place) """
+        self._name = []
+        self._index = []
 
     def __iter__(self):
         """ Iterate names in the group """
@@ -53,6 +69,8 @@ class NamedIndex(object):
         if name in self._name:
             raise SislError(self.__class__.__name__ + '.add_name already contains name {}, please delete group name before adding.'.format(name))
         self._name.append(name)
+        if isinstance(index, ndarray) and index.dtype == bool_:
+            index = np.flatnonzero(index)
         self._index.append(arrayi(index).ravel())
 
     def delete_name(self, name):
@@ -68,17 +86,17 @@ class NamedIndex(object):
         del self._index[i]
 
     def __str__(self):
-        """ Representation of the object """
+        """ Representation of object """
         N = len(self)
         if N == 0:
-            return NamedIndex.__name__ + '{}'
-        s = NamedIndex.__name__ + '{{groups: {0}'.format(N)
+            return self.__class__.__name__ + '{}'
+        s = self.__class__.__name__ + '{{groups: {0}'.format(N)
         for name, idx in zip(self._name, self._index):
             s += ',\n {0}: [{1}]'.format(name, list2str(idx))
         return s + '\n}'
 
     def __setitem__(self, name, index):
-        """ Equivalent to `add` """
+        """ Equivalent to `add_name` """
         if isinstance(name, _str):
             self.add_name(name, index)
         else:
@@ -106,7 +124,124 @@ class NamedIndex(object):
         """ Check whether a name exists in this group a named group """
         return name in self._name
 
-    def remove(self, index):
+    def merge(self, other, offset=0, duplicate="raise"):
+        """ Return a new object which is a merge of self and other
+
+        By default, name conflicts between self and other will raise a ValueError.
+        See the `duplicate` parameter for information on how to change this.
+
+        Parameters
+        ----------
+        other : NamedIndex
+            the object to merge names(+indices) with
+        offset : int, optional
+            `other` will have `offset` added to all indices before merge is done.
+        duplicate: {"raise", "union", "left", "right", "omit"}
+            Selects the default behaviour in case of name conflict.
+            Default ("raise") is to raise a ValueError in the case of conflict.
+            If "union", each name will contain indices from both `self` and `other`.
+            If "left" or "right", the name from `self` or `other`, respectively,
+            will take precedence.
+            If "omit", duplicate names are completely omitted.
+        """
+        new = self.copy()
+
+        set_self = set(self.names)
+        set_other = set(other.names)
+
+        # Figure out if there are duplicate names
+        intersection = set_self & set_other
+
+        # First add all unique names (equivalent to duplicate == "left")
+        for name in other:
+            if not name in intersection:
+                new[name] = other[name] + offset
+
+        if len(intersection) == 0:
+            # If there are no duplicates then we are done, all unique names are already present
+            pass
+
+        elif duplicate == "raise":
+            raise ValueError("{}.merge has overlapping names without a duplicate handler: {}".format(self.__class__.__name__, list(intersection)))
+
+        elif duplicate == "union":
+            # Indices are made a union
+            for name in intersection:
+                # Clean the name (currently add_name raises an issue if already existing)
+                del new[name]
+
+                # Create a union of indices
+                new[name] = np.union1d(self[name], other[name] + offset)
+
+        elif duplicate == "left":
+            # Indices are chosen from `self`, but since new is already a copy of self
+            # we do not have to do anything
+            pass
+
+        elif duplicate == "right":
+            for name in intersection:
+                del new[name]
+                new[name] = other[name] + offset
+
+        elif duplicate == "omit":
+            for name in intersection:
+                del new[name]
+
+        else:
+            raise ValueError("{}.merge wrong argument: duplicate.".format(self.__class__.__name__))
+
+        return new
+
+    def sub_index(self, index, name=None):
+        """ Get a new object with only the indexes in idx.
+
+        Parameters
+        ----------
+        index : array_like of int
+            indices to select
+        name : str, Iterable of str, optional
+            If given, perform sub only on the indices for `name`. Other names
+            are preserved.
+        """
+        if name is None:
+            name = self._name
+        elif isinstance(name, _str):
+            name = [name]
+
+        new_index = []
+        for l_name in self:
+            if l_name in name:
+                new_index.append(np.intersect1d(self[l_name], index))
+            else:
+                new_index.append(self[l_name].copy())
+
+        return self.__class__(self._name[:], new_index)
+
+    def sub_name(self, names):
+        """ Get a new object with only the names in `names`
+
+        Parameters
+        ----------
+        names : str or iterable of str
+            The name(s) which the new object contain.
+        """
+        if isinstance(names, _str):
+            names = [names]
+
+        for name in names:
+            if name not in self._name:
+                raise ValueError("{}.sub_name specified name ({}) is not in object.".format(self.__class__.__name__, name))
+
+        new_index = []
+        for name in self:
+            if name in names:
+                new_index.append(self[name].copy())
+
+        # IF names and new_index does not have the same length
+        # then the constructor will fail!
+        return self.__class__(names, new_index)
+
+    def remove_index(self, index):
         """ Remove indices from all named index groups
 
         Parameters
@@ -114,11 +249,16 @@ class NamedIndex(object):
         index : array_like of int
            indices to remove
         """
-        n = len(self)
-        if n == 0:
-            return
+        new = self.copy()
         index = arrayi(index).ravel()
-        for i in range(n):
-            print(self._index[i], index)
-            idx2 = indices_only(self._index[i], index)
-            self._index[i] = np.delete(self._index[i], idx2)
+        for i in range(len(new)):
+            idx = new._index[i]
+            new._index[i] = np.delete(idx, indices_only(idx, index))
+
+        return new
+
+    def reduce(self):
+        """ Removes names from the object which have no index associated (in-place) """
+        for i in range(len(self))[::-1]:
+            if len(self._index[n]) == 0:
+                del self[self.names[i]]

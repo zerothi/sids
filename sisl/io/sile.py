@@ -3,6 +3,11 @@ from __future__ import print_function, division
 from functools import wraps
 from os.path import splitext, isfile, dirname, join, abspath, basename
 import gzip
+try:
+    from pathlib import Path
+except ImportError:  # Ancient Python
+    class Path:
+        pass
 
 import numpy as np
 
@@ -272,7 +277,7 @@ def get_sile(file, *args, **kwargs):
 
     Parameters
     ----------
-    file : str
+    file : str or pathlib.Path
        the file to be quried for a correct `Sile` object.
        This file name may contain {<class-name>} which sets
        `cls` in case `cls` is not set.
@@ -285,6 +290,8 @@ def get_sile(file, *args, **kwargs):
        function returns a random one.
     """
     cls = kwargs.pop('cls', None)
+    if isinstance(file, Path):
+        file = str(file)
     sile = get_sile_class(file, *args, cls=cls, **kwargs)
     return sile(str_spec(file)[0], *args, **kwargs)
 
@@ -702,7 +709,7 @@ class SileCDF(BaseSile):
     def _cmp_args(self):
         """ Returns the compression arguments for the NetCDF file
 
-        >>> nc.createVariable(..., **self._cmp_args) # doctest: +SKIP
+        >>> nc.createVariable(..., **self._cmp_args)
         """
         return {'zlib': self._lvl > 0, 'complevel': self._lvl}
 
@@ -873,13 +880,13 @@ class SileCDF(BaseSile):
 
         Script for looping and checking each instance.
 
-        >>> for gv in self.iter(): # doctest: +SKIP
-        ...     if self.isGroup(gv): # doctest: +SKIP
-        ...         # is group # doctest: +SKIP
-        ...     elif self.isDimension(gv): # doctest: +SKIP
-        ...         # is dimension # doctest: +SKIP
-        ...     elif self.isVariable(gv): # doctest: +SKIP
-        ...         # is variable # doctest: +SKIP
+        >>> for gv in self.iter():
+        ...     if self.isGroup(gv):
+        ...         # is group
+        ...     elif self.isDimension(gv):
+        ...         # is dimension
+        ...     elif self.isVariable(gv):
+        ...         # is variable
 
         """
         if root is None:
