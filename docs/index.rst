@@ -26,8 +26,8 @@
 	      tight-binding, electron, electrons, phonon, phonons
 
 
-sisl: a tight-binding and DFT postprocessing library
-====================================================
+sisl: tight-binding and DFT interface library
+=============================================
 
 The Python library `sisl <http://github.com/zerothi/sisl>`_ was born out of a need to handle(create and read), manipulate and analyse output from DFT programs.
 It was initially developed by Nick R. Papior (co-developer of `Siesta`_) as a side-project to `TranSiesta`_
@@ -44,7 +44,7 @@ in Python which does analysis using the same interface, regardless of code being
 For instance one may read the Kohn-Sham eigenvalue spectrum from various codes and return them
 in a consistent manner so the post-processing is the same, regardless of code being used.
 
-sisl is also part of the training material for a series of workshops hosted [here][workshop].
+sisl is also part of the training material for a series of workshops hosted `here <workshop_>`_.
 
 In some regards it has overlap with `ASE`_ and sisl also interfaces with ASE.
 
@@ -52,7 +52,7 @@ In some regards it has overlap with `ASE`_ and sisl also interfaces with ASE.
 First time use
 --------------
 
-Here we show 2 examples of using sisl together with [Siesta][siesta].
+Here we show 2 examples of using sisl together with `Siesta`_.
 
 To read in a Hamiltonian from a Siesta calculation and calculate the DOS for a given Monkhorst-Pack grid
 one would do::
