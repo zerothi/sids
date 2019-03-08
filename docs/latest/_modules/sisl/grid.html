@@ -180,9 +180,10 @@
 <span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">floor</span><span class="p">,</span> <span class="n">dot</span><span class="p">,</span> <span class="n">add</span><span class="p">,</span> <span class="n">cos</span><span class="p">,</span> <span class="n">sin</span>
 <span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">ogrid</span><span class="p">,</span> <span class="n">take</span>
 <span class="kn">from</span> <span class="nn">scipy.sparse</span> <span class="k">import</span> <span class="n">diags</span> <span class="k">as</span> <span class="n">sp_diags</span>
+<span class="kn">from</span> <span class="nn">scipy.sparse</span> <span class="k">import</span> <span class="n">SparseEfficiencyWarning</span>
 
 <span class="kn">from</span> <span class="nn">.</span> <span class="k">import</span> <span class="n">_array</span> <span class="k">as</span> <span class="n">_a</span>
-<span class="kn">from</span> <span class="nn">._help</span> <span class="k">import</span> <span class="n">dtype_complex_to_real</span>
+<span class="kn">from</span> <span class="nn">._help</span> <span class="k">import</span> <span class="n">dtype_complex_to_real</span><span class="p">,</span> <span class="n">wrap_filterwarnings</span>
 <span class="kn">from</span> <span class="nn">.shape</span> <span class="k">import</span> <span class="n">Shape</span>
 <span class="kn">from</span> <span class="nn">.utils</span> <span class="k">import</span> <span class="n">default_ArgumentParser</span><span class="p">,</span> <span class="n">default_namespace</span>
 <span class="kn">from</span> <span class="nn">.utils</span> <span class="k">import</span> <span class="n">cmd</span><span class="p">,</span> <span class="n">strseq</span><span class="p">,</span> <span class="n">direction</span><span class="p">,</span> <span class="n">str_spec</span>
@@ -423,7 +424,7 @@
     <span class="n">set_boundary</span> <span class="o">=</span> <span class="n">set_bc</span>
     <span class="n">set_boundary_condition</span> <span class="o">=</span> <span class="n">set_bc</span>
 
-    <span class="k">def</span> <span class="nf">__sc_geometry_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__sc_geometry_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Internal routine for copying the SuperCell and Geometry &quot;&quot;&quot;</span>
         <span class="n">d</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
         <span class="n">d</span><span class="p">[</span><span class="s1">&#39;sc&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sc</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
@@ -434,8 +435,9 @@
 <div class="viewcode-block" id="Grid.copy"><a class="viewcode-back" href="../../api-generated/sisl.Grid.html#sisl.Grid.copy">[docs]</a>    <span class="k">def</span> <span class="nf">copy</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Copy the object &quot;&quot;&quot;</span>
         <span class="n">d</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__sc_geometry_dict</span><span class="p">()</span>
-        <span class="n">grid</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">),</span> <span class="n">bc</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">bc</span><span class="p">),</span>
-                              <span class="n">dtype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="o">**</span><span class="n">d</span><span class="p">)</span>
+        <span class="n">d</span><span class="p">[</span><span class="s1">&#39;dtype&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dtype</span>
+        <span class="n">grid</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="p">([</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="mi">3</span><span class="p">,</span> <span class="n">bc</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">bc</span><span class="p">),</span> <span class="o">**</span><span class="n">d</span><span class="p">)</span>
+        <span class="c1"># This also ensures the shape is copied!</span>
         <span class="n">grid</span><span class="o">.</span><span class="n">grid</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
         <span class="k">return</span> <span class="n">grid</span></div>
 
@@ -451,8 +453,8 @@
         <span class="n">s</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
         <span class="n">d</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__sc_geometry_dict</span><span class="p">()</span>
         <span class="n">d</span><span class="p">[</span><span class="s1">&#39;sc&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">d</span><span class="p">[</span><span class="s1">&#39;sc&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">swapaxes</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">)</span>
-        <span class="n">grid</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="p">(</span><span class="n">s</span><span class="p">[</span><span class="n">idx</span><span class="p">],</span> <span class="n">bc</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">bc</span><span class="p">[</span><span class="n">idx</span><span class="p">],</span>
-                              <span class="n">dtype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="o">**</span><span class="n">d</span><span class="p">)</span>
+        <span class="n">d</span><span class="p">[</span><span class="s1">&#39;dtype&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dtype</span>
+        <span class="n">grid</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="p">(</span><span class="n">s</span><span class="p">[</span><span class="n">idx</span><span class="p">],</span> <span class="n">bc</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">bc</span><span class="p">[</span><span class="n">idx</span><span class="p">],</span> <span class="o">**</span><span class="n">d</span><span class="p">)</span>
         <span class="c1"># We need to force the C-order or we loose the contiguity</span>
         <span class="n">grid</span><span class="o">.</span><span class="n">grid</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">swapaxes</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">grid</span><span class="p">,</span> <span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">),</span> <span class="n">order</span><span class="o">=</span><span class="s1">&#39;C&#39;</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">grid</span></div>
@@ -477,7 +479,7 @@
         <span class="n">shape</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span> <span class="o">=</span> <span class="n">n</span>
         <span class="k">if</span> <span class="n">n</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;You cannot retain no indices.&#39;</span><span class="p">)</span>
-        <span class="n">grid</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="p">(</span><span class="n">shape</span><span class="p">,</span> <span class="n">bc</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">bc</span><span class="p">),</span> <span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">__sc_geometry_dict</span><span class="p">())</span>
+        <span class="n">grid</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="p">(</span><span class="n">shape</span><span class="p">,</span> <span class="n">bc</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">bc</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">__sc_geometry_dict</span><span class="p">())</span>
         <span class="c1"># Update cell shape (the cell is smaller now)</span>
         <span class="n">grid</span><span class="o">.</span><span class="n">set_sc</span><span class="p">(</span><span class="n">cell</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">scale_geometry</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">geometry</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
@@ -870,6 +872,7 @@
                 <span class="n">d</span><span class="p">[</span><span class="s1">&#39;geometry&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">d</span><span class="p">[</span><span class="s1">&#39;geometry&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">other</span><span class="o">.</span><span class="n">geometry</span><span class="p">,</span> <span class="n">axis</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">d</span><span class="p">[</span><span class="s1">&#39;geometry&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">other</span><span class="o">.</span><span class="n">geometry</span>
+        <span class="n">d</span><span class="p">[</span><span class="s1">&#39;dtype&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dtype</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="p">(</span><span class="n">shape</span><span class="p">,</span> <span class="n">bc</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">bc</span><span class="p">),</span> <span class="o">**</span><span class="n">d</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="Grid.read"><a class="viewcode-back" href="../../api-generated/sisl.Grid.html#sisl.Grid.read">[docs]</a>    <span class="nd">@staticmethod</span>
@@ -1181,7 +1184,8 @@
         <span class="c1"># force RHS value</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">pyamg_source</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="n">pyamg_indices</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="Grid.pyamg_boundary_condition"><a class="viewcode-back" href="../../api-generated/sisl.Grid.html#sisl.Grid.pyamg_boundary_condition">[docs]</a>    <span class="k">def</span> <span class="nf">pyamg_boundary_condition</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">A</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">bc</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<div class="viewcode-block" id="Grid.pyamg_boundary_condition"><a class="viewcode-back" href="../../api-generated/sisl.Grid.html#sisl.Grid.pyamg_boundary_condition">[docs]</a>    <span class="nd">@wrap_filterwarnings</span><span class="p">(</span><span class="s2">&quot;ignore&quot;</span><span class="p">,</span> <span class="n">category</span><span class="o">=</span><span class="n">SparseEfficiencyWarning</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">pyamg_boundary_condition</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">A</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">bc</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sa">r</span><span class="sd">&quot;&quot;&quot; Attach boundary conditions to the `pyamg` grid-matrix `A` with default boundary conditions as specified for this `Grid`</span>
 
 <span class="sd">        Parameters</span>
@@ -1196,6 +1200,7 @@
 <span class="sd">           with elements corresponding to `Grid.PERIODIC`/`Grid.NEUMANN`...</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">C</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+
         <span class="k">def</span> <span class="nf">Neumann</span><span class="p">(</span><span class="n">idx_bc</span><span class="p">,</span> <span class="n">idx_p1</span><span class="p">):</span>
             <span class="c1"># TODO check this BC</span>
             <span class="c1"># Set all boundary equations to 0</span>
@@ -1392,7 +1397,7 @@
 
             <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parser</span><span class="p">,</span> <span class="n">ns</span><span class="p">,</span> <span class="n">values</span><span class="p">,</span> <span class="n">option_string</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
                 <span class="n">ns</span><span class="o">.</span><span class="n">_grid</span> <span class="o">=</span> <span class="n">ns</span><span class="o">.</span><span class="n">_grid</span><span class="o">.</span><span class="n">interp</span><span class="p">([</span><span class="nb">int</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">values</span><span class="p">])</span>
-        <span class="n">p</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="o">*</span><span class="n">opts</span><span class="p">(</span><span class="s1">&#39;--interp&#39;</span><span class="p">),</span> <span class="n">nargs</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>
+        <span class="n">p</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="o">*</span><span class="n">opts</span><span class="p">(</span><span class="s1">&#39;--interp&#39;</span><span class="p">),</span> <span class="n">nargs</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">metavar</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;NX&#39;</span><span class="p">,</span> <span class="s1">&#39;NY&#39;</span><span class="p">,</span> <span class="s1">&#39;NZ&#39;</span><span class="p">),</span>
                        <span class="n">action</span><span class="o">=</span><span class="n">InterpGrid</span><span class="p">,</span>
                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Interpolate the grid.&#39;</span><span class="p">)</span>
 
@@ -1564,11 +1569,11 @@
 <span class="s2">This manipulation utility is highly advanced and one should note that the ORDER of</span>
 <span class="s2">options is determining the final structure. For instance:</span>
 
-<span class="s2">   </span><span class="si">{0}</span><span class="s2"> ElectrostaticPotential.grid.nc --diff Other.grid.nc --sub z 0.:0.2f</span>
+<span class="s2">   $&gt; </span><span class="si">{0}</span><span class="s2"> Reference.grid.nc --diff Other.grid.nc --sub 0.:0.2f z</span>
 
 <span class="s2">is NOT equivalent to:</span>
 
-<span class="s2">   </span><span class="si">{0}</span><span class="s2"> ElectrostaticPotential.grid.nc --sub z 0.:0.2f --diff Other.grid.nc</span>
+<span class="s2">   $&gt; </span><span class="si">{0}</span><span class="s2"> Reference.grid.nc --sub 0.:0.2f z --diff Other.grid.nc</span>
 
 <span class="s2">This may be unexpected but enables one to do advanced manipulations.</span>
 <span class="s2">    &quot;&quot;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">osp</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
