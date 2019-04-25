@@ -13,7 +13,8 @@ from sisl.utils.mathematics import fnorm
 from sisl.utils.ranges import array_arange
 from sisl._help import array_replace
 import sisl._array as _a
-from sisl.linalg import solve, inv
+from sisl.linalg import linalg_info, solve, inv
+from sisl.linalg.base import _compute_lwork
 from sisl.physics.brillouinzone import MonkhorstPack
 from sisl.physics.bloch import Bloch
 
@@ -206,8 +207,26 @@ class RecursiveSI(SemiInfinite):
             beta[:, :] = conjugate(P.T) - conjugate(S.T) * E
             del P, S
 
+        # Get faster methods since we don't want overhead of solve
+        gesv = linalg_info('gesv', dtype)
+
+        getrf = linalg_info('getrf', dtype)
+        getri = linalg_info('getri', dtype)
+        getri_lwork = linalg_info('getri_lwork', dtype)
+        lwork = int(1.01 * _compute_lwork(getri_lwork, n))
+        def inv(A):
+            lu, piv, info = getrf(A, overwrite_a=True)
+            if info == 0:
+                x, info = getri(lu, piv, lwork=lwork, overwrite_lu=True)
+            if info != 0:
+                raise ValueError(self.__class__.__name__ + '.green could not compute the inverse.')
+            return x
+
         while True:
-            tab = solve(GB, ab2).reshape(shape)
+            _, _, tab, info = gesv(GB, ab2, overwrite_a=False, overwrite_b=False)
+            tab.shape = shape
+            if info != 0:
+                raise ValueError(self.__class__.__name__ + '.green could not solve G x = B system!')
 
             # Update bulk Green function
             subtract(GB, dot(alpha, tab[:, 1, :]), out=GB)
@@ -221,7 +240,7 @@ class RecursiveSI(SemiInfinite):
             if _abs(alpha).max() < eps:
                 # Return the pristine Green function
                 del ab, alpha, beta, ab2, tab
-                return inv(GB, True)
+                return inv(GB)
 
         raise ValueError(self.__class__.__name__+'.green could not converge Green function calculation')
 
@@ -294,17 +313,23 @@ class RecursiveSI(SemiInfinite):
         else:
             GS = zeros_like(GB)
 
+        # Get faster methods since we don't want overhead of solve
+        gesv = linalg_info('gesv', dtype)
+
         # Specifying dot with 'out' argument should be faster
         tmp = empty_like(GS)
         while True:
-            tab = solve(GB, ab2).reshape(shape)
+            _, _, tab, info = gesv(GB, ab2, overwrite_a=False, overwrite_b=False)
+            tab.shape = shape
+            if info != 0:
+                raise ValueError(self.__class__.__name__ + '.self_energy could not solve G x = B system!')
 
             dot(alpha, tab[:, 1, :], tmp)
             # Update bulk Green function
             subtract(GB, tmp, out=GB)
             subtract(GB, dot(beta, tab[:, 0, :]), out=GB)
             # Update surface self-energy
-            GS -= tmp
+            subtract(GS, tmp, out=GS)
 
             # Update forward/backward
             alpha[:, :] = dot(alpha, tab[:, 0, :])
@@ -394,17 +419,23 @@ class RecursiveSI(SemiInfinite):
         else:
             GS = zeros_like(GB)
 
+        # Get faster methods since we don't want overhead of solve
+        gesv = linalg_info('gesv', dtype)
+
         # Specifying dot with 'out' argument should be faster
         tmp = empty_like(GS)
         while True:
-            tab = solve(GB, ab2).reshape(shape)
+            _, _, tab, info = gesv(GB, ab2, overwrite_a=False, overwrite_b=False)
+            tab.shape = shape
+            if info != 0:
+                raise ValueError(self.__class__.__name__ + '.self_energy_lr could not solve G x = B system!')
 
             dot(alpha, tab[:, 1, :], tmp)
             # Update bulk Green function
             subtract(GB, tmp, out=GB)
             subtract(GB, dot(beta, tab[:, 0, :]), out=GB)
             # Update surface self-energy
-            GS -= tmp
+            subtract(GS, tmp, out=GS)
 
             # Update forward/backward
             alpha[:, :] = dot(alpha, tab[:, 0, :])
@@ -791,6 +822,19 @@ class RealSpaceSE(SelfEnergy):
         unfold[s_ax] = 1
         bloch = Bloch(unfold)
 
+        # We always need the inverse
+        getrf = linalg_info('getrf', dtype)
+        getri = linalg_info('getri', dtype)
+        getri_lwork = linalg_info('getri_lwork', dtype)
+        lwork = int(1.01 * _compute_lwork(getri_lwork, self._calc['SE'].spgeom0.shape[0]))
+        def inv(A):
+            lu, piv, info = getrf(A, overwrite_a=True)
+            if info == 0:
+                x, info = getri(lu, piv, lwork=lwork, overwrite_lu=True)
+            if info != 0:
+                raise ValueError(self.__class__.__name__ + '.green could not compute the inverse.')
+            return x
+
         if tile == 1:
             # When not tiling, it can be simplified quite a bit
             M0 = self._calc['SE'].spgeom0
@@ -800,26 +844,33 @@ class RealSpaceSE(SelfEnergy):
                 S0E = identity(len(M0), dtype=dtype) * E
                 def _calc_green(k, dtype, no, tile, idx0):
                     SL, SR = SE(E, k, dtype=dtype, **kwargs)
-                    return inv(S0E - M0Pk(k, dtype=dtype, format='array', **kwargs) - SL - SR, True)
+                    return inv(S0E - M0Pk(k, dtype=dtype, format='array', **kwargs) - SL - SR)
             else:
                 M0Sk = M0.Sk
                 def _calc_green(k, dtype, no, tile, idx0):
                     SL, SR = SE(E, k, dtype=dtype, **kwargs)
-                    return inv(M0Sk(k, dtype=dtype, format='array') * E - M0Pk(k, dtype=dtype, format='array', **kwargs) - SL - SR, True)
+                    return inv(M0Sk(k, dtype=dtype, format='array') * E - M0Pk(k, dtype=dtype, format='array', **kwargs) - SL - SR)
 
         else:
+            # Get faster methods since we don't want overhead of solve
+            gesv = linalg_info('gesv', dtype)
             M1 = self._calc['SE'].spgeom1
             M1Pk = M1.Pk
             if self.parent.orthogonal:
                 def _calc_green(k, dtype, no, tile, idx0):
                     # Calculate left/right self-energies
                     Gf, A2 = SE(E, k, dtype=dtype, bulk=True, **kwargs) # A1 == Gf, because of memory usage
-                    B = - M1Pk(k, dtype=dtype, format='array', **kwargs)
+                    # skip negation since we don't do negation on tY/tX
+                    B = M1Pk(k, dtype=dtype, format='array', **kwargs)
                     # C = conjugate(B.T)
 
-                    tY = - solve(Gf, conjugate(B.T), True, True)
-                    Gf = inv(A2 + dot(B, tY), True)
-                    tX = - solve(A2, B, True, True)
+                    _, _, tY, info = gesv(Gf, conjugate(B.T), overwrite_a=True, overwrite_b=True)
+                    if info != 0:
+                        raise ValueError(self.__class__.__name__ + '.green could not solve tY x = B system!')
+                    Gf[:, :] = inv(A2 - dot(B, tY))
+                    _, _, tX, info = gesv(A2, B, overwrite_a=True, overwrite_b=True)
+                    if info != 0:
+                        raise ValueError(self.__class__.__name__ + '.green could not solve tX x = B system!')
 
                     # Since this is the pristine case, we know that
                     # G11 and G22 are the same:
@@ -838,12 +889,17 @@ class RealSpaceSE(SelfEnergy):
                     Gf, A2 = SE(E, k, dtype=dtype, bulk=True, **kwargs) # A1 == Gf, because of memory usage
                     tY = M1Sk(k, dtype=dtype, format='array') # S
                     tX = M1Pk(k, dtype=dtype, format='array', **kwargs) # H
-                    B = tY * E - tX
+                    # negate B to allow faster gesv method
+                    B = tX - tY * E
                     # C = _conj(tY.T) * E - _conj(tX.T)
 
-                    tY = - solve(Gf, conjugate(tY.T) * E - conjugate(tX.T), True, True)
-                    Gf = inv(A2 + dot(B, tY), True)
-                    tX = - solve(A2, B, True, True)
+                    _, _, tY[:, :], info = gesv(Gf, conjugate(tX.T) - conjugate(tY.T) * E, overwrite_a=True, overwrite_b=True)
+                    if info != 0:
+                        raise ValueError(self.__class__.__name__ + '.green could not solve tY x = B system!')
+                    Gf[:, :] = inv(A2 - dot(B, tY))
+                    _, _, tX[:, :], info = gesv(A2, B, overwrite_a=True, overwrite_b=True)
+                    if info != 0:
+                        raise ValueError(self.__class__.__name__ + '.green could not solve tX x = B system!')
 
                     G = empty([tile, no, tile, no], dtype=dtype)
                     G[idx0, :, idx0, :] = Gf.reshape(1, no, no)
@@ -1320,6 +1376,19 @@ class RealSpaceSI(SelfEnergy):
 
         M0 = self.surface
         M0Pk = M0.Pk
+
+        getrf = linalg_info('getrf', dtype)
+        getri = linalg_info('getri', dtype)
+        getri_lwork = linalg_info('getri_lwork', dtype)
+        lwork = int(1.01 * _compute_lwork(getri_lwork, M0.shape[0]))
+        def inv(A):
+            lu, piv, info = getrf(A, overwrite_a=True)
+            if info == 0:
+                x, info = getri(lu, piv, lwork=lwork, overwrite_lu=True)
+            if info != 0:
+                raise ValueError(self.__class__.__name__ + '.green could not compute the inverse.')
+            return x
+
         if M0.orthogonal:
             # Orthogonal *always* identity
             S0E = identity(len(M0), dtype=dtype) * E
@@ -1329,7 +1398,7 @@ class RealSpaceSI(SelfEnergy):
                     invG[surf_orbs, surf_orbs.T] = SE(E, k, dtype=dtype, bulk=semi_bulk, **kwargs)
                 else:
                     invG[surf_orbs, surf_orbs.T] -= SE(E, k, dtype=dtype, bulk=semi_bulk, **kwargs)
-                return inv(invG, True)
+                return inv(invG)
         else:
             M0Sk = M0.Sk
             def _calc_green(k, dtype, surf_orbs, semi_bulk):
@@ -1338,7 +1407,7 @@ class RealSpaceSI(SelfEnergy):
                     invG[surf_orbs, surf_orbs.T] = SE(E, k, dtype=dtype, bulk=semi_bulk, **kwargs)
                 else:
                     invG[surf_orbs, surf_orbs.T] -= SE(E, k, dtype=dtype, bulk=semi_bulk, **kwargs)
-                return inv(invG, True)
+                return inv(invG)
 
         # Create functions used to calculate the real-space Green function
         # For TRS we only-calculate +k and average by using G(k) = G(-k)^T

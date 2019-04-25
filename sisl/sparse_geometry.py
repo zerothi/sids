@@ -830,17 +830,17 @@ class _SparseGeometry(object):
 
     def __getstate__(self):
         """ Return dictionary with the current state """
-        d = {}
-        d['geometry'] = self.geometry.__getstate__()
-        d['csr'] = self._csr.__getstate__()
-        return d
+        return {
+            'geometry': self.geometry.__getstate__(),
+            'csr': self._csr.__getstate__()
+        }
 
     def __setstate__(self, state):
         """ Return dictionary with the current state """
         geom = Geometry([0] * 3, Atom(1))
         geom.__setstate__(state['geometry'])
         self._geometry = geom
-        csr = SparseCSR((10, 10, 2))
+        csr = SparseCSR((2, 2, 2))
         csr.__setstate__(state['csr'])
         self._csr = csr
         self._def_dim = -1
@@ -1706,6 +1706,12 @@ class SparseOrbital(_SparseGeometry):
         >>> obj.sub_orbital(1, 1)
         """
         # Get specie index of the atom
+        if isinstance(atom, (tuple, list)):
+            if isinstance(atom[0], Atom):
+                spg = self
+                for a in atom:
+                    spg = spg.sub_orbital(a, orbital)
+                return spg
         if isinstance(atom, Atom):
             # All atoms with this specie
             atom = self.geometry.atoms.index(atom)
