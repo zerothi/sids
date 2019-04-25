@@ -240,7 +240,7 @@
 <h1>phtncSileTBtrans<a class="headerlink" href="#phtncsiletbtrans" title="Permalink to this headline">¶</a></h1>
 <dl class="class">
 <dt id="sisl.io.tbtrans.phtncSileTBtrans">
-<em class="property">class </em><code class="descclassname">sisl.io.tbtrans.</code><code class="descname">phtncSileTBtrans</code><span class="sig-paren">(</span><em>filename</em>, <em>mode='r'</em>, <em>lvl=0</em>, <em>access=1</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/sisl/io/tbtrans/tbt.html#phtncSileTBtrans"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sisl.io.tbtrans.phtncSileTBtrans" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="descclassname">sisl.io.tbtrans.</code><code class="descname">phtncSileTBtrans</code><span class="sig-paren">(</span><em>filename</em>, <em>mode='r'</em>, <em>lvl=0</em>, <em>access=1</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/sisl/io/tbtrans/pht.html#phtncSileTBtrans"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sisl.io.tbtrans.phtncSileTBtrans" title="Permalink to this definition">¶</a></dt>
 <dd><p>PHtrans file object</p>
 <p class="rubric">Attributes</p>
 <table border="1" class="longtable docutils">
@@ -623,8 +623,9 @@ in real-space.</p>
 </td>
 </tr>
 <tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
-<dt><strong>DensityMatrix: the object containing the Geometry and the density matrix elements</strong></dt>
-<dd></dd>
+<dt><strong>DensityMatrix</strong></dt>
+<dd><p class="first last">object containing the Geometry and the density matrix elements</p>
+</dd>
 </dl>
 </td>
 </tr>
@@ -1387,8 +1388,9 @@ in real-space.</p>
 </td>
 </tr>
 <tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
-<dt><strong>DensityMatrix: the object containing the Geometry and the density matrix elements</strong></dt>
-<dd></dd>
+<dt><strong>DensityMatrix</strong></dt>
+<dd><p class="first last">object containing the Geometry and the density matrix elements</p>
+</dd>
 </dl>
 </td>
 </tr>
@@ -1450,9 +1452,11 @@ region eta will be returned.</p>
 <dt id="sisl.io.tbtrans.phtncSileTBtrans.fano">
 <code class="descname">fano</code><span class="sig-paren">(</span><em>elec_from=0</em>, <em>elec_to=1</em>, <em>kavg=True</em>, <em>zero_T=1e-06</em><span class="sig-paren">)</span><a class="headerlink" href="#sisl.io.tbtrans.phtncSileTBtrans.fano" title="Permalink to this definition">¶</a></dt>
 <dd><p>The Fano-factor for the calculation (requires calculated transmission eigenvalues)</p>
-<p>Calculate the Fano factor defined as:</p>
+<p>Calculate the Fano factor defined as (or through the shot-noise):</p>
 <div class="math notranslate nohighlight">
-\[F(E) = \sum_k\frac{\sum_n T_{k,n}(E)[1 - T_{k,n}(E)]}{\sum_n T_{k,n}(E)} w_k\]</div>
+\[\begin{split}F(E) &amp;= \frac{\sum_{k,n} T_{k,n}(E)[1 - T_{k,n}(E)] w_k}{\sum_{k,n} T_{k,n}(E) w_k}
+\\
+     &amp;= S(E, V) / S_P(E, V)\end{split}\]</div>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
@@ -1466,7 +1470,7 @@ region eta will be returned.</p>
 </dd>
 <dt><strong>kavg: bool, int, optional</strong></dt>
 <dd><p class="first last">whether the returned Fano factor is k-averaged, or an explicit (unweighed) k-point
-is returned</p>
+is returned. In any case the divisor will always be the k-averaged transmission.</p>
 </dd>
 <dt><strong>zero_T</strong> <span class="classifier-delimiter">:</span> <span class="classifier">float, optional</span></dt>
 <dd><p class="first last">any transmission eigen value lower than this value will be treated as exactly 0.</p>
@@ -1486,7 +1490,18 @@ is returned</p>
 </dl>
 </div>
 <p class="rubric">Notes</p>
-<p>The default <em class="xref py py-obj">zero_T</em> may change in the future.</p>
+<p>The default <em class="xref py py-obj">zero_T</em> may change in the future.
+This calculation will <em>only</em> work for non-polarized calculations since the divisor needs
+to be the spin-sum.
+The current implementation uses the full transmission as the divisor.</p>
+<p class="rubric">Examples</p>
+<p>For a spin-polarized calculation one should calculate the Fano factor as:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">up</span> <span class="o">=</span> <span class="n">get_sile</span><span class="p">(</span><span class="s1">&#39;siesta.TBT_UP.nc&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">down</span> <span class="o">=</span> <span class="n">get_sile</span><span class="p">(</span><span class="s1">&#39;siesta.TBT_DN.nc&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">fano</span> <span class="o">=</span> <span class="n">up</span><span class="o">.</span><span class="n">fano</span><span class="p">()</span> <span class="o">*</span> <span class="n">up</span><span class="o">.</span><span class="n">transmission</span><span class="p">()</span> <span class="o">+</span> <span class="n">down</span><span class="o">.</span><span class="n">fano</span><span class="p">()</span> <span class="o">*</span> <span class="n">down</span><span class="o">.</span><span class="n">transmission</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">fano</span> <span class="o">/=</span> <span class="n">up</span><span class="o">.</span><span class="n">transmission</span><span class="p">()</span> <span class="o">+</span> <span class="n">down</span><span class="o">.</span><span class="n">transmission</span><span class="p">()</span>
+</pre></div>
+</div>
 </dd></dl>
 
 <dl class="attribute">
@@ -1589,7 +1604,7 @@ sub-groups this iterator will return.</p>
 
 <dl class="method">
 <dt id="sisl.io.tbtrans.phtncSileTBtrans.kT">
-<code class="descname">kT</code><span class="sig-paren">(</span><em>elec</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/sisl/io/tbtrans/tbt.html#phtncSileTBtrans.kT"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sisl.io.tbtrans.phtncSileTBtrans.kT" title="Permalink to this definition">¶</a></dt>
+<code class="descname">kT</code><span class="sig-paren">(</span><em>elec</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/sisl/io/tbtrans/pht.html#phtncSileTBtrans.kT"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sisl.io.tbtrans.phtncSileTBtrans.kT" title="Permalink to this definition">¶</a></dt>
 <dd><p>Phonon bath temperature [eV]</p>
 </dd></dl>
 
@@ -2161,7 +2176,7 @@ arguments for <a class="reference internal" href="#sisl.io.tbtrans.phtncSileTBtr
 
 <dl class="method">
 <dt id="sisl.io.tbtrans.phtncSileTBtrans.phonon_temperature">
-<code class="descname">phonon_temperature</code><span class="sig-paren">(</span><em>elec</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/sisl/io/tbtrans/tbt.html#phtncSileTBtrans.phonon_temperature"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sisl.io.tbtrans.phtncSileTBtrans.phonon_temperature" title="Permalink to this definition">¶</a></dt>
+<code class="descname">phonon_temperature</code><span class="sig-paren">(</span><em>elec</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/sisl/io/tbtrans/pht.html#phtncSileTBtrans.phonon_temperature"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sisl.io.tbtrans.phtncSileTBtrans.phonon_temperature" title="Permalink to this definition">¶</a></dt>
 <dd><p>Phonon bath temperature [Kelvin]</p>
 </dd></dl>
 
@@ -2444,8 +2459,9 @@ of the vector is compatibile with the other options given a pristine system.</p>
 </td>
 </tr>
 <tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
-<dt><strong>numpy.ndarray</strong> <span class="classifier-delimiter">:</span> <span class="classifier">an array of vectors per atom in the Geometry (only non-zero for device atoms)</span></dt>
-<dd></dd>
+<dt><strong>numpy.ndarray</strong></dt>
+<dd><p class="first last">array of vectors per atom in the Geometry (only non-zero for device atoms)</p>
+</dd>
 </dl>
 </td>
 </tr>
@@ -2487,8 +2503,9 @@ of the vector is compatibile with the other options given a pristine system.</p>
 </td>
 </tr>
 <tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
-<dt><strong>numpy.ndarray</strong> <span class="classifier-delimiter">:</span> <span class="classifier">an array of vectors per atom in the Geometry (only non-zero for device atoms)</span></dt>
-<dd></dd>
+<dt><strong>numpy.ndarray</strong></dt>
+<dd><p class="first last">array of vectors per atom in the Geometry (only non-zero for device atoms)</p>
+</dd>
 </dl>
 </td>
 </tr>

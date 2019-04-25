@@ -185,7 +185,7 @@
 <span class="kn">from</span> <span class="nn">.sile</span> <span class="k">import</span> <span class="n">SileBinSiesta</span>
 
 <span class="kn">import</span> <span class="nn">sisl._array</span> <span class="k">as</span> <span class="nn">_a</span>
-<span class="kn">from</span> <span class="nn">sisl</span> <span class="k">import</span> <span class="n">Geometry</span><span class="p">,</span> <span class="n">Atom</span><span class="p">,</span> <span class="n">SuperCell</span><span class="p">,</span> <span class="n">Grid</span>
+<span class="kn">from</span> <span class="nn">sisl</span> <span class="k">import</span> <span class="n">Geometry</span><span class="p">,</span> <span class="n">Atom</span><span class="p">,</span> <span class="n">Atoms</span><span class="p">,</span> <span class="n">SuperCell</span><span class="p">,</span> <span class="n">Grid</span>
 <span class="kn">from</span> <span class="nn">sisl.unit.siesta</span> <span class="k">import</span> <span class="n">unit_convert</span>
 <span class="kn">from</span> <span class="nn">sisl.physics.sparse</span> <span class="k">import</span> <span class="n">SparseOrbitalBZ</span>
 <span class="kn">from</span> <span class="nn">sisl.physics</span> <span class="k">import</span> <span class="n">Hamiltonian</span><span class="p">,</span> <span class="n">DensityMatrix</span><span class="p">,</span> <span class="n">EnergyDensityMatrix</span>
@@ -206,6 +206,74 @@
 <span class="k">def</span> <span class="nf">_bin_check</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="n">method</span><span class="p">,</span> <span class="n">message</span><span class="p">):</span>
     <span class="k">if</span> <span class="n">_siesta</span><span class="o">.</span><span class="n">io_m</span><span class="o">.</span><span class="n">iostat_query</span><span class="p">()</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
         <span class="k">raise</span> <span class="n">SileError</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">{}</span><span class="s1">.</span><span class="si">{}</span><span class="s1"> </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">obj</span><span class="p">),</span> <span class="n">method</span><span class="p">,</span> <span class="n">message</span><span class="p">))</span>
+
+
+<span class="k">def</span> <span class="nf">_geometry_align</span><span class="p">(</span><span class="n">geom_b</span><span class="p">,</span> <span class="n">geom_u</span><span class="p">,</span> <span class="bp">cls</span><span class="p">,</span> <span class="n">method</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Routine used to align two geometries</span>
+
+<span class="sd">    There are a few twists in this since the fdf-reads will automatically</span>
+<span class="sd">    try and pass a geometry from the output files.</span>
+<span class="sd">    In cases where the *.ion* files are non-existing this will</span>
+<span class="sd">    result in a twist.</span>
+
+<span class="sd">    This routine will select and return a merged Geometry which</span>
+<span class="sd">    fulfills the correct number of atoms and orbitals.</span>
+
+<span class="sd">    However, if the input geometries have mis-matching number</span>
+<span class="sd">    of atoms a SislError will be raised.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    geom_b : Geometry from binary file</span>
+<span class="sd">    geom_u : Geometry supplied by user</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    SislError : if the geometries have non-equal atom count</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Default to use the users geometry</span>
+    <span class="n">geom</span> <span class="o">=</span> <span class="n">geom_u</span>
+
+    <span class="n">is_copy</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="k">def</span> <span class="nf">get_copy</span><span class="p">(</span><span class="n">geom</span><span class="p">,</span> <span class="n">is_copy</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">is_copy</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">geom</span><span class="p">,</span> <span class="kc">True</span>
+        <span class="k">return</span> <span class="n">geom</span><span class="o">.</span><span class="n">copy</span><span class="p">(),</span> <span class="kc">True</span>
+
+    <span class="k">if</span> <span class="n">geom_b</span><span class="o">.</span><span class="n">na</span> <span class="o">!=</span> <span class="n">geom</span><span class="o">.</span><span class="n">na</span><span class="p">:</span>
+        <span class="c1"># we have no way of solving this issue...</span>
+        <span class="k">raise</span> <span class="n">SileError</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">{cls}</span><span class="s2">.</span><span class="si">{method}</span><span class="s2"> could not use the passed geometry as the &quot;</span>
+                        <span class="s2">&quot;of atoms is not consistent, user-atoms=</span><span class="si">{u_na}</span><span class="s2">, file-atoms=</span><span class="si">{b_na}</span><span class="s2">.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">cls</span><span class="o">=</span><span class="bp">cls</span><span class="o">.</span><span class="vm">__name__</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="n">method</span><span class="p">,</span>
+                                                                                                   <span class="n">b_na</span><span class="o">=</span><span class="n">geom_b</span><span class="o">.</span><span class="n">na</span><span class="p">,</span> <span class="n">u_na</span><span class="o">=</span><span class="n">geom_u</span><span class="o">.</span><span class="n">na</span><span class="p">))</span>
+
+    <span class="c1"># Try and figure out what to do</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">allclose</span><span class="p">(</span><span class="n">geom_b</span><span class="o">.</span><span class="n">xyz</span><span class="p">,</span> <span class="n">geom</span><span class="o">.</span><span class="n">xyz</span><span class="p">):</span>
+        <span class="n">warn</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">{cls}</span><span class="s2">.</span><span class="si">{method}</span><span class="s2"> has mismatched atomic coordinates, will copy geometry and use file XYZ.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">cls</span><span class="o">=</span><span class="bp">cls</span><span class="o">.</span><span class="vm">__name__</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="n">method</span><span class="p">))</span>
+        <span class="n">geom</span><span class="p">,</span> <span class="n">is_copy</span> <span class="o">=</span> <span class="n">get_copy</span><span class="p">(</span><span class="n">geom</span><span class="p">,</span> <span class="n">is_copy</span><span class="p">)</span>
+        <span class="n">geom</span><span class="o">.</span><span class="n">xyz</span><span class="p">[:,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">geom_b</span><span class="o">.</span><span class="n">xyz</span><span class="p">[:,</span> <span class="p">:]</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">allclose</span><span class="p">(</span><span class="n">geom_b</span><span class="o">.</span><span class="n">sc</span><span class="o">.</span><span class="n">cell</span><span class="p">,</span> <span class="n">geom</span><span class="o">.</span><span class="n">sc</span><span class="o">.</span><span class="n">cell</span><span class="p">):</span>
+        <span class="n">warn</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">{cls}</span><span class="s2">.</span><span class="si">{method}</span><span class="s2"> has non-equal lattice vectors, will copy geometry and use file lattice.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">cls</span><span class="o">=</span><span class="bp">cls</span><span class="o">.</span><span class="vm">__name__</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="n">method</span><span class="p">))</span>
+        <span class="n">geom</span><span class="p">,</span> <span class="n">is_copy</span> <span class="o">=</span> <span class="n">get_copy</span><span class="p">(</span><span class="n">geom</span><span class="p">,</span> <span class="n">is_copy</span><span class="p">)</span>
+        <span class="n">geom</span><span class="o">.</span><span class="n">sc</span><span class="o">.</span><span class="n">cell</span><span class="p">[:,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">geom_b</span><span class="o">.</span><span class="n">sc</span><span class="o">.</span><span class="n">cell</span><span class="p">[:,</span> <span class="p">:]</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">array_equal</span><span class="p">(</span><span class="n">geom_b</span><span class="o">.</span><span class="n">nsc</span><span class="p">,</span> <span class="n">geom</span><span class="o">.</span><span class="n">nsc</span><span class="p">):</span>
+        <span class="n">warn</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">{cls}</span><span class="s2">.</span><span class="si">{method}</span><span class="s2"> has non-equal number of supercells, will copy geometry and use file supercell count.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">cls</span><span class="o">=</span><span class="bp">cls</span><span class="o">.</span><span class="vm">__name__</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="n">method</span><span class="p">))</span>
+        <span class="n">geom</span><span class="p">,</span> <span class="n">is_copy</span> <span class="o">=</span> <span class="n">get_copy</span><span class="p">(</span><span class="n">geom</span><span class="p">,</span> <span class="n">is_copy</span><span class="p">)</span>
+        <span class="n">geom</span><span class="o">.</span><span class="n">set_nsc</span><span class="p">(</span><span class="n">geom_b</span><span class="o">.</span><span class="n">nsc</span><span class="p">)</span>
+
+    <span class="c1"># Now for the difficult part.</span>
+    <span class="c1"># If there is a mismatch in the number of orbitals we will</span>
+    <span class="c1"># prefer to use the user-supplied atomic species, but fill with</span>
+    <span class="c1"># *random* orbitals</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">array_equal</span><span class="p">(</span><span class="n">geom_b</span><span class="o">.</span><span class="n">atoms</span><span class="o">.</span><span class="n">orbitals</span><span class="p">,</span> <span class="n">geom</span><span class="o">.</span><span class="n">atoms</span><span class="o">.</span><span class="n">orbitals</span><span class="p">):</span>
+        <span class="n">warn</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">{cls}</span><span class="s2">.</span><span class="si">{method}</span><span class="s2"> has non-equal number of orbitals per atom, will correct with *empty* orbitals.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">cls</span><span class="o">=</span><span class="bp">cls</span><span class="o">.</span><span class="vm">__name__</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="n">method</span><span class="p">))</span>
+        <span class="n">geom</span><span class="p">,</span> <span class="n">is_copy</span> <span class="o">=</span> <span class="n">get_copy</span><span class="p">(</span><span class="n">geom</span><span class="p">,</span> <span class="n">is_copy</span><span class="p">)</span>
+
+        <span class="c1"># Now create a new atom specie with the correct number of orbitals</span>
+        <span class="n">norbs</span> <span class="o">=</span> <span class="n">geom_b</span><span class="o">.</span><span class="n">atoms</span><span class="o">.</span><span class="n">orbitals</span><span class="p">[:]</span>
+        <span class="n">atoms</span> <span class="o">=</span> <span class="n">Atoms</span><span class="p">([</span><span class="n">geom</span><span class="o">.</span><span class="n">atoms</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">orbital</span><span class="o">=</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="n">norbs</span><span class="p">[</span><span class="n">i</span><span class="p">])</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">geom</span><span class="o">.</span><span class="n">na</span><span class="p">)])</span>
+        <span class="n">geom</span><span class="o">.</span><span class="n">_atoms</span> <span class="o">=</span> <span class="n">atoms</span>
+
+    <span class="k">return</span> <span class="n">geom</span>
 
 
 <div class="viewcode-block" id="onlysSileSiesta"><a class="viewcode-back" href="../../../../api-generated/sisl.io.siesta.onlysSileSiesta.html#sisl.io.siesta.onlysSileSiesta">[docs]</a><span class="k">class</span> <span class="nc">onlysSileSiesta</span><span class="p">(</span><span class="n">SileBinSiesta</span><span class="p">):</span>
@@ -266,15 +334,7 @@
 <div class="viewcode-block" id="onlysSileSiesta.read_overlap"><a class="viewcode-back" href="../../../../api-generated/sisl.io.siesta.onlysSileSiesta.html#sisl.io.siesta.onlysSileSiesta.read_overlap">[docs]</a>    <span class="k">def</span> <span class="nf">read_overlap</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Returns the overlap matrix from the siesta.TSHS file &quot;&quot;&quot;</span>
         <span class="n">tshs_g</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">read_geometry</span><span class="p">()</span>
-        <span class="n">geom</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;geometry&#39;</span><span class="p">,</span> <span class="n">tshs_g</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">geom</span><span class="o">.</span><span class="n">na</span> <span class="o">!=</span> <span class="n">tshs_g</span><span class="o">.</span><span class="n">na</span> <span class="ow">or</span> <span class="n">geom</span><span class="o">.</span><span class="n">no</span> <span class="o">!=</span> <span class="n">tshs_g</span><span class="o">.</span><span class="n">no</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="n">SileError</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39;.read_overlap could not use the &#39;</span>
-                            <span class="s1">&#39;passed geometry as the number of atoms or orbitals is &#39;</span>
-                            <span class="s1">&#39;inconsistent with TSHS file.&#39;</span><span class="p">)</span>
-
-        <span class="c1"># Ensure that the number of supercells is correct</span>
-        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">geom</span><span class="o">.</span><span class="n">nsc</span> <span class="o">!=</span> <span class="n">tshs_g</span><span class="o">.</span><span class="n">nsc</span><span class="p">):</span>
-            <span class="n">geom</span><span class="o">.</span><span class="n">set_nsc</span><span class="p">(</span><span class="n">tshs_g</span><span class="o">.</span><span class="n">nsc</span><span class="p">)</span>
+        <span class="n">geom</span> <span class="o">=</span> <span class="n">_geometry_align</span><span class="p">(</span><span class="n">tshs_g</span><span class="p">,</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;geometry&#39;</span><span class="p">,</span> <span class="n">tshs_g</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="p">,</span> <span class="s1">&#39;read_overlap&#39;</span><span class="p">)</span>
 
         <span class="c1"># read the sizes used...</span>
         <span class="n">sizes</span> <span class="o">=</span> <span class="n">_siesta</span><span class="o">.</span><span class="n">read_tshs_sizes</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">file</span><span class="p">)</span>
@@ -311,15 +371,7 @@
 <div class="viewcode-block" id="tshsSileSiesta.read_hamiltonian"><a class="viewcode-back" href="../../../../api-generated/sisl.io.siesta.tshsSileSiesta.html#sisl.io.siesta.tshsSileSiesta.read_hamiltonian">[docs]</a>    <span class="k">def</span> <span class="nf">read_hamiltonian</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Returns the electronic structure from the siesta.TSHS file &quot;&quot;&quot;</span>
         <span class="n">tshs_g</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">read_geometry</span><span class="p">()</span>
-        <span class="n">geom</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;geometry&#39;</span><span class="p">,</span> <span class="n">tshs_g</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">geom</span><span class="o">.</span><span class="n">na</span> <span class="o">!=</span> <span class="n">tshs_g</span><span class="o">.</span><span class="n">na</span> <span class="ow">or</span> <span class="n">geom</span><span class="o">.</span><span class="n">no</span> <span class="o">!=</span> <span class="n">tshs_g</span><span class="o">.</span><span class="n">no</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="n">SileError</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39;.read_hamiltonian could not use the &#39;</span>
-                            <span class="s1">&#39;passed geometry as the number of atoms or orbitals is inconsistent &#39;</span>
-                            <span class="s1">&#39;with TSHS file.&#39;</span><span class="p">)</span>
-
-        <span class="c1"># Ensure that the number of supercells is correct</span>
-        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">geom</span><span class="o">.</span><span class="n">nsc</span> <span class="o">!=</span> <span class="n">tshs_g</span><span class="o">.</span><span class="n">nsc</span><span class="p">):</span>
-            <span class="n">geom</span><span class="o">.</span><span class="n">set_nsc</span><span class="p">(</span><span class="n">tshs_g</span><span class="o">.</span><span class="n">nsc</span><span class="p">)</span>
+        <span class="n">geom</span> <span class="o">=</span> <span class="n">_geometry_align</span><span class="p">(</span><span class="n">tshs_g</span><span class="p">,</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;geometry&#39;</span><span class="p">,</span> <span class="n">tshs_g</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="p">,</span> <span class="s1">&#39;read_hamiltonian&#39;</span><span class="p">)</span>
 
         <span class="c1"># read the sizes used...</span>
         <span class="n">sizes</span> <span class="o">=</span> <span class="n">_siesta</span><span class="o">.</span><span class="n">read_tshs_sizes</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">file</span><span class="p">)</span>
@@ -542,8 +594,7 @@
         <span class="k">if</span> <span class="n">nsc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">geom</span><span class="o">.</span><span class="n">no_s</span> <span class="o">&gt;=</span> <span class="n">col</span><span class="o">.</span><span class="n">max</span><span class="p">():</span>
             <span class="n">_csr_from_siesta</span><span class="p">(</span><span class="n">geom</span><span class="p">,</span> <span class="n">EDM</span><span class="o">.</span><span class="n">_csr</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="n">warn</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;.read_energy_density_matrix may &#39;</span>
-                 <span class="s1">&#39;result in a wrong sparse pattern!&#39;</span><span class="p">)</span>
+            <span class="n">warn</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;.read_energy_density_matrix may result in a wrong sparse pattern!&#39;</span><span class="p">)</span>
 
         <span class="k">return</span> <span class="n">EDM</span></div></div>
 
