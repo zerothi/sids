@@ -186,6 +186,7 @@
 <span class="kn">from</span> <span class="nn">.</span> <span class="k">import</span> <span class="n">_array</span> <span class="k">as</span> <span class="n">_a</span>
 <span class="kn">from</span> <span class="nn">._math_small</span> <span class="k">import</span> <span class="n">is_ascending</span>
 <span class="kn">from</span> <span class="nn">._indices</span> <span class="k">import</span> <span class="n">indices_in_sphere_with_dist</span><span class="p">,</span> <span class="n">indices_le</span><span class="p">,</span> <span class="n">indices_gt_le</span>
+<span class="kn">from</span> <span class="nn">._indices</span> <span class="k">import</span> <span class="n">list_index_le</span>
 <span class="kn">from</span> <span class="nn">.messages</span> <span class="k">import</span> <span class="n">info</span><span class="p">,</span> <span class="n">warn</span><span class="p">,</span> <span class="n">SislError</span>
 <span class="kn">from</span> <span class="nn">._help</span> <span class="k">import</span> <span class="n">_str</span>
 <span class="kn">from</span> <span class="nn">._help</span> <span class="k">import</span> <span class="n">_range</span> <span class="k">as</span> <span class="nb">range</span>
@@ -469,6 +470,19 @@
         <span class="c1"># We shouldn&#39;t .ravel() since the calling routine may expect</span>
         <span class="c1"># a 0D vector.</span>
         <span class="k">return</span> <span class="n">_a</span><span class="o">.</span><span class="n">asarrayi</span><span class="p">(</span><span class="n">atom</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_sanitize_orb</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">orbital</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Converts an `orbital` to index under given inputs</span>
+
+<span class="sd">        `orbital` may be one of the following:</span>
+
+<span class="sd">        - boolean array -&gt; nonzero()[0]</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">orbital</span><span class="p">,</span> <span class="n">ndarray</span><span class="p">)</span> <span class="ow">and</span> <span class="n">orbital</span><span class="o">.</span><span class="n">dtype</span> <span class="o">==</span> <span class="n">bool_</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">flatnonzero</span><span class="p">(</span><span class="n">orbital</span><span class="p">)</span>
+        <span class="c1"># We shouldn&#39;t .ravel() since the calling routine may expect</span>
+        <span class="c1"># a 0D vector.</span>
+        <span class="k">return</span> <span class="n">_a</span><span class="o">.</span><span class="n">asarrayi</span><span class="p">(</span><span class="n">orbital</span><span class="p">)</span>
 
 <div class="viewcode-block" id="Geometry.as_primary"><a class="viewcode-back" href="../../api-generated/sisl.Geometry.html#sisl.Geometry.as_primary">[docs]</a>    <span class="k">def</span> <span class="nf">as_primary</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">na_primary</span><span class="p">,</span> <span class="n">ret_super</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Try and reduce the geometry to the primary unit-cell comprising `na_primary` atoms</span>
@@ -2901,6 +2915,130 @@
 
         <span class="k">return</span> <span class="n">ret</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span></div>
 
+<div class="viewcode-block" id="Geometry.a2transpose"><a class="viewcode-back" href="../../api-generated/sisl.Geometry.html#sisl.Geometry.a2transpose">[docs]</a>    <span class="k">def</span> <span class="nf">a2transpose</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">atom1</span><span class="p">,</span> <span class="n">atom2</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Transposes connections from `atom1` to `atom2` such that supercell connections are transposed</span>
+
+<span class="sd">        When handling supercell indices it is useful to get the *transposed* connection. I.e. if you have</span>
+<span class="sd">        a connection from site ``i`` (in unit cell indices) to site ``j`` (in supercell indices) it may be</span>
+<span class="sd">        useful to get the equivalent supercell connection such for site ``j`` (in unit cell indices) to</span>
+<span class="sd">        site ``i`` (in supercell indices) such that they correspond to the transposed coupling.</span>
+
+<span class="sd">        Note that since this transposes couplings the indices returned are always expanded to the full</span>
+<span class="sd">        length if either of the inputs are a single index.</span>
+
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
+<span class="sd">        &gt;&gt;&gt; gr = geom.graphene()</span>
+<span class="sd">        &gt;&gt;&gt; idx = gr.close(0, 1.5)</span>
+<span class="sd">        &gt;&gt;&gt; idx</span>
+<span class="sd">        array([0, 1, 5, 9], dtype=int32)</span>
+<span class="sd">        &gt;&gt;&gt; gr.a2transpose(0, idx)</span>
+<span class="sd">        (array([0, 1, 1, 1], dtype=int32), array([ 0,  0, 14, 10], dtype=int32))</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        atom1 : array_like</span>
+<span class="sd">            atomic indices must have same length as `atom2` or length 1</span>
+<span class="sd">        atom2 : array_like, optional</span>
+<span class="sd">            atomic indices must have same length as `atom1` or length 1.</span>
+<span class="sd">            If not present then only `atom1` will be returned in transposed indices.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        atom2 : array_like</span>
+<span class="sd">            transposed indices for atom2 (only returned if `atom2` is not None)</span>
+<span class="sd">        atom1 : array_like</span>
+<span class="sd">            transposed indices for atom1</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># First check whether they have the same size, if so then do not pre-process</span>
+        <span class="n">atom1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sanitize_atom</span><span class="p">(</span><span class="n">atom1</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">atom2</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># we only need to transpose atom1</span>
+            <span class="n">offset</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sc</span><span class="o">.</span><span class="n">sc_index</span><span class="p">(</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">a2isc</span><span class="p">(</span><span class="n">atom1</span><span class="p">))</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">na</span>
+            <span class="k">return</span> <span class="n">atom1</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">na</span> <span class="o">+</span> <span class="n">offset</span>
+
+        <span class="n">atom2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sanitize_atom</span><span class="p">(</span><span class="n">atom2</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">atom1</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="n">atom2</span><span class="o">.</span><span class="n">size</span><span class="p">:</span>
+            <span class="k">pass</span>
+        <span class="k">elif</span> <span class="n">atom1</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span> <span class="c1"># typical case where atom1 is a single number</span>
+            <span class="n">atom1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="n">atom1</span><span class="p">,</span> <span class="n">atom2</span><span class="o">.</span><span class="n">size</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">atom2</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">atom2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="n">atom2</span><span class="p">,</span> <span class="n">atom1</span><span class="o">.</span><span class="n">size</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39;.a2transpose only allows length 1 or same length arrays.&#39;</span><span class="p">)</span>
+
+        <span class="c1"># Now convert atoms</span>
+        <span class="n">na</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">na</span>
+        <span class="n">sc_index</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sc</span><span class="o">.</span><span class="n">sc_index</span>
+        <span class="n">isc1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">a2isc</span><span class="p">(</span><span class="n">atom1</span><span class="p">)</span>
+        <span class="n">isc2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">a2isc</span><span class="p">(</span><span class="n">atom2</span><span class="p">)</span>
+
+        <span class="n">atom1</span> <span class="o">=</span> <span class="n">atom1</span> <span class="o">%</span> <span class="n">na</span> <span class="o">+</span> <span class="n">sc_index</span><span class="p">(</span><span class="o">-</span><span class="n">isc2</span><span class="p">)</span> <span class="o">*</span> <span class="n">na</span>
+        <span class="n">atom2</span> <span class="o">=</span> <span class="n">atom2</span> <span class="o">%</span> <span class="n">na</span> <span class="o">+</span> <span class="n">sc_index</span><span class="p">(</span><span class="o">-</span><span class="n">isc1</span><span class="p">)</span> <span class="o">*</span> <span class="n">na</span>
+        <span class="k">return</span> <span class="n">atom2</span><span class="p">,</span> <span class="n">atom1</span></div>
+
+<div class="viewcode-block" id="Geometry.o2transpose"><a class="viewcode-back" href="../../api-generated/sisl.Geometry.html#sisl.Geometry.o2transpose">[docs]</a>    <span class="k">def</span> <span class="nf">o2transpose</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">orb1</span><span class="p">,</span> <span class="n">orb2</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Transposes connections from `orb1` to `orb2` such that supercell connections are transposed</span>
+
+<span class="sd">        When handling supercell indices it is useful to get the *transposed* connection. I.e. if you have</span>
+<span class="sd">        a connection from site ``i`` (in unit cell indices) to site ``j`` (in supercell indices) it may be</span>
+<span class="sd">        useful to get the equivalent supercell connection such for site ``j`` (in unit cell indices) to</span>
+<span class="sd">        site ``i`` (in supercell indices) such that they correspond to the transposed coupling.</span>
+
+<span class="sd">        Note that since this transposes couplings the indices returned are always expanded to the full</span>
+<span class="sd">        length if either of the inputs are a single index.</span>
+
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
+<span class="sd">        &gt;&gt;&gt; gr = geom.graphene() # one orbital per site</span>
+<span class="sd">        &gt;&gt;&gt; idx = gr.close(0, 1.5)</span>
+<span class="sd">        &gt;&gt;&gt; idx</span>
+<span class="sd">        array([0, 1, 5, 9], dtype=int32)</span>
+<span class="sd">        &gt;&gt;&gt; gr.o2transpose(0, idx)</span>
+<span class="sd">        (array([0, 1, 1, 1], dtype=int32), array([ 0,  0, 14, 10], dtype=int32))</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        orb1 : array_like</span>
+<span class="sd">            orbital indices must have same length as `orb2` or length 1</span>
+<span class="sd">        orb2 : array_like, optional</span>
+<span class="sd">            orbital indices must have same length as `orb1` or length 1.</span>
+<span class="sd">            If not present then only `orb1` will be returned in transposed indices.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        orb2 : array_like</span>
+<span class="sd">            transposed indices for orb2 (only returned if `orb2` is not None)</span>
+<span class="sd">        orb1 : array_like</span>
+<span class="sd">            transposed indices for orb1</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># First check whether they have the same size, if so then do not pre-process</span>
+        <span class="n">orb1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sanitize_orb</span><span class="p">(</span><span class="n">orb1</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">orb2</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># we only need to transpose orb1</span>
+            <span class="n">offset</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sc</span><span class="o">.</span><span class="n">sc_index</span><span class="p">(</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">o2isc</span><span class="p">(</span><span class="n">orb1</span><span class="p">))</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">no</span>
+            <span class="k">return</span> <span class="n">orb1</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">no</span> <span class="o">+</span> <span class="n">offset</span>
+
+        <span class="n">orb2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sanitize_orb</span><span class="p">(</span><span class="n">orb2</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">orb1</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="n">orb2</span><span class="o">.</span><span class="n">size</span><span class="p">:</span>
+            <span class="k">pass</span>
+        <span class="k">elif</span> <span class="n">orb1</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span> <span class="c1"># typical case where orb1 is a single number</span>
+            <span class="n">orb1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="n">orb1</span><span class="p">,</span> <span class="n">orb2</span><span class="o">.</span><span class="n">size</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">orb2</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">orb2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="n">orb2</span><span class="p">,</span> <span class="n">orb1</span><span class="o">.</span><span class="n">size</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39;.o2transpose only allows length 1 or same length arrays.&#39;</span><span class="p">)</span>
+
+        <span class="c1"># Now convert orbs</span>
+        <span class="n">no</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">no</span>
+        <span class="n">sc_index</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sc</span><span class="o">.</span><span class="n">sc_index</span>
+        <span class="n">isc1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">o2isc</span><span class="p">(</span><span class="n">orb1</span><span class="p">)</span>
+        <span class="n">isc2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">o2isc</span><span class="p">(</span><span class="n">orb2</span><span class="p">)</span>
+
+        <span class="n">orb1</span> <span class="o">=</span> <span class="n">orb1</span> <span class="o">%</span> <span class="n">no</span> <span class="o">+</span> <span class="n">sc_index</span><span class="p">(</span><span class="o">-</span><span class="n">isc2</span><span class="p">)</span> <span class="o">*</span> <span class="n">no</span>
+        <span class="n">orb2</span> <span class="o">=</span> <span class="n">orb2</span> <span class="o">%</span> <span class="n">no</span> <span class="o">+</span> <span class="n">sc_index</span><span class="p">(</span><span class="o">-</span><span class="n">isc1</span><span class="p">)</span> <span class="o">*</span> <span class="n">no</span>
+        <span class="k">return</span> <span class="n">orb2</span><span class="p">,</span> <span class="n">orb1</span></div>
+
 <div class="viewcode-block" id="Geometry.a2o"><a class="viewcode-back" href="../../api-generated/sisl.Geometry.html#sisl.Geometry.a2o">[docs]</a>    <span class="k">def</span> <span class="nf">a2o</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ia</span><span class="p">,</span> <span class="nb">all</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Returns an orbital index of the first orbital of said atom.</span>
@@ -2950,21 +3088,35 @@
                 <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">io</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">no</span> <span class="o">&lt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">lasto</span><span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="n">io</span> <span class="o">//</span> <span class="bp">self</span><span class="o">.</span><span class="n">no</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">na</span><span class="p">)</span>
             <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">io</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">no</span> <span class="o">&lt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">lasto</span><span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="n">io</span> <span class="o">//</span> <span class="bp">self</span><span class="o">.</span><span class="n">no</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">na</span>
 
-        <span class="n">a</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">asarrayi</span><span class="p">(</span><span class="n">io</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">no</span>
-        <span class="c1"># Use b-casting rules</span>
-        <span class="n">a</span><span class="o">.</span><span class="n">shape</span> <span class="o">=</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
-        <span class="n">a</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">a</span> <span class="o">&lt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">lasto</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">a</span> <span class="o">=</span> <span class="n">list_index_le</span><span class="p">(</span><span class="n">_a</span><span class="o">.</span><span class="n">asarrayi</span><span class="p">(</span><span class="n">io</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">no</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">lasto</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">unique</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">a</span> <span class="o">+</span> <span class="p">(</span><span class="n">io</span> <span class="o">//</span> <span class="bp">self</span><span class="o">.</span><span class="n">no</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">na</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">a</span> <span class="o">+</span> <span class="p">(</span><span class="n">io</span> <span class="o">//</span> <span class="bp">self</span><span class="o">.</span><span class="n">no</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">na</span></div>
 
-<div class="viewcode-block" id="Geometry.sc2uc"><a class="viewcode-back" href="../../api-generated/sisl.Geometry.html#sisl.Geometry.sc2uc">[docs]</a>    <span class="k">def</span> <span class="nf">sc2uc</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">atom</span><span class="p">,</span> <span class="n">unique</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot; Returns atom from super-cell indices to unit-cell indices, possibly removing dublicates</span>
+<div class="viewcode-block" id="Geometry.uc2sc"><a class="viewcode-back" href="../../api-generated/sisl.Geometry.html#sisl.Geometry.uc2sc">[docs]</a>    <span class="k">def</span> <span class="nf">uc2sc</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">atom</span><span class="p">,</span> <span class="n">unique</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Returns atom from unit-cell indices to supercell indices, possibly removing dublicates</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
 <span class="sd">        atom : array_like or int</span>
-<span class="sd">           the atomic indices converted from supercell indices to unit-cell indices</span>
+<span class="sd">           the atomic unit-cell indices to be converted to supercell indices</span>
+<span class="sd">        unique : bool, optional</span>
+<span class="sd">           If True the returned indices are unique and sorted.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">atom</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sanitize_atom</span><span class="p">(</span><span class="n">atom</span><span class="p">)</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">na</span>
+        <span class="n">atom</span> <span class="o">=</span> <span class="p">(</span><span class="n">atom</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">+</span> <span class="n">_a</span><span class="o">.</span><span class="n">arangei</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_s</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">na</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">unique</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">atom</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">atom</span></div>
+    <span class="n">auc2sc</span> <span class="o">=</span> <span class="n">uc2sc</span>
+
+<div class="viewcode-block" id="Geometry.sc2uc"><a class="viewcode-back" href="../../api-generated/sisl.Geometry.html#sisl.Geometry.sc2uc">[docs]</a>    <span class="k">def</span> <span class="nf">sc2uc</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">atom</span><span class="p">,</span> <span class="n">unique</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Returns atom from supercell indices to unit-cell indices, possibly removing dublicates</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        atom : array_like or int</span>
+<span class="sd">           the atomic supercell indices to be converted to unit-cell indices</span>
 <span class="sd">        unique : bool, optional</span>
 <span class="sd">           If True the returned indices are unique and sorted.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -2975,16 +3127,32 @@
     <span class="n">asc2uc</span> <span class="o">=</span> <span class="n">sc2uc</span>
 
 <div class="viewcode-block" id="Geometry.osc2uc"><a class="viewcode-back" href="../../api-generated/sisl.Geometry.html#sisl.Geometry.osc2uc">[docs]</a>    <span class="k">def</span> <span class="nf">osc2uc</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">orb</span><span class="p">,</span> <span class="n">unique</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot; Returns orbitals from super-cell indices to unit-cell indices, possibly removing dublicates</span>
+        <span class="sd">&quot;&quot;&quot; Returns orbitals from supercell indices to unit-cell indices, possibly removing dublicates</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
 <span class="sd">        orb : array_like or int</span>
-<span class="sd">           the orbital indices converted from supercell indices to unit-cell indices</span>
+<span class="sd">           the orbital supercell indices to be converted to unit-cell indices</span>
 <span class="sd">        unique : bool, optional</span>
 <span class="sd">           If True the returned indices are unique and sorted.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">orb</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">asarrayi</span><span class="p">(</span><span class="n">orb</span><span class="p">)</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">no</span>
+        <span class="k">if</span> <span class="n">unique</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">orb</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">orb</span></div>
+
+<div class="viewcode-block" id="Geometry.ouc2sc"><a class="viewcode-back" href="../../api-generated/sisl.Geometry.html#sisl.Geometry.ouc2sc">[docs]</a>    <span class="k">def</span> <span class="nf">ouc2sc</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">orb</span><span class="p">,</span> <span class="n">unique</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Returns orbitals from unit-cell indices to supercell indices, possibly removing dublicates</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        orb : array_like or int</span>
+<span class="sd">           the orbital unit-cell indices to be converted to supercell indices</span>
+<span class="sd">        unique : bool, optional</span>
+<span class="sd">           If True the returned indices are unique and sorted.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">orb</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">asarrayi</span><span class="p">(</span><span class="n">orb</span><span class="p">)</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">no</span>
+        <span class="n">orb</span> <span class="o">=</span> <span class="p">(</span><span class="n">orb</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">+</span> <span class="n">_a</span><span class="o">.</span><span class="n">arangei</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_s</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">no</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
         <span class="k">if</span> <span class="n">unique</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">orb</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">orb</span></div>

@@ -171,6 +171,7 @@
   <h1>Source code for sisl.io.siesta.out</h1><div class="highlight"><pre>
 <span></span><span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">print_function</span><span class="p">,</span> <span class="n">division</span>
 
+<span class="kn">import</span> <span class="nn">os</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 
 <span class="kn">from</span> <span class="nn">.sile</span> <span class="k">import</span> <span class="n">SileSiesta</span>
@@ -199,6 +200,20 @@
 
 <span class="sd">    This enables reading the output quantities from the Siesta output.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">_job_completed</span> <span class="o">=</span> <span class="kc">False</span>
+
+    <span class="k">def</span> <span class="nf">readline</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">line</span> <span class="o">=</span> <span class="nb">super</span><span class="p">(</span><span class="n">outSileSiesta</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">readline</span><span class="p">()</span>
+        <span class="k">if</span> <span class="s1">&#39;Job completed&#39;</span> <span class="ow">in</span> <span class="n">line</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_job_completed</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">return</span> <span class="n">line</span>
+
+    <span class="n">readline</span><span class="o">.</span><span class="vm">__doc__</span> <span class="o">=</span> <span class="n">SileSiesta</span><span class="o">.</span><span class="n">readline</span><span class="o">.</span><span class="vm">__doc__</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">job_completed</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; True if the full file has been read and &quot;Job completed&quot; was found. &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_job_completed</span>
 
 <div class="viewcode-block" id="outSileSiesta.read_species"><a class="viewcode-back" href="../../../../api-generated/sisl.io.siesta.outSileSiesta.html#sisl.io.siesta.outSileSiesta.read_species">[docs]</a>    <span class="nd">@sile_fh_open</span><span class="p">()</span>
     <span class="k">def</span> <span class="nf">read_species</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -245,14 +260,14 @@
             <span class="n">cell</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="nb">float</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">line</span><span class="p">[:</span><span class="mi">3</span><span class="p">]])</span>
             <span class="n">line</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">readline</span><span class="p">()</span>
 
-        <span class="n">cell</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">cell</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+        <span class="n">cell</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">cell</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="ow">not</span> <span class="n">Ang</span><span class="p">:</span>
             <span class="n">cell</span> <span class="o">*=</span> <span class="n">Bohr2Ang</span>
 
         <span class="k">return</span> <span class="n">SuperCell</span><span class="p">(</span><span class="n">cell</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">_read_geometry_outcoor</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">line</span><span class="p">,</span> <span class="n">last</span><span class="p">,</span> <span class="nb">all</span><span class="p">,</span> <span class="n">species</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">_read_geometry_outcoor</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">line</span><span class="p">,</span> <span class="n">species</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Wrapper for reading the geometry as in the outcoor output &quot;&quot;&quot;</span>
         <span class="n">species</span> <span class="o">=</span> <span class="n">_ensure_species</span><span class="p">(</span><span class="n">species</span><span class="p">)</span>
 
@@ -277,8 +292,9 @@
                 <span class="k">pass</span>
             <span class="n">line</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">readline</span><span class="p">()</span>
 
+        <span class="c1"># in outcoor we know it is always just after</span>
         <span class="n">cell</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_read_supercell_outcell</span><span class="p">()</span>
-        <span class="n">xyz</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">xyz</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+        <span class="n">xyz</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">xyz</span><span class="p">)</span>
 
         <span class="c1"># Now create the geometry</span>
         <span class="k">if</span> <span class="n">scaled</span><span class="p">:</span>
@@ -287,9 +303,7 @@
             <span class="c1"># So... :(</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Could not read the lattice-constant for the scaled geometry&quot;</span><span class="p">)</span>
         <span class="k">elif</span> <span class="n">fractional</span><span class="p">:</span>
-            <span class="n">xyz</span> <span class="o">=</span> <span class="n">xyz</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">cell</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="p">:][</span><span class="kc">None</span><span class="p">,</span> <span class="p">:]</span> <span class="o">+</span> \
-                  <span class="n">xyz</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="n">cell</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="p">:][</span><span class="kc">None</span><span class="p">,</span> <span class="p">:]</span> <span class="o">+</span> \
-                  <span class="n">xyz</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">*</span> <span class="n">cell</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="p">:][</span><span class="kc">None</span><span class="p">,</span> <span class="p">:]</span>
+            <span class="n">xyz</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">xyz</span><span class="p">,</span> <span class="n">cell</span><span class="o">.</span><span class="n">cell</span><span class="p">)</span>
         <span class="k">elif</span> <span class="ow">not</span> <span class="n">Ang</span><span class="p">:</span>
             <span class="n">xyz</span> <span class="o">*=</span> <span class="n">Bohr2Ang</span>
 
@@ -297,12 +311,6 @@
             <span class="n">geom</span> <span class="o">=</span> <span class="n">Geometry</span><span class="p">(</span><span class="n">xyz</span><span class="p">,</span> <span class="n">atom</span><span class="p">,</span> <span class="n">sc</span><span class="o">=</span><span class="n">cell</span><span class="p">)</span>
         <span class="k">except</span><span class="p">:</span>
             <span class="n">geom</span> <span class="o">=</span> <span class="n">Geometry</span><span class="p">(</span><span class="n">xyz</span><span class="p">,</span> <span class="p">[</span><span class="n">species</span><span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">i</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">spec</span><span class="p">],</span> <span class="n">sc</span><span class="o">=</span><span class="n">cell</span><span class="p">)</span>
-
-        <span class="k">if</span> <span class="nb">all</span><span class="p">:</span>
-            <span class="n">tmp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_read_geometry_outcoor</span><span class="p">(</span><span class="n">last</span><span class="p">,</span> <span class="nb">all</span><span class="p">,</span> <span class="n">species</span><span class="p">)</span>
-            <span class="k">if</span> <span class="n">tmp</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-                <span class="k">return</span> <span class="p">[</span><span class="n">geom</span><span class="p">]</span>
-            <span class="k">return</span> <span class="n">tmp</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="n">geom</span><span class="p">])</span>
 
         <span class="k">return</span> <span class="n">geom</span>
 
@@ -323,16 +331,18 @@
             <span class="n">atom</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">species</span><span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">line</span><span class="p">[</span><span class="mi">4</span><span class="p">])</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
             <span class="n">line</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">readline</span><span class="p">()</span>
 
-        <span class="c1"># Retrieve the unit-cell</span>
+        <span class="c1"># Retrieve the unit-cell (but do not skip file-descriptor position)</span>
+        <span class="c1"># This is because the current unit-cell is not always written.</span>
+        <span class="n">pos</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fh</span><span class="o">.</span><span class="n">tell</span><span class="p">()</span>
         <span class="n">cell</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_read_supercell_outcell</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fh</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="n">pos</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">SEEK_SET</span><span class="p">)</span>
+
         <span class="c1"># Convert xyz</span>
-        <span class="n">xyz</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">xyz</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+        <span class="n">xyz</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">xyz</span><span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">Ang</span><span class="p">:</span>
             <span class="n">xyz</span> <span class="o">*=</span> <span class="n">Bohr2Ang</span>
 
-        <span class="n">geom</span> <span class="o">=</span> <span class="n">Geometry</span><span class="p">(</span><span class="n">xyz</span><span class="p">,</span> <span class="n">atom</span><span class="p">,</span> <span class="n">sc</span><span class="o">=</span><span class="n">cell</span><span class="p">)</span>
-
-        <span class="k">return</span> <span class="n">geom</span>
+        <span class="k">return</span> <span class="n">Geometry</span><span class="p">(</span><span class="n">xyz</span><span class="p">,</span> <span class="n">atom</span><span class="p">,</span> <span class="n">sc</span><span class="o">=</span><span class="n">cell</span><span class="p">)</span>
 
 <div class="viewcode-block" id="outSileSiesta.read_geometry"><a class="viewcode-back" href="../../../../api-generated/sisl.io.siesta.outSileSiesta.html#sisl.io.siesta.outSileSiesta.read_geometry">[docs]</a>    <span class="nd">@sile_fh_open</span><span class="p">()</span>
     <span class="k">def</span> <span class="nf">read_geometry</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">last</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="nb">all</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
@@ -340,11 +350,17 @@
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
-<span class="sd">        last: bool, True</span>
+<span class="sd">        last: bool, optional</span>
 <span class="sd">           only read the last geometry</span>
-<span class="sd">        all: bool, False</span>
+<span class="sd">        all: bool, optional</span>
 <span class="sd">           return a list of all geometries (like an MD)</span>
 <span class="sd">           If `True` `last` is ignored</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        geometries: list or Geometry or None</span>
+<span class="sd">             if all is False only one geometry will be returned (or None). Otherwise</span>
+<span class="sd">             a list of geometries corresponding to the MD-runs.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="c1"># The first thing we do is reading the species.</span>
@@ -353,6 +369,9 @@
         <span class="c1"># Perhaps we should rewind to ensure this...</span>
         <span class="c1"># But...</span>
         <span class="n">species</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">read_species</span><span class="p">()</span>
+        <span class="k">if</span> <span class="nb">all</span><span class="p">:</span>
+            <span class="c1"># force last to be false</span>
+            <span class="n">last</span> <span class="o">=</span> <span class="kc">False</span>
 
         <span class="k">def</span> <span class="nf">type_coord</span><span class="p">(</span><span class="n">line</span><span class="p">):</span>
             <span class="k">if</span> <span class="s1">&#39;outcoor&#39;</span> <span class="ow">in</span> <span class="n">line</span><span class="p">:</span>
@@ -362,22 +381,44 @@
             <span class="c1"># Signal not found</span>
             <span class="k">return</span> <span class="mi">0</span>
 
+        <span class="k">def</span> <span class="nf">next_geom</span><span class="p">():</span>
+            <span class="n">coord</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="k">while</span> <span class="n">coord</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">line</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">readline</span><span class="p">()</span>
+                <span class="k">if</span> <span class="n">line</span> <span class="o">==</span> <span class="s1">&#39;&#39;</span><span class="p">:</span>
+                    <span class="k">return</span> <span class="mi">0</span><span class="p">,</span> <span class="kc">None</span>
+                <span class="n">coord</span> <span class="o">=</span> <span class="n">type_coord</span><span class="p">(</span><span class="n">line</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">coord</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">coord</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_read_geometry_outcoor</span><span class="p">(</span><span class="n">line</span><span class="p">,</span> <span class="n">species</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">coord</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">coord</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_read_geometry_atomic</span><span class="p">(</span><span class="n">line</span><span class="p">,</span> <span class="n">species</span><span class="p">)</span>
+
         <span class="c1"># Read until a coordinate block is found</span>
-        <span class="n">line</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">readline</span><span class="p">()</span>
-        <span class="k">while</span> <span class="n">type_coord</span><span class="p">(</span><span class="n">line</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="n">line</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">readline</span><span class="p">()</span>
-            <span class="k">if</span> <span class="n">line</span> <span class="o">==</span> <span class="s1">&#39;&#39;</span><span class="p">:</span>
-                <span class="k">break</span>
+        <span class="n">geom0</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="n">mds</span> <span class="o">=</span> <span class="p">[]</span>
 
-        <span class="n">coord</span> <span class="o">=</span> <span class="n">type_coord</span><span class="p">(</span><span class="n">line</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">all</span> <span class="ow">or</span> <span class="n">last</span><span class="p">:</span>
+            <span class="c1"># we need to read through all things!</span>
+            <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+                <span class="n">coord</span><span class="p">,</span> <span class="n">geom</span> <span class="o">=</span> <span class="n">next_geom</span><span class="p">()</span>
+                <span class="k">if</span> <span class="n">coord</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="k">break</span>
+                <span class="k">if</span> <span class="n">coord</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+                    <span class="n">geom0</span> <span class="o">=</span> <span class="n">geom</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">mds</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">geom</span><span class="p">)</span>
 
-        <span class="k">if</span> <span class="n">coord</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
-            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_read_geometry_outcoor</span><span class="p">(</span><span class="n">line</span><span class="p">,</span> <span class="n">last</span><span class="p">,</span> <span class="nb">all</span><span class="p">,</span> <span class="n">species</span><span class="p">)</span>
-        <span class="k">elif</span> <span class="n">coord</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
-            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_read_geometry_atomic</span><span class="p">(</span><span class="n">line</span><span class="p">,</span> <span class="n">species</span><span class="p">)</span>
+            <span class="c1"># Since the user requests only the MD geometries</span>
+            <span class="c1"># we only return those</span>
+            <span class="k">if</span> <span class="n">last</span><span class="p">:</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">mds</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="k">return</span> <span class="n">mds</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+                <span class="k">return</span> <span class="n">geom0</span>
+            <span class="k">return</span> <span class="n">mds</span>
 
-        <span class="c1"># Signal not found</span>
-        <span class="k">return</span> <span class="kc">None</span></div>
+        <span class="c1"># just read the next geometry we hit</span>
+        <span class="k">return</span> <span class="n">next_geom</span><span class="p">()[</span><span class="mi">1</span><span class="p">]</span></div>
 
 <div class="viewcode-block" id="outSileSiesta.read_force"><a class="viewcode-back" href="../../../../api-generated/sisl.io.siesta.outSileSiesta.html#sisl.io.siesta.outSileSiesta.read_force">[docs]</a>    <span class="nd">@sile_fh_open</span><span class="p">()</span>
     <span class="k">def</span> <span class="nf">read_force</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">last</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="nb">all</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
@@ -385,34 +426,115 @@
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
-<span class="sd">        last: bool, True</span>
+<span class="sd">        last: bool, optional</span>
 <span class="sd">           only read the last force</span>
-<span class="sd">        all: bool, False</span>
+<span class="sd">        all: bool, optional</span>
 <span class="sd">           return a list of all forces (like an MD)</span>
 <span class="sd">           If `True` `last` is ignored</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        forces: np.ndarray or None</span>
+<span class="sd">            returns ``None`` if the forces are not found in the</span>
+<span class="sd">            output, otherwise forces will be returned</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-
-        <span class="c1"># Read until outcoor is found</span>
-        <span class="n">line</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">readline</span><span class="p">()</span>
-        <span class="k">while</span> <span class="ow">not</span> <span class="s1">&#39;siesta: Atomic forces&#39;</span> <span class="ow">in</span> <span class="n">line</span><span class="p">:</span>
-            <span class="n">line</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">readline</span><span class="p">()</span>
-            <span class="k">if</span> <span class="n">line</span> <span class="o">==</span> <span class="s1">&#39;&#39;</span><span class="p">:</span>
-                <span class="k">return</span> <span class="kc">None</span>
-
-        <span class="n">F</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="n">line</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">readline</span><span class="p">()</span>
-        <span class="k">while</span> <span class="ow">not</span> <span class="n">line</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;--&#39;</span><span class="p">):</span>
-            <span class="n">F</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="nb">float</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">()[</span><span class="mi">1</span><span class="p">:]])</span>
-            <span class="n">line</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">readline</span><span class="p">()</span>
-
-        <span class="n">F</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">F</span><span class="p">)</span>
-
         <span class="k">if</span> <span class="nb">all</span><span class="p">:</span>
-            <span class="n">tmp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">read_force</span><span class="p">(</span><span class="n">last</span><span class="p">,</span> <span class="nb">all</span><span class="p">)</span>
-            <span class="k">if</span> <span class="n">tmp</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-                <span class="k">return</span> <span class="p">[]</span>
-            <span class="k">return</span> <span class="n">tmp</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="n">F</span><span class="p">])</span>
-        <span class="k">return</span> <span class="n">F</span></div>
+            <span class="n">last</span> <span class="o">=</span> <span class="kc">False</span>
+
+        <span class="c1"># Read until forces are found</span>
+        <span class="k">def</span> <span class="nf">next_force</span><span class="p">():</span>
+            <span class="n">line</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">readline</span><span class="p">()</span>
+            <span class="k">while</span> <span class="ow">not</span> <span class="s1">&#39;siesta: Atomic forces&#39;</span> <span class="ow">in</span> <span class="n">line</span><span class="p">:</span>
+                <span class="n">line</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">readline</span><span class="p">()</span>
+                <span class="k">if</span> <span class="n">line</span> <span class="o">==</span> <span class="s1">&#39;&#39;</span><span class="p">:</span>
+                    <span class="k">return</span> <span class="kc">None</span>
+
+            <span class="c1"># Now read data</span>
+            <span class="n">F</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="n">line</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">readline</span><span class="p">()</span>
+            <span class="k">while</span> <span class="s1">&#39;---&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">line</span><span class="p">:</span>
+                <span class="n">line</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+                <span class="n">F</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="nb">float</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">line</span><span class="p">[</span><span class="o">-</span><span class="mi">3</span><span class="p">:]])</span>
+                <span class="n">line</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">readline</span><span class="p">()</span>
+                <span class="k">if</span> <span class="n">line</span> <span class="o">==</span> <span class="s1">&#39;&#39;</span><span class="p">:</span>
+                    <span class="k">break</span>
+
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">F</span><span class="p">)</span>
+
+        <span class="c1"># list of all forces</span>
+        <span class="n">Fs</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="k">if</span> <span class="nb">all</span> <span class="ow">or</span> <span class="n">last</span><span class="p">:</span>
+            <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+                <span class="n">F</span> <span class="o">=</span> <span class="n">next_force</span><span class="p">()</span>
+                <span class="k">if</span> <span class="n">F</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="k">break</span>
+                <span class="n">Fs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">F</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">last</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">Fs</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">job_completed</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">Fs</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+            <span class="k">return</span> <span class="n">Fs</span>
+
+        <span class="k">return</span> <span class="n">next_force</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="outSileSiesta.read_stress"><a class="viewcode-back" href="../../../../api-generated/sisl.io.siesta.outSileSiesta.html#sisl.io.siesta.outSileSiesta.read_stress">[docs]</a>    <span class="nd">@sile_fh_open</span><span class="p">()</span>
+    <span class="k">def</span> <span class="nf">read_stress</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="s1">&#39;static&#39;</span><span class="p">,</span> <span class="n">last</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="nb">all</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Reads the stresses from the Siesta output file</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        key : {&#39;static&#39;, &#39;total&#39;}</span>
+<span class="sd">           which stress to read from the output.</span>
+<span class="sd">        last: bool, optional</span>
+<span class="sd">           only read the last stress</span>
+<span class="sd">        all: bool, optional</span>
+<span class="sd">           return a list of all stresses (like an MD)</span>
+<span class="sd">           If `True` `last` is ignored</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        stresses: np.ndarray or None</span>
+<span class="sd">            returns ``None`` if the stresses are not found in the</span>
+<span class="sd">            output, otherwise stresses will be returned</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">all</span><span class="p">:</span>
+            <span class="n">last</span> <span class="o">=</span> <span class="kc">False</span>
+
+        <span class="c1"># Read until stress are found</span>
+        <span class="k">def</span> <span class="nf">next_stress</span><span class="p">():</span>
+            <span class="n">line</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">readline</span><span class="p">()</span>
+            <span class="k">while</span> <span class="ow">not</span> <span class="p">(</span><span class="s1">&#39;siesta: Stress tensor&#39;</span> <span class="ow">in</span> <span class="n">line</span> <span class="ow">and</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">line</span><span class="p">):</span>
+                <span class="n">line</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">readline</span><span class="p">()</span>
+                <span class="k">if</span> <span class="n">line</span> <span class="o">==</span> <span class="s1">&#39;&#39;</span><span class="p">:</span>
+                    <span class="k">return</span> <span class="kc">None</span>
+
+            <span class="c1"># Now read data</span>
+            <span class="n">S</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">3</span><span class="p">):</span>
+                <span class="n">line</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">readline</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+                <span class="n">S</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="nb">float</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">line</span><span class="p">[</span><span class="o">-</span><span class="mi">3</span><span class="p">:]])</span>
+
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">S</span><span class="p">)</span>
+
+        <span class="c1"># list of all stresses</span>
+        <span class="n">Ss</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="k">if</span> <span class="nb">all</span> <span class="ow">or</span> <span class="n">last</span><span class="p">:</span>
+            <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+                <span class="n">S</span> <span class="o">=</span> <span class="n">next_stress</span><span class="p">()</span>
+                <span class="k">if</span> <span class="n">S</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="k">break</span>
+                <span class="n">Ss</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">S</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">last</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">Ss</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">job_completed</span> <span class="ow">and</span> <span class="n">key</span> <span class="o">==</span> <span class="s1">&#39;static&#39;</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">Ss</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+            <span class="k">return</span> <span class="n">Ss</span>
+
+        <span class="k">return</span> <span class="n">next_stress</span><span class="p">()</span></div>
 
 <div class="viewcode-block" id="outSileSiesta.read_moment"><a class="viewcode-back" href="../../../../api-generated/sisl.io.siesta.outSileSiesta.html#sisl.io.siesta.outSileSiesta.read_moment">[docs]</a>    <span class="nd">@sile_fh_open</span><span class="p">()</span>
     <span class="k">def</span> <span class="nf">read_moment</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">orbital</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">quantity</span><span class="o">=</span><span class="s1">&#39;S&#39;</span><span class="p">,</span> <span class="n">last</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="nb">all</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
@@ -503,13 +625,13 @@
 <span class="sd">        of keywords, so:</span>
 
 <span class="sd">        &gt;&gt;&gt; read_data(geometry=True, force=True)</span>
-<span class="sd">        &lt;geom&gt;, &lt;forces&gt;</span>
-<span class="sd">        &gt;&gt;&gt; read_data(force=True,geometry=True)</span>
-<span class="sd">        &lt;forces&gt;, &lt;geom&gt;</span>
+<span class="sd">        &lt;geometry&gt;, &lt;force&gt;</span>
+<span class="sd">        &gt;&gt;&gt; read_data(force=True, geometry=True)</span>
+<span class="sd">        &lt;force&gt;, &lt;geometry&gt;</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
-<span class="sd">        geom: bool</span>
+<span class="sd">        geometry: bool</span>
 <span class="sd">           return the last geometry in the `outSileSiesta`</span>
 <span class="sd">        force: bool</span>
 <span class="sd">           return the last force in the `outSileSiesta`</span>
@@ -519,7 +641,7 @@
         <span class="n">val</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">kw</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="p">:</span>
 
-            <span class="k">if</span> <span class="n">kw</span> <span class="o">==</span> <span class="s1">&#39;geom&#39;</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">kw</span> <span class="o">==</span> <span class="s1">&#39;geometry&#39;</span><span class="p">:</span>
                 <span class="k">if</span> <span class="n">kwargs</span><span class="p">[</span><span class="n">kw</span><span class="p">]:</span>
                     <span class="n">val</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">read_geometry</span><span class="p">())</span>
 
@@ -532,7 +654,7 @@
                     <span class="n">val</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">read_moment</span><span class="p">())</span>
 
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">val</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="n">val</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="k">return</span> <span class="kc">None</span>
         <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">val</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
             <span class="n">val</span> <span class="o">=</span> <span class="n">val</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
         <span class="k">return</span> <span class="n">val</span></div></div>

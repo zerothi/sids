@@ -175,16 +175,17 @@
 <span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">in1d</span><span class="p">,</span> <span class="n">argsort</span>
 
 <span class="c1"># Import sile objects</span>
-<span class="kn">from</span> <span class="nn">..sile</span> <span class="k">import</span> <span class="n">add_sile</span>
-<span class="kn">from</span> <span class="nn">._cdf</span> <span class="k">import</span> <span class="n">_devncSileTBtrans</span>
+<span class="kn">from</span> <span class="nn">sisl._indices</span> <span class="k">import</span> <span class="n">indices</span>
 <span class="kn">from</span> <span class="nn">sisl.utils</span> <span class="k">import</span> <span class="o">*</span>
 <span class="kn">import</span> <span class="nn">sisl._array</span> <span class="k">as</span> <span class="nn">_a</span>
+<span class="kn">from</span> <span class="nn">..sile</span> <span class="k">import</span> <span class="n">add_sile</span>
+<span class="kn">from</span> <span class="nn">._cdf</span> <span class="k">import</span> <span class="n">_devncSileTBtrans</span>
 
 <span class="c1"># Import the geometry object</span>
 <span class="kn">from</span> <span class="nn">sisl.unit.siesta</span> <span class="k">import</span> <span class="n">unit_convert</span>
 
 
-<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;tbtsencSileTBtrans&#39;</span><span class="p">,</span> <span class="s1">&#39;phtsencSileTBtrans&#39;</span><span class="p">]</span>
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;tbtsencSileTBtrans&#39;</span><span class="p">,</span> <span class="s1">&#39;phtsencSilePHtrans&#39;</span><span class="p">]</span>
 
 
 <span class="n">Bohr2Ang</span> <span class="o">=</span> <span class="n">unit_convert</span><span class="p">(</span><span class="s1">&#39;Bohr&#39;</span><span class="p">,</span> <span class="s1">&#39;Ang&#39;</span><span class="p">)</span>
@@ -224,7 +225,8 @@
 <span class="sd">    &gt;&gt;&gt; Hdev[dpvt_unsorted, dpvt_unsorted.T] -= se_unsorted[:, :]</span>
 <span class="sd">    &gt;&gt;&gt; Hdev[dpvt_sorted, dpvt_sorted.T] -= se_sorted[:, :]</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">_SE2eV</span> <span class="o">=</span> <span class="n">Ry2eV</span>
+    <span class="n">_trans_type</span> <span class="o">=</span> <span class="s1">&#39;TBT&#39;</span>
+    <span class="n">_E2eV</span> <span class="o">=</span> <span class="n">Ry2eV</span>
 
     <span class="k">def</span> <span class="nf">_elec</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">elec</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Converts a string or integer to the corresponding electrode name</span>
@@ -258,7 +260,7 @@
 <div class="viewcode-block" id="tbtsencSileTBtrans.eta"><a class="viewcode-back" href="../../../../api-generated/sisl.io.tbtrans.tbtsencSileTBtrans.html#sisl.io.tbtrans.tbtsencSileTBtrans.eta">[docs]</a>    <span class="k">def</span> <span class="nf">eta</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">elec</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; The imaginary part used when calculating the self-energies in eV &quot;&quot;&quot;</span>
         <span class="k">try</span><span class="p">:</span>
-            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_value</span><span class="p">(</span><span class="s1">&#39;eta&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_elec</span><span class="p">(</span><span class="n">elec</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">Ry2eV</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_value</span><span class="p">(</span><span class="s1">&#39;eta&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_elec</span><span class="p">(</span><span class="n">elec</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_E2eV</span>
         <span class="k">except</span><span class="p">:</span>
             <span class="k">return</span> <span class="mf">0.</span></div>
 
@@ -304,11 +306,6 @@
                 <span class="n">pvt</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">pvt</span><span class="p">)</span>
             <span class="k">return</span> <span class="n">pvt</span>
 
-        <span class="k">if</span> <span class="n">in_device</span><span class="p">:</span>
-            <span class="n">pvt</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_value</span><span class="p">(</span><span class="s1">&#39;pivot&#39;</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span>
-            <span class="k">if</span> <span class="n">sort</span><span class="p">:</span>
-                <span class="n">pvt</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">pvt</span><span class="p">)</span>
-
         <span class="c1"># Get electrode pivoting elements</span>
         <span class="n">se_pvt</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_value</span><span class="p">(</span><span class="s1">&#39;pivot&#39;</span><span class="p">,</span> <span class="n">tree</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_elec</span><span class="p">(</span><span class="n">elec</span><span class="p">))</span> <span class="o">-</span> <span class="mi">1</span>
         <span class="k">if</span> <span class="n">sort</span><span class="p">:</span>
@@ -319,8 +316,11 @@
             <span class="n">se_pvt</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">se_pvt</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="n">in_device</span><span class="p">:</span>
+            <span class="n">pvt</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_value</span><span class="p">(</span><span class="s1">&#39;pivot&#39;</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span>
+            <span class="k">if</span> <span class="n">sort</span><span class="p">:</span>
+                <span class="n">pvt</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">pvt</span><span class="p">)</span>
             <span class="c1"># translate to the device indices</span>
-            <span class="n">se_pvt</span> <span class="o">=</span> <span class="n">in1d</span><span class="p">(</span><span class="n">pvt</span><span class="p">,</span> <span class="n">se_pvt</span><span class="p">,</span> <span class="n">assume_unique</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">nonzero</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">se_pvt</span> <span class="o">=</span> <span class="n">indices</span><span class="p">(</span><span class="n">pvt</span><span class="p">,</span> <span class="n">se_pvt</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">se_pvt</span></div>
 
 <div class="viewcode-block" id="tbtsencSileTBtrans.a2p"><a class="viewcode-back" href="../../../../api-generated/sisl.io.tbtrans.tbtsencSileTBtrans.html#sisl.io.tbtrans.tbtsencSileTBtrans.a2p">[docs]</a>    <span class="k">def</span> <span class="nf">a2p</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">atom</span><span class="p">,</span> <span class="n">elec</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
@@ -380,13 +380,12 @@
         <span class="n">SE</span> <span class="o">=</span> <span class="p">(</span><span class="n">re</span><span class="p">[</span><span class="n">ik</span><span class="p">,</span> <span class="n">iE</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">+</span> <span class="mi">1</span><span class="n">j</span> <span class="o">*</span> <span class="n">im</span><span class="p">[</span><span class="n">ik</span><span class="p">,</span> <span class="n">iE</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:])</span>
         <span class="k">if</span> <span class="n">sort</span><span class="p">:</span>
             <span class="n">pvt</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">pivot</span><span class="p">(</span><span class="n">elec</span><span class="p">)</span>
-            <span class="n">idx</span> <span class="o">=</span> <span class="n">argsort</span><span class="p">(</span><span class="n">pvt</span><span class="p">)</span>
-            <span class="n">idx</span><span class="o">.</span><span class="n">shape</span> <span class="o">=</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="n">idx</span> <span class="o">=</span> <span class="n">argsort</span><span class="p">(</span><span class="n">pvt</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
 
             <span class="c1"># pivot for sorted device region</span>
-            <span class="k">return</span> <span class="n">SE</span><span class="p">[</span><span class="n">idx</span><span class="p">,</span> <span class="n">idx</span><span class="o">.</span><span class="n">T</span><span class="p">]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_SE2eV</span>
+            <span class="k">return</span> <span class="n">SE</span><span class="p">[</span><span class="n">idx</span><span class="p">,</span> <span class="n">idx</span><span class="o">.</span><span class="n">T</span><span class="p">]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_E2eV</span>
 
-        <span class="k">return</span> <span class="n">SE</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_SE2eV</span></div>
+        <span class="k">return</span> <span class="n">SE</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_E2eV</span></div>
 
 <div class="viewcode-block" id="tbtsencSileTBtrans.scattering_matrix"><a class="viewcode-back" href="../../../../api-generated/sisl.io.tbtrans.tbtsencSileTBtrans.html#sisl.io.tbtrans.tbtsencSileTBtrans.scattering_matrix">[docs]</a>    <span class="k">def</span> <span class="nf">scattering_matrix</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">elec</span><span class="p">,</span> <span class="n">E</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">sort</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
         <span class="sa">r</span><span class="sd">&quot;&quot;&quot; Return the scattering matrix from the electrode `elec`</span>
@@ -423,9 +422,9 @@
             <span class="n">idx</span><span class="o">.</span><span class="n">shape</span> <span class="o">=</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
 
             <span class="c1"># pivot for sorted device region</span>
-            <span class="k">return</span> <span class="n">G</span><span class="p">[</span><span class="n">idx</span><span class="p">,</span> <span class="n">idx</span><span class="o">.</span><span class="n">T</span><span class="p">]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_SE2eV</span>
+            <span class="k">return</span> <span class="n">G</span><span class="p">[</span><span class="n">idx</span><span class="p">,</span> <span class="n">idx</span><span class="o">.</span><span class="n">T</span><span class="p">]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_E2eV</span>
 
-        <span class="k">return</span> <span class="n">G</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_SE2eV</span></div>
+        <span class="k">return</span> <span class="n">G</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_E2eV</span></div>
 
 <div class="viewcode-block" id="tbtsencSileTBtrans.self_energy_average"><a class="viewcode-back" href="../../../../api-generated/sisl.io.tbtrans.tbtsencSileTBtrans.html#sisl.io.tbtrans.tbtsencSileTBtrans.self_energy_average">[docs]</a>    <span class="k">def</span> <span class="nf">self_energy_average</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">elec</span><span class="p">,</span> <span class="n">E</span><span class="p">,</span> <span class="n">sort</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Return the k-averaged average self-energy from the electrode `elec`</span>
@@ -455,9 +454,9 @@
             <span class="n">idx</span><span class="o">.</span><span class="n">shape</span> <span class="o">=</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
 
             <span class="c1"># pivot for sorted device region</span>
-            <span class="k">return</span> <span class="n">SE</span><span class="p">[</span><span class="n">idx</span><span class="p">,</span> <span class="n">idx</span><span class="o">.</span><span class="n">T</span><span class="p">]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_SE2eV</span>
+            <span class="k">return</span> <span class="n">SE</span><span class="p">[</span><span class="n">idx</span><span class="p">,</span> <span class="n">idx</span><span class="o">.</span><span class="n">T</span><span class="p">]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_E2eV</span>
 
-        <span class="k">return</span> <span class="n">SE</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_SE2eV</span></div></div>
+        <span class="k">return</span> <span class="n">SE</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_E2eV</span></div></div>
 
 
 <span class="n">add_sile</span><span class="p">(</span><span class="s1">&#39;TBT.SE.nc&#39;</span><span class="p">,</span> <span class="n">tbtsencSileTBtrans</span><span class="p">)</span>
@@ -466,12 +465,12 @@
 <span class="n">add_sile</span><span class="p">(</span><span class="s1">&#39;TBT_DN.SE.nc&#39;</span><span class="p">,</span> <span class="n">tbtsencSileTBtrans</span><span class="p">)</span>
 
 
-<div class="viewcode-block" id="phtsencSileTBtrans"><a class="viewcode-back" href="../../../../api-generated/sisl.io.tbtrans.phtsencSileTBtrans.html#sisl.io.tbtrans.phtsencSileTBtrans">[docs]</a><span class="k">class</span> <span class="nc">phtsencSileTBtrans</span><span class="p">(</span><span class="n">tbtsencSileTBtrans</span><span class="p">):</span>
+<div class="viewcode-block" id="phtsencSilePHtrans"><a class="viewcode-back" href="../../../../api-generated/sisl.io.tbtrans.phtsencSilePHtrans.html#sisl.io.tbtrans.phtsencSilePHtrans">[docs]</a><span class="k">class</span> <span class="nc">phtsencSilePHtrans</span><span class="p">(</span><span class="n">tbtsencSileTBtrans</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot; PHtrans file object &quot;&quot;&quot;</span>
     <span class="n">_trans_type</span> <span class="o">=</span> <span class="s1">&#39;PHT&#39;</span>
-    <span class="n">_SE2eV</span> <span class="o">=</span> <span class="n">Ry2eV</span> <span class="o">**</span> <span class="mi">2</span></div>
+    <span class="n">_E2eV</span> <span class="o">=</span> <span class="n">Ry2eV</span> <span class="o">**</span> <span class="mi">2</span></div>
 
-<span class="n">add_sile</span><span class="p">(</span><span class="s1">&#39;PHT.SE.nc&#39;</span><span class="p">,</span> <span class="n">phtsencSileTBtrans</span><span class="p">)</span>
+<span class="n">add_sile</span><span class="p">(</span><span class="s1">&#39;PHT.SE.nc&#39;</span><span class="p">,</span> <span class="n">phtsencSilePHtrans</span><span class="p">)</span>
 </pre></div>
 
            </div>
