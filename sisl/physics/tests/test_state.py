@@ -13,6 +13,17 @@ def ar(*args):
     return np.arange(l, dtype=np.float64).reshape(args)
 
 
+def ortho_matrix(n, m=None):
+    if m is None:
+        m = n
+    max_nm = max(n, m)
+    from scipy.linalg import qr
+    H = np.random.randn(max_nm, max_nm) + 1j * np.random.randn(max_nm, max_nm)
+    Q, _ = qr(H)
+    M = Q.dot(np.conjugate(Q.T))
+    return M[:n, :]
+
+
 def outer(v):
     return np.outer(v, np.conjugate(v))
 
@@ -88,7 +99,6 @@ def test_state_norm1():
     str(state)
     assert len(state) == 1
     assert state.norm()[0] == pytest.approx(1)
-    assert state.norm2()[0] == pytest.approx(1)
 
 
 def test_state_sub1():
@@ -101,13 +111,12 @@ def test_state_sub1():
         assert len(state.sub(i)) == 1
         assert state.sub(i).norm()[0] == norm[i]
         assert state[i].norm()[0] == norm[i]
-        assert state[i].norm2()[0] == norm2[i]
     for i, sub in enumerate(state):
         assert len(sub) == 1
         assert sub.norm()[0] == norm[i]
 
     for i, sub in enumerate(state.iter(True)):
-        assert (sub ** 2).sum() ** .5 == norm[i]
+        assert (sub ** 2).sum() == norm2[i]
 
 
 def test_state_outer1():
@@ -133,6 +142,17 @@ def test_state_inner1():
     assert np.allclose(inner, state.inner(state, diagonal=False))
 
 
+def test_state_inner_differing_size():
+    state1 = State(ar(8, 10))
+    state2 = State(ar(4, 10))
+
+    inner = state1.inner(state2, diagonal=False)
+    assert inner.shape == (8, 4)
+
+    inner = state1.inner(state2)
+    assert inner.shape == (4, )
+
+
 def test_state_phase_max():
     state = np.random.rand(10, 10) + 1j * np.random.rand(10, 10)
     state1 = State(state)
@@ -151,14 +171,39 @@ def test_state_phase_all():
     assert np.allclose(ph1, ph2 + np.pi)
 
 
-def test_state_align1():
-    state = np.random.rand(10, 10) + 1j * np.random.rand(10, 10)
+def test_state_align_phase1():
+    state = ortho_matrix(10)
     state1 = State(state)
     state2 = State(-state)
 
     # This should rotate all back
-    align2 = state1.align(state2)
+    align2 = state1.align_phase(state2)
     assert np.allclose(state1.state, align2.state)
+
+
+def test_state_align_norm1():
+    state = ortho_matrix(10)
+    state1 = State(state)
+    idx = np.arange(len(state))
+    np.random.shuffle(idx)
+    state2 = state1.sub(idx)
+
+    # This should swap all back
+    align2 = state1.align_norm(state2)
+    assert np.allclose(state1.state, align2.state)
+
+
+def test_state_align_norm2():
+    state = ortho_matrix(15)
+    state1 = State(state)
+    idx = np.arange(len(state))
+    np.random.shuffle(idx)
+    state2 = state1.sub(idx)
+
+    # This should swap all back
+    align2, idx2 = state1.align_norm(state2, ret_index=True)
+    assert np.allclose(state1.state, align2.state)
+    assert np.allclose(state1.state, state2.sub(idx2).state)
 
 
 def test_state_rotate_1():
@@ -191,26 +236,6 @@ def test_state_rotate_1():
     assert pytest.approx(np.angle(s.state[1, 0]), np.pi / 4)
     assert pytest.approx(np.angle(s.state[1, 1]), np.pi / 2)
 
-# def test_state_toStateC1():
-#     state = State(ar(6)).toStateC()
-#     assert len(state) == 1
-#     assert state.c[0] == pytest.approx((ar(6) ** 2).sum() ** .5)
-#     assert state.norm()[0] == pytest.approx(1)
-
-
-# def test_state_toStateC2():
-#     state = State(ar(2, 5)).toStateC()
-#     assert np.allclose(state.norm2(), 1.)
-#     state = State(ar(2, 5)).toStateC(norm=[0.5, 0.5])
-#     assert np.allclose(state.norm2(), 0.5)
-#     state = State(ar(2, 5)).toStateC(norm=[0.25, 0.75])
-#     assert np.allclose(state.norm2(), [0.25, 0.75])
-
-
-# @pytest.mark.xfail(raises=ValueError)
-# def test_state_toStateC_fail():
-#     State(ar(2, 5)).toStateC(norm=[0.2, 0.5, 0.5])
-
 
 def test_cstate_creation1():
     state = StateC(ar(6), 1)
@@ -241,10 +266,12 @@ def test_cstate_sub1():
     state = StateC(ar(10, 10), ar(10))
     assert len(state) == 10
     norm = state.norm()
+    norm2 = state.norm2()
     for i in range(len(state)):
         assert len(state.sub(i)) == 1
         assert state.sub(i).norm()[0] == norm[i]
         assert state[i].norm()[0] == norm[i]
+        assert state[i].norm2()[0] == norm2[i]
         assert state[i].c[0] == state.c[i]
     for i, sub in enumerate(state):
         assert len(sub) == 1
@@ -264,7 +291,6 @@ def test_cstate_norm1():
     state = StateC(ar(10, 10), ar(10)).normalize()
     assert len(state) == 10
     assert np.allclose(state.norm(), 1)
-    assert np.allclose(state.norm2(), 1)
 
 
 def test_cstate_outer1():
