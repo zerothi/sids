@@ -199,8 +199,6 @@ class tbtprojncSileTBtrans(tbtncSileTBtrans):
         """
         mol_proj_elec = self._mol_proj_elec(elec_mol_proj)
         dm = self._sparse_data('DM', mol_proj_elec, E, kavg, isc) * eV2Ry
-        dm.eliminate_zeros()
-        dm.sort_indices()
         # Now create the density matrix object
         geom = self.read_geometry()
         if geometry is None:
@@ -272,8 +270,6 @@ class tbtprojncSileTBtrans(tbtncSileTBtrans):
         """
         mol_proj_elec = self._mol_proj_elec(elec_mol_proj)
         COOP = self._sparse_data('COOP', mol_proj_elec, E, kavg, isc) * eV2Ry
-        COOP.eliminate_zeros()
-        COOP.sort_indices()
         return COOP
 
     def orbital_ACOHP(self, elec_mol_proj, E, kavg=True, isc=None):
@@ -315,8 +311,6 @@ class tbtprojncSileTBtrans(tbtncSileTBtrans):
         """
         mol_proj_elec = self._mol_proj_elec(elec_mol_proj)
         COHP = self._sparse_data('COHP', mol_proj_elec, E, kavg, isc)
-        COHP.eliminate_zeros()
-        COHP.sort_indices()
         return COHP
 
     @default_ArgumentParser(description="Extract data from a TBT.Proj.nc file")
@@ -598,6 +592,7 @@ class tbtprojncSileTBtrans(tbtncSileTBtrans):
 
         The eigenstate object will contain the geometry as the parent object.
         The eigenstate will be in the Lowdin basis:
+
         .. math::
             |\psi'_i\rangle = \mathbf S^{1/2} |\psi_i\rangle
 
@@ -647,6 +642,7 @@ class tbtprojncSileTBtrans(tbtncSileTBtrans):
 
 for _name in ['current', 'current_parameter',
               'shot_noise', 'noise_power', 'fano',
+              "write_tbtav",
               'density_matrix',
               'orbital_COOP', 'atom_COOP',
               'orbital_COHP', 'atom_COHP']:
