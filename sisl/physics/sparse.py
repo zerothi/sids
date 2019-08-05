@@ -610,12 +610,12 @@ class SparseOrbitalBZSpin(SparseOrbitalBZ):
             if self.spin.dkind == 'f':
                 self.M11r = 0
                 self.M22r = 1
-                self.M21r = 2
-                self.M21_i = 3
+                self.M12r = 2
+                self.M12i = 3
                 self.M11i = 4
                 self.M22i = 5
-                self.M12r = 6
-                self.M12i = 7
+                self.M21r = 6
+                self.M21i = 7
             else:
                 self.M11 = 0
                 self.M22 = 1
@@ -860,11 +860,86 @@ class SparseOrbitalBZSpin(SparseOrbitalBZ):
 
         return lin.eigsh(P, k=n, return_eigenvectors=not eigvals_only, **kwargs)
 
+    def transpose(self, hermitian=False):
+        """ A transpose copy of this object, possibly apply the Hermitian conjugate as well (default)
+
+        Parameters
+        ----------
+        hermitian : bool, optional
+           if true, also emply a spin-box Hermitian operator to ensure TRS, otherwise
+           only return the transpose values.
+        """
+        new = super(SparseOrbitalBZSpin, self).transpose()
+        sp = self.spin
+        D = new._csr._D
+
+        if hermitian:
+            if sp.is_noncolinear:
+                # conjugate the imaginary value
+                if sp.dkind == 'f':
+                    D[:, 3] = -D[:, 3]
+                else:
+                    D[:, 2] = np.conj(D[:, 2])
+            elif sp.is_spinorbit:
+                # conjugate the imaginary value and transpose spin-box
+                if sp.dkind == 'f':
+                    # imaginary components (including transposing)
+                    #    12,11,22,21
+                    D[:, [3, 4, 5, 7]] = -D[:, [7, 4, 5, 3]]
+                    # M21r -> M12r
+                    D[:, [2, 6]] = D[:, [6, 2]]
+                else:
+                    D[:, [0, 1]] = np.conj(D[:, [0, 1]])
+                    D[:, [2, 3]] = np.conj(D[:, [3, 2]])
+        elif sp.is_spinorbit:
+            # transpose spin-box
+            if sp.dkind == 'f':
+                #    12 -> 21
+                D[:, [2, 3, 6, 7]] = D[:, [6, 7, 2, 3]]
+            else:
+                D[:, [2, 3]] = D[:, [3, 2]]
+
+        return new
+
+    def trs(self):
+        """ Create a new matrix with applied time-reversal-symmetry
+
+        Time reversal symmetry is applied using the following equality:
+
+        .. math::
+
+            2M = M + \boldsymbol\sigma_y K M \boldsymbol\sigma_y
+
+        where :math:`K` is the conjugation operator.
+        """
+        new = self.copy()
+        sp = self.spin
+        D = new._csr._D
+
+        if sp.is_spinorbit:
+            # Apply Pauli-Y on the left and right of each spin-box
+            if sp.dkind == 'f':
+                # [R11, R22, R12, I12, I11, I22, R21, I21]
+                # [R11, R22] = [R22, R11]
+                # [I12, I21] = [I21, I12] (conj + Y @ Y[sign-changes conj])
+                D[:, [0, 1, 3, 7]] = D[:, [1, 0, 7, 3]]
+                # [I11, I22] = -[I22, I11] (conj + Y @ Y[no sign change])
+                # [R12, R21] = -[R21, R12] (Y @ Y)
+                D[:, [4, 5, 2, 6]] = -D[:, [5, 4, 6, 2]]
+            else:
+                # [11, 22, 12, 21]
+                # [11, 22] = K[22, 11]
+                D[:, [0, 1]] = np.conj(D[:, [1, 0]])
+                # [12, 21] = -K[21, 12]
+                D[:, [2, 3]] = -np.conj(D[:, [3, 2]])
+
+        return new
+
     def __getstate__(self):
         return {
             'sparseorbitalbzspin': super(SparseOrbitalBZSpin, self).__getstate__(),
             'spin': self._spin.__getstate__(),
-            'orthogonal': self._orthogonal
+            'orthogonal': self._orthogonal,
         }
 
     def __setstate__(self, state):
