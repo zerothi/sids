@@ -781,12 +781,12 @@
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">spin</span><span class="o">.</span><span class="n">dkind</span> <span class="o">==</span> <span class="s1">&#39;f&#39;</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">M11r</span> <span class="o">=</span> <span class="mi">0</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">M22r</span> <span class="o">=</span> <span class="mi">1</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">M21r</span> <span class="o">=</span> <span class="mi">2</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">M21_i</span> <span class="o">=</span> <span class="mi">3</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">M12r</span> <span class="o">=</span> <span class="mi">2</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">M12i</span> <span class="o">=</span> <span class="mi">3</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">M11i</span> <span class="o">=</span> <span class="mi">4</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">M22i</span> <span class="o">=</span> <span class="mi">5</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">M12r</span> <span class="o">=</span> <span class="mi">6</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">M12i</span> <span class="o">=</span> <span class="mi">7</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">M21r</span> <span class="o">=</span> <span class="mi">6</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">M21i</span> <span class="o">=</span> <span class="mi">7</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">M11</span> <span class="o">=</span> <span class="mi">0</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">M22</span> <span class="o">=</span> <span class="mi">1</span>
@@ -1031,11 +1031,86 @@
 
         <span class="k">return</span> <span class="n">lin</span><span class="o">.</span><span class="n">eigsh</span><span class="p">(</span><span class="n">P</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="n">n</span><span class="p">,</span> <span class="n">return_eigenvectors</span><span class="o">=</span><span class="ow">not</span> <span class="n">eigvals_only</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
 
+<div class="viewcode-block" id="SparseOrbitalBZSpin.transpose"><a class="viewcode-back" href="../../../api-generated/sisl.physics.SparseOrbitalBZSpin.html#sisl.physics.SparseOrbitalBZSpin.transpose">[docs]</a>    <span class="k">def</span> <span class="nf">transpose</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">hermitian</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; A transpose copy of this object, possibly apply the Hermitian conjugate as well (default)</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        hermitian : bool, optional</span>
+<span class="sd">           if true, also emply a spin-box Hermitian operator to ensure TRS, otherwise</span>
+<span class="sd">           only return the transpose values.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">new</span> <span class="o">=</span> <span class="nb">super</span><span class="p">(</span><span class="n">SparseOrbitalBZSpin</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">transpose</span><span class="p">()</span>
+        <span class="n">sp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">spin</span>
+        <span class="n">D</span> <span class="o">=</span> <span class="n">new</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">_D</span>
+
+        <span class="k">if</span> <span class="n">hermitian</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">sp</span><span class="o">.</span><span class="n">is_noncolinear</span><span class="p">:</span>
+                <span class="c1"># conjugate the imaginary value</span>
+                <span class="k">if</span> <span class="n">sp</span><span class="o">.</span><span class="n">dkind</span> <span class="o">==</span> <span class="s1">&#39;f&#39;</span><span class="p">:</span>
+                    <span class="n">D</span><span class="p">[:,</span> <span class="mi">3</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="n">D</span><span class="p">[:,</span> <span class="mi">3</span><span class="p">]</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">D</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">conj</span><span class="p">(</span><span class="n">D</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">])</span>
+            <span class="k">elif</span> <span class="n">sp</span><span class="o">.</span><span class="n">is_spinorbit</span><span class="p">:</span>
+                <span class="c1"># conjugate the imaginary value and transpose spin-box</span>
+                <span class="k">if</span> <span class="n">sp</span><span class="o">.</span><span class="n">dkind</span> <span class="o">==</span> <span class="s1">&#39;f&#39;</span><span class="p">:</span>
+                    <span class="c1"># imaginary components (including transposing)</span>
+                    <span class="c1">#    12,11,22,21</span>
+                    <span class="n">D</span><span class="p">[:,</span> <span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">7</span><span class="p">]]</span> <span class="o">=</span> <span class="o">-</span><span class="n">D</span><span class="p">[:,</span> <span class="p">[</span><span class="mi">7</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">3</span><span class="p">]]</span>
+                    <span class="c1"># M21r -&gt; M12r</span>
+                    <span class="n">D</span><span class="p">[:,</span> <span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">6</span><span class="p">]]</span> <span class="o">=</span> <span class="n">D</span><span class="p">[:,</span> <span class="p">[</span><span class="mi">6</span><span class="p">,</span> <span class="mi">2</span><span class="p">]]</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">D</span><span class="p">[:,</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">conj</span><span class="p">(</span><span class="n">D</span><span class="p">[:,</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]])</span>
+                    <span class="n">D</span><span class="p">[:,</span> <span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">]]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">conj</span><span class="p">(</span><span class="n">D</span><span class="p">[:,</span> <span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="mi">2</span><span class="p">]])</span>
+        <span class="k">elif</span> <span class="n">sp</span><span class="o">.</span><span class="n">is_spinorbit</span><span class="p">:</span>
+            <span class="c1"># transpose spin-box</span>
+            <span class="k">if</span> <span class="n">sp</span><span class="o">.</span><span class="n">dkind</span> <span class="o">==</span> <span class="s1">&#39;f&#39;</span><span class="p">:</span>
+                <span class="c1">#    12 -&gt; 21</span>
+                <span class="n">D</span><span class="p">[:,</span> <span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">7</span><span class="p">]]</span> <span class="o">=</span> <span class="n">D</span><span class="p">[:,</span> <span class="p">[</span><span class="mi">6</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">]]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">D</span><span class="p">[:,</span> <span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">]]</span> <span class="o">=</span> <span class="n">D</span><span class="p">[:,</span> <span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="mi">2</span><span class="p">]]</span>
+
+        <span class="k">return</span> <span class="n">new</span></div>
+
+<div class="viewcode-block" id="SparseOrbitalBZSpin.trs"><a class="viewcode-back" href="../../../api-generated/sisl.physics.SparseOrbitalBZSpin.html#sisl.physics.SparseOrbitalBZSpin.trs">[docs]</a>    <span class="k">def</span> <span class="nf">trs</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Create a new matrix with applied time-reversal-symmetry</span>
+
+<span class="sd">        Time reversal symmetry is applied using the following equality:</span>
+
+<span class="sd">        .. math::</span>
+
+<span class="sd">            2M = M + \boldsymbol\sigma_y K M \boldsymbol\sigma_y</span>
+
+<span class="sd">        where :math:`K` is the conjugation operator.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">new</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">sp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">spin</span>
+        <span class="n">D</span> <span class="o">=</span> <span class="n">new</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">_D</span>
+
+        <span class="k">if</span> <span class="n">sp</span><span class="o">.</span><span class="n">is_spinorbit</span><span class="p">:</span>
+            <span class="c1"># Apply Pauli-Y on the left and right of each spin-box</span>
+            <span class="k">if</span> <span class="n">sp</span><span class="o">.</span><span class="n">dkind</span> <span class="o">==</span> <span class="s1">&#39;f&#39;</span><span class="p">:</span>
+                <span class="c1"># [R11, R22, R12, I12, I11, I22, R21, I21]</span>
+                <span class="c1"># [R11, R22] = [R22, R11]</span>
+                <span class="c1"># [I12, I21] = [I21, I12] (conj + Y @ Y[sign-changes conj])</span>
+                <span class="n">D</span><span class="p">[:,</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">7</span><span class="p">]]</span> <span class="o">=</span> <span class="n">D</span><span class="p">[:,</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span> <span class="mi">3</span><span class="p">]]</span>
+                <span class="c1"># [I11, I22] = -[I22, I11] (conj + Y @ Y[no sign change])</span>
+                <span class="c1"># [R12, R21] = -[R21, R12] (Y @ Y)</span>
+                <span class="n">D</span><span class="p">[:,</span> <span class="p">[</span><span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">6</span><span class="p">]]</span> <span class="o">=</span> <span class="o">-</span><span class="n">D</span><span class="p">[:,</span> <span class="p">[</span><span class="mi">5</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">2</span><span class="p">]]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># [11, 22, 12, 21]</span>
+                <span class="c1"># [11, 22] = K[22, 11]</span>
+                <span class="n">D</span><span class="p">[:,</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">conj</span><span class="p">(</span><span class="n">D</span><span class="p">[:,</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">]])</span>
+                <span class="c1"># [12, 21] = -K[21, 12]</span>
+                <span class="n">D</span><span class="p">[:,</span> <span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">]]</span> <span class="o">=</span> <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">conj</span><span class="p">(</span><span class="n">D</span><span class="p">[:,</span> <span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="mi">2</span><span class="p">]])</span>
+
+        <span class="k">return</span> <span class="n">new</span></div>
+
     <span class="k">def</span> <span class="nf">__getstate__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">return</span> <span class="p">{</span>
             <span class="s1">&#39;sparseorbitalbzspin&#39;</span><span class="p">:</span> <span class="nb">super</span><span class="p">(</span><span class="n">SparseOrbitalBZSpin</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__getstate__</span><span class="p">(),</span>
             <span class="s1">&#39;spin&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_spin</span><span class="o">.</span><span class="n">__getstate__</span><span class="p">(),</span>
-            <span class="s1">&#39;orthogonal&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_orthogonal</span>
+            <span class="s1">&#39;orthogonal&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_orthogonal</span><span class="p">,</span>
         <span class="p">}</span>
 
     <span class="k">def</span> <span class="nf">__setstate__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">):</span>
