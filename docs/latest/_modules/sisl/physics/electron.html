@@ -180,7 +180,7 @@
 <span class="sd">electronic eigenvalues and other quantities.</span>
 
 <span class="sd">This module implements the necessary tools required for calculating</span>
-<span class="sd">DOS, PDOS, band-velocities and spin moments of non-collinear calculations.</span>
+<span class="sd">DOS, PDOS, band-velocities and spin moments of non-colinear calculations.</span>
 <span class="sd">One may also plot real-space wavefunctions.</span>
 
 <span class="sd">.. autosummary::</span>
@@ -193,6 +193,7 @@
 <span class="sd">   berry_phase</span>
 <span class="sd">   wavefunction</span>
 <span class="sd">   spin_moment</span>
+<span class="sd">   spin_orbital_moment</span>
 <span class="sd">   spin_squared</span>
 
 
@@ -249,7 +250,8 @@
 
 <span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;DOS&#39;</span><span class="p">,</span> <span class="s1">&#39;PDOS&#39;</span><span class="p">]</span>
 <span class="n">__all__</span> <span class="o">+=</span> <span class="p">[</span><span class="s1">&#39;velocity&#39;</span><span class="p">,</span> <span class="s1">&#39;velocity_matrix&#39;</span><span class="p">]</span>
-<span class="n">__all__</span> <span class="o">+=</span> <span class="p">[</span><span class="s1">&#39;spin_moment&#39;</span><span class="p">,</span> <span class="s1">&#39;inv_eff_mass_tensor&#39;</span><span class="p">,</span> <span class="s1">&#39;berry_phase&#39;</span><span class="p">]</span>
+<span class="n">__all__</span> <span class="o">+=</span> <span class="p">[</span><span class="s1">&#39;spin_moment&#39;</span><span class="p">,</span> <span class="s1">&#39;spin_orbital_moment&#39;</span><span class="p">]</span>
+<span class="n">__all__</span> <span class="o">+=</span> <span class="p">[</span><span class="s1">&#39;inv_eff_mass_tensor&#39;</span><span class="p">,</span> <span class="s1">&#39;berry_phase&#39;</span><span class="p">]</span>
 <span class="n">__all__</span> <span class="o">+=</span> <span class="p">[</span><span class="s1">&#39;wavefunction&#39;</span><span class="p">]</span>
 <span class="n">__all__</span> <span class="o">+=</span> <span class="p">[</span><span class="s1">&#39;CoefficientElectron&#39;</span><span class="p">,</span> <span class="s1">&#39;StateElectron&#39;</span><span class="p">,</span> <span class="s1">&#39;StateCElectron&#39;</span><span class="p">]</span>
 <span class="n">__all__</span> <span class="o">+=</span> <span class="p">[</span><span class="s1">&#39;EigenvalueElectron&#39;</span><span class="p">,</span> <span class="s1">&#39;EigenvectorElectron&#39;</span><span class="p">,</span> <span class="s1">&#39;EigenstateElectron&#39;</span><span class="p">]</span>
@@ -282,6 +284,7 @@
 <span class="sd">    sisl.physics.distribution : a selected set of implemented distribution functions</span>
 <span class="sd">    PDOS : projected DOS (same as this, but projected onto each orbital)</span>
 <span class="sd">    spin_moment : spin moment for states</span>
+<span class="sd">    spin_orbital_moment : orbital resolved spin-moment</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
@@ -312,7 +315,7 @@
 <span class="sd">    .. math::</span>
 <span class="sd">       \mathrm{DOS}(E) = \sum_\nu\mathrm{PDOS}_\nu(E)</span>
 
-<span class="sd">    For non-collinear calculations (this includes spin-orbit calculations) the PDOS is additionally</span>
+<span class="sd">    For non-colinear calculations (this includes spin-orbit calculations) the PDOS is additionally</span>
 <span class="sd">    separated into 4 components (in this order):</span>
 
 <span class="sd">    - Total projected DOS</span>
@@ -345,13 +348,13 @@
 <span class="sd">       eigenvectors</span>
 <span class="sd">    S : array_like, optional</span>
 <span class="sd">       overlap matrix used in the :math:`\langle\psi|\mathbf S|\psi\rangle` calculation. If `None` the identity</span>
-<span class="sd">       matrix is assumed. For non-collinear calculations this matrix may be halve the size of ``len(state[0, :])`` to</span>
-<span class="sd">       trigger the non-collinear calculation of PDOS.</span>
+<span class="sd">       matrix is assumed. For non-colinear calculations this matrix may be halve the size of ``len(state[0, :])`` to</span>
+<span class="sd">       trigger the non-colinear calculation of PDOS.</span>
 <span class="sd">    distribution : func or str, optional</span>
 <span class="sd">       a function that accepts :math:`E-\epsilon` as argument and calculates the</span>
 <span class="sd">       distribution function.</span>
 <span class="sd">    spin : str or Spin, optional</span>
-<span class="sd">       the spin configuration. This is generally only needed when the eigenvectors correspond to a non-collinear</span>
+<span class="sd">       the spin configuration. This is generally only needed when the eigenvectors correspond to a non-colinear</span>
 <span class="sd">       calculation.</span>
 
 <span class="sd">    See Also</span>
@@ -359,18 +362,19 @@
 <span class="sd">    sisl.physics.distribution : a selected set of implemented distribution functions</span>
 <span class="sd">    DOS : total DOS (same as summing over orbitals)</span>
 <span class="sd">    spin_moment : spin moment for states</span>
+<span class="sd">    spin_orbital_moment : orbital resolved spin-moment</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
 <span class="sd">    numpy.ndarray</span>
 <span class="sd">        projected DOS calculated at energies, has dimension ``(state.shape[1], len(E))``.</span>
-<span class="sd">        For non-collinear calculations it will be ``(4, state.shape[1] // 2, len(E))``, ordered as</span>
+<span class="sd">        For non-colinear calculations it will be ``(4, state.shape[1] // 2, len(E))``, ordered as</span>
 <span class="sd">        indicated in the above list.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">distribution</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
         <span class="n">distribution</span> <span class="o">=</span> <span class="n">get_distribution</span><span class="p">(</span><span class="n">distribution</span><span class="p">)</span>
 
-    <span class="c1"># Figure out whether we are dealing with a non-collinear calculation</span>
+    <span class="c1"># Figure out whether we are dealing with a non-colinear calculation</span>
     <span class="k">if</span> <span class="n">S</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">class</span> <span class="nc">S</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
             <span class="vm">__slots__</span> <span class="o">=</span> <span class="p">[]</span>
@@ -386,7 +390,7 @@
         <span class="k">else</span><span class="p">:</span>
             <span class="n">spin</span> <span class="o">=</span> <span class="n">Spin</span><span class="p">()</span>
 
-    <span class="c1"># check for non-collinear (or SO)</span>
+    <span class="c1"># check for non-colinear (or SO)</span>
     <span class="k">if</span> <span class="n">spin</span><span class="o">.</span><span class="n">kind</span> <span class="o">&gt;</span> <span class="n">Spin</span><span class="o">.</span><span class="n">POLARIZED</span><span class="p">:</span>
         <span class="c1"># Non colinear eigenvectors</span>
         <span class="k">if</span> <span class="n">S</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="n">state</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]:</span>
@@ -428,7 +432,7 @@
 <div class="viewcode-block" id="spin_moment"><a class="viewcode-back" href="../../../api-generated/sisl.physics.electron.spin_moment.html#sisl.physics.spin_moment">[docs]</a><span class="k">def</span> <span class="nf">spin_moment</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">S</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
     <span class="sa">r</span><span class="sd">&quot;&quot;&quot; Calculate the spin magnetic moment (also known as spin texture)</span>
 
-<span class="sd">    This calculation only makes sense for non-collinear calculations.</span>
+<span class="sd">    This calculation only makes sense for non-colinear calculations.</span>
 
 <span class="sd">    The returned quantities are given in this order:</span>
 
@@ -453,17 +457,18 @@
 <span class="sd">    S : array_like, optional</span>
 <span class="sd">       overlap matrix used in the :math:`\langle\psi|\mathbf S|\psi\rangle` calculation. If `None` the identity</span>
 <span class="sd">       matrix is assumed. The overlap matrix should correspond to the system and :math:`k` point the eigenvectors</span>
-<span class="sd">       have been evaluated at.</span>
+<span class="sd">       has been evaluated at.</span>
 
 <span class="sd">    Notes</span>
 <span class="sd">    -----</span>
-<span class="sd">    This routine cannot check whether the input eigenvectors originate from a non-collinear calculation.</span>
+<span class="sd">    This routine cannot check whether the input eigenvectors originate from a non-colinear calculation.</span>
 <span class="sd">    If a non-polarized eigenvector is passed to this routine, the output will have no physical meaning.</span>
 
 <span class="sd">    See Also</span>
 <span class="sd">    --------</span>
 <span class="sd">    DOS : total DOS</span>
 <span class="sd">    PDOS : projected DOS</span>
+<span class="sd">    spin_orbital_moment : orbital resolved spin-moment</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
@@ -498,6 +503,81 @@
         <span class="n">D</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="p">(</span><span class="n">conj</span><span class="p">(</span><span class="n">state</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="mi">1</span><span class="p">::</span><span class="mi">2</span><span class="p">])</span> <span class="o">*</span> <span class="n">Sstate</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">])</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
         <span class="n">s</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">D</span><span class="o">.</span><span class="n">real</span>
         <span class="n">s</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">D</span><span class="o">.</span><span class="n">imag</span>
+
+    <span class="k">return</span> <span class="n">s</span></div>
+
+
+<div class="viewcode-block" id="spin_orbital_moment"><a class="viewcode-back" href="../../../api-generated/sisl.physics.electron.spin_orbital_moment.html#sisl.physics.spin_orbital_moment">[docs]</a><span class="k">def</span> <span class="nf">spin_orbital_moment</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">S</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sa">r</span><span class="sd">&quot;&quot;&quot; Calculate the spin magnetic moment per orbital site (equivalent to spin-moment per orbital)</span>
+
+<span class="sd">    This calculation only makes sense for non-colinear calculations.</span>
+
+<span class="sd">    The returned quantities are given in this order:</span>
+
+<span class="sd">    - Spin magnetic moment along :math:`x` direction</span>
+<span class="sd">    - Spin magnetic moment along :math:`y` direction</span>
+<span class="sd">    - Spin magnetic moment along :math:`z` direction</span>
+
+<span class="sd">    These are calculated using the Pauli matrices :math:`\boldsymbol\sigma_x`, :math:`\boldsymbol\sigma_y` and :math:`\boldsymbol\sigma_z`:</span>
+
+<span class="sd">    .. math::</span>
+
+<span class="sd">       \mathbf{S}_{i,o}^x &amp;= \psi_{i,o}^* | \boldsymbol\sigma_x \mathbf S | \psi_i \rangle</span>
+<span class="sd">       \\</span>
+<span class="sd">       \mathbf{S}_{i,o}^y &amp;= \psi_{i,o}^* | \boldsymbol\sigma_y \mathbf S | \psi_i \rangle</span>
+<span class="sd">       \\</span>
+<span class="sd">       \mathbf{S}_{i,o}^z &amp;= \psi_{i,o}^* | \boldsymbol\sigma_z \mathbf S | \psi_i \rangle</span>
+
+<span class="sd">    Note that this is equivalent to `PDOS` *without* the distribution function and energy grid.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    state : array_like</span>
+<span class="sd">       vectors describing the electronic states, 2nd dimension contains the states</span>
+<span class="sd">    S : array_like, optional</span>
+<span class="sd">       overlap matrix used in the :math:`\mathbf S|\psi\rangle` calculation. If `None` the identity</span>
+<span class="sd">       matrix is assumed. The overlap matrix should correspond to the system and :math:`k` point the eigenvectors</span>
+<span class="sd">       has been evaluated at.</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    This routine cannot check whether the input eigenvectors originate from a non-colinear calculation.</span>
+<span class="sd">    If a non-polarized eigenvector is passed to this routine, the output will have no physical meaning.</span>
+
+<span class="sd">    See Also</span>
+<span class="sd">    --------</span>
+<span class="sd">    DOS : total DOS</span>
+<span class="sd">    PDOS : projected DOS</span>
+<span class="sd">    spin_moment : spin moment for states (equivalent to the ``spin_orbital_moment.sum(1)``)</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    numpy.ndarray</span>
+<span class="sd">        spin moments per state with final dimension ``(state.shape[0], state.shape[1] // 2, 3)``.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">state</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">spin_orbital_moment</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">),</span> <span class="n">S</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+
+    <span class="k">if</span> <span class="n">S</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">class</span> <span class="nc">S</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+            <span class="vm">__slots__</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="n">shape</span> <span class="o">=</span> <span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">//</span> <span class="mi">2</span><span class="p">,</span> <span class="n">state</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">//</span> <span class="mi">2</span><span class="p">)</span>
+            <span class="nd">@staticmethod</span>
+            <span class="k">def</span> <span class="nf">dot</span><span class="p">(</span><span class="n">v</span><span class="p">):</span>
+                <span class="k">return</span> <span class="n">v</span>
+
+    <span class="k">if</span> <span class="n">S</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="n">state</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]:</span>
+        <span class="n">S</span> <span class="o">=</span> <span class="n">S</span><span class="p">[::</span><span class="mi">2</span><span class="p">,</span> <span class="p">::</span><span class="mi">2</span><span class="p">]</span>
+
+    <span class="n">s</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">([</span><span class="n">state</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">state</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">//</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype_complex_to_real</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">dtype</span><span class="p">))</span>
+
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">state</span><span class="p">)):</span>
+        <span class="n">Sstate</span> <span class="o">=</span> <span class="n">S</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">state</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span>
+        <span class="n">D</span> <span class="o">=</span> <span class="p">(</span><span class="n">conj</span><span class="p">(</span><span class="n">state</span><span class="p">[</span><span class="n">i</span><span class="p">])</span> <span class="o">*</span> <span class="n">Sstate</span><span class="o">.</span><span class="n">ravel</span><span class="p">())</span><span class="o">.</span><span class="n">real</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+        <span class="n">s</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="p">:,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">D</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">D</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span>
+        <span class="n">D</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">conj</span><span class="p">(</span><span class="n">state</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="mi">1</span><span class="p">::</span><span class="mi">2</span><span class="p">])</span> <span class="o">*</span> <span class="n">Sstate</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span>
+        <span class="n">s</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="p">:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">D</span><span class="o">.</span><span class="n">real</span>
+        <span class="n">s</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="p">:,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">D</span><span class="o">.</span><span class="n">imag</span>
 
     <span class="k">return</span> <span class="n">s</span></div>
 
@@ -1150,7 +1230,7 @@
 <span class="sd">    .. math::</span>
 <span class="sd">       \psi(\mathbf r) = \sum_i\phi_i(\mathbf r) |\psi\rangle_i \exp(-i\mathbf k \mathbf R)</span>
 
-<span class="sd">    While for non-collinear/spin-orbit calculations the wavefunctions are determined from the</span>
+<span class="sd">    While for non-colinear/spin-orbit calculations the wavefunctions are determined from the</span>
 <span class="sd">    spinor component (`spinor`)</span>
 
 <span class="sd">    .. math::</span>
@@ -1187,13 +1267,13 @@
 <span class="sd">       to calculate the eigenstate will be used (generally shouldn&#39;t be used unless the `EigenstateElectron` object</span>
 <span class="sd">       has not been created via :meth:`~.Hamiltonian.eigenstate`).</span>
 <span class="sd">    spinor : int, optional</span>
-<span class="sd">       the spinor for non-collinear/spin-orbit calculations. This is only used if the</span>
+<span class="sd">       the spinor for non-colinear/spin-orbit calculations. This is only used if the</span>
 <span class="sd">       eigenstate object has been created from a parent object with a `Spin` object</span>
-<span class="sd">       contained, *and* if the spin-configuration is non-collinear or spin-orbit coupling.</span>
+<span class="sd">       contained, *and* if the spin-configuration is non-colinear or spin-orbit coupling.</span>
 <span class="sd">       Default to the first spinor component.</span>
 <span class="sd">    spin : Spin, optional</span>
 <span class="sd">       specification of the spin configuration of the orbital coefficients. This only has</span>
-<span class="sd">       influence for non-collinear wavefunctions where `spinor` choice is important.</span>
+<span class="sd">       influence for non-colinear wavefunctions where `spinor` choice is important.</span>
 <span class="sd">    eta : bool, optional</span>
 <span class="sd">       Display a console progressbar.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
@@ -1211,12 +1291,12 @@
 
     <span class="k">if</span> <span class="n">spin</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="o">//</span> <span class="mi">2</span> <span class="o">==</span> <span class="n">geometry</span><span class="o">.</span><span class="n">no</span><span class="p">:</span>
-            <span class="c1"># We can see from the input that the vector *must* be a non-collinear calculation</span>
+            <span class="c1"># We can see from the input that the vector *must* be a non-colinear calculation</span>
             <span class="n">v</span> <span class="o">=</span> <span class="n">v</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">)[:,</span> <span class="n">spinor</span><span class="p">]</span>
-            <span class="n">info</span><span class="p">(</span><span class="s1">&#39;wavefunction assumes the input wavefunction coefficients to originate from a non-collinear calculation!&#39;</span><span class="p">)</span>
+            <span class="n">info</span><span class="p">(</span><span class="s1">&#39;wavefunction assumes the input wavefunction coefficients to originate from a non-colinear calculation!&#39;</span><span class="p">)</span>
 
     <span class="k">elif</span> <span class="n">spin</span><span class="o">.</span><span class="n">kind</span> <span class="o">&gt;</span> <span class="n">Spin</span><span class="o">.</span><span class="n">POLARIZED</span><span class="p">:</span>
-        <span class="c1"># For non-collinear cases the user selects the spinor component.</span>
+        <span class="c1"># For non-colinear cases the user selects the spinor component.</span>
         <span class="n">v</span> <span class="o">=</span> <span class="n">v</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">)[:,</span> <span class="n">spinor</span><span class="p">]</span>
 
     <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="o">!=</span> <span class="n">geometry</span><span class="o">.</span><span class="n">no</span><span class="p">:</span>
@@ -1471,7 +1551,7 @@
     <span class="vm">__slots__</span> <span class="o">=</span> <span class="p">[]</span>
 
     <span class="k">def</span> <span class="nf">__is_nc</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot; Internal routine to check whether this is a non-collinear calculation &quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot; Internal routine to check whether this is a non-colinear calculation &quot;&quot;&quot;</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">spin</span><span class="o">.</span><span class="n">has_noncolinear</span>
         <span class="k">except</span><span class="p">:</span>
@@ -1489,7 +1569,7 @@
 <span class="sd">           the returned format of the overlap matrix. This only takes effect for</span>
 <span class="sd">           non-orthogonal parents.</span>
 <span class="sd">        spin : Spin, optional</span>
-<span class="sd">           for non-collinear spin configurations the *fake* overlap matrix returned</span>
+<span class="sd">           for non-colinear spin configurations the *fake* overlap matrix returned</span>
 <span class="sd">           will have halve the size of the input matrix. If you want the *full* overlap</span>
 <span class="sd">           matrix, simply do not specify the `spin` argument.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -1607,6 +1687,20 @@
         <span class="k">except</span><span class="p">:</span>
             <span class="n">spin</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="k">return</span> <span class="n">spin_moment</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">Sk</span><span class="p">(</span><span class="n">spin</span><span class="o">=</span><span class="n">spin</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">spin_orbital_moment</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot; Calculate spin moment per orbital from the states</span>
+
+<span class="sd">        This routine calls `~sisl.physics.electron.spin_orbital_moment` with appropriate arguments</span>
+<span class="sd">        and returns the spin moment for each orbital on the states.</span>
+
+<span class="sd">        See `~sisl.physics.electron.spin_orbital_moment` for details.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">spin</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">spin</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">spin</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">return</span> <span class="n">spin_orbital_moment</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">Sk</span><span class="p">(</span><span class="n">spin</span><span class="o">=</span><span class="n">spin</span><span class="p">))</span>
 
     <span class="k">def</span> <span class="nf">expectation</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">A</span><span class="p">,</span> <span class="n">diag</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
         <span class="sa">r</span><span class="sd">&quot;&quot;&quot; Calculate the expectation value of matrix `A`</span>
@@ -1969,7 +2063,7 @@
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2015-2018, Nick Papior
+        &copy; Copyright 2015-2019, Nick Papior
 
     </p>
   </div>
