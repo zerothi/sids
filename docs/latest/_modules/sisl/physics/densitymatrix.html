@@ -175,7 +175,8 @@
 <span class="kn">from</span> <span class="nn">scipy.sparse</span> <span class="k">import</span> <span class="n">csr_matrix</span><span class="p">,</span> <span class="n">triu</span><span class="p">,</span> <span class="n">tril</span>
 <span class="kn">from</span> <span class="nn">scipy.sparse</span> <span class="k">import</span> <span class="n">hstack</span> <span class="k">as</span> <span class="n">ss_hstack</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-<span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">dot</span><span class="p">,</span> <span class="n">unique</span>
+<span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">repeat</span><span class="p">,</span> <span class="n">logical_and</span>
+<span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">dot</span><span class="p">,</span> <span class="n">unique</span><span class="p">,</span> <span class="n">add</span><span class="p">,</span> <span class="n">subtract</span>
 
 <span class="kn">from</span> <span class="nn">sisl.geometry</span> <span class="k">import</span> <span class="n">Geometry</span>
 <span class="kn">from</span> <span class="nn">sisl.supercell</span> <span class="k">import</span> <span class="n">SuperCell</span>
@@ -195,44 +196,93 @@
 
 <span class="k">class</span> <span class="nc">_realspace_DensityMatrix</span><span class="p">(</span><span class="n">SparseOrbitalBZSpin</span><span class="p">):</span>
 
-    <span class="k">def</span> <span class="nf">_mulliken</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="c1"># Calculate the Mulliken elements</span>
+    <span class="k">def</span> <span class="nf">mulliken</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">projection</span><span class="o">=</span><span class="s1">&#39;orbital&#39;</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot; Calculate Mulliken charges from the density matrix</span>
 
-        <span class="c1"># First we re-create the sparse matrix as required for csr_matrix</span>
-        <span class="n">ptr</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">ptr</span>
-        <span class="n">ncol</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">ncol</span>
-        <span class="c1"># Indices of non-zero elements</span>
-        <span class="n">idx</span> <span class="o">=</span> <span class="n">array_arange</span><span class="p">(</span><span class="n">ptr</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">n</span><span class="o">=</span><span class="n">ncol</span><span class="p">)</span>
-        <span class="c1"># Create the new pointer array</span>
-        <span class="n">new_ptr</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">emptyi</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">ptr</span><span class="p">))</span>
-        <span class="n">new_ptr</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
-        <span class="n">col</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">col</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span>
-        <span class="n">_a</span><span class="o">.</span><span class="n">cumsumi</span><span class="p">(</span><span class="n">ncol</span><span class="p">,</span> <span class="n">out</span><span class="o">=</span><span class="n">new_ptr</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span>
+<span class="sd">        In the following :math:`\nu` and :math:`\mu` are orbital indices.</span>
+<span class="sd">        Atomic indices noted by :math:`\alpha`, :math:`\beta`.</span>
+<span class="sd">        Matrices :math:`\boldsymbol\rho` and :math:`\mathbf S` are density</span>
+<span class="sd">        and overlap matrices, respectively.</span>
 
-        <span class="c1"># The shape of the matrices</span>
-        <span class="n">shape</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[:</span><span class="mi">2</span><span class="p">]</span>
+<span class="sd">        For polarized calculations the Mulliken charges are calculated as</span>
+<span class="sd">        (for each spin-channel)</span>
 
-        <span class="c1"># Create list of charges to be returned</span>
-        <span class="n">Q</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+<span class="sd">        .. math::</span>
+<span class="sd">             M_{\nu} &amp;= \sum_mu [\boldsymbol\rho \mathbf S]_{\nu\mu}</span>
+<span class="sd">             M_{\alpha} &amp;= \sum_{\nu\in\alpha} M_{\nu}</span>
 
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">orthogonal</span><span class="p">:</span>
-            <span class="c1"># We only need the diagonal elements</span>
-            <span class="n">S</span> <span class="o">=</span> <span class="n">csr_matrix</span><span class="p">(</span><span class="n">shape</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
-            <span class="n">S</span><span class="o">.</span><span class="n">setdiag</span><span class="p">(</span><span class="mf">1.</span><span class="p">)</span>
+<span class="sd">        For non-colinear calculations (including spin-orbit) they are calculated</span>
+<span class="sd">        as above but using the spin-box per orbital (:math:`\sigma` is spin)</span>
 
-            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">]):</span>
-                <span class="n">DM</span> <span class="o">=</span> <span class="n">csr_matrix</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">_D</span><span class="p">[</span><span class="n">idx</span><span class="p">,</span> <span class="n">i</span><span class="p">],</span> <span class="n">col</span><span class="p">,</span> <span class="n">new_ptr</span><span class="p">),</span> <span class="n">shape</span><span class="o">=</span><span class="n">shape</span><span class="p">)</span>
-                <span class="n">Q</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">DM</span><span class="o">.</span><span class="n">multiply</span><span class="p">(</span><span class="n">S</span><span class="p">))</span>
-                <span class="n">Q</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">eliminate_zeros</span><span class="p">()</span>
-        <span class="k">else</span><span class="p">:</span>
+<span class="sd">        .. math::</span>
+<span class="sd">             M_{\nu} &amp;= \sum_\sigma\sum_mu [\boldsymbol\rho \mathbf S]_{\nu\mu,\sigma\sigma}</span>
+<span class="sd">             S_{\nu}^x &amp;= \sum_mu \Re [\boldsymbol\rho \mathbf S]_{\nu\mu,\uparrow\downarrow} +</span>
+<span class="sd">                          \Re [\boldsymbol\rho \mathbf S]_{\nu\mu,\downarrow\uparrow}</span>
+<span class="sd">             S_{\nu}^y &amp;= \sum_mu \Im [\boldsymbol\rho \mathbf S]_{\nu\mu,\uparrow\downarrow} -</span>
+<span class="sd">                          \Im [\boldsymbol\rho \mathbf S]_{\nu\mu,\downarrow\uparrow}</span>
+<span class="sd">             S_{\nu}^z &amp;= \sum_mu \Re [\boldsymbol\rho \mathbf S]_{\nu\mu,\uparrow\uparrow} -</span>
+<span class="sd">                          \Re [\boldsymbol\rho \mathbf S]_{\nu\mu,\downarrow\downarrow}</span>
 
-            <span class="c1"># We now what S is and do it element-wise.</span>
-            <span class="n">q</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">_D</span><span class="p">[</span><span class="n">idx</span><span class="p">,</span> <span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">_D</span><span class="p">[</span><span class="n">idx</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">S_idx</span><span class="p">]</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
-            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">q</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
-                <span class="n">Q</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">csr_matrix</span><span class="p">((</span><span class="n">q</span><span class="p">[:,</span> <span class="n">i</span><span class="p">],</span> <span class="n">col</span><span class="p">,</span> <span class="n">new_ptr</span><span class="p">),</span> <span class="n">shape</span><span class="o">=</span><span class="n">shape</span><span class="p">))</span>
-                <span class="n">Q</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">eliminate_zeros</span><span class="p">()</span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        projection : {&#39;orbital&#39;, &#39;atom&#39;}</span>
+<span class="sd">            how the Mulliken charges are returned.</span>
+<span class="sd">            Can be atom-resolved, orbital-resolved or the</span>
+<span class="sd">            charge matrix (off-diagonal elements)</span>
 
-        <span class="k">return</span> <span class="n">Q</span>
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        numpy.ndarray</span>
+<span class="sd">            if `projection` does not contain matrix, the first dimension contains the spin information</span>
+<span class="sd">        list of scipy.sparse.csr_matrix</span>
+<span class="sd">            if `projection` contains matrix</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">def</span> <span class="nf">_convert</span><span class="p">(</span><span class="n">M</span><span class="p">):</span>
+            <span class="sd">&quot;&quot;&quot; Converts a non-colinear DM from [11, 22, Re(12), Im(12)] -&gt; [T, Sx, Sy, Sz] &quot;&quot;&quot;</span>
+            <span class="k">if</span> <span class="n">M</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="mi">8</span><span class="p">:</span>
+                <span class="c1"># We need to calculate the corresponding values</span>
+                <span class="n">M</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">M</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">+</span> <span class="n">M</span><span class="p">[:,</span> <span class="mi">6</span><span class="p">])</span>
+                <span class="n">M</span><span class="p">[:,</span> <span class="mi">3</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">M</span><span class="p">[:,</span> <span class="mi">3</span><span class="p">]</span> <span class="o">-</span> <span class="n">M</span><span class="p">[:,</span> <span class="mi">7</span><span class="p">])</span> <span class="c1"># sign change again below</span>
+                <span class="n">M</span> <span class="o">=</span> <span class="n">M</span><span class="p">[:,</span> <span class="p">:</span><span class="mi">4</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">M</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="mi">4</span><span class="p">:</span>
+                <span class="n">m</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty_like</span><span class="p">(</span><span class="n">M</span><span class="p">)</span>
+                <span class="n">m</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">M</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">M</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span>
+                <span class="n">m</span><span class="p">[:,</span> <span class="mi">3</span><span class="p">]</span> <span class="o">=</span> <span class="n">M</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">M</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span>
+                <span class="n">m</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">M</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">]</span>
+                <span class="n">m</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">M</span><span class="p">[:,</span> <span class="mi">3</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">M</span>
+            <span class="k">return</span> <span class="n">m</span>
+
+        <span class="k">if</span> <span class="s2">&quot;orbital&quot;</span> <span class="o">==</span> <span class="n">projection</span><span class="p">:</span>
+            <span class="c1"># Orbital Mulliken population</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">orthogonal</span><span class="p">:</span>
+                <span class="n">D</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">tocsr</span><span class="p">(</span><span class="n">i</span><span class="p">)</span><span class="o">.</span><span class="n">diagonal</span><span class="p">()</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">])])</span><span class="o">.</span><span class="n">T</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">D</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span><span class="p">))</span>
+                <span class="n">D</span><span class="o">.</span><span class="n">_D</span> <span class="o">*=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">_D</span><span class="p">[:,</span> <span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+                <span class="n">D</span> <span class="o">=</span> <span class="n">D</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+
+            <span class="k">return</span> <span class="n">_convert</span><span class="p">(</span><span class="n">D</span><span class="p">)</span><span class="o">.</span><span class="n">T</span>
+
+        <span class="k">elif</span> <span class="s2">&quot;atom&quot;</span> <span class="o">==</span> <span class="n">projection</span><span class="p">:</span>
+            <span class="c1"># Atomic Mulliken population</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">orthogonal</span><span class="p">:</span>
+                <span class="n">D</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">tocsr</span><span class="p">(</span><span class="n">i</span><span class="p">)</span><span class="o">.</span><span class="n">diagonal</span><span class="p">()</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">])])</span><span class="o">.</span><span class="n">T</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">D</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span><span class="p">))</span>
+                <span class="n">D</span><span class="o">.</span><span class="n">_D</span> <span class="o">*=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">_D</span><span class="p">[:,</span> <span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+                <span class="n">D</span> <span class="o">=</span> <span class="n">D</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+
+            <span class="c1"># Now perform summation per atom</span>
+            <span class="n">geom</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">geometry</span>
+            <span class="n">M</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">([</span><span class="n">geom</span><span class="o">.</span><span class="n">na</span><span class="p">,</span> <span class="n">D</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">D</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">add</span><span class="o">.</span><span class="n">at</span><span class="p">(</span><span class="n">M</span><span class="p">,</span> <span class="n">geom</span><span class="o">.</span><span class="n">o2a</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">geom</span><span class="o">.</span><span class="n">no</span><span class="p">)),</span> <span class="n">D</span><span class="p">)</span>
+            <span class="k">del</span> <span class="n">D</span>
+
+            <span class="k">return</span> <span class="n">_convert</span><span class="p">(</span><span class="n">M</span><span class="p">)</span><span class="o">.</span><span class="n">T</span>
+
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span> <span class="o">+</span> <span class="s2">&quot;.mulliken only allows projection [orbital, atom]&quot;</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">density</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">grid</span><span class="p">,</span> <span class="n">spinor</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="mf">1e-7</span><span class="p">,</span> <span class="n">eta</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
         <span class="sa">r</span><span class="sd">&quot;&quot;&quot; Expand the density matrix to the charge density on a grid</span>
@@ -697,6 +747,223 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">dDk</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dPk</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">ddDk</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ddPk</span>
 
+<div class="viewcode-block" id="DensityMatrix.orbital_momentum"><a class="viewcode-back" href="../../../api-generated/sisl.physics.DensityMatrix.html#sisl.physics.DensityMatrix.orbital_momentum">[docs]</a>    <span class="k">def</span> <span class="nf">orbital_momentum</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">projection</span><span class="o">=</span><span class="s1">&#39;orbital&#39;</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s1">&#39;onsite&#39;</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot; Calculate orbital angular momentum on either atoms or orbitals</span>
+
+<span class="sd">        Currently this implementation equals the Siesta implementation in that</span>
+<span class="sd">        the on-site approximation is enforced thus limiting the calculated quantities</span>
+<span class="sd">        to obey the following conditions:</span>
+
+<span class="sd">        1. Same atom</span>
+<span class="sd">        2. :math:`l&gt;0`</span>
+<span class="sd">        3. :math:`l_\nu \equiv l_\mu`</span>
+<span class="sd">        4. :math:`m_\nu \neq m_\mu`</span>
+<span class="sd">        5. :math:`\zeta_\nu \equiv \zeta_\mu`</span>
+
+<span class="sd">        This allows one to sum the orbital angular moments on a per atom site.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        projection : {&#39;orbital&#39;, &#39;atom&#39;}</span>
+<span class="sd">            whether the angular momentum is resolved per atom, or per orbital</span>
+<span class="sd">        method : {&#39;onsite&#39;}</span>
+<span class="sd">            method used to calculate the angular momentum</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        numpy.ndarray</span>
+<span class="sd">            orbital angular momentum with the last dimension equalling the :math:`L_x`, :math:`L_y` and :math:`L_z` components</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Check that the spin configuration is correct</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">spin</span><span class="o">.</span><span class="n">is_spinorbit</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39;.orbital_momentum requires a spin-orbit matrix&#39;</span><span class="p">)</span>
+
+        <span class="c1"># First we calculate</span>
+        <span class="n">orb_lmZ</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">emptyi</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">no</span><span class="p">,</span> <span class="mi">3</span><span class="p">])</span>
+        <span class="k">for</span> <span class="n">atom</span><span class="p">,</span> <span class="n">idx</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">atoms</span><span class="o">.</span><span class="n">iter</span><span class="p">(</span><span class="kc">True</span><span class="p">):</span>
+            <span class="c1"># convert to FIRST orbital index per atom</span>
+            <span class="n">oidx</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">a2o</span><span class="p">(</span><span class="n">idx</span><span class="p">)</span>
+            <span class="c1"># loop orbitals</span>
+            <span class="k">for</span> <span class="n">io</span><span class="p">,</span> <span class="n">orb</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">atom</span><span class="p">):</span>
+                <span class="n">orb_lmZ</span><span class="p">[</span><span class="n">oidx</span> <span class="o">+</span> <span class="n">io</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">orb</span><span class="o">.</span><span class="n">l</span><span class="p">,</span> <span class="n">orb</span><span class="o">.</span><span class="n">m</span><span class="p">,</span> <span class="n">orb</span><span class="o">.</span><span class="n">Z</span>
+
+        <span class="c1"># Now we need to calculate the stuff</span>
+        <span class="n">DM</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="c1"># The Siesta convention *only* calculates contributions</span>
+        <span class="c1"># in the primary unit-cell.</span>
+        <span class="n">DM</span><span class="o">.</span><span class="n">set_nsc</span><span class="p">([</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="mi">3</span><span class="p">)</span>
+        <span class="n">geom</span> <span class="o">=</span> <span class="n">DM</span><span class="o">.</span><span class="n">geometry</span>
+        <span class="n">csr</span> <span class="o">=</span> <span class="n">DM</span><span class="o">.</span><span class="n">_csr</span>
+
+        <span class="c1"># The siesta moments are only *on-site* per atom.</span>
+        <span class="c1"># 1. create a logical index for the matrix elements</span>
+        <span class="c1">#    that is true for ia-ia interaction and false</span>
+        <span class="c1">#    otherwise</span>
+        <span class="n">idx</span> <span class="o">=</span> <span class="n">repeat</span><span class="p">(</span><span class="n">_a</span><span class="o">.</span><span class="n">arangei</span><span class="p">(</span><span class="n">geom</span><span class="o">.</span><span class="n">no</span><span class="p">),</span> <span class="n">csr</span><span class="o">.</span><span class="n">ncol</span><span class="p">)</span>
+        <span class="n">aidx</span> <span class="o">=</span> <span class="n">geom</span><span class="o">.</span><span class="n">o2a</span><span class="p">(</span><span class="n">idx</span><span class="p">)</span>
+
+        <span class="c1"># Sparse matrix indices for data</span>
+        <span class="n">sidx</span> <span class="o">=</span> <span class="n">array_arange</span><span class="p">(</span><span class="n">csr</span><span class="o">.</span><span class="n">ptr</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">n</span><span class="o">=</span><span class="n">csr</span><span class="o">.</span><span class="n">ncol</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
+        <span class="n">jdx</span> <span class="o">=</span> <span class="n">csr</span><span class="o">.</span><span class="n">col</span><span class="p">[</span><span class="n">sidx</span><span class="p">]</span>
+        <span class="n">ajdx</span> <span class="o">=</span> <span class="n">geom</span><span class="o">.</span><span class="n">o2a</span><span class="p">(</span><span class="n">jdx</span><span class="p">)</span>
+
+        <span class="c1"># Now only take the elements that are *on-site* and which are *not*</span>
+        <span class="c1"># having the same m quantum numbers (if the orbital index is the same</span>
+        <span class="c1"># it means they have the same m quantum number)</span>
+        <span class="c1">#</span>
+        <span class="c1"># 1. on the same atom</span>
+        <span class="c1"># 2. l &gt; 0</span>
+        <span class="c1"># 3. same quantum number l</span>
+        <span class="c1"># 4. different quantum number m</span>
+        <span class="c1"># 5. same zeta</span>
+        <span class="n">onsite_idx</span> <span class="o">=</span> <span class="p">((</span><span class="n">aidx</span> <span class="o">==</span> <span class="n">ajdx</span><span class="p">)</span> <span class="o">&amp;</span> \
+                      <span class="p">(</span><span class="n">orb_lmZ</span><span class="p">[</span><span class="n">idx</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span> <span class="o">&amp;</span> \
+                      <span class="p">(</span><span class="n">orb_lmZ</span><span class="p">[</span><span class="n">idx</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="n">orb_lmZ</span><span class="p">[</span><span class="n">jdx</span><span class="p">,</span> <span class="mi">0</span><span class="p">])</span> <span class="o">&amp;</span> \
+                      <span class="p">(</span><span class="n">orb_lmZ</span><span class="p">[</span><span class="n">idx</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">!=</span> <span class="n">orb_lmZ</span><span class="p">[</span><span class="n">jdx</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span> <span class="o">&amp;</span> \
+                      <span class="p">(</span><span class="n">orb_lmZ</span><span class="p">[</span><span class="n">idx</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">==</span> <span class="n">orb_lmZ</span><span class="p">[</span><span class="n">jdx</span><span class="p">,</span> <span class="mi">2</span><span class="p">]))</span><span class="o">.</span><span class="n">nonzero</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="c1"># clean variables we don&#39;t need</span>
+        <span class="k">del</span> <span class="n">aidx</span><span class="p">,</span> <span class="n">ajdx</span>
+
+        <span class="c1"># Now reduce arrays to the orbital connections that obey the</span>
+        <span class="c1"># above criteria</span>
+        <span class="n">idx</span> <span class="o">=</span> <span class="n">idx</span><span class="p">[</span><span class="n">onsite_idx</span><span class="p">]</span>
+        <span class="n">idx_l</span> <span class="o">=</span> <span class="n">orb_lmZ</span><span class="p">[</span><span class="n">idx</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span>
+        <span class="n">idx_m</span> <span class="o">=</span> <span class="n">orb_lmZ</span><span class="p">[</span><span class="n">idx</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span>
+        <span class="n">jdx</span> <span class="o">=</span> <span class="n">jdx</span><span class="p">[</span><span class="n">onsite_idx</span><span class="p">]</span>
+        <span class="n">jdx_m</span> <span class="o">=</span> <span class="n">orb_lmZ</span><span class="p">[</span><span class="n">jdx</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span>
+        <span class="n">sidx</span> <span class="o">=</span> <span class="n">sidx</span><span class="p">[</span><span class="n">onsite_idx</span><span class="p">]</span>
+
+        <span class="c1"># Sum the spin-box diagonal imaginary parts</span>
+        <span class="n">DM</span> <span class="o">=</span> <span class="n">csr</span><span class="o">.</span><span class="n">_D</span><span class="p">[</span><span class="n">sidx</span><span class="p">][:,</span> <span class="p">[</span><span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">]]</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+        <span class="c1"># Define functions to calculate L projections</span>
+        <span class="k">def</span> <span class="nf">La</span><span class="p">(</span><span class="n">idx_l</span><span class="p">,</span> <span class="n">DM</span><span class="p">,</span> <span class="n">sub</span><span class="p">):</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">sub</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">return</span> <span class="p">[]</span>
+            <span class="k">return</span> <span class="p">(</span><span class="n">idx_l</span><span class="p">[</span><span class="n">sub</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="n">idx_l</span><span class="p">[</span><span class="n">sub</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="mf">0.5</span><span class="p">)</span> <span class="o">**</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">DM</span><span class="p">[</span><span class="n">sub</span><span class="p">]</span>
+
+        <span class="k">def</span> <span class="nf">Lb</span><span class="p">(</span><span class="n">idx_l</span><span class="p">,</span> <span class="n">DM</span><span class="p">,</span> <span class="n">sub</span><span class="p">):</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">sub</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">return</span>
+            <span class="k">return</span> <span class="p">(</span><span class="n">idx_l</span><span class="p">[</span><span class="n">sub</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="n">idx_l</span><span class="p">[</span><span class="n">sub</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">-</span> <span class="mi">2</span><span class="p">)</span> <span class="o">**</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">DM</span><span class="p">[</span><span class="n">sub</span><span class="p">]</span>
+
+        <span class="k">def</span> <span class="nf">Lc</span><span class="p">(</span><span class="n">idx</span><span class="p">,</span> <span class="n">idx_l</span><span class="p">,</span> <span class="n">DM</span><span class="p">,</span> <span class="n">sub</span><span class="p">):</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">sub</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">return</span> <span class="p">[],</span> <span class="p">[]</span>
+            <span class="n">sub</span> <span class="o">=</span> <span class="n">sub</span><span class="p">[</span><span class="n">idx_l</span><span class="p">[</span><span class="n">sub</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="mi">3</span><span class="p">]</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">sub</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">return</span> <span class="p">[],</span> <span class="p">[]</span>
+            <span class="k">return</span> <span class="n">idx</span><span class="p">[</span><span class="n">sub</span><span class="p">],</span> <span class="p">(</span><span class="n">idx_l</span><span class="p">[</span><span class="n">sub</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="n">idx_l</span><span class="p">[</span><span class="n">sub</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">-</span> <span class="mi">6</span><span class="p">)</span> <span class="o">**</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">DM</span><span class="p">[</span><span class="n">sub</span><span class="p">]</span>
+
+        <span class="c1"># construct for different m</span>
+        <span class="c1"># in Siesta the spin orbital angular momentum</span>
+        <span class="c1"># is calculated by swapping i and j indices.</span>
+        <span class="c1"># This is somewhat confusing to me, so I reversed everything.</span>
+        <span class="c1"># This will probably add to the confusion when comparing the two</span>
+        <span class="c1"># Additionally Siesta calculates L for &lt;i|L|j&gt; and then does:</span>
+        <span class="c1">#    L(:) = [L(3), -L(2), -L(1)]</span>
+        <span class="c1"># Here we *directly* store the quantities used</span>
+        <span class="c1"># Pre-allocate the L_xyz quantity per orbital</span>
+        <span class="n">L</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">([</span><span class="n">geom</span><span class="o">.</span><span class="n">no</span><span class="p">,</span> <span class="mi">3</span><span class="p">])</span>
+        <span class="n">L0</span> <span class="o">=</span> <span class="n">L</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span>
+        <span class="n">L1</span> <span class="o">=</span> <span class="n">L</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span>
+        <span class="n">L2</span> <span class="o">=</span> <span class="n">L</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">]</span>
+
+        <span class="c1"># Pre-calculate all those which have m_i + m_j == 0</span>
+        <span class="n">b</span> <span class="o">=</span> <span class="p">(</span><span class="n">idx_m</span> <span class="o">+</span> <span class="n">jdx_m</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">nonzero</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">subtract</span><span class="o">.</span><span class="n">at</span><span class="p">(</span><span class="n">L2</span><span class="p">,</span> <span class="n">idx</span><span class="p">[</span><span class="n">b</span><span class="p">],</span> <span class="n">idx_m</span><span class="p">[</span><span class="n">b</span><span class="p">]</span> <span class="o">*</span> <span class="n">DM</span><span class="p">[</span><span class="n">b</span><span class="p">])</span>
+        <span class="k">del</span> <span class="n">b</span>
+
+        <span class="c1">#   mi == 0</span>
+        <span class="n">i_m</span> <span class="o">=</span> <span class="n">idx_m</span> <span class="o">==</span> <span class="mi">0</span>
+        <span class="c1">#     mj == -1</span>
+        <span class="n">sub</span> <span class="o">=</span> <span class="n">logical_and</span><span class="p">(</span><span class="n">i_m</span><span class="p">,</span> <span class="n">jdx_m</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">nonzero</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">subtract</span><span class="o">.</span><span class="n">at</span><span class="p">(</span><span class="n">L0</span><span class="p">,</span> <span class="n">idx</span><span class="p">[</span><span class="n">sub</span><span class="p">],</span> <span class="n">La</span><span class="p">(</span><span class="n">idx_l</span><span class="p">,</span> <span class="n">DM</span><span class="p">,</span> <span class="n">sub</span><span class="p">))</span>
+        <span class="c1">#     mj == 1</span>
+        <span class="n">sub</span> <span class="o">=</span> <span class="n">logical_and</span><span class="p">(</span><span class="n">i_m</span><span class="p">,</span> <span class="n">jdx_m</span> <span class="o">==</span> <span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">nonzero</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">add</span><span class="o">.</span><span class="n">at</span><span class="p">(</span><span class="n">L1</span><span class="p">,</span> <span class="n">idx</span><span class="p">[</span><span class="n">sub</span><span class="p">],</span> <span class="n">La</span><span class="p">(</span><span class="n">idx_l</span><span class="p">,</span> <span class="n">DM</span><span class="p">,</span> <span class="n">sub</span><span class="p">))</span>
+
+        <span class="c1">#   mi == 1</span>
+        <span class="n">i_m</span> <span class="o">=</span> <span class="n">idx_m</span> <span class="o">==</span> <span class="mi">1</span>
+        <span class="c1">#     mj == -2</span>
+        <span class="n">sub</span> <span class="o">=</span> <span class="n">logical_and</span><span class="p">(</span><span class="n">i_m</span><span class="p">,</span> <span class="n">jdx_m</span> <span class="o">==</span> <span class="o">-</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">nonzero</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">subtract</span><span class="o">.</span><span class="n">at</span><span class="p">(</span><span class="n">L0</span><span class="p">,</span> <span class="n">idx</span><span class="p">[</span><span class="n">sub</span><span class="p">],</span> <span class="n">Lb</span><span class="p">(</span><span class="n">idx_l</span><span class="p">,</span> <span class="n">DM</span><span class="p">,</span> <span class="n">sub</span><span class="p">))</span>
+        <span class="c1">#     mj == 0</span>
+        <span class="n">sub</span> <span class="o">=</span> <span class="n">logical_and</span><span class="p">(</span><span class="n">i_m</span><span class="p">,</span> <span class="n">jdx_m</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">nonzero</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">subtract</span><span class="o">.</span><span class="n">at</span><span class="p">(</span><span class="n">L1</span><span class="p">,</span> <span class="n">idx</span><span class="p">[</span><span class="n">sub</span><span class="p">],</span> <span class="n">La</span><span class="p">(</span><span class="n">idx_l</span><span class="p">,</span> <span class="n">DM</span><span class="p">,</span> <span class="n">sub</span><span class="p">))</span>
+        <span class="c1">#     mj == 2</span>
+        <span class="n">sub</span> <span class="o">=</span> <span class="n">logical_and</span><span class="p">(</span><span class="n">i_m</span><span class="p">,</span> <span class="n">jdx_m</span> <span class="o">==</span> <span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">nonzero</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">add</span><span class="o">.</span><span class="n">at</span><span class="p">(</span><span class="n">L1</span><span class="p">,</span> <span class="n">idx</span><span class="p">[</span><span class="n">sub</span><span class="p">],</span> <span class="n">Lb</span><span class="p">(</span><span class="n">idx_l</span><span class="p">,</span> <span class="n">DM</span><span class="p">,</span> <span class="n">sub</span><span class="p">))</span>
+
+        <span class="c1">#   mi == -1</span>
+        <span class="n">i_m</span> <span class="o">=</span> <span class="n">idx_m</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span>
+        <span class="c1">#     mj == -2</span>
+        <span class="n">sub</span> <span class="o">=</span> <span class="n">logical_and</span><span class="p">(</span><span class="n">i_m</span><span class="p">,</span> <span class="n">jdx_m</span> <span class="o">==</span> <span class="o">-</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">nonzero</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">add</span><span class="o">.</span><span class="n">at</span><span class="p">(</span><span class="n">L1</span><span class="p">,</span> <span class="n">idx</span><span class="p">[</span><span class="n">sub</span><span class="p">],</span> <span class="n">Lb</span><span class="p">(</span><span class="n">idx_l</span><span class="p">,</span> <span class="n">DM</span><span class="p">,</span> <span class="n">sub</span><span class="p">))</span>
+        <span class="c1">#     mj == 0</span>
+        <span class="n">sub</span> <span class="o">=</span> <span class="n">logical_and</span><span class="p">(</span><span class="n">i_m</span><span class="p">,</span> <span class="n">jdx_m</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">nonzero</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">add</span><span class="o">.</span><span class="n">at</span><span class="p">(</span><span class="n">L0</span><span class="p">,</span> <span class="n">idx</span><span class="p">[</span><span class="n">sub</span><span class="p">],</span> <span class="n">La</span><span class="p">(</span><span class="n">idx_l</span><span class="p">,</span> <span class="n">DM</span><span class="p">,</span> <span class="n">sub</span><span class="p">))</span>
+        <span class="c1">#     mj == 2</span>
+        <span class="n">sub</span> <span class="o">=</span> <span class="n">logical_and</span><span class="p">(</span><span class="n">i_m</span><span class="p">,</span> <span class="n">jdx_m</span> <span class="o">==</span> <span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">nonzero</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">add</span><span class="o">.</span><span class="n">at</span><span class="p">(</span><span class="n">L0</span><span class="p">,</span> <span class="n">idx</span><span class="p">[</span><span class="n">sub</span><span class="p">],</span> <span class="n">Lb</span><span class="p">(</span><span class="n">idx_l</span><span class="p">,</span> <span class="n">DM</span><span class="p">,</span> <span class="n">sub</span><span class="p">))</span>
+
+        <span class="c1">#   mi == 2</span>
+        <span class="n">i_m</span> <span class="o">=</span> <span class="n">idx_m</span> <span class="o">==</span> <span class="mi">2</span>
+        <span class="c1">#     mj == -3</span>
+        <span class="n">sub</span> <span class="o">=</span> <span class="n">logical_and</span><span class="p">(</span><span class="n">i_m</span><span class="p">,</span> <span class="n">jdx_m</span> <span class="o">==</span> <span class="o">-</span><span class="mi">3</span><span class="p">)</span><span class="o">.</span><span class="n">nonzero</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">subtract</span><span class="o">.</span><span class="n">at</span><span class="p">(</span><span class="n">L0</span><span class="p">,</span> <span class="o">*</span><span class="n">Lc</span><span class="p">(</span><span class="n">idx</span><span class="p">,</span> <span class="n">idx_l</span><span class="p">,</span> <span class="n">DM</span><span class="p">,</span> <span class="n">sub</span><span class="p">))</span>
+        <span class="c1">#     mj == -1</span>
+        <span class="n">sub</span> <span class="o">=</span> <span class="n">logical_and</span><span class="p">(</span><span class="n">i_m</span><span class="p">,</span> <span class="n">jdx_m</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">nonzero</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">subtract</span><span class="o">.</span><span class="n">at</span><span class="p">(</span><span class="n">L0</span><span class="p">,</span> <span class="n">idx</span><span class="p">[</span><span class="n">sub</span><span class="p">],</span> <span class="n">Lb</span><span class="p">(</span><span class="n">idx_l</span><span class="p">,</span> <span class="n">DM</span><span class="p">,</span> <span class="n">sub</span><span class="p">))</span>
+        <span class="c1">#     mj == 1</span>
+        <span class="n">sub</span> <span class="o">=</span> <span class="n">logical_and</span><span class="p">(</span><span class="n">i_m</span><span class="p">,</span> <span class="n">jdx_m</span> <span class="o">==</span> <span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">nonzero</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">subtract</span><span class="o">.</span><span class="n">at</span><span class="p">(</span><span class="n">L1</span><span class="p">,</span> <span class="n">idx</span><span class="p">[</span><span class="n">sub</span><span class="p">],</span> <span class="n">Lb</span><span class="p">(</span><span class="n">idx_l</span><span class="p">,</span> <span class="n">DM</span><span class="p">,</span> <span class="n">sub</span><span class="p">))</span>
+        <span class="c1">#     mj == 3</span>
+        <span class="n">sub</span> <span class="o">=</span> <span class="n">logical_and</span><span class="p">(</span><span class="n">i_m</span><span class="p">,</span> <span class="n">jdx_m</span> <span class="o">==</span> <span class="mi">3</span><span class="p">)</span><span class="o">.</span><span class="n">nonzero</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">add</span><span class="o">.</span><span class="n">at</span><span class="p">(</span><span class="n">L1</span><span class="p">,</span> <span class="o">*</span><span class="n">Lc</span><span class="p">(</span><span class="n">idx</span><span class="p">,</span> <span class="n">idx_l</span><span class="p">,</span> <span class="n">DM</span><span class="p">,</span> <span class="n">sub</span><span class="p">))</span>
+
+        <span class="c1">#   mi == -2</span>
+        <span class="n">i_m</span> <span class="o">=</span> <span class="n">idx_m</span> <span class="o">==</span> <span class="o">-</span><span class="mi">2</span>
+        <span class="c1">#     mj == -3</span>
+        <span class="n">sub</span> <span class="o">=</span> <span class="n">logical_and</span><span class="p">(</span><span class="n">i_m</span><span class="p">,</span> <span class="n">jdx_m</span> <span class="o">==</span> <span class="o">-</span><span class="mi">3</span><span class="p">)</span><span class="o">.</span><span class="n">nonzero</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">add</span><span class="o">.</span><span class="n">at</span><span class="p">(</span><span class="n">L1</span><span class="p">,</span> <span class="o">*</span><span class="n">Lc</span><span class="p">(</span><span class="n">idx</span><span class="p">,</span> <span class="n">idx_l</span><span class="p">,</span> <span class="n">DM</span><span class="p">,</span> <span class="n">sub</span><span class="p">))</span>
+        <span class="c1">#     mj == -1</span>
+        <span class="n">sub</span> <span class="o">=</span> <span class="n">logical_and</span><span class="p">(</span><span class="n">i_m</span><span class="p">,</span> <span class="n">jdx_m</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">nonzero</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">subtract</span><span class="o">.</span><span class="n">at</span><span class="p">(</span><span class="n">L1</span><span class="p">,</span> <span class="n">idx</span><span class="p">[</span><span class="n">sub</span><span class="p">],</span> <span class="n">Lb</span><span class="p">(</span><span class="n">idx_l</span><span class="p">,</span> <span class="n">DM</span><span class="p">,</span> <span class="n">sub</span><span class="p">))</span>
+        <span class="c1">#     mj == 1</span>
+        <span class="n">sub</span> <span class="o">=</span> <span class="n">logical_and</span><span class="p">(</span><span class="n">i_m</span><span class="p">,</span> <span class="n">jdx_m</span> <span class="o">==</span> <span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">nonzero</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">add</span><span class="o">.</span><span class="n">at</span><span class="p">(</span><span class="n">L0</span><span class="p">,</span> <span class="n">idx</span><span class="p">[</span><span class="n">sub</span><span class="p">],</span> <span class="n">Lb</span><span class="p">(</span><span class="n">idx_l</span><span class="p">,</span> <span class="n">DM</span><span class="p">,</span> <span class="n">sub</span><span class="p">))</span>
+        <span class="c1">#     mj == 3</span>
+        <span class="n">sub</span> <span class="o">=</span> <span class="n">logical_and</span><span class="p">(</span><span class="n">i_m</span><span class="p">,</span> <span class="n">jdx_m</span> <span class="o">==</span> <span class="mi">3</span><span class="p">)</span><span class="o">.</span><span class="n">nonzero</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">add</span><span class="o">.</span><span class="n">at</span><span class="p">(</span><span class="n">L0</span><span class="p">,</span> <span class="o">*</span><span class="n">Lc</span><span class="p">(</span><span class="n">idx</span><span class="p">,</span> <span class="n">idx_l</span><span class="p">,</span> <span class="n">DM</span><span class="p">,</span> <span class="n">sub</span><span class="p">))</span>
+
+        <span class="c1">#   mi == -3</span>
+        <span class="n">i_m</span> <span class="o">=</span> <span class="n">idx_m</span> <span class="o">==</span> <span class="o">-</span><span class="mi">3</span>
+        <span class="c1">#     mj == -2</span>
+        <span class="n">sub</span> <span class="o">=</span> <span class="n">logical_and</span><span class="p">(</span><span class="n">i_m</span><span class="p">,</span> <span class="n">jdx_m</span> <span class="o">==</span> <span class="o">-</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">nonzero</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">subtract</span><span class="o">.</span><span class="n">at</span><span class="p">(</span><span class="n">L1</span><span class="p">,</span> <span class="o">*</span><span class="n">Lc</span><span class="p">(</span><span class="n">idx</span><span class="p">,</span> <span class="n">idx_l</span><span class="p">,</span> <span class="n">DM</span><span class="p">,</span> <span class="n">sub</span><span class="p">))</span>
+        <span class="c1">#     mj == 2</span>
+        <span class="n">sub</span> <span class="o">=</span> <span class="n">logical_and</span><span class="p">(</span><span class="n">i_m</span><span class="p">,</span> <span class="n">jdx_m</span> <span class="o">==</span> <span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">nonzero</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">add</span><span class="o">.</span><span class="n">at</span><span class="p">(</span><span class="n">L0</span><span class="p">,</span> <span class="o">*</span><span class="n">Lc</span><span class="p">(</span><span class="n">idx</span><span class="p">,</span> <span class="n">idx_l</span><span class="p">,</span> <span class="n">DM</span><span class="p">,</span> <span class="n">sub</span><span class="p">))</span>
+
+        <span class="c1">#   mi == 3</span>
+        <span class="n">i_m</span> <span class="o">=</span> <span class="n">idx_m</span> <span class="o">==</span> <span class="mi">3</span>
+        <span class="c1">#     mj == -2</span>
+        <span class="n">sub</span> <span class="o">=</span> <span class="n">logical_and</span><span class="p">(</span><span class="n">i_m</span><span class="p">,</span> <span class="n">jdx_m</span> <span class="o">==</span> <span class="o">-</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">nonzero</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">subtract</span><span class="o">.</span><span class="n">at</span><span class="p">(</span><span class="n">L0</span><span class="p">,</span> <span class="o">*</span><span class="n">Lc</span><span class="p">(</span><span class="n">idx</span><span class="p">,</span> <span class="n">idx_l</span><span class="p">,</span> <span class="n">DM</span><span class="p">,</span> <span class="n">sub</span><span class="p">))</span>
+        <span class="c1">#     mj == 2</span>
+        <span class="n">sub</span> <span class="o">=</span> <span class="n">logical_and</span><span class="p">(</span><span class="n">i_m</span><span class="p">,</span> <span class="n">jdx_m</span> <span class="o">==</span> <span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">nonzero</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">subtract</span><span class="o">.</span><span class="n">at</span><span class="p">(</span><span class="n">L1</span><span class="p">,</span> <span class="o">*</span><span class="n">Lc</span><span class="p">(</span><span class="n">idx</span><span class="p">,</span> <span class="n">idx_l</span><span class="p">,</span> <span class="n">DM</span><span class="p">,</span> <span class="n">sub</span><span class="p">))</span>
+
+        <span class="k">if</span> <span class="s2">&quot;orbital&quot;</span> <span class="o">==</span> <span class="n">projection</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">L</span>
+        <span class="k">elif</span> <span class="s2">&quot;atom&quot;</span> <span class="o">==</span> <span class="n">projection</span><span class="p">:</span>
+            <span class="c1"># Now perform summation per atom</span>
+            <span class="n">l</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">([</span><span class="n">geom</span><span class="o">.</span><span class="n">na</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">L</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+            <span class="n">add</span><span class="o">.</span><span class="n">at</span><span class="p">(</span><span class="n">l</span><span class="p">,</span> <span class="n">geom</span><span class="o">.</span><span class="n">o2a</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">geom</span><span class="o">.</span><span class="n">no</span><span class="p">)),</span> <span class="n">L</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">l</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s2">&quot;.orbital_momentum must define projection to be orbital or atom.&quot;</span><span class="p">)</span></div>
+
 <div class="viewcode-block" id="DensityMatrix.Dk"><a class="viewcode-back" href="../../../api-generated/sisl.physics.DensityMatrix.html#sisl.physics.DensityMatrix.Dk">[docs]</a>    <span class="k">def</span> <span class="nf">Dk</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">gauge</span><span class="o">=</span><span class="s1">&#39;R&#39;</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s1">&#39;csr&#39;</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="sa">r</span><span class="sd">&quot;&quot;&quot; Setup the density matrix for a given k-point</span>
 
@@ -857,24 +1124,6 @@
 <span class="sd">        tuple of tuples : for each of the Cartesian directions</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">pass</span></div>
-
-<div class="viewcode-block" id="DensityMatrix.charge"><a class="viewcode-back" href="../../../api-generated/sisl.physics.DensityMatrix.html#sisl.physics.DensityMatrix.charge">[docs]</a>    <span class="k">def</span> <span class="nf">charge</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s1">&#39;mulliken&#39;</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot; Calculate orbital charges based on the density matrix</span>
-
-<span class="sd">        This returns CSR-matrices with each spin-components charges.</span>
-
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        method : str, optional</span>
-<span class="sd">            choice of method to calculate the charges, currently only Mulliken is allowed</span>
-
-<span class="sd">        Returns</span>
-<span class="sd">        -------</span>
-<span class="sd">        charge : csr_matrix of charges</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="n">method</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;mulliken&#39;</span><span class="p">:</span>
-            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mulliken</span><span class="p">()</span>
-        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39;.charge does not implement the &quot;</span><span class="si">{}</span><span class="s1">&quot; method.&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">method</span><span class="p">))</span></div>
 
     <span class="k">def</span> <span class="nf">_get_D</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_def_dim</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">UP</span>

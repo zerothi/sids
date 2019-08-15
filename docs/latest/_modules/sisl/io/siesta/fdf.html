@@ -1272,7 +1272,7 @@
 <span class="sd">            the fdf file).</span>
 <span class="sd">        order: list of str, optional</span>
 <span class="sd">            the order of which to try and read the geometry.</span>
-<span class="sd">            By default this is ``[&#39;XV&#39;, &#39;nc&#39;, &#39;fdf&#39;]`` if `output` is true</span>
+<span class="sd">            By default this is ``[&#39;XV&#39;, &#39;nc&#39;, &#39;fdf&#39;, &#39;TSHS&#39;]`` if `output` is true</span>
 <span class="sd">            If `order` is present `output` is disregarded.</span>
 
 <span class="sd">        Examples</span>
@@ -1283,8 +1283,13 @@
 <span class="sd">        &gt;&gt;&gt; fdf.read_geometry(order=[&#39;nc&#39;]) # read from [nc]</span>
 <span class="sd">        &gt;&gt;&gt; fdf.read_geometry(True, order=[&#39;nc&#39;]) # read from [nc]</span>
 <span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1">##</span>
+        <span class="c1"># NOTE</span>
+        <span class="c1"># When adding more capabilities please check the read_geometry(True, order=...) in this</span>
+        <span class="c1"># code to correct.</span>
+        <span class="c1">##</span>
         <span class="k">if</span> <span class="n">output</span><span class="p">:</span>
-            <span class="n">order</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;order&#39;</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;XV&#39;</span><span class="p">,</span> <span class="s1">&#39;nc&#39;</span><span class="p">,</span> <span class="s1">&#39;fdf&#39;</span><span class="p">])</span>
+            <span class="n">order</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;order&#39;</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;XV&#39;</span><span class="p">,</span> <span class="s1">&#39;nc&#39;</span><span class="p">,</span> <span class="s1">&#39;fdf&#39;</span><span class="p">,</span> <span class="s1">&#39;TSHS&#39;</span><span class="p">])</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">order</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;order&#39;</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;fdf&#39;</span><span class="p">])</span>
         <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">order</span><span class="p">:</span>
@@ -1317,6 +1322,14 @@
         <span class="n">f</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dir_file</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;SystemLabel&#39;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="s1">&#39;siesta&#39;</span><span class="p">))</span> <span class="o">+</span> <span class="s1">&#39;.nc&#39;</span>
         <span class="k">if</span> <span class="n">isfile</span><span class="p">(</span><span class="n">f</span><span class="p">):</span>
             <span class="k">return</span> <span class="n">ncSileSiesta</span><span class="p">(</span><span class="n">f</span><span class="p">)</span><span class="o">.</span><span class="n">read_geometry</span><span class="p">()</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+    <span class="k">def</span> <span class="nf">_r_geometry_tshs</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1"># Read geometry from &lt;&gt;.TSHS file</span>
+        <span class="n">f</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dir_file</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;SystemLabel&#39;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="s1">&#39;siesta&#39;</span><span class="p">))</span> <span class="o">+</span> <span class="s1">&#39;.TSHS&#39;</span>
+        <span class="k">if</span> <span class="n">isfile</span><span class="p">(</span><span class="n">f</span><span class="p">):</span>
+            <span class="c1"># Default to a geometry with the correct atomic numbers etc.</span>
+            <span class="k">return</span> <span class="n">tshsSileSiesta</span><span class="p">(</span><span class="n">f</span><span class="p">)</span><span class="o">.</span><span class="n">read_geometry</span><span class="p">(</span><span class="n">geometry</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">read_geometry</span><span class="p">(</span><span class="kc">False</span><span class="p">))</span>
         <span class="k">return</span> <span class="kc">None</span>
 
     <span class="k">def</span> <span class="nf">_r_geometry_fdf</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
@@ -1591,6 +1604,18 @@
             <span class="n">atom</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">Atom</span><span class="p">(</span><span class="n">Z</span><span class="o">=</span><span class="n">Z</span><span class="p">,</span> <span class="n">tag</span><span class="o">=</span><span class="n">lbl</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">atom</span>
 
+    <span class="k">def</span> <span class="nf">_r_add_overlap</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent_call</span><span class="p">,</span> <span class="n">M</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Internal routine to ensure that the overlap matrix is read and added to the matrix `M` &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">S</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">read_overlap</span><span class="p">()</span>
+            <span class="c1"># Check for the same sparsity pattern</span>
+            <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">M</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">col</span> <span class="o">==</span> <span class="n">S</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">col</span><span class="p">):</span>
+                <span class="n">M</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">_D</span><span class="p">[:,</span> <span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">S</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">_D</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">warn</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39; could not succesfully read the overlap matrix in </span><span class="si">{}</span><span class="s1">.&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">parent_call</span><span class="p">))</span>
+
 <div class="viewcode-block" id="fdfSileSiesta.read_density_matrix"><a class="viewcode-back" href="../../../../api-generated/sisl.io.siesta.fdfSileSiesta.html#sisl.io.siesta.fdfSileSiesta.read_density_matrix">[docs]</a>    <span class="k">def</span> <span class="nf">read_density_matrix</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Try and read density matrix by reading the &lt;&gt;.nc, &lt;&gt;.TSDE files, &lt;&gt;.DM (in that order)</span>
 
@@ -1605,17 +1630,19 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">order</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;order&#39;</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;nc&#39;</span><span class="p">,</span> <span class="s1">&#39;TSDE&#39;</span><span class="p">,</span> <span class="s1">&#39;DM&#39;</span><span class="p">])</span>
         <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">order</span><span class="p">:</span>
-            <span class="n">v</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;_r_density_matrix_</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">lower</span><span class="p">()))(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
-            <span class="k">if</span> <span class="n">v</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-                <span class="k">return</span> <span class="n">v</span>
+            <span class="n">DM</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;_r_density_matrix_</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">lower</span><span class="p">()))(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">DM</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">DM</span>
         <span class="k">return</span> <span class="kc">None</span></div>
 
     <span class="k">def</span> <span class="nf">_r_density_matrix_nc</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Try and read the density matrix by reading the &lt;&gt;.nc &quot;&quot;&quot;</span>
         <span class="n">f</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dir_file</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;SystemLabel&#39;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="s1">&#39;siesta&#39;</span><span class="p">))</span> <span class="o">+</span> <span class="s1">&#39;.nc&#39;</span>
+        <span class="n">DM</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="k">if</span> <span class="n">isfile</span><span class="p">(</span><span class="n">f</span><span class="p">):</span>
-            <span class="k">return</span> <span class="n">ncSileSiesta</span><span class="p">(</span><span class="n">f</span><span class="p">)</span><span class="o">.</span><span class="n">read_density_matrix</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
-        <span class="k">return</span> <span class="kc">None</span>
+            <span class="c1"># this *should* also contain the overlap matrix</span>
+            <span class="n">DM</span> <span class="o">=</span> <span class="n">ncSileSiesta</span><span class="p">(</span><span class="n">f</span><span class="p">)</span><span class="o">.</span><span class="n">read_density_matrix</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">DM</span>
 
     <span class="k">def</span> <span class="nf">_r_density_matrix_tsde</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Read density matrix from the TSDE file &quot;&quot;&quot;</span>
@@ -1623,8 +1650,10 @@
         <span class="n">DM</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="k">if</span> <span class="n">isfile</span><span class="p">(</span><span class="n">f</span><span class="p">):</span>
             <span class="k">if</span> <span class="s1">&#39;geometry&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="p">:</span>
-                <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;geometry&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">read_geometry</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+                <span class="c1"># to ensure we get the correct orbital count</span>
+                <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;geometry&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">read_geometry</span><span class="p">(</span><span class="kc">True</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;nc&#39;</span><span class="p">,</span> <span class="s1">&#39;TSHS&#39;</span><span class="p">])</span>
             <span class="n">DM</span> <span class="o">=</span> <span class="n">tsdeSileSiesta</span><span class="p">(</span><span class="n">f</span><span class="p">)</span><span class="o">.</span><span class="n">read_density_matrix</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_r_add_overlap</span><span class="p">(</span><span class="s1">&#39;_r_density_matrix_tsde&#39;</span><span class="p">,</span> <span class="n">DM</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">DM</span>
 
     <span class="k">def</span> <span class="nf">_r_density_matrix_dm</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
@@ -1633,8 +1662,10 @@
         <span class="n">DM</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="k">if</span> <span class="n">isfile</span><span class="p">(</span><span class="n">f</span><span class="p">):</span>
             <span class="k">if</span> <span class="s1">&#39;geometry&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="p">:</span>
-                <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;geometry&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">read_geometry</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+                <span class="c1"># to ensure we get the correct orbital count</span>
+                <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;geometry&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">read_geometry</span><span class="p">(</span><span class="kc">True</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;nc&#39;</span><span class="p">,</span> <span class="s1">&#39;TSHS&#39;</span><span class="p">])</span>
             <span class="n">DM</span> <span class="o">=</span> <span class="n">dmSileSiesta</span><span class="p">(</span><span class="n">f</span><span class="p">)</span><span class="o">.</span><span class="n">read_density_matrix</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_r_add_overlap</span><span class="p">(</span><span class="s1">&#39;_r_density_matrix_dm&#39;</span><span class="p">,</span> <span class="n">DM</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">DM</span>
 
 <div class="viewcode-block" id="fdfSileSiesta.read_energy_density_matrix"><a class="viewcode-back" href="../../../../api-generated/sisl.io.siesta.fdfSileSiesta.html#sisl.io.siesta.fdfSileSiesta.read_energy_density_matrix">[docs]</a>    <span class="k">def</span> <span class="nf">read_energy_density_matrix</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
@@ -1651,9 +1682,9 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">order</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;order&#39;</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;nc&#39;</span><span class="p">,</span> <span class="s1">&#39;TSDE&#39;</span><span class="p">])</span>
         <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">order</span><span class="p">:</span>
-            <span class="n">v</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;_r_energy_density_matrix_</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">lower</span><span class="p">()))(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
-            <span class="k">if</span> <span class="n">v</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-                <span class="k">return</span> <span class="n">v</span>
+            <span class="n">EDM</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;_r_energy_density_matrix_</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">lower</span><span class="p">()))(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">EDM</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">EDM</span>
         <span class="k">return</span> <span class="kc">None</span></div>
 
     <span class="k">def</span> <span class="nf">_r_energy_density_matrix_nc</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
@@ -1669,8 +1700,10 @@
         <span class="n">EDM</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="k">if</span> <span class="n">isfile</span><span class="p">(</span><span class="n">f</span><span class="p">):</span>
             <span class="k">if</span> <span class="s1">&#39;geometry&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="p">:</span>
-                <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;geometry&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">read_geometry</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+                <span class="c1"># to ensure we get the correct orbital count</span>
+                <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;geometry&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">read_geometry</span><span class="p">(</span><span class="kc">True</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;nc&#39;</span><span class="p">,</span> <span class="s1">&#39;TSHS&#39;</span><span class="p">])</span>
             <span class="n">EDM</span> <span class="o">=</span> <span class="n">tsdeSileSiesta</span><span class="p">(</span><span class="n">f</span><span class="p">)</span><span class="o">.</span><span class="n">read_energy_density_matrix</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_r_add_overlap</span><span class="p">(</span><span class="s1">&#39;_r_energy_density_matrix_tsde&#39;</span><span class="p">,</span> <span class="n">EDM</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">EDM</span>
 
 <div class="viewcode-block" id="fdfSileSiesta.read_overlap"><a class="viewcode-back" href="../../../../api-generated/sisl.io.siesta.fdfSileSiesta.html#sisl.io.siesta.fdfSileSiesta.read_overlap">[docs]</a>    <span class="k">def</span> <span class="nf">read_overlap</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
@@ -1705,7 +1738,8 @@
         <span class="n">S</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="k">if</span> <span class="n">isfile</span><span class="p">(</span><span class="n">f</span><span class="p">):</span>
             <span class="k">if</span> <span class="s1">&#39;geometry&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="p">:</span>
-                <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;geometry&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">read_geometry</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+                <span class="c1"># to ensure we get the correct orbital count</span>
+                <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;geometry&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">read_geometry</span><span class="p">(</span><span class="kc">True</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;nc&#39;</span><span class="p">,</span> <span class="s1">&#39;TSHS&#39;</span><span class="p">])</span>
             <span class="n">S</span> <span class="o">=</span> <span class="n">tshsSileSiesta</span><span class="p">(</span><span class="n">f</span><span class="p">)</span><span class="o">.</span><span class="n">read_overlap</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">S</span>
 
@@ -1715,7 +1749,8 @@
         <span class="n">S</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="k">if</span> <span class="n">isfile</span><span class="p">(</span><span class="n">f</span><span class="p">):</span>
             <span class="k">if</span> <span class="s1">&#39;geometry&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="p">:</span>
-                <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;geometry&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">read_geometry</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+                <span class="c1"># to ensure we get the correct orbital count</span>
+                <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;geometry&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">read_geometry</span><span class="p">(</span><span class="kc">True</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;nc&#39;</span><span class="p">,</span> <span class="s1">&#39;TSHS&#39;</span><span class="p">])</span>
             <span class="n">S</span> <span class="o">=</span> <span class="n">hsxSileSiesta</span><span class="p">(</span><span class="n">f</span><span class="p">)</span><span class="o">.</span><span class="n">read_overlap</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">S</span>
 
@@ -1725,7 +1760,8 @@
         <span class="n">S</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="k">if</span> <span class="n">isfile</span><span class="p">(</span><span class="n">f</span><span class="p">):</span>
             <span class="k">if</span> <span class="s1">&#39;geometry&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="p">:</span>
-                <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;geometry&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">read_geometry</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+                <span class="c1"># to ensure we get the correct orbital count</span>
+                <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;geometry&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">read_geometry</span><span class="p">(</span><span class="kc">True</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;nc&#39;</span><span class="p">,</span> <span class="s1">&#39;TSHS&#39;</span><span class="p">])</span>
             <span class="n">S</span> <span class="o">=</span> <span class="n">onlysSileSiesta</span><span class="p">(</span><span class="n">f</span><span class="p">)</span><span class="o">.</span><span class="n">read_overlap</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">S</span>
 
@@ -1743,9 +1779,9 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">order</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;order&#39;</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;nc&#39;</span><span class="p">,</span> <span class="s1">&#39;TSHS&#39;</span><span class="p">,</span> <span class="s1">&#39;HSX&#39;</span><span class="p">])</span>
         <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">order</span><span class="p">:</span>
-            <span class="n">v</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;_r_hamiltonian_</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">lower</span><span class="p">()))(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
-            <span class="k">if</span> <span class="n">v</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-                <span class="k">return</span> <span class="n">v</span>
+            <span class="n">H</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;_r_hamiltonian_</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">lower</span><span class="p">()))(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">H</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">H</span>
         <span class="k">return</span> <span class="kc">None</span></div>
 
     <span class="k">def</span> <span class="nf">_r_hamiltonian_nc</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
@@ -1761,7 +1797,8 @@
         <span class="n">H</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="k">if</span> <span class="n">isfile</span><span class="p">(</span><span class="n">f</span><span class="p">):</span>
             <span class="k">if</span> <span class="s1">&#39;geometry&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="p">:</span>
-                <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;geometry&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">read_geometry</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+                <span class="c1"># to ensure we get the correct orbital count</span>
+                <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;geometry&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">read_geometry</span><span class="p">(</span><span class="kc">True</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;nc&#39;</span><span class="p">,</span> <span class="s1">&#39;TSHS&#39;</span><span class="p">])</span>
             <span class="n">H</span> <span class="o">=</span> <span class="n">tshsSileSiesta</span><span class="p">(</span><span class="n">f</span><span class="p">)</span><span class="o">.</span><span class="n">read_hamiltonian</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">H</span>
 
@@ -1771,7 +1808,8 @@
         <span class="n">H</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="k">if</span> <span class="n">isfile</span><span class="p">(</span><span class="n">f</span><span class="p">):</span>
             <span class="k">if</span> <span class="s1">&#39;geometry&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="p">:</span>
-                <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;geometry&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">read_geometry</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+                <span class="c1"># to ensure we get the correct orbital count</span>
+                <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;geometry&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">read_geometry</span><span class="p">(</span><span class="kc">True</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;nc&#39;</span><span class="p">,</span> <span class="s1">&#39;TSHS&#39;</span><span class="p">])</span>
             <span class="n">H</span> <span class="o">=</span> <span class="n">hsxSileSiesta</span><span class="p">(</span><span class="n">f</span><span class="p">)</span><span class="o">.</span><span class="n">read_hamiltonian</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">H</span>
 
