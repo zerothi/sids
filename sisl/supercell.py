@@ -915,7 +915,9 @@ class SuperCell(object):
 
     def __str__(self):
         """ Returns a string representation of the object """
-        return self.__class__.__name__ + '{{volume: {:.4e}, nsc: [{} {} {}]}}'.format(self.volume, *self.nsc)
+        # Create format for lattice vectors
+        s = ',\n '.join(['ABC'[i] + '=[{:.3f}, {:.3f}, {:.3f}]'.format(*self.cell[i]) for i in (0, 1, 2)])
+        return self.__class__.__name__ + ('{{nsc: [{:} {:} {:}],\n ' + s + ',\n}}').format(*self.nsc)
 
     def __eq__(self, other):
         """ Equality check """
