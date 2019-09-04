@@ -307,8 +307,8 @@ class TestSparseAtom(object):
         g = graphene(atom=Atom(6, R=1.43))
         s = SparseAtom(g)
         s.construct([[0.1, 1.43], [1, 2]])
-        assert len(s.edges(0)) == 3
-        assert len(s.edges(0, exclude=[])) == 4
+        assert len(s.edges(0)) == 4
+        assert len(s.edges(0, exclude=[0])) == 3
 
     def test_op_numpy_scalar(self, setup):
         g = graphene(atom=Atom(6, R=1.43))
@@ -392,28 +392,6 @@ class TestSparseAtom(object):
         assert np.allclose(s1[1, [1, 2, 4], 0], np.zeros([3], np.int32))
         assert np.allclose(s1[1, [1, 2, 4], 1], np.ones([3], np.int32)*2)
 
-        s2 = SparseAtom.fromsp(g, lil1, lil2)
-        assert s2.nnz == 6
-        assert np.allclose(s2.shape, [g.na, g.na_s, 2])
-
-        assert np.allclose(s2[0, [1, 2, 3], 0], np.ones([3], np.int32))
-        assert np.allclose(s2[0, [1, 2, 3], 1], np.zeros([3], np.int32))
-        assert np.allclose(s2[1, [1, 2, 4], 0], np.zeros([3], np.int32))
-        assert np.allclose(s2[1, [1, 2, 4], 1], np.ones([3], np.int32)*2)
-
-        assert s1.spsame(s2)
-
-    @pytest.mark.xfail(raises=ValueError)
-    def test_fromsp3(self, setup):
-        g = setup.g.repeat(2, 0).tile(2, 1)
-        lil1 = sc.sparse.lil_matrix((g.na, g.na_s), dtype=np.int32)
-        lil2 = sc.sparse.lil_matrix((g.na, g.na_s), dtype=np.int32)
-        lil1[0, [1, 2, 3]] = 1
-        lil2[1, [2, 4, 1]] = 2
-
-        # Ensure that one does not mix everything.
-        SparseAtom.fromsp(g, [lil1], lil2)
-
     @pytest.mark.xfail(raises=ValueError)
     def test_fromsp4(self, setup):
         g = setup.g.repeat(2, 0).tile(2, 1)
@@ -449,7 +427,7 @@ def test_sparse_atom_symmetric(n0, n1, n2):
     s = s.tile(n0, 0).tile(n1, 1).tile(n2, 2)
     na = s.geometry.na
 
-    nnz = na
+    nnz = 0
     for ia in range(na):
         # orbitals connecting to ia
         edges = s.edges(ia)
