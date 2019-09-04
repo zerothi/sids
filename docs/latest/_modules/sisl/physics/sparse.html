@@ -293,34 +293,53 @@
     <span class="n">S</span> <span class="o">=</span> <span class="nb">property</span><span class="p">(</span><span class="n">_get_S</span><span class="p">,</span> <span class="n">_set_S</span><span class="p">,</span> <span class="n">doc</span><span class="o">=</span><span class="s2">&quot;Access elements to the sparse overlap&quot;</span><span class="p">)</span>
 
 <div class="viewcode-block" id="SparseOrbitalBZ.fromsp"><a class="viewcode-back" href="../../../api-generated/sisl.physics.SparseOrbitalBZ.html#sisl.physics.SparseOrbitalBZ.fromsp">[docs]</a>    <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">fromsp</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">geometry</span><span class="p">,</span> <span class="n">P</span><span class="p">,</span> <span class="n">S</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-        <span class="sa">r</span><span class="sd">&quot;&quot;&quot; Read and return the object with possible overlap &quot;&quot;&quot;</span>
-        <span class="c1"># Calculate maximum number of connections per row</span>
-        <span class="n">nc</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">def</span> <span class="nf">fromsp</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">geometry</span><span class="p">,</span> <span class="n">P</span><span class="p">,</span> <span class="n">S</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot; Create a sparse model from a preset `Geometry` and a list of sparse matrices</span>
 
+<span class="sd">        The passed sparse matrices are in one of `scipy.sparse` formats.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        geometry : Geometry</span>
+<span class="sd">           geometry to describe the new sparse geometry</span>
+<span class="sd">        P : list of scipy.sparse or scipy.sparse</span>
+<span class="sd">           the new sparse matrices that are to be populated in the sparse</span>
+<span class="sd">           matrix</span>
+<span class="sd">        S : scipy.sparse, optional</span>
+<span class="sd">           if provided this refers to the overlap matrix and will force the</span>
+<span class="sd">           returned sparse matrix to be non-orthogonal</span>
+<span class="sd">        **kwargs : optional</span>
+<span class="sd">           any arguments that are directly passed to the ``__init__`` method</span>
+<span class="sd">           of the class.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        SparseGeometry</span>
+<span class="sd">             a new sparse matrix that holds the passed geometry and the elements of `P` and optionally being non-orthogonal if `S` is not none</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># Ensure list of csr format (to get dimensions)</span>
         <span class="k">if</span> <span class="n">isspmatrix</span><span class="p">(</span><span class="n">P</span><span class="p">):</span>
             <span class="n">P</span> <span class="o">=</span> <span class="p">[</span><span class="n">P</span><span class="p">]</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">P</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">):</span>
+            <span class="n">P</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">P</span><span class="p">)</span>
 
         <span class="c1"># Number of dimensions</span>
         <span class="n">dim</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">P</span><span class="p">)</span>
+        <span class="n">nnzpr</span> <span class="o">=</span> <span class="mi">1</span>
         <span class="c1"># Sort all indices for the passed sparse matrices</span>
         <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">dim</span><span class="p">):</span>
             <span class="n">P</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">P</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">tocsr</span><span class="p">()</span>
             <span class="n">P</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">sort_indices</span><span class="p">()</span>
             <span class="n">P</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">sum_duplicates</span><span class="p">()</span>
 
-        <span class="c1"># Figure out the maximum connections per</span>
-        <span class="c1"># row to reduce number of re-allocations to 0</span>
-        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">P</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
-            <span class="n">nc</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">nc</span><span class="p">,</span> <span class="n">P</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="n">i</span><span class="p">,</span> <span class="p">:]</span><span class="o">.</span><span class="n">getnnz</span><span class="p">())</span>
+            <span class="n">nnzpr</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">nnzpr</span><span class="p">,</span> <span class="n">P</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">nnz</span> <span class="o">//</span> <span class="n">P</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
 
         <span class="c1"># Create the sparse object</span>
-        <span class="n">p</span> <span class="o">=</span> <span class="bp">cls</span><span class="p">(</span><span class="n">geometry</span><span class="p">,</span> <span class="n">dim</span><span class="p">,</span> <span class="n">P</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">nc</span><span class="p">,</span> <span class="n">orthogonal</span><span class="o">=</span><span class="n">S</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="n">p</span> <span class="o">=</span> <span class="bp">cls</span><span class="p">(</span><span class="n">geometry</span><span class="p">,</span> <span class="n">dim</span><span class="p">,</span> <span class="n">P</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">nnzpr</span><span class="p">,</span> <span class="n">orthogonal</span><span class="o">=</span><span class="n">S</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="n">p</span><span class="o">.</span><span class="n">_size</span> <span class="o">!=</span> <span class="n">P</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="bp">cls</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39;.fromsp cannot create a new class, the geometry &#39;</span> <span class="o">+</span> \
-                             <span class="s1">&#39;and sparse matrices does not have coinciding dimensions size != sp.shape[0]&#39;</span><span class="p">)</span>
+                             <span class="s1">&#39;and sparse matrices does not have coinciding dimensions size != P[0].shape[0]&#39;</span><span class="p">)</span>
 
         <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">dim</span><span class="p">):</span>
             <span class="n">ptr</span> <span class="o">=</span> <span class="n">P</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">indptr</span>
@@ -365,6 +384,13 @@
 <span class="sd">        local : bool, optional</span>
 <span class="sd">           whether the orbital index is the global index, or the local index relative to</span>
 <span class="sd">           the atom it resides on.</span>
+
+<span class="sd">        Yields</span>
+<span class="sd">        ------</span>
+<span class="sd">        ia</span>
+<span class="sd">           atomic index</span>
+<span class="sd">        io</span>
+<span class="sd">           orbital index</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">for</span> <span class="n">ia</span><span class="p">,</span> <span class="n">io</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">iter_orbitals</span><span class="p">(</span><span class="n">local</span><span class="o">=</span><span class="n">local</span><span class="p">):</span>
             <span class="k">yield</span> <span class="n">ia</span><span class="p">,</span> <span class="n">io</span></div>
