@@ -216,19 +216,22 @@
 <span class="sd">    &gt;&gt;&gt; se_unsorted = se.self_energy(&#39;Left&#39;, 0.1, [0, 0, 0])</span>
 <span class="sd">    &gt;&gt;&gt; # Return the self-energy for the left electrode (sorted)</span>
 <span class="sd">    &gt;&gt;&gt; se_sorted = se.self_energy(&#39;Left&#39;, 0.1, [0, 0, 0], sort=True)</span>
-<span class="sd">    &gt;&gt;&gt; #</span>
 <span class="sd">    &gt;&gt;&gt; # Query the indices in the full Hamiltonian</span>
 <span class="sd">    &gt;&gt;&gt; pvt_unsorted = se.pivot(&#39;Left&#39;).reshape(-1, 1)</span>
 <span class="sd">    &gt;&gt;&gt; pvt_sorted = se.pivot(&#39;Left&#39;, sort=True).reshape(-1, 1)</span>
 <span class="sd">    &gt;&gt;&gt; # The following two lines are equivalent</span>
-<span class="sd">    &gt;&gt;&gt; Hfull[pvt_unsorted, pvt_unsorted.T] -= se_unsorted[:, :]</span>
-<span class="sd">    &gt;&gt;&gt; Hfull[pvt_sorted, pvt_sorted.T] -= se_sorted[:, :]</span>
+<span class="sd">    &gt;&gt;&gt; Hfull1[pvt_unsorted, pvt_unsorted.T] -= se_unsorted[:, :]</span>
+<span class="sd">    &gt;&gt;&gt; Hfull2[pvt_sorted, pvt_sorted.T] -= se_sorted[:, :]</span>
+<span class="sd">    &gt;&gt;&gt; np.allclose(Hfull1, Hfull2)</span>
+<span class="sd">    True</span>
 <span class="sd">    &gt;&gt;&gt; # Query the indices in the device Hamiltonian</span>
-<span class="sd">    &gt;&gt;&gt; dpvt_unsorted = se.pivot(&#39;Left&#39;, in_device=True).reshape(-1, 1)</span>
-<span class="sd">    &gt;&gt;&gt; dpvt_sorted = se.pivot(&#39;Left&#39;, in_device=True, sort=True).reshape(-1, 1)</span>
-<span class="sd">    &gt;&gt;&gt; # Following inserts are equivalent</span>
-<span class="sd">    &gt;&gt;&gt; Hdev[dpvt_unsorted, dpvt_unsorted.T] -= se_unsorted[:, :]</span>
+<span class="sd">    &gt;&gt;&gt; dev_pvt = se.pivot(&#39;Left&#39;, in_device=True).reshape(-1, 1)</span>
+<span class="sd">    &gt;&gt;&gt; dev_unpvt = se.pivot(&#39;Left&#39;, in_device=True, sort=True).reshape(-1, 1)</span>
+<span class="sd">    &gt;&gt;&gt; Hdev_pvt[dev_pvt, dev_pvt.T] -= se_unsorted[:, :]</span>
 <span class="sd">    &gt;&gt;&gt; Hdev[dpvt_sorted, dpvt_sorted.T] -= se_sorted[:, :]</span>
+<span class="sd">    &gt;&gt;&gt; pvt_dev = se.pivot(in_device=True).reshape(-1, 1)</span>
+<span class="sd">    &gt;&gt;&gt; np.allclose(Hdev_pvt, Hdev[pvt_dev, pvt_dev.T])</span>
+<span class="sd">    True</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">_trans_type</span> <span class="o">=</span> <span class="s1">&#39;TBT&#39;</span>
     <span class="n">_E2eV</span> <span class="o">=</span> <span class="n">Ry2eV</span>
@@ -247,7 +250,9 @@
 <span class="sd">        k : array_like or int</span>
 <span class="sd">           k-point to retrieve, if an integer it is the k-index in the file</span>
 <span class="sd">        sort : bool, optional</span>
-<span class="sd">           if ``True`` the returned self-energy will be sorted (equivalent to pivoting the self-energy)</span>
+<span class="sd">           if ``True`` the returned self-energy will be sorted according to the order of</span>
+<span class="sd">           the orbitals in the non-pivoted geometry, otherwise the self-energy will</span>
+<span class="sd">           be returned according to the pivoted orbitals in the device region.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">tree</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_elec</span><span class="p">(</span><span class="n">elec</span><span class="p">)</span>
         <span class="n">ik</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">kindex</span><span class="p">(</span><span class="n">k</span><span class="p">)</span>
@@ -256,15 +261,15 @@
         <span class="n">re</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_variable</span><span class="p">(</span><span class="s1">&#39;ReSelfEnergy&#39;</span><span class="p">,</span> <span class="n">tree</span><span class="o">=</span><span class="n">tree</span><span class="p">)</span>
         <span class="n">im</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_variable</span><span class="p">(</span><span class="s1">&#39;ImSelfEnergy&#39;</span><span class="p">,</span> <span class="n">tree</span><span class="o">=</span><span class="n">tree</span><span class="p">)</span>
 
-        <span class="n">SE</span> <span class="o">=</span> <span class="p">(</span><span class="n">re</span><span class="p">[</span><span class="n">ik</span><span class="p">,</span> <span class="n">iE</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">+</span> <span class="mi">1</span><span class="n">j</span> <span class="o">*</span> <span class="n">im</span><span class="p">[</span><span class="n">ik</span><span class="p">,</span> <span class="n">iE</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:])</span>
+        <span class="n">SE</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_E2eV</span> <span class="o">*</span> <span class="n">re</span><span class="p">[</span><span class="n">ik</span><span class="p">,</span> <span class="n">iE</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">+</span> <span class="p">(</span><span class="mi">1</span><span class="n">j</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_E2eV</span><span class="p">)</span> <span class="o">*</span> <span class="n">im</span><span class="p">[</span><span class="n">ik</span><span class="p">,</span> <span class="n">iE</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span>
         <span class="k">if</span> <span class="n">sort</span><span class="p">:</span>
             <span class="n">pvt</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">pivot</span><span class="p">(</span><span class="n">elec</span><span class="p">)</span>
             <span class="n">idx</span> <span class="o">=</span> <span class="n">argsort</span><span class="p">(</span><span class="n">pvt</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
 
             <span class="c1"># pivot for sorted device region</span>
-            <span class="k">return</span> <span class="n">SE</span><span class="p">[</span><span class="n">idx</span><span class="p">,</span> <span class="n">idx</span><span class="o">.</span><span class="n">T</span><span class="p">]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_E2eV</span>
+            <span class="k">return</span> <span class="n">SE</span><span class="p">[</span><span class="n">idx</span><span class="p">,</span> <span class="n">idx</span><span class="o">.</span><span class="n">T</span><span class="p">]</span>
 
-        <span class="k">return</span> <span class="n">SE</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_E2eV</span></div>
+        <span class="k">return</span> <span class="n">SE</span></div>
 
 <div class="viewcode-block" id="tbtsencSileTBtrans.scattering_matrix"><a class="viewcode-back" href="../../../../api-generated/sisl.io.tbtrans.tbtsencSileTBtrans.html#sisl.io.tbtrans.tbtsencSileTBtrans.scattering_matrix">[docs]</a>    <span class="k">def</span> <span class="nf">scattering_matrix</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">elec</span><span class="p">,</span> <span class="n">E</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">sort</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
         <span class="sa">r</span><span class="sd">&quot;&quot;&quot; Return the scattering matrix from the electrode `elec`</span>
@@ -285,7 +290,9 @@
 <span class="sd">        k : array_like or int</span>
 <span class="sd">           k-point to retrieve, if an integer it is the k-index in the file</span>
 <span class="sd">        sort : bool, optional</span>
-<span class="sd">           if ``True`` the returned scattering matrix will be sorted (equivalent to pivoting the scattering matrix)</span>
+<span class="sd">           if ``True`` the returned scattering matrix will be sorted according to the order of</span>
+<span class="sd">           the orbitals in the non-pivoted geometry, otherwise the scattering matrix will</span>
+<span class="sd">           be returned according to the pivoted orbitals in the device region.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">tree</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_elec</span><span class="p">(</span><span class="n">elec</span><span class="p">)</span>
         <span class="n">ik</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">kindex</span><span class="p">(</span><span class="n">k</span><span class="p">)</span>
@@ -294,16 +301,16 @@
         <span class="n">re</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_variable</span><span class="p">(</span><span class="s1">&#39;ReSelfEnergy&#39;</span><span class="p">,</span> <span class="n">tree</span><span class="o">=</span><span class="n">tree</span><span class="p">)[</span><span class="n">ik</span><span class="p">,</span> <span class="n">iE</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span>
         <span class="n">im</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_variable</span><span class="p">(</span><span class="s1">&#39;ImSelfEnergy&#39;</span><span class="p">,</span> <span class="n">tree</span><span class="o">=</span><span class="n">tree</span><span class="p">)[</span><span class="n">ik</span><span class="p">,</span> <span class="n">iE</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span>
 
-        <span class="n">G</span> <span class="o">=</span> <span class="o">-</span> <span class="p">(</span><span class="n">im</span> <span class="o">+</span> <span class="n">im</span><span class="o">.</span><span class="n">T</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="n">j</span> <span class="o">*</span> <span class="p">(</span><span class="n">re</span> <span class="o">-</span> <span class="n">re</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
+        <span class="n">G</span> <span class="o">=</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">_E2eV</span> <span class="o">*</span> <span class="p">(</span><span class="n">im</span> <span class="o">+</span> <span class="n">im</span><span class="o">.</span><span class="n">T</span><span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="mi">1</span><span class="n">j</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_E2eV</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">re</span> <span class="o">-</span> <span class="n">re</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">sort</span><span class="p">:</span>
             <span class="n">pvt</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">pivot</span><span class="p">(</span><span class="n">elec</span><span class="p">)</span>
             <span class="n">idx</span> <span class="o">=</span> <span class="n">argsort</span><span class="p">(</span><span class="n">pvt</span><span class="p">)</span>
             <span class="n">idx</span><span class="o">.</span><span class="n">shape</span> <span class="o">=</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
 
             <span class="c1"># pivot for sorted device region</span>
-            <span class="k">return</span> <span class="n">G</span><span class="p">[</span><span class="n">idx</span><span class="p">,</span> <span class="n">idx</span><span class="o">.</span><span class="n">T</span><span class="p">]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_E2eV</span>
+            <span class="k">return</span> <span class="n">G</span><span class="p">[</span><span class="n">idx</span><span class="p">,</span> <span class="n">idx</span><span class="o">.</span><span class="n">T</span><span class="p">]</span>
 
-        <span class="k">return</span> <span class="n">G</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_E2eV</span></div>
+        <span class="k">return</span> <span class="n">G</span></div>
 
 <div class="viewcode-block" id="tbtsencSileTBtrans.self_energy_average"><a class="viewcode-back" href="../../../../api-generated/sisl.io.tbtrans.tbtsencSileTBtrans.html#sisl.io.tbtrans.tbtsencSileTBtrans.self_energy_average">[docs]</a>    <span class="k">def</span> <span class="nf">self_energy_average</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">elec</span><span class="p">,</span> <span class="n">E</span><span class="p">,</span> <span class="n">sort</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Return the k-averaged average self-energy from the electrode `elec`</span>
@@ -317,8 +324,9 @@
 <span class="sd">           energy value will be found and returned, if an integer it will correspond</span>
 <span class="sd">           to the exact index</span>
 <span class="sd">        sort : bool, optional</span>
-<span class="sd">           if ``True`` the returned self-energy will be sorted but not necessarily consecutive</span>
-<span class="sd">           in the device region.</span>
+<span class="sd">           if ``True`` the returned self-energy will be sorted according to the order of</span>
+<span class="sd">           the orbitals in the non-pivoted geometry, otherwise the self-energy will</span>
+<span class="sd">           be returned according to the pivoted orbitals in the device region.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">tree</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_elec</span><span class="p">(</span><span class="n">elec</span><span class="p">)</span>
         <span class="n">iE</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Eindex</span><span class="p">(</span><span class="n">E</span><span class="p">)</span>
@@ -326,16 +334,16 @@
         <span class="n">re</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_variable</span><span class="p">(</span><span class="s1">&#39;ReSelfEnergyMean&#39;</span><span class="p">,</span> <span class="n">tree</span><span class="o">=</span><span class="n">tree</span><span class="p">)</span>
         <span class="n">im</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_variable</span><span class="p">(</span><span class="s1">&#39;ImSelfEnergyMean&#39;</span><span class="p">,</span> <span class="n">tree</span><span class="o">=</span><span class="n">tree</span><span class="p">)</span>
 
-        <span class="n">SE</span> <span class="o">=</span> <span class="p">(</span><span class="n">re</span><span class="p">[</span><span class="n">ik</span><span class="p">,</span> <span class="n">iE</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">+</span> <span class="mi">1</span><span class="n">j</span> <span class="o">*</span> <span class="n">im</span><span class="p">[</span><span class="n">ik</span><span class="p">,</span> <span class="n">iE</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:])</span>
+        <span class="n">SE</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_E2eV</span> <span class="o">*</span> <span class="n">re</span><span class="p">[</span><span class="n">ik</span><span class="p">,</span> <span class="n">iE</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">+</span> <span class="p">(</span><span class="mi">1</span><span class="n">j</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_E2eV</span><span class="p">)</span> <span class="o">*</span> <span class="n">im</span><span class="p">[</span><span class="n">ik</span><span class="p">,</span> <span class="n">iE</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span>
         <span class="k">if</span> <span class="n">sort</span><span class="p">:</span>
             <span class="n">pvt</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">pivot</span><span class="p">(</span><span class="n">elec</span><span class="p">)</span>
             <span class="n">idx</span> <span class="o">=</span> <span class="n">argsort</span><span class="p">(</span><span class="n">pvt</span><span class="p">)</span>
             <span class="n">idx</span><span class="o">.</span><span class="n">shape</span> <span class="o">=</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
 
             <span class="c1"># pivot for sorted device region</span>
-            <span class="k">return</span> <span class="n">SE</span><span class="p">[</span><span class="n">idx</span><span class="p">,</span> <span class="n">idx</span><span class="o">.</span><span class="n">T</span><span class="p">]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_E2eV</span>
+            <span class="k">return</span> <span class="n">SE</span><span class="p">[</span><span class="n">idx</span><span class="p">,</span> <span class="n">idx</span><span class="o">.</span><span class="n">T</span><span class="p">]</span>
 
-        <span class="k">return</span> <span class="n">SE</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_E2eV</span></div>
+        <span class="k">return</span> <span class="n">SE</span></div>
 
 <div class="viewcode-block" id="tbtsencSileTBtrans.info"><a class="viewcode-back" href="../../../../api-generated/sisl.io.tbtrans.tbtsencSileTBtrans.html#sisl.io.tbtrans.tbtsencSileTBtrans.info">[docs]</a>    <span class="k">def</span> <span class="nf">info</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">elec</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Information about the self-energy file available for extracting in this file</span>
