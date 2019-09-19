@@ -185,18 +185,24 @@
 
 
 <div class="viewcode-block" id="carSileVASP"><a class="viewcode-back" href="../../../../api-generated/sisl.io.vasp.carSileVASP.html#sisl.io.vasp.carSileVASP">[docs]</a><span class="k">class</span> <span class="nc">carSileVASP</span><span class="p">(</span><span class="n">SileVASP</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot; Geometry informaation</span>
+    <span class="sd">&quot;&quot;&quot; *CAR VASP files for defining geomtries</span>
 
 <span class="sd">    This file-object handles both POSCAR and CONTCAR files</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span> <span class="nf">_setup</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot; Setup the `poscarSile` after initialization &quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot; Setup the `carSile` after initialization &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_scale</span> <span class="o">=</span> <span class="mf">1.</span>
 
 <div class="viewcode-block" id="carSileVASP.write_geometry"><a class="viewcode-back" href="../../../../api-generated/sisl.io.vasp.carSileVASP.html#sisl.io.vasp.carSileVASP.write_geometry">[docs]</a>    <span class="nd">@sile_fh_open</span><span class="p">()</span>
-    <span class="k">def</span> <span class="nf">write_geometry</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">geom</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot; Writes the geometry to the contained file &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">write_geometry</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">geometry</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Writes the geometry to the contained file</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        geometry : Geometry</span>
+<span class="sd">           geometry to be written to the file</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># Check that we can write to the file</span>
         <span class="n">sile_raise_write</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
 
@@ -210,20 +216,20 @@
         <span class="n">fmt</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;   &#39;</span> <span class="o">+</span> <span class="s1">&#39;</span><span class="si">{:18.9f}</span><span class="s1">&#39;</span> <span class="o">*</span> <span class="mi">3</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span>
         <span class="n">tmp</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">([</span><span class="mi">3</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
         <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">3</span><span class="p">):</span>
-            <span class="n">tmp</span><span class="p">[:</span><span class="mi">3</span><span class="p">]</span> <span class="o">=</span> <span class="n">geom</span><span class="o">.</span><span class="n">cell</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="p">:]</span>
+            <span class="n">tmp</span><span class="p">[:</span><span class="mi">3</span><span class="p">]</span> <span class="o">=</span> <span class="n">geometry</span><span class="o">.</span><span class="n">cell</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="p">:]</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_write</span><span class="p">(</span><span class="n">fmt</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="o">*</span><span class="n">tmp</span><span class="p">))</span>
 
         <span class="c1"># Figure out how many species</span>
         <span class="n">pt</span> <span class="o">=</span> <span class="n">PeriodicTable</span><span class="p">()</span>
         <span class="n">s</span><span class="p">,</span> <span class="n">d</span> <span class="o">=</span> <span class="p">[],</span> <span class="p">[]</span>
         <span class="n">ia</span> <span class="o">=</span> <span class="mi">0</span>
-        <span class="k">while</span> <span class="n">ia</span> <span class="o">&lt;</span> <span class="n">geom</span><span class="o">.</span><span class="n">na</span><span class="p">:</span>
-            <span class="n">atom</span> <span class="o">=</span> <span class="n">geom</span><span class="o">.</span><span class="n">atoms</span><span class="p">[</span><span class="n">ia</span><span class="p">]</span>
-            <span class="n">specie</span> <span class="o">=</span> <span class="n">geom</span><span class="o">.</span><span class="n">atoms</span><span class="o">.</span><span class="n">specie</span><span class="p">[</span><span class="n">ia</span><span class="p">]</span>
-            <span class="n">ia_end</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">geom</span><span class="o">.</span><span class="n">atoms</span><span class="o">.</span><span class="n">specie</span><span class="p">[</span><span class="n">ia</span><span class="p">:])</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">nonzero</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">while</span> <span class="n">ia</span> <span class="o">&lt;</span> <span class="n">geometry</span><span class="o">.</span><span class="n">na</span><span class="p">:</span>
+            <span class="n">atom</span> <span class="o">=</span> <span class="n">geometry</span><span class="o">.</span><span class="n">atoms</span><span class="p">[</span><span class="n">ia</span><span class="p">]</span>
+            <span class="n">specie</span> <span class="o">=</span> <span class="n">geometry</span><span class="o">.</span><span class="n">atoms</span><span class="o">.</span><span class="n">specie</span><span class="p">[</span><span class="n">ia</span><span class="p">]</span>
+            <span class="n">ia_end</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">geometry</span><span class="o">.</span><span class="n">atoms</span><span class="o">.</span><span class="n">specie</span><span class="p">[</span><span class="n">ia</span><span class="p">:])</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">nonzero</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
             <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">ia_end</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
                 <span class="c1"># remaining atoms</span>
-                <span class="n">ia_end</span> <span class="o">=</span> <span class="n">geom</span><span class="o">.</span><span class="n">na</span>
+                <span class="n">ia_end</span> <span class="o">=</span> <span class="n">geometry</span><span class="o">.</span><span class="n">na</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="n">ia_end</span> <span class="o">=</span> <span class="n">ia</span> <span class="o">+</span> <span class="n">ia_end</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span>
             <span class="n">s</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">pt</span><span class="o">.</span><span class="n">Z_label</span><span class="p">(</span><span class="n">atom</span><span class="o">.</span><span class="n">Z</span><span class="p">))</span>
@@ -237,8 +243,8 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_write</span><span class="p">(</span><span class="s1">&#39;Cartesian</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
 
         <span class="n">fmt</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="si">{:18.9f}</span><span class="s1">&#39;</span> <span class="o">*</span> <span class="mi">3</span> <span class="o">+</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span>
-        <span class="k">for</span> <span class="n">ia</span> <span class="ow">in</span> <span class="n">geom</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_write</span><span class="p">(</span><span class="n">fmt</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="o">*</span><span class="n">geom</span><span class="o">.</span><span class="n">xyz</span><span class="p">[</span><span class="n">ia</span><span class="p">,</span> <span class="p">:]))</span></div>
+        <span class="k">for</span> <span class="n">ia</span> <span class="ow">in</span> <span class="n">geometry</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_write</span><span class="p">(</span><span class="n">fmt</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="o">*</span><span class="n">geometry</span><span class="o">.</span><span class="n">xyz</span><span class="p">[</span><span class="n">ia</span><span class="p">,</span> <span class="p">:]))</span></div>
 
 <div class="viewcode-block" id="carSileVASP.read_supercell"><a class="viewcode-back" href="../../../../api-generated/sisl.io.vasp.carSileVASP.html#sisl.io.vasp.carSileVASP.read_supercell">[docs]</a>    <span class="nd">@sile_fh_open</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
     <span class="k">def</span> <span class="nf">read_supercell</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -306,7 +312,7 @@
 
         <span class="n">xyz</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">([</span><span class="n">na</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
         <span class="k">for</span> <span class="n">ia</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">na</span><span class="p">):</span>
-            <span class="n">xyz</span><span class="p">[</span><span class="n">ia</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="nb">float</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">readline</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">()))</span>
+            <span class="n">xyz</span><span class="p">[</span><span class="n">ia</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="nb">float</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">readline</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">()[:</span><span class="mi">3</span><span class="p">]))</span>
         <span class="k">if</span> <span class="n">cart</span><span class="p">:</span>
             <span class="c1"># The unit of the coordinates are cartesian</span>
             <span class="n">xyz</span> <span class="o">*=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_scale</span>

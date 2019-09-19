@@ -2385,10 +2385,26 @@
 
             <span class="nd">@collect_action</span>
             <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parser</span><span class="p">,</span> <span class="n">ns</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">option_string</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-                <span class="n">ns</span><span class="o">.</span><span class="n">_krng</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">ns</span><span class="o">.</span><span class="n">_krng</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+                <span class="k">except</span><span class="p">:</span>
+                    <span class="c1"># Parse it as an array</span>
+                    <span class="k">if</span> <span class="s1">&#39;,&#39;</span> <span class="ow">in</span> <span class="n">value</span><span class="p">:</span>
+                        <span class="n">k</span> <span class="o">=</span> <span class="nb">map</span><span class="p">(</span><span class="nb">float</span><span class="p">,</span> <span class="n">value</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;,&#39;</span><span class="p">))</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">k</span> <span class="o">=</span> <span class="nb">map</span><span class="p">(</span><span class="nb">float</span><span class="p">,</span> <span class="n">value</span><span class="o">.</span><span class="n">split</span><span class="p">())</span>
+                    <span class="n">k</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">k</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">k</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">3</span><span class="p">:</span>
+                        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Argument --kpoint *must* be an integer or 3 values to find the corresponding k-index&#39;</span><span class="p">)</span>
+                    <span class="n">ns</span><span class="o">.</span><span class="n">_krng</span> <span class="o">=</span> <span class="n">ns</span><span class="o">.</span><span class="n">_tbt</span><span class="o">.</span><span class="n">kindex</span><span class="p">(</span><span class="n">k</span><span class="p">)</span>
+                <span class="c1"># Add a description on which k-point this is</span>
+                <span class="n">k</span> <span class="o">=</span> <span class="n">ns</span><span class="o">.</span><span class="n">_tbt</span><span class="o">.</span><span class="n">k</span><span class="p">[</span><span class="n">ns</span><span class="o">.</span><span class="n">_krng</span><span class="p">]</span>
+                <span class="n">ns</span><span class="o">.</span><span class="n">_data_description</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;Data is extracted at k-point: [</span><span class="si">{}</span><span class="s1"> </span><span class="si">{}</span><span class="s1"> </span><span class="si">{}</span><span class="s1">]&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">k</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">k</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">k</span><span class="p">[</span><span class="mi">2</span><span class="p">]))</span>
+
         <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_k_avg</span><span class="p">:</span>
             <span class="n">p</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--kpoint&#39;</span><span class="p">,</span> <span class="s1">&#39;-k&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="n">kRange</span><span class="p">,</span>
-                           <span class="n">help</span><span class="o">=</span><span class="s2">&quot;&quot;&quot;Denote a specific k-index that is extracted, default to k-averaged quantity.</span>
+                           <span class="n">help</span><span class="o">=</span><span class="s2">&quot;&quot;&quot;Denote a specific k-index or comma/white-space separated k-point that is extracted, default to k-averaged quantity.</span>
+<span class="s2">                           For specific k-points the k weight will not be used.</span>
 
 <span class="s2">                           This flag takes effect on all k-resolved quantities and is reset whenever --plot or --out is called&quot;&quot;&quot;</span><span class="p">)</span>
 
