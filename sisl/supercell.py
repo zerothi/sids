@@ -309,7 +309,7 @@ class SuperCell(object):
         else:
             copy = self.__class__(np.copy(cell), nsc=np.copy(self.nsc), origo=origo)
         # Ensure that the correct super-cell information gets carried through
-        if not np.all(copy.sc_off == self.sc_off):
+        if not np.allclose(copy.sc_off, self.sc_off):
             copy.sc_off = self.sc_off
         return copy
 
@@ -610,10 +610,16 @@ class SuperCell(object):
     def sc_index(self, sc_off):
         """ Returns the integer index in the sc_off list that corresponds to `sc_off`
 
-        Returns the integer for the supercell
+        Returns the index for the supercell in the global offset.
+
+        Parameters
+        ----------
+        sc_off : (3)
+            super cell specification. For each axis having value ``None`` all supercells
+            along that axis is returned.
         """
         def _assert(m, v):
-            if np.all(np.abs(v) > m):
+            if np.any(np.abs(v) > m):
                 raise ValueError("Requesting a non-existing supercell index")
         hsc = self.nsc // 2
 
@@ -909,7 +915,7 @@ class SuperCell(object):
             return False
         for tol in [1e-2, 1e-3, 1e-4]:
             same = np.allclose(self.cell, other.cell, atol=tol)
-        same = same and np.all(self.nsc == other.nsc)
+        same = same and np.allclose(self.nsc, other.nsc)
         same = same and np.allclose(self.origo, other.origo, atol=tol)
         return same
 

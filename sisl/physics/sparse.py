@@ -195,14 +195,13 @@ class SparseOrbitalBZ(SparseOrbital):
 
         return p
 
-    # Create iterations on entire set of orbitals
-    def iter(self, local=False):
+    def iter_orbitals(self, atom=None, local=False):
         r""" Iterations of the orbital space in the geometry, two indices from loop
 
         An iterator returning the current atomic index and the corresponding
         orbital index.
 
-        >>> for ia, io in self:
+        >>> for ia, io in self.iter_orbitals():
 
         In the above case `io` always belongs to atom `ia` and `ia` may be
         repeated according to the number of orbitals associated with
@@ -210,6 +209,8 @@ class SparseOrbitalBZ(SparseOrbital):
 
         Parameters
         ----------
+        atom : int or array_like, optional
+           only loop on the given atoms, default to all atoms
         local : bool, optional
            whether the orbital index is the global index, or the local index relative to
            the atom it resides on.
@@ -220,11 +221,13 @@ class SparseOrbitalBZ(SparseOrbital):
            atomic index
         io
            orbital index
+
+        See Also
+        --------
+        Geometry.iter_orbitals : method used to iterate orbitals
         """
         for ia, io in self.geometry.iter_orbitals(local=local):
             yield ia, io
-
-    __iter__ = iter
 
     def _Pk(self, k=(0, 0, 0), dtype=None, gauge='R', format='csr', _dim=0):
         r""" Sparse matrix (``scipy.sparse.csr_matrix``) at `k` for a polarized system
@@ -934,9 +937,9 @@ class SparseOrbitalBZSpin(SparseOrbitalBZ):
 
         .. math::
 
-            2M = M + \boldsymbol\sigma_y K M \boldsymbol\sigma_y
+            2\mathbf M^{\mathrm{TRS}} = \mathbf M + \boldsymbol\sigma_y \mathbf M^* \boldsymbol\sigma_y
 
-        where :math:`K` is the conjugation operator.
+        where :math:`*` is the conjugation operator.
         """
         new = self.copy()
         sp = self.spin

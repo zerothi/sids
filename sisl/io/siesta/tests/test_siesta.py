@@ -2,7 +2,7 @@ from __future__ import print_function, division
 
 import pytest
 import numpy as np
-
+import os.path as osp
 import sisl
 from sisl import Hamiltonian, DynamicalMatrix, DensityMatrix
 from sisl import EnergyDensityMatrix
@@ -10,7 +10,7 @@ from sisl.io.siesta import *
 
 
 pytestmark = [pytest.mark.io, pytest.mark.siesta]
-_dir = 'sisl/io/siesta'
+_dir = osp.join('sisl', 'io', 'siesta')
 
 
 def test_nc1(sisl_tmp, sisl_system):
@@ -63,7 +63,7 @@ def test_nc_overlap(sisl_tmp, sisl_system):
 def test_nc_dynamical_matrix(sisl_tmp, sisl_system):
     f = sisl_tmp('grdyn.nc', _dir)
     dm = DynamicalMatrix(sisl_system.gtb)
-    for _, ix in dm:
+    for _, ix in dm.iter_orbitals():
         dm[ix, ix] = ix / 2.
     dm.write(ncSileSiesta(f, 'w'))
 
@@ -81,7 +81,7 @@ def test_nc_dynamical_matrix(sisl_tmp, sisl_system):
 def test_nc_density_matrix(sisl_tmp, sisl_system):
     f = sisl_tmp('grDM.nc', _dir)
     dm = DensityMatrix(sisl_system.gtb)
-    for _, ix in dm:
+    for _, ix in dm.iter_orbitals():
         dm[ix, ix] = ix / 2.
     dm.write(ncSileSiesta(f, 'w'))
 

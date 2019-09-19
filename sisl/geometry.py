@@ -298,7 +298,10 @@ class Geometry(SuperCellChild):
             return np.flatnonzero(atom)
         # We shouldn't .ravel() since the calling routine may expect
         # a 0D vector.
-        return _a.asarrayi(atom)
+        atom = _a.asarrayi(atom)
+        if atom.ndim > 1:
+            raise ValueError('Indexing geometries with a multi-dimensional array is not supported, ensure 0D or 1D arrays.')
+        return atom
 
     def _sanitize_orb(self, orbital):
         """ Converts an `orbital` to index under given inputs
@@ -311,7 +314,10 @@ class Geometry(SuperCellChild):
             return np.flatnonzero(orbital)
         # We shouldn't .ravel() since the calling routine may expect
         # a 0D vector.
-        return _a.asarrayi(orbital)
+        orbital = _a.asarrayi(orbital)
+        if orbital.ndim > 1:
+            raise ValueError('Indexing geometries with a multi-dimensional array is not supported, ensure 0D or 1D arrays.')
+        return orbital
 
     def as_primary(self, na_primary, ret_super=False):
         """ Try and reduce the geometry to the primary unit-cell comprising `na_primary` atoms
@@ -480,7 +486,7 @@ class Geometry(SuperCellChild):
 
         if isinstance(ja, Integral):
             return xj[:] - xi[:]
-        elif np.all(xi.shape == xj.shape):
+        elif np.allclose(xi.shape, xj.shape):
             return xj - xi
 
         return xj - xi[None, :]
@@ -627,7 +633,7 @@ class Geometry(SuperCellChild):
                 yield ia, self.atoms[ia], self.atoms.specie[ia]
 
     def iter_orbitals(self, atom=None, local=True):
-        """
+        r"""
         Returns an iterator over all atoms and their associated orbitals
 
         >>> for ia, io in self.iter_orbitals():
@@ -642,6 +648,13 @@ class Geometry(SuperCellChild):
         local : bool, optional
            whether the orbital index is the global index, or the local index relative to
            the atom it resides on.
+
+        Yields
+        ------
+        ia
+           atomic index
+        io
+           orbital index
 
         See Also
         --------
@@ -1013,11 +1026,11 @@ class Geometry(SuperCellChild):
         return _a.arrayi(idx_self), _a.arrayi(idx_other)
 
     def sort(self, axes=(2, 1, 0)):
-        """ Return an equivalent geometry by sorting the coordinates according to the axis orders
+        """ Return an equivalent geometry by sorting the coordinates according to the order of axis
 
         Examples
         --------
-        >>> idx = np.lexsort((self.xyz[:, i] for i in axis))
+        >>> idx = np.lexsort((self.xyz[:, i] for i in axes))
         >>> new = self.sub(idx)
 
         Parameters
