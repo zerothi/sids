@@ -59,38 +59,46 @@ class eigSileSiesta(SileSiesta):
     the used distribution is a Lorentzian.
     """
 
+    @sile_fh_open(True)
+    def read_fermi_level(self):
+        r""" Query the Fermi-level contained in the file
+
+        Returns
+        -------
+        Ef : fermi-level of the system
+        """
+        return float(self.readline())
+
     @sile_fh_open()
     def read_data(self):
         r""" Read eigenvalues, as calculated and written by Siesta
 
         Returns
         -------
-        numpy.ndarray : all eigenvalues, shifted to :math:`E_F = 0`, shape ``(ns, nk, no)``
+        numpy.ndarray : all eigenvalues, shifted to :math:`E_F = 0`, shape ``(ns, nk, nb)``
                         where ``ns`` number of spin-components, ``nk`` number of k-points and
-                        ``no`` number of orbitals.
+                        ``nb`` number of bands.
         """
-
-        # Luckily the data is in eV
-        Ef = float(self.readline())
+        Ef = self.read_fermi_level()
 
         # Read the total length of the path
-        no, ns, nk = map(int, self.readline().split())
+        nb, ns, nk = map(int, self.readline().split())
         if ns > 2:
             # This is simply a NC/SOC calculation which is irrelevant in
             # regards of the eigenvalues.
             ns = 1
 
         # Allocate
-        eigs = np.empty([ns, nk, no], np.float64)
+        eigs = np.empty([ns, nk, nb], np.float64)
 
         readline = self.readline
         for ik in range(nk):
             # The first line is special
             E_list = list(map(float, readline().split()[1:]))
             for _ in range(ns):
-                while len(E_list) < ns*no:
+                while len(E_list) < ns * nb:
                     E_list.extend(list(map(float, readline().split())))
-            eigs[:, ik, :] = np.asarray(E_list, np.float64).reshape(ns, no)
+            eigs[:, ik, :] = np.asarray(E_list, np.float64).reshape(ns, nb)
 
         return eigs - Ef
 

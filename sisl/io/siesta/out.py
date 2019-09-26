@@ -25,7 +25,7 @@ def _ensure_species(species):
 
 
 class outSileSiesta(SileSiesta):
-    """ Output file
+    """ Output file from Siesta
 
     This enables reading the output quantities from the Siesta output.
     """
@@ -108,17 +108,11 @@ class outSileSiesta(SileSiesta):
         # Read in data
         xyz = []
         spec = []
-        atom = []
         line = self.readline()
         while len(line.strip()) > 0:
             line = line.split()
             xyz.append([float(x) for x in line[:3]])
-            spec.append(line[3])
-            try:
-                atom.append(line[5])
-            except Exception:
-                # Allowed pass due to pythonic reading
-                pass
+            spec.append(int(line[3]))
             line = self.readline()
 
         # in outcoor we know it is always just after
@@ -136,10 +130,8 @@ class outSileSiesta(SileSiesta):
         elif not Ang:
             xyz *= Bohr2Ang
 
-        try:
-            geom = Geometry(xyz, atom, sc=cell)
-        except:
-            geom = Geometry(xyz, [species[int(i)-1] for i in spec], sc=cell)
+        # Assign the correct species
+        geom = Geometry(xyz, [species[ia - 1] for ia in spec], sc=cell)
 
         return geom
 
@@ -219,9 +211,9 @@ class outSileSiesta(SileSiesta):
                 coord = type_coord(line)
 
             if coord == 1:
-                return coord, self._read_geometry_outcoor(line, species)
+                return 1, self._read_geometry_outcoor(line, species)
             elif coord == 2:
-                return coord, self._read_geometry_atomic(line, species)
+                return 2, self._read_geometry_atomic(line, species)
 
         # Read until a coordinate block is found
         geom0 = None
@@ -460,27 +452,30 @@ class outSileSiesta(SileSiesta):
 
         Parameters
         ----------
-        geometry: bool
-           return the last geometry in the `outSileSiesta`
-        force: bool
-           return the last force in the `outSileSiesta`
-        moment: bool
-           return the last moments in the `outSileSiesta` (only for spin-orbit coupling calculations)
+        geometry: bool, optional
+           read geometry, args are passed to `read_geometry`
+        force: bool, optional
+           read force, args are passed to `read_force`
+        stress: bool, optional
+           read stress, args are passed to `read_stress`
+        moment: bool, optional
+           read moment, args are passed to `read_moment` (only for spin-orbit calculations)
         """
+        run = []
+        # This loops ensures that we preserve the order of arguments
+        # From Py3.6 and onwards the **kwargs is an OrderedDictionary
+        for kw in kwargs.keys():
+            if kw in ['geometry', 'force', 'moment', 'stress']:
+                if kwargs[kw]:
+                    run.append(kw)
+
+        # Clean running names
+        for name in run:
+            kwargs.pop(name)
+
         val = []
-        for kw in kwargs:
-
-            if kw == 'geometry':
-                if kwargs[kw]:
-                    val.append(self.read_geometry())
-
-            if kw == 'force':
-                if kwargs[kw]:
-                    val.append(self.read_force())
-
-            if kw == 'moment':
-                if kwargs[kw]:
-                    val.append(self.read_moment())
+        for name in run:
+            val.append(getattr(self, 'read_{}'.format(name.lower()))(*args, **kwargs))
 
         if len(val) == 0:
             return None
