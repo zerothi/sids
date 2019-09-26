@@ -196,7 +196,7 @@
 
 
 <div class="viewcode-block" id="outSileSiesta"><a class="viewcode-back" href="../../../../api-generated/sisl.io.siesta.outSileSiesta.html#sisl.io.siesta.outSileSiesta">[docs]</a><span class="k">class</span> <span class="nc">outSileSiesta</span><span class="p">(</span><span class="n">SileSiesta</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot; Output file</span>
+    <span class="sd">&quot;&quot;&quot; Output file from Siesta</span>
 
 <span class="sd">    This enables reading the output quantities from the Siesta output.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
@@ -279,17 +279,11 @@
         <span class="c1"># Read in data</span>
         <span class="n">xyz</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="n">spec</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="n">atom</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="n">line</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">readline</span><span class="p">()</span>
         <span class="k">while</span> <span class="nb">len</span><span class="p">(</span><span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">())</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
             <span class="n">line</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
             <span class="n">xyz</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="nb">float</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">line</span><span class="p">[:</span><span class="mi">3</span><span class="p">]])</span>
-            <span class="n">spec</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">line</span><span class="p">[</span><span class="mi">3</span><span class="p">])</span>
-            <span class="k">try</span><span class="p">:</span>
-                <span class="n">atom</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">line</span><span class="p">[</span><span class="mi">5</span><span class="p">])</span>
-            <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
-                <span class="c1"># Allowed pass due to pythonic reading</span>
-                <span class="k">pass</span>
+            <span class="n">spec</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">line</span><span class="p">[</span><span class="mi">3</span><span class="p">]))</span>
             <span class="n">line</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">readline</span><span class="p">()</span>
 
         <span class="c1"># in outcoor we know it is always just after</span>
@@ -307,10 +301,8 @@
         <span class="k">elif</span> <span class="ow">not</span> <span class="n">Ang</span><span class="p">:</span>
             <span class="n">xyz</span> <span class="o">*=</span> <span class="n">Bohr2Ang</span>
 
-        <span class="k">try</span><span class="p">:</span>
-            <span class="n">geom</span> <span class="o">=</span> <span class="n">Geometry</span><span class="p">(</span><span class="n">xyz</span><span class="p">,</span> <span class="n">atom</span><span class="p">,</span> <span class="n">sc</span><span class="o">=</span><span class="n">cell</span><span class="p">)</span>
-        <span class="k">except</span><span class="p">:</span>
-            <span class="n">geom</span> <span class="o">=</span> <span class="n">Geometry</span><span class="p">(</span><span class="n">xyz</span><span class="p">,</span> <span class="p">[</span><span class="n">species</span><span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">i</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">spec</span><span class="p">],</span> <span class="n">sc</span><span class="o">=</span><span class="n">cell</span><span class="p">)</span>
+        <span class="c1"># Assign the correct species</span>
+        <span class="n">geom</span> <span class="o">=</span> <span class="n">Geometry</span><span class="p">(</span><span class="n">xyz</span><span class="p">,</span> <span class="p">[</span><span class="n">species</span><span class="p">[</span><span class="n">ia</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">ia</span> <span class="ow">in</span> <span class="n">spec</span><span class="p">],</span> <span class="n">sc</span><span class="o">=</span><span class="n">cell</span><span class="p">)</span>
 
         <span class="k">return</span> <span class="n">geom</span>
 
@@ -390,9 +382,9 @@
                 <span class="n">coord</span> <span class="o">=</span> <span class="n">type_coord</span><span class="p">(</span><span class="n">line</span><span class="p">)</span>
 
             <span class="k">if</span> <span class="n">coord</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
-                <span class="k">return</span> <span class="n">coord</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_read_geometry_outcoor</span><span class="p">(</span><span class="n">line</span><span class="p">,</span> <span class="n">species</span><span class="p">)</span>
+                <span class="k">return</span> <span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_read_geometry_outcoor</span><span class="p">(</span><span class="n">line</span><span class="p">,</span> <span class="n">species</span><span class="p">)</span>
             <span class="k">elif</span> <span class="n">coord</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
-                <span class="k">return</span> <span class="n">coord</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_read_geometry_atomic</span><span class="p">(</span><span class="n">line</span><span class="p">,</span> <span class="n">species</span><span class="p">)</span>
+                <span class="k">return</span> <span class="mi">2</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_read_geometry_atomic</span><span class="p">(</span><span class="n">line</span><span class="p">,</span> <span class="n">species</span><span class="p">)</span>
 
         <span class="c1"># Read until a coordinate block is found</span>
         <span class="n">geom0</span> <span class="o">=</span> <span class="kc">None</span>
@@ -631,27 +623,30 @@
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
-<span class="sd">        geometry: bool</span>
-<span class="sd">           return the last geometry in the `outSileSiesta`</span>
-<span class="sd">        force: bool</span>
-<span class="sd">           return the last force in the `outSileSiesta`</span>
-<span class="sd">        moment: bool</span>
-<span class="sd">           return the last moments in the `outSileSiesta` (only for spin-orbit coupling calculations)</span>
+<span class="sd">        geometry: bool, optional</span>
+<span class="sd">           read geometry, args are passed to `read_geometry`</span>
+<span class="sd">        force: bool, optional</span>
+<span class="sd">           read force, args are passed to `read_force`</span>
+<span class="sd">        stress: bool, optional</span>
+<span class="sd">           read stress, args are passed to `read_stress`</span>
+<span class="sd">        moment: bool, optional</span>
+<span class="sd">           read moment, args are passed to `read_moment` (only for spin-orbit calculations)</span>
 <span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">run</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="c1"># This loops ensures that we preserve the order of arguments</span>
+        <span class="c1"># From Py3.6 and onwards the **kwargs is an OrderedDictionary</span>
+        <span class="k">for</span> <span class="n">kw</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">kw</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;geometry&#39;</span><span class="p">,</span> <span class="s1">&#39;force&#39;</span><span class="p">,</span> <span class="s1">&#39;moment&#39;</span><span class="p">,</span> <span class="s1">&#39;stress&#39;</span><span class="p">]:</span>
+                <span class="k">if</span> <span class="n">kwargs</span><span class="p">[</span><span class="n">kw</span><span class="p">]:</span>
+                    <span class="n">run</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">kw</span><span class="p">)</span>
+
+        <span class="c1"># Clean running names</span>
+        <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">run</span><span class="p">:</span>
+            <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+
         <span class="n">val</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="k">for</span> <span class="n">kw</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="p">:</span>
-
-            <span class="k">if</span> <span class="n">kw</span> <span class="o">==</span> <span class="s1">&#39;geometry&#39;</span><span class="p">:</span>
-                <span class="k">if</span> <span class="n">kwargs</span><span class="p">[</span><span class="n">kw</span><span class="p">]:</span>
-                    <span class="n">val</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">read_geometry</span><span class="p">())</span>
-
-            <span class="k">if</span> <span class="n">kw</span> <span class="o">==</span> <span class="s1">&#39;force&#39;</span><span class="p">:</span>
-                <span class="k">if</span> <span class="n">kwargs</span><span class="p">[</span><span class="n">kw</span><span class="p">]:</span>
-                    <span class="n">val</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">read_force</span><span class="p">())</span>
-
-            <span class="k">if</span> <span class="n">kw</span> <span class="o">==</span> <span class="s1">&#39;moment&#39;</span><span class="p">:</span>
-                <span class="k">if</span> <span class="n">kwargs</span><span class="p">[</span><span class="n">kw</span><span class="p">]:</span>
-                    <span class="n">val</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">read_moment</span><span class="p">())</span>
+        <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">run</span><span class="p">:</span>
+            <span class="n">val</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;read_</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">name</span><span class="o">.</span><span class="n">lower</span><span class="p">()))(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">))</span>
 
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">val</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
             <span class="k">return</span> <span class="kc">None</span>

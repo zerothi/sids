@@ -230,38 +230,46 @@
 <span class="sd">    the used distribution is a Lorentzian.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
+<div class="viewcode-block" id="eigSileSiesta.read_fermi_level"><a class="viewcode-back" href="../../../../api-generated/sisl.io.siesta.eigSileSiesta.html#sisl.io.siesta.eigSileSiesta.read_fermi_level">[docs]</a>    <span class="nd">@sile_fh_open</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">read_fermi_level</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot; Query the Fermi-level contained in the file</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        Ef : fermi-level of the system</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">readline</span><span class="p">())</span></div>
+
 <div class="viewcode-block" id="eigSileSiesta.read_data"><a class="viewcode-back" href="../../../../api-generated/sisl.io.siesta.eigSileSiesta.html#sisl.io.siesta.eigSileSiesta.read_data">[docs]</a>    <span class="nd">@sile_fh_open</span><span class="p">()</span>
     <span class="k">def</span> <span class="nf">read_data</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sa">r</span><span class="sd">&quot;&quot;&quot; Read eigenvalues, as calculated and written by Siesta</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
-<span class="sd">        numpy.ndarray : all eigenvalues, shifted to :math:`E_F = 0`, shape ``(ns, nk, no)``</span>
+<span class="sd">        numpy.ndarray : all eigenvalues, shifted to :math:`E_F = 0`, shape ``(ns, nk, nb)``</span>
 <span class="sd">                        where ``ns`` number of spin-components, ``nk`` number of k-points and</span>
-<span class="sd">                        ``no`` number of orbitals.</span>
+<span class="sd">                        ``nb`` number of bands.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-
-        <span class="c1"># Luckily the data is in eV</span>
-        <span class="n">Ef</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">readline</span><span class="p">())</span>
+        <span class="n">Ef</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">read_fermi_level</span><span class="p">()</span>
 
         <span class="c1"># Read the total length of the path</span>
-        <span class="n">no</span><span class="p">,</span> <span class="n">ns</span><span class="p">,</span> <span class="n">nk</span> <span class="o">=</span> <span class="nb">map</span><span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">readline</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">())</span>
+        <span class="n">nb</span><span class="p">,</span> <span class="n">ns</span><span class="p">,</span> <span class="n">nk</span> <span class="o">=</span> <span class="nb">map</span><span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">readline</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">())</span>
         <span class="k">if</span> <span class="n">ns</span> <span class="o">&gt;</span> <span class="mi">2</span><span class="p">:</span>
             <span class="c1"># This is simply a NC/SOC calculation which is irrelevant in</span>
             <span class="c1"># regards of the eigenvalues.</span>
             <span class="n">ns</span> <span class="o">=</span> <span class="mi">1</span>
 
         <span class="c1"># Allocate</span>
-        <span class="n">eigs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">([</span><span class="n">ns</span><span class="p">,</span> <span class="n">nk</span><span class="p">,</span> <span class="n">no</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+        <span class="n">eigs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">([</span><span class="n">ns</span><span class="p">,</span> <span class="n">nk</span><span class="p">,</span> <span class="n">nb</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
 
         <span class="n">readline</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">readline</span>
         <span class="k">for</span> <span class="n">ik</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nk</span><span class="p">):</span>
             <span class="c1"># The first line is special</span>
             <span class="n">E_list</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="nb">float</span><span class="p">,</span> <span class="n">readline</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">()[</span><span class="mi">1</span><span class="p">:]))</span>
             <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">ns</span><span class="p">):</span>
-                <span class="k">while</span> <span class="nb">len</span><span class="p">(</span><span class="n">E_list</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">ns</span><span class="o">*</span><span class="n">no</span><span class="p">:</span>
+                <span class="k">while</span> <span class="nb">len</span><span class="p">(</span><span class="n">E_list</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">ns</span> <span class="o">*</span> <span class="n">nb</span><span class="p">:</span>
                     <span class="n">E_list</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="nb">float</span><span class="p">,</span> <span class="n">readline</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">())))</span>
-            <span class="n">eigs</span><span class="p">[:,</span> <span class="n">ik</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">E_list</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">ns</span><span class="p">,</span> <span class="n">no</span><span class="p">)</span>
+            <span class="n">eigs</span><span class="p">[:,</span> <span class="n">ik</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">E_list</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">ns</span><span class="p">,</span> <span class="n">nb</span><span class="p">)</span>
 
         <span class="k">return</span> <span class="n">eigs</span> <span class="o">-</span> <span class="n">Ef</span></div>
 
