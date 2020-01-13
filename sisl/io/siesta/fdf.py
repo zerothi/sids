@@ -71,16 +71,9 @@ class fdfSileSiesta(SileSiesta):
     >>> fdf = fdfSileSiesta('tmp/RUN.fdf', base='.') # reads output files in './' folder
     """
 
-    def __init__(self, filename, mode='r', base=None):
-        super(fdfSileSiesta, self).__init__(filename, mode=mode, comment=['#', '!', ';'], base=base)
-
-    @property
-    def file(self):
-        """ Return the current file name (without the directory prefix) """
-        return self._file
-
     def _setup(self, *args, **kwargs):
         """ Setup the `fdfSileSiesta` after initialization """
+        self._comment = ['#', '!', ';']
 
         # List of parent file-handles used while reading
         # This is because fdf enables inclusion of other files
@@ -752,7 +745,8 @@ class fdfSileSiesta(SileSiesta):
 
         Returns
         -------
-        (*, 3, 2, *, 3) : vector with force constant element for each of the atomic displacements
+        force_constant : numpy.ndarray
+            vector [*, 3, 2, *, 3]  with force constant element for each of the atomic displacements
         """
         order = _listify_str(kwargs.pop('order', ['nc', 'FC']))
         for f in order:
@@ -806,7 +800,8 @@ class fdfSileSiesta(SileSiesta):
 
         Returns
         -------
-        float : fermi-level
+        Ef : float
+            fermi-level
         """
         order = _listify_str(kwargs.pop('order', ['nc', 'TSDE', 'TSHS', 'EIG']))
         for f in order:
@@ -849,7 +844,7 @@ class fdfSileSiesta(SileSiesta):
             By default this is ``['nc', 'FC']``.
         cutoff_dist : float, optional
             cutoff value for the distance of the force-constants (everything farther than
-            `cutoff_dist` will be set to 0, unit in Ang.
+            `cutoff_dist` will be set to 0 Ang). Default, no cutoff.
         cutoff : float, optional
             absolute values below the cutoff are considered 0. Defaults to 1e-4 eV/Ang**2.
         correct_fc : bool, optional
@@ -858,7 +853,8 @@ class fdfSileSiesta(SileSiesta):
 
         Returns
         -------
-        DynamicalMatrix : Dynamical matrix
+        dynamic_matrix : DynamicalMatrix
+            the dynamical matrix
         """
         order = _listify_str(kwargs.pop('order', ['nc', 'FC']))
         for f in order:

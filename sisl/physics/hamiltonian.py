@@ -470,7 +470,7 @@ class Hamiltonian(SparseOrbitalBZSpin):
         """
         return self.eigenstate(k, **kwargs).PDOS(E, distribution)
 
-    def fermi_level(self, bz=None, q=None, distribution='fermi_dirac', q_tol=1e-12):
+    def fermi_level(self, bz=None, q=None, distribution='fermi_dirac', q_tol=1e-10):
         """ Calculate the Fermi-level using a Brillouinzone sampling and a target charge
 
         The Fermi-level will be calculated using an iterative approach by first calculating all eigenvalues
@@ -505,9 +505,12 @@ class Hamiltonian(SparseOrbitalBZSpin):
         bz.asarray()
 
         if q is None:
-            q = self.geometry.q0
+            if self.spin.is_unpolarized:
+                q = self.geometry.q0 * 0.5
+            else:
+                q = self.geometry.q0
         # Ensure we have an "array" in case of spin-polarized calculations
-        q = np.asarray(q)
+        q = np.asarray(q, dtype=np.float64)
 
         if isinstance(distribution, str):
             distribution = get_distribution(distribution)
@@ -520,37 +523,21 @@ class Hamiltonian(SparseOrbitalBZSpin):
             # We could reduce it depending on the temperature,
             # however the distribution does not have the kT
             # parameter available.
-            Ef = np.average(eig[:, int(q)])
+            min_Ef, max_Ef = eig.min(), eig.max()
 
-            l_Ef = []
-            l_q = []
-            def list_append(q, Ef):
-                l_q.append(q)
-                l_Ef.append(Ef)
+            while True:
+                Ef = (min_Ef + max_Ef) * 0.5
 
-            # Calculate guessed charge
-            qt = (distribution(eig, mu=Ef) * w).sum()
-
-            while abs(qt - q) > q_tol:
-                # Add to cubic-spline
-                list_append(qt, Ef)
-
-                # Estimate new Fermi-level
-                if len(l_q) > 1:
-                    # We can do a spline interpolation
-                    lq = np.array(l_q)
-                    idx = np.argsort(lq)
-                    lEf = np.array(l_Ef)
-                    Ef = CubicSpline(lq[idx], lEf[idx], extrapolate=True)(q)
-                else:
-                    # Update limits
-                    if qt > q:
-                        Ef = Ef - 0.5
-                    elif qt < q:
-                        Ef = Ef + 0.5
-
-                # Calculate new guessed charge
+                # Calculate guessed charge
                 qt = (distribution(eig, mu=Ef) * w).sum()
+
+                if abs(qt - q) < q_tol:
+                    return Ef
+
+                if qt >= q:
+                    max_Ef = Ef
+                elif qt <= q:
+                    min_Ef = Ef
 
             return Ef
 

@@ -242,6 +242,10 @@ class SparseCSR(object):
         # Denote that this sparsity pattern hasn't been finalized
         self._finalized = False
 
+    def diagonal(self):
+        r""" Return the diagonal elements from the matrix """
+        return np.array([self[i, i] for i in range(self.shape[0])], dtype=self.dtype)
+
     def diags(self, diagonals, offsets=0, dim=None, dtype=None):
         """ Create a `SparseCSR` with diagonal elements with the same shape as the routine
 
@@ -929,11 +933,13 @@ class SparseCSR(object):
             indices of the existing elements
         """
         # Ensure flattened array...
-        j = asarrayi(j).ravel()
+        j = asarrayi(j)
 
         # Make it a little easier
         ptr = self.ptr[i]
 
+        if j.ndim == 0:
+            return indices(self.col[ptr:ptr+self.ncol[i]], j.ravel(), ptr)[0]
         return indices(self.col[ptr:ptr+self.ncol[i]], j, ptr)
 
     def _get_only(self, i, j):
@@ -1013,12 +1019,16 @@ class SparseCSR(object):
 
         # Get indices of sparse data (-1 if non-existing)
         get_idx = self._get(key[0], key[1])
-        n = len(get_idx)
+        dim0 = get_idx.ndim == 0
+        if dim0:
+            n = 1
+        else:
+            n = len(get_idx)
 
         # Indices of existing values in return array
         ret_idx = (get_idx >= 0).nonzero()[0]
         # Indices of existing values in get array
-        get_idx = get_idx[ret_idx]
+        get_idx = get_idx.ravel()[ret_idx]
 
         # Check which data to retrieve
         if len(key) > 2:
@@ -1040,6 +1050,10 @@ class SparseCSR(object):
                 r = zeros([n, s], dtype=self._D.dtype)
                 r[ret_idx, :] = self._D[get_idx, :]
 
+        if dim0:
+            if r.size == 1:
+                return r.ravel()[0]
+            return np.squeeze(r, axis=-2)
         return r
 
     def __setitem__(self, key, data):
@@ -1704,24 +1718,30 @@ class SparseCSR(object):
         return self
 
     def __getstate__(self):
-        """ Return dictionary with the current state """
-        d = {}
-        # Reduce array sizes
-        self.finalize()
-        return {
+        """ Return dictionary with the current state (finalizing the object may reduce memory footprint) """
+        d = {
             'shape': self._shape[:],
             'ncol': self.ncol.copy(),
             'col': self.col.copy(),
-            'D': self._D.copy()
+            'D': self._D.copy(),
+            'finalized': self._finalized
         }
+        if not self.finalized:
+            d['ptr'] = self.ptr.copy()
+        return d
 
     def __setstate__(self, state):
         """ Reset state of the object """
         self._shape = tuple(state['shape'][:])
         self.ncol = state['ncol']
-        self.ptr = insert(_a.cumsumi(self.ncol), 0, 0)
         self.col = state['col']
         self._D = state['D']
+        self._nnz = self.ncol.sum()
+        self._finalized = state['finalized']
+        if self.finalized:
+            self.ptr = insert(_a.cumsumi(self.ncol), 0, 0)
+        else:
+            self.ptr = state['ptr']
 
 
 def ispmatrix(matrix, map_row=None, map_col=None):

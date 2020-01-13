@@ -34,11 +34,25 @@ class SelfEnergy(object):
     """
 
     def __init__(self, *args, **kwargs):
-        """ Self-energy class for constructing a self-energy. """
+        r""" Self-energy class for constructing a self-energy. """
         pass
+
+    def __len__(self):
+        r"""Dimension of the self-energy"""
+        raise NotImplementedError
 
     @staticmethod
     def se2scat(SE):
+        r""" Calculate the scattering matrix from the self-energy
+
+        .. math::
+            \boldsymbol\Gamma = i(\boldsymbol\Sigma - \boldsymbol \Sigma ^\dagger)
+
+        Parameters
+        ----------
+        SE : matrix
+            self-energy matrix
+        """
         return 1j * (SE - conjugate(SE.T))
 
     def _setup(self, *args, **kwargs):
@@ -58,7 +72,7 @@ class SelfEnergy(object):
         This corresponds to:
 
         .. math::
-            \boldsymbol Gamma = i(\boldsymbol\Sigma - \boldsymbol \Sigma ^\dagger)
+            \boldsymbol\Gamma = i(\boldsymbol\Sigma - \boldsymbol \Sigma ^\dagger)
 
         Examples
         --------
@@ -189,6 +203,10 @@ class RecursiveSI(SemiInfinite):
         cols = array_arange(idx, idx + n)
         # Delete all values in columns, but keep them to retain the supercell information
         self.spgeom1._csr.delete_columns(cols, keep_shape=True)
+
+    def __len__(self):
+        r"""Dimension of the self-energy"""
+        return len(self.spgeom0)
 
     def green(self, E, k=(0, 0, 0), dtype=None, eps=1e-14, **kwargs):
         r""" Return a dense matrix with the bulk Green function at energy `E` and k-point `k` (default Gamma).
@@ -508,7 +526,7 @@ class RealSpaceSE(SelfEnergy):
 
     .. math::
         \boldsymbol\Sigma^\mathcal{R}(E) = \mathbf S^\mathcal{R} (E+i\eta) - \mathbf H^\mathcal{R}
-             - \sum_{\mathbf k} \mathbf G_{\mathbf k}(E)
+             - \Big[\sum_{\mathbf k} \mathbf G_{\mathbf k}(E)\Big]^{-1}
 
     The method actually used is relying on `RecursiveSI` and `~sisl.physics.Bloch` objects.
 
@@ -599,6 +617,10 @@ class RealSpaceSE(SelfEnergy):
         }
         self.set_options(**options)
         self.initialize()
+
+    def __len__(self):
+        r"""Dimension of the self-energy"""
+        return len(self.parent) * np.prod(self._unfold)
 
     def __str__(self):
         """ String representation of RealSpaceSE """
@@ -771,7 +793,7 @@ class RealSpaceSE(SelfEnergy):
 
         .. math::
             \boldsymbol\Sigma^{\mathcal{R}}(E) = \mathbf S^{\mathcal{R}} E - \mathbf H^{\mathcal{R}}
-               - \sum_{\mathbf k} \mathbf G_{\mathbf k}(E)
+               - \Big[\sum_{\mathbf k} \mathbf G_{\mathbf k}(E)\Big]^{-1}
 
         Parameters
         ----------
@@ -1015,7 +1037,7 @@ class RealSpaceSI(SelfEnergy):
 
     .. math::
         \boldsymbol\Sigma^\mathcal{R}(E) = \mathbf S^\mathcal{R} (E+i\eta) - \mathbf H^\mathcal{R}
-             - \sum_{\mathbf k} \mathbf G_{\mathbf k}(E)
+             - \Big[\sum_{\mathbf k} \mathbf G_{\mathbf k}(E)\Big]^{-1}
 
     The method actually used is relying on `RecursiveSI` and `~sisl.physics.Bloch` objects.
 
@@ -1354,7 +1376,7 @@ class RealSpaceSI(SelfEnergy):
         The real space self-energy is calculated via:
         .. math::
             \boldsymbol\Sigma^{\mathcal{R}}(E) = \mathbf S^{\mathcal{R}} E - \mathbf H^{\mathcal{R}}
-               - \sum_{\mathbf k} \mathbf G_{\mathbf k}(E)
+               - \Big[\sum_{\mathbf k} \mathbf G_{\mathbf k}(E)\Big]^{-1}
 
         Parameters
         ----------

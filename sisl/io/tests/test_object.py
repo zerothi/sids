@@ -1,5 +1,3 @@
-from __future__ import print_function, division
-
 import pytest
 import os.path as osp
 import numpy as np
@@ -19,7 +17,9 @@ gsc = get_sile_class
 
 
 def _my_intersect(a, b):
-    return list(set(get_siles(a)).intersection(get_siles(b)))
+    a = get_siles(a)
+    b = set(get_siles(b))
+    return [k for k in a if k in b]
 
 
 def _fnames(base, variants):

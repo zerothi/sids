@@ -352,6 +352,8 @@ class Geometry(SuperCellChild):
         n_supercells = len(self) // na_primary
         if n_supercells == 1:
             # Return a copy of self
+            if ret_super:
+                return self.copy(), self.nsc.copy()
             return self.copy()
 
         # Now figure out the repetitions along each direction
@@ -1217,11 +1219,7 @@ class Geometry(SuperCellChild):
         --------
         sub : the negative of this routine, i.e. retain a subset of atoms
         """
-        if isinstance(atom, ndarray) and atom.dtype == bool_:
-            atom = np.flatnonzero(atom)
-        elif isinstance(atom, str):
-            atom = self.names[atom]
-        atom = self.sc2uc(atom)
+        atom = self.sc2uc(self._sanitize_atom(atom))
         atom = np.delete(_a.arangei(self.na), atom)
         return self.sub(atom)
 
@@ -3620,7 +3618,6 @@ class Geometry(SuperCellChild):
                     g = ns._geometry
                     # Change all coordinates using the reciprocal cell and move to unit-cell (% 1.)
                     fxyz = g.fxyz % 1.
-                    fxyz -= np.amin(fxyz, axis=0)
                     ns._geometry.xyz[:, :] = dot(fxyz, g.cell)
         p.add_argument(*opts('--unit-cell', '-uc'), choices=['translate', 'tr', 't', 'mod'],
                        action=MoveUnitCell,
