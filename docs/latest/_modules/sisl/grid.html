@@ -684,7 +684,7 @@
 <span class="sd">        Examples</span>
 <span class="sd">        --------</span>
 <span class="sd">        &gt;&gt;&gt; grid = Grid([10, 10, 10])</span>
-<span class="sd">        &gt;&gt;&gt; assert np.all(grid.index2primary([-1, -1, -1]) == 9)</span>
+<span class="sd">        &gt;&gt;&gt; assert np.all(grid.index_fold([-1, -1, -1]) == 9)</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
@@ -697,6 +697,10 @@
 <span class="sd">        -------</span>
 <span class="sd">        numpy.ndarray</span>
 <span class="sd">            all indices are then within the shape of the grid</span>
+
+<span class="sd">        See Also</span>
+<span class="sd">        --------</span>
+<span class="sd">        index_truncate : truncate indices by removing indices outside the primary cell</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">index</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">asarrayi</span><span class="p">(</span><span class="n">index</span><span class="p">)</span>
         <span class="n">ndim</span> <span class="o">=</span> <span class="n">index</span><span class="o">.</span><span class="n">ndim</span>
@@ -706,6 +710,41 @@
             <span class="n">index</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">index</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span> <span class="o">%</span> <span class="n">_a</span><span class="o">.</span><span class="n">asarrayi</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">)[</span><span class="kc">None</span><span class="p">,</span> <span class="p">:],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">index</span> <span class="o">=</span> <span class="n">index</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span> <span class="o">%</span> <span class="n">_a</span><span class="o">.</span><span class="n">asarrayi</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">)[</span><span class="kc">None</span><span class="p">,</span> <span class="p">:]</span>
+
+        <span class="k">if</span> <span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">index</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">index</span></div>
+
+<div class="viewcode-block" id="Grid.index_truncate"><a class="viewcode-back" href="../../api-generated/sisl.Grid.html#sisl.Grid.index_truncate">[docs]</a>    <span class="k">def</span> <span class="nf">index_truncate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">index</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Remove indices from *outside* the grid to only retain indices in the &quot;primary&quot; grid</span>
+
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
+<span class="sd">        &gt;&gt;&gt; grid = Grid([10, 10, 10])</span>
+<span class="sd">        &gt;&gt;&gt; assert len(grid.index_truncate([-1, -1, -1])) == 0</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        index : array_like</span>
+<span class="sd">           indices for grid-positions</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        numpy.ndarray</span>
+<span class="sd">            all indices are then within the shape of the grid (others have been removed</span>
+
+<span class="sd">        See Also</span>
+<span class="sd">        --------</span>
+<span class="sd">        index_fold : fold indices into the primary cell</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">index</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">asarrayi</span><span class="p">(</span><span class="n">index</span><span class="p">)</span>
+        <span class="n">ndim</span> <span class="o">=</span> <span class="n">index</span><span class="o">.</span><span class="n">ndim</span>
+
+        <span class="n">index</span><span class="o">.</span><span class="n">shape</span> <span class="o">=</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+        <span class="n">log_and_reduce</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">logical_and</span><span class="o">.</span><span class="n">reduce</span>
+        <span class="n">index</span> <span class="o">=</span> <span class="n">index</span><span class="p">[</span><span class="n">log_and_reduce</span><span class="p">(</span><span class="mi">0</span> <span class="o">&lt;=</span> <span class="n">index</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span> <span class="p">:]</span>
+        <span class="n">s</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">asarrayi</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+        <span class="n">index</span> <span class="o">=</span> <span class="n">index</span><span class="p">[</span><span class="n">log_and_reduce</span><span class="p">(</span><span class="n">index</span> <span class="o">&lt;</span> <span class="n">s</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span> <span class="p">:]</span>
 
         <span class="k">if</span> <span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">index</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
@@ -1200,38 +1239,21 @@
 <span class="sd">           Default to the grid&#39;s boundary conditions, else `bc` *must* be a list of elements</span>
 <span class="sd">           with elements corresponding to `Grid.PERIODIC`/`Grid.NEUMANN`...</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">C</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
-
         <span class="k">def</span> <span class="nf">Neumann</span><span class="p">(</span><span class="n">idx_bc</span><span class="p">,</span> <span class="n">idx_p1</span><span class="p">):</span>
-            <span class="c1"># TODO check this BC</span>
             <span class="c1"># Set all boundary equations to 0</span>
             <span class="n">s</span> <span class="o">=</span> <span class="n">array_arange</span><span class="p">(</span><span class="n">A</span><span class="o">.</span><span class="n">indptr</span><span class="p">[</span><span class="n">idx_bc</span><span class="p">],</span> <span class="n">A</span><span class="o">.</span><span class="n">indptr</span><span class="p">[</span><span class="n">idx_bc</span><span class="o">+</span><span class="mi">1</span><span class="p">])</span>
             <span class="n">A</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">s</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
             <span class="c1"># force the boundary cells to equal the neighbouring cell</span>
-            <span class="n">A</span><span class="p">[</span><span class="n">idx_bc</span><span class="p">,</span> <span class="n">idx_bc</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="n">C</span> <span class="c1"># I am not sure this is correct, but setting it to 0 does NOT work</span>
-            <span class="n">A</span><span class="p">[</span><span class="n">idx_bc</span><span class="p">,</span> <span class="n">idx_p1</span><span class="p">]</span> <span class="o">=</span> <span class="n">C</span>
-            <span class="c1"># ensure the neighbouring cell doesn&#39;t connect to the boundary (no back propagation)</span>
-            <span class="n">A</span><span class="p">[</span><span class="n">idx_p1</span><span class="p">,</span> <span class="n">idx_bc</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
-            <span class="c1"># Ensure the sum of the source for the neighbouring cells equals 0</span>
-            <span class="c1"># To make it easy to figure out the diagonal elements we first</span>
-            <span class="c1"># set it to 0, then sum off-diagonal terms, and set the diagonal</span>
-            <span class="c1"># equal to the sum.</span>
-            <span class="n">A</span><span class="p">[</span><span class="n">idx_p1</span><span class="p">,</span> <span class="n">idx_p1</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
-            <span class="n">n</span> <span class="o">=</span> <span class="n">A</span><span class="o">.</span><span class="n">indptr</span><span class="p">[</span><span class="n">idx_p1</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">A</span><span class="o">.</span><span class="n">indptr</span><span class="p">[</span><span class="n">idx_p1</span><span class="p">]</span>
-            <span class="n">s</span> <span class="o">=</span> <span class="n">array_arange</span><span class="p">(</span><span class="n">A</span><span class="o">.</span><span class="n">indptr</span><span class="p">[</span><span class="n">idx_p1</span><span class="p">],</span> <span class="n">n</span><span class="o">=</span><span class="n">n</span><span class="p">)</span>
-            <span class="n">n</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">A</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">s</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">cumsum</span><span class="p">(</span><span class="n">n</span><span class="p">)[:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
-            <span class="n">n</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">fromiteri</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">,</span> <span class="n">n</span><span class="p">))</span>
-            <span class="c1"># update diagonal</span>
-            <span class="n">A</span><span class="p">[</span><span class="n">idx_p1</span><span class="p">,</span> <span class="n">idx_p1</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="n">n</span>
-            <span class="k">del</span> <span class="n">s</span><span class="p">,</span> <span class="n">n</span>
+            <span class="n">A</span><span class="p">[</span><span class="n">idx_bc</span><span class="p">,</span> <span class="n">idx_bc</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+            <span class="n">A</span><span class="p">[</span><span class="n">idx_bc</span><span class="p">,</span> <span class="n">idx_p1</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
             <span class="n">A</span><span class="o">.</span><span class="n">eliminate_zeros</span><span class="p">()</span>
             <span class="n">b</span><span class="p">[</span><span class="n">idx_bc</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.</span>
         <span class="k">def</span> <span class="nf">Dirichlet</span><span class="p">(</span><span class="n">idx</span><span class="p">):</span>
             <span class="c1"># Default pyamg Poisson matrix has Dirichlet BC</span>
             <span class="n">b</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.</span>
         <span class="k">def</span> <span class="nf">Periodic</span><span class="p">(</span><span class="n">idx1</span><span class="p">,</span> <span class="n">idx2</span><span class="p">):</span>
-            <span class="n">A</span><span class="p">[</span><span class="n">idx1</span><span class="p">,</span> <span class="n">idx2</span><span class="p">]</span> <span class="o">=</span> <span class="n">C</span>
-            <span class="n">A</span><span class="p">[</span><span class="n">idx2</span><span class="p">,</span> <span class="n">idx1</span><span class="p">]</span> <span class="o">=</span> <span class="n">C</span>
+            <span class="n">A</span><span class="p">[</span><span class="n">idx1</span><span class="p">,</span> <span class="n">idx2</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+            <span class="n">A</span><span class="p">[</span><span class="n">idx2</span><span class="p">,</span> <span class="n">idx1</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
 
         <span class="k">def</span> <span class="nf">sl2idx</span><span class="p">(</span><span class="n">sl</span><span class="p">):</span>
             <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">pyamg_index</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mgrid</span><span class="p">(</span><span class="n">sl</span><span class="p">))</span>
@@ -1504,6 +1526,15 @@
         <span class="n">p</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="o">*</span><span class="n">opts</span><span class="p">(</span><span class="s1">&#39;--remove&#39;</span><span class="p">),</span> <span class="n">nargs</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">metavar</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;COORD&#39;</span><span class="p">,</span> <span class="s1">&#39;DIR&#39;</span><span class="p">),</span>
                        <span class="n">action</span><span class="o">=</span><span class="n">RemoveDirectionGrid</span><span class="p">,</span>
                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Reduce the grid by removing a subset of the grid (along DIR).&#39;</span><span class="p">)</span>
+
+        <span class="c1"># Scale the grid with this value</span>
+        <span class="k">class</span> <span class="nc">ScaleGrid</span><span class="p">(</span><span class="n">argparse</span><span class="o">.</span><span class="n">Action</span><span class="p">):</span>
+
+            <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parser</span><span class="p">,</span> <span class="n">ns</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">option_string</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+                <span class="n">ns</span><span class="o">.</span><span class="n">_grid</span><span class="o">.</span><span class="n">grid</span> <span class="o">*=</span> <span class="n">value</span>
+        <span class="n">p</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="o">*</span><span class="n">opts</span><span class="p">(</span><span class="s1">&#39;--scale&#39;</span><span class="p">,</span> <span class="s1">&#39;-S&#39;</span><span class="p">),</span> <span class="nb">type</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span>
+                       <span class="n">action</span><span class="o">=</span><span class="n">ScaleGrid</span><span class="p">,</span>
+                       <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Scale grid values.&#39;</span><span class="p">)</span>
 
         <span class="c1"># Define size of grid</span>
         <span class="k">class</span> <span class="nc">PrintInfo</span><span class="p">(</span><span class="n">argparse</span><span class="o">.</span><span class="n">Action</span><span class="p">):</span>

@@ -641,7 +641,7 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">eigenstate</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span><span class="o">.</span><span class="n">PDOS</span><span class="p">(</span><span class="n">E</span><span class="p">,</span> <span class="n">distribution</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="Hamiltonian.fermi_level"><a class="viewcode-back" href="../../../api-generated/sisl.physics.Hamiltonian.html#sisl.physics.Hamiltonian.fermi_level">[docs]</a>    <span class="k">def</span> <span class="nf">fermi_level</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">bz</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">q</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">distribution</span><span class="o">=</span><span class="s1">&#39;fermi_dirac&#39;</span><span class="p">,</span> <span class="n">q_tol</span><span class="o">=</span><span class="mf">1e-12</span><span class="p">):</span>
+<div class="viewcode-block" id="Hamiltonian.fermi_level"><a class="viewcode-back" href="../../../api-generated/sisl.physics.Hamiltonian.html#sisl.physics.Hamiltonian.fermi_level">[docs]</a>    <span class="k">def</span> <span class="nf">fermi_level</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">bz</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">q</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">distribution</span><span class="o">=</span><span class="s1">&#39;fermi_dirac&#39;</span><span class="p">,</span> <span class="n">q_tol</span><span class="o">=</span><span class="mf">1e-10</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Calculate the Fermi-level using a Brillouinzone sampling and a target charge</span>
 
 <span class="sd">        The Fermi-level will be calculated using an iterative approach by first calculating all eigenvalues</span>
@@ -676,9 +676,12 @@
         <span class="n">bz</span><span class="o">.</span><span class="n">asarray</span><span class="p">()</span>
 
         <span class="k">if</span> <span class="n">q</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">q</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">q0</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">spin</span><span class="o">.</span><span class="n">is_unpolarized</span><span class="p">:</span>
+                <span class="n">q</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">q0</span> <span class="o">*</span> <span class="mf">0.5</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">q</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">q0</span>
         <span class="c1"># Ensure we have an &quot;array&quot; in case of spin-polarized calculations</span>
-        <span class="n">q</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">q</span><span class="p">)</span>
+        <span class="n">q</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">q</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">distribution</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
             <span class="n">distribution</span> <span class="o">=</span> <span class="n">get_distribution</span><span class="p">(</span><span class="n">distribution</span><span class="p">)</span>
@@ -691,37 +694,21 @@
             <span class="c1"># We could reduce it depending on the temperature,</span>
             <span class="c1"># however the distribution does not have the kT</span>
             <span class="c1"># parameter available.</span>
-            <span class="n">Ef</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">average</span><span class="p">(</span><span class="n">eig</span><span class="p">[:,</span> <span class="nb">int</span><span class="p">(</span><span class="n">q</span><span class="p">)])</span>
+            <span class="n">min_Ef</span><span class="p">,</span> <span class="n">max_Ef</span> <span class="o">=</span> <span class="n">eig</span><span class="o">.</span><span class="n">min</span><span class="p">(),</span> <span class="n">eig</span><span class="o">.</span><span class="n">max</span><span class="p">()</span>
 
-            <span class="n">l_Ef</span> <span class="o">=</span> <span class="p">[]</span>
-            <span class="n">l_q</span> <span class="o">=</span> <span class="p">[]</span>
-            <span class="k">def</span> <span class="nf">list_append</span><span class="p">(</span><span class="n">q</span><span class="p">,</span> <span class="n">Ef</span><span class="p">):</span>
-                <span class="n">l_q</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">q</span><span class="p">)</span>
-                <span class="n">l_Ef</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Ef</span><span class="p">)</span>
+            <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+                <span class="n">Ef</span> <span class="o">=</span> <span class="p">(</span><span class="n">min_Ef</span> <span class="o">+</span> <span class="n">max_Ef</span><span class="p">)</span> <span class="o">*</span> <span class="mf">0.5</span>
 
-            <span class="c1"># Calculate guessed charge</span>
-            <span class="n">qt</span> <span class="o">=</span> <span class="p">(</span><span class="n">distribution</span><span class="p">(</span><span class="n">eig</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="n">Ef</span><span class="p">)</span> <span class="o">*</span> <span class="n">w</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
-
-            <span class="k">while</span> <span class="nb">abs</span><span class="p">(</span><span class="n">qt</span> <span class="o">-</span> <span class="n">q</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">q_tol</span><span class="p">:</span>
-                <span class="c1"># Add to cubic-spline</span>
-                <span class="n">list_append</span><span class="p">(</span><span class="n">qt</span><span class="p">,</span> <span class="n">Ef</span><span class="p">)</span>
-
-                <span class="c1"># Estimate new Fermi-level</span>
-                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">l_q</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
-                    <span class="c1"># We can do a spline interpolation</span>
-                    <span class="n">lq</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">l_q</span><span class="p">)</span>
-                    <span class="n">idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="n">lq</span><span class="p">)</span>
-                    <span class="n">lEf</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">l_Ef</span><span class="p">)</span>
-                    <span class="n">Ef</span> <span class="o">=</span> <span class="n">CubicSpline</span><span class="p">(</span><span class="n">lq</span><span class="p">[</span><span class="n">idx</span><span class="p">],</span> <span class="n">lEf</span><span class="p">[</span><span class="n">idx</span><span class="p">],</span> <span class="n">extrapolate</span><span class="o">=</span><span class="kc">True</span><span class="p">)(</span><span class="n">q</span><span class="p">)</span>
-                <span class="k">else</span><span class="p">:</span>
-                    <span class="c1"># Update limits</span>
-                    <span class="k">if</span> <span class="n">qt</span> <span class="o">&gt;</span> <span class="n">q</span><span class="p">:</span>
-                        <span class="n">Ef</span> <span class="o">=</span> <span class="n">Ef</span> <span class="o">-</span> <span class="mf">0.5</span>
-                    <span class="k">elif</span> <span class="n">qt</span> <span class="o">&lt;</span> <span class="n">q</span><span class="p">:</span>
-                        <span class="n">Ef</span> <span class="o">=</span> <span class="n">Ef</span> <span class="o">+</span> <span class="mf">0.5</span>
-
-                <span class="c1"># Calculate new guessed charge</span>
+                <span class="c1"># Calculate guessed charge</span>
                 <span class="n">qt</span> <span class="o">=</span> <span class="p">(</span><span class="n">distribution</span><span class="p">(</span><span class="n">eig</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="n">Ef</span><span class="p">)</span> <span class="o">*</span> <span class="n">w</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+
+                <span class="k">if</span> <span class="nb">abs</span><span class="p">(</span><span class="n">qt</span> <span class="o">-</span> <span class="n">q</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">q_tol</span><span class="p">:</span>
+                    <span class="k">return</span> <span class="n">Ef</span>
+
+                <span class="k">if</span> <span class="n">qt</span> <span class="o">&gt;=</span> <span class="n">q</span><span class="p">:</span>
+                    <span class="n">max_Ef</span> <span class="o">=</span> <span class="n">Ef</span>
+                <span class="k">elif</span> <span class="n">qt</span> <span class="o">&lt;=</span> <span class="n">q</span><span class="p">:</span>
+                    <span class="n">min_Ef</span> <span class="o">=</span> <span class="n">Ef</span>
 
             <span class="k">return</span> <span class="n">Ef</span>
 

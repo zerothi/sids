@@ -242,16 +242,9 @@
 <span class="sd">    &gt;&gt;&gt; fdf = fdfSileSiesta(&#39;tmp/RUN.fdf&#39;, base=&#39;.&#39;) # reads output files in &#39;./&#39; folder</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filename</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">base</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-        <span class="nb">super</span><span class="p">(</span><span class="n">fdfSileSiesta</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="n">mode</span><span class="p">,</span> <span class="n">comment</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;#&#39;</span><span class="p">,</span> <span class="s1">&#39;!&#39;</span><span class="p">,</span> <span class="s1">&#39;;&#39;</span><span class="p">],</span> <span class="n">base</span><span class="o">=</span><span class="n">base</span><span class="p">)</span>
-
-    <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">file</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot; Return the current file name (without the directory prefix) &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_file</span>
-
     <span class="k">def</span> <span class="nf">_setup</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Setup the `fdfSileSiesta` after initialization &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_comment</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;#&#39;</span><span class="p">,</span> <span class="s1">&#39;!&#39;</span><span class="p">,</span> <span class="s1">&#39;;&#39;</span><span class="p">]</span>
 
         <span class="c1"># List of parent file-handles used while reading</span>
         <span class="c1"># This is because fdf enables inclusion of other files</span>
@@ -923,7 +916,8 @@
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
-<span class="sd">        (*, 3, 2, *, 3) : vector with force constant element for each of the atomic displacements</span>
+<span class="sd">        force_constant : numpy.ndarray</span>
+<span class="sd">            vector [*, 3, 2, *, 3]  with force constant element for each of the atomic displacements</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">order</span> <span class="o">=</span> <span class="n">_listify_str</span><span class="p">(</span><span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;order&#39;</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;nc&#39;</span><span class="p">,</span> <span class="s1">&#39;FC&#39;</span><span class="p">]))</span>
         <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">order</span><span class="p">:</span>
@@ -977,7 +971,8 @@
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
-<span class="sd">        float : fermi-level</span>
+<span class="sd">        Ef : float</span>
+<span class="sd">            fermi-level</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">order</span> <span class="o">=</span> <span class="n">_listify_str</span><span class="p">(</span><span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;order&#39;</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;nc&#39;</span><span class="p">,</span> <span class="s1">&#39;TSDE&#39;</span><span class="p">,</span> <span class="s1">&#39;TSHS&#39;</span><span class="p">,</span> <span class="s1">&#39;EIG&#39;</span><span class="p">]))</span>
         <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">order</span><span class="p">:</span>
@@ -1020,7 +1015,7 @@
 <span class="sd">            By default this is ``[&#39;nc&#39;, &#39;FC&#39;]``.</span>
 <span class="sd">        cutoff_dist : float, optional</span>
 <span class="sd">            cutoff value for the distance of the force-constants (everything farther than</span>
-<span class="sd">            `cutoff_dist` will be set to 0, unit in Ang.</span>
+<span class="sd">            `cutoff_dist` will be set to 0 Ang). Default, no cutoff.</span>
 <span class="sd">        cutoff : float, optional</span>
 <span class="sd">            absolute values below the cutoff are considered 0. Defaults to 1e-4 eV/Ang**2.</span>
 <span class="sd">        correct_fc : bool, optional</span>
@@ -1029,7 +1024,8 @@
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
-<span class="sd">        DynamicalMatrix : Dynamical matrix</span>
+<span class="sd">        dynamic_matrix : DynamicalMatrix</span>
+<span class="sd">            the dynamical matrix</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">order</span> <span class="o">=</span> <span class="n">_listify_str</span><span class="p">(</span><span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;order&#39;</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;nc&#39;</span><span class="p">,</span> <span class="s1">&#39;FC&#39;</span><span class="p">]))</span>
         <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">order</span><span class="p">:</span>

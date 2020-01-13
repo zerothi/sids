@@ -523,6 +523,8 @@
         <span class="n">n_supercells</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">//</span> <span class="n">na_primary</span>
         <span class="k">if</span> <span class="n">n_supercells</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
             <span class="c1"># Return a copy of self</span>
+            <span class="k">if</span> <span class="n">ret_super</span><span class="p">:</span>
+                <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">copy</span><span class="p">(),</span> <span class="bp">self</span><span class="o">.</span><span class="n">nsc</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
             <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
 
         <span class="c1"># Now figure out the repetitions along each direction</span>
@@ -1388,11 +1390,7 @@
 <span class="sd">        --------</span>
 <span class="sd">        sub : the negative of this routine, i.e. retain a subset of atoms</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">atom</span><span class="p">,</span> <span class="n">ndarray</span><span class="p">)</span> <span class="ow">and</span> <span class="n">atom</span><span class="o">.</span><span class="n">dtype</span> <span class="o">==</span> <span class="n">bool_</span><span class="p">:</span>
-            <span class="n">atom</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">flatnonzero</span><span class="p">(</span><span class="n">atom</span><span class="p">)</span>
-        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">atom</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
-            <span class="n">atom</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">names</span><span class="p">[</span><span class="n">atom</span><span class="p">]</span>
-        <span class="n">atom</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sc2uc</span><span class="p">(</span><span class="n">atom</span><span class="p">)</span>
+        <span class="n">atom</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sc2uc</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_sanitize_atom</span><span class="p">(</span><span class="n">atom</span><span class="p">))</span>
         <span class="n">atom</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="n">_a</span><span class="o">.</span><span class="n">arangei</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">na</span><span class="p">),</span> <span class="n">atom</span><span class="p">)</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="n">atom</span><span class="p">)</span></div>
 
@@ -3791,7 +3789,6 @@
                     <span class="n">g</span> <span class="o">=</span> <span class="n">ns</span><span class="o">.</span><span class="n">_geometry</span>
                     <span class="c1"># Change all coordinates using the reciprocal cell and move to unit-cell (% 1.)</span>
                     <span class="n">fxyz</span> <span class="o">=</span> <span class="n">g</span><span class="o">.</span><span class="n">fxyz</span> <span class="o">%</span> <span class="mf">1.</span>
-                    <span class="n">fxyz</span> <span class="o">-=</span> <span class="n">np</span><span class="o">.</span><span class="n">amin</span><span class="p">(</span><span class="n">fxyz</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
                     <span class="n">ns</span><span class="o">.</span><span class="n">_geometry</span><span class="o">.</span><span class="n">xyz</span><span class="p">[:,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">dot</span><span class="p">(</span><span class="n">fxyz</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">cell</span><span class="p">)</span>
         <span class="n">p</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="o">*</span><span class="n">opts</span><span class="p">(</span><span class="s1">&#39;--unit-cell&#39;</span><span class="p">,</span> <span class="s1">&#39;-uc&#39;</span><span class="p">),</span> <span class="n">choices</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;translate&#39;</span><span class="p">,</span> <span class="s1">&#39;tr&#39;</span><span class="p">,</span> <span class="s1">&#39;t&#39;</span><span class="p">,</span> <span class="s1">&#39;mod&#39;</span><span class="p">],</span>
                        <span class="n">action</span><span class="o">=</span><span class="n">MoveUnitCell</span><span class="p">,</span>
