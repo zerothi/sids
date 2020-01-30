@@ -2237,8 +2237,131 @@
 
         <span class="k">return</span> <span class="n">R</span></div>
 
+<div class="viewcode-block" id="SparseOrbital.add"><a class="viewcode-back" href="../../api-generated/sisl.SparseOrbital.html#sisl.SparseOrbital.add">[docs]</a>    <span class="k">def</span> <span class="nf">add</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">offset</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot; Add two sparse matrices by adding the parameters to one set. The final matrix will have no couplings between `self` and `other`</span>
+
+<span class="sd">        The final sparse matrix will not have any couplings between `self` and `other`. Not even if they</span>
+<span class="sd">        have commensurate overlapping regions. If you want to create couplings you have to use `append` but that</span>
+<span class="sd">        requires the structures are commensurate in the coupling region.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        other : SparseGeometry</span>
+<span class="sd">            the other sparse matrix to be added, all atoms will be appended</span>
+<span class="sd">        axis : int or None, optional</span>
+<span class="sd">            whether a specific axis of the cell will be added to the final geometry.</span>
+<span class="sd">            For ``None`` the final cell will be that of `self`, otherwise the lattice</span>
+<span class="sd">            vector corresponding to `axis` will be appended.</span>
+<span class="sd">        offset : (3,), optional</span>
+<span class="sd">            offset in geometry of `other` when adding the atoms.</span>
+
+<span class="sd">        See Also</span>
+<span class="sd">        --------</span>
+<span class="sd">        append : append two matrices by also adding overlap couplings</span>
+<span class="sd">        prepend : see `append`</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Check that the sparse matrices are compatible</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="ow">is</span> <span class="nb">type</span><span class="p">(</span><span class="n">other</span><span class="p">)):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39;.add requires other to be of same type: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">other</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="p">))</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dtype</span> <span class="o">!=</span> <span class="n">other</span><span class="o">.</span><span class="n">dtype</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39;.add requires the same datatypes in the two matrices.&#39;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dim</span> <span class="o">!=</span> <span class="n">other</span><span class="o">.</span><span class="n">dim</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39;.add requires the same number of dimensions in the matrix.&#39;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">axis</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">geom</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">other</span><span class="o">.</span><span class="n">geometry</span><span class="p">,</span> <span class="n">offset</span><span class="o">=</span><span class="n">offset</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># Same effect but also adds the lattice vectors</span>
+            <span class="n">geom</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">axis</span><span class="p">,</span> <span class="n">offset</span><span class="o">=</span><span class="n">offset</span><span class="p">)</span>
+
+        <span class="c1"># Now we have the correct geometry, then create the correct</span>
+        <span class="c1"># class</span>
+        <span class="c1"># New indices and data (the constructor for SparseCSR copies)</span>
+        <span class="n">full</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="p">(</span><span class="n">geom</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dim</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">_cls_kwargs</span><span class="p">())</span>
+        <span class="n">full</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">ptr</span> <span class="o">=</span> <span class="n">concatenate</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">ptr</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">other</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">ptr</span><span class="p">))</span>
+        <span class="n">full</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">ptr</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">no</span><span class="p">:]</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">ptr</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">full</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">ncol</span> <span class="o">=</span> <span class="n">concatenate</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">ncol</span><span class="p">,</span> <span class="n">other</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">ncol</span><span class="p">))</span>
+        <span class="n">full</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">_D</span> <span class="o">=</span> <span class="n">concatenate</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">_D</span><span class="p">,</span> <span class="n">other</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">_D</span><span class="p">))</span>
+        <span class="n">full</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">_nnz</span> <span class="o">=</span> <span class="n">full</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">ncol</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+        <span class="n">full</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">_finalized</span> <span class="o">=</span> <span class="kc">False</span>
+
+        <span class="c1"># Retrieve the maximum number of orbitals (in the supercell)</span>
+        <span class="c1"># This may be used to remove couplings</span>
+        <span class="n">full_no_s</span> <span class="o">=</span> <span class="n">geom</span><span class="o">.</span><span class="n">no_s</span>
+
+        <span class="c1"># Now we have to transfer the indices to the new sparse pattern</span>
+
+        <span class="c1"># First create a local copy of the columns, then we transfer, and then we collect.</span>
+        <span class="n">s_col</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">col</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">transfer_idx</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">arangei</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">no_s</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">no</span><span class="p">)</span>
+        <span class="n">transfer_idx</span> <span class="o">+=</span> <span class="n">_a</span><span class="o">.</span><span class="n">arangei</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">n_s</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">other</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">no</span>
+        <span class="c1"># Remove couplings along axis</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">axis</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">idx</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">sc</span><span class="o">.</span><span class="n">sc_off</span><span class="p">[:,</span> <span class="n">axis</span><span class="p">]</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">nonzero</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="c1"># Tell the routine to delete these indices</span>
+            <span class="n">transfer_idx</span><span class="p">[</span><span class="n">idx</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">full_no_s</span> <span class="o">+</span> <span class="mi">1</span>
+        <span class="n">idx</span> <span class="o">=</span> <span class="n">array_arange</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">ptr</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">n</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">ncol</span><span class="p">)</span>
+        <span class="n">s_col</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">transfer_idx</span><span class="o">.</span><span class="n">ravel</span><span class="p">()[</span><span class="n">s_col</span><span class="p">[</span><span class="n">idx</span><span class="p">]]</span>
+
+        <span class="c1"># Same for the other, but correct for deleted supercells and supercells along</span>
+        <span class="c1"># disconnected auxiliary cells.</span>
+        <span class="n">o_col</span> <span class="o">=</span> <span class="n">other</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">col</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">transfer_idx</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">arangei</span><span class="p">(</span><span class="n">other</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">no_s</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">other</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">no</span><span class="p">)</span>
+
+        <span class="c1"># Transfer the correct supercells</span>
+        <span class="n">o_idx</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">s_idx</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">idx_delete</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">isc</span><span class="p">,</span> <span class="n">sc</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">other</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">sc</span><span class="o">.</span><span class="n">sc_off</span><span class="p">):</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">s_idx</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">sc</span><span class="o">.</span><span class="n">sc_index</span><span class="p">(</span><span class="n">sc</span><span class="p">))</span>
+                <span class="n">o_idx</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">isc</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+                <span class="n">idx_delete</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">isc</span><span class="p">)</span>
+        <span class="c1"># o_idx are transferred to s_idx</span>
+        <span class="n">transfer_idx</span><span class="p">[</span><span class="n">o_idx</span><span class="p">,</span> <span class="p">:]</span> <span class="o">+=</span> <span class="n">_a</span><span class="o">.</span><span class="n">arangei</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">other</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">n_s</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)[</span><span class="n">s_idx</span><span class="p">]</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">no</span>
+        <span class="c1"># Remove some columns</span>
+        <span class="n">transfer_idx</span><span class="p">[</span><span class="n">idx_delete</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">full_no_s</span> <span class="o">+</span> <span class="mi">1</span>
+        <span class="c1"># Clean-up to not confuse the rest of the algorithm</span>
+        <span class="k">del</span> <span class="n">o_idx</span><span class="p">,</span> <span class="n">s_idx</span><span class="p">,</span> <span class="n">idx_delete</span>
+
+        <span class="c1"># Now figure out if the supercells can be kept, at all...</span>
+        <span class="c1"># find SC indices in other corresponding to self</span>
+        <span class="n">o_idx_uc</span> <span class="o">=</span> <span class="n">other</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">sc</span><span class="o">.</span><span class="n">sc_index</span><span class="p">([</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="mi">3</span><span class="p">)</span>
+        <span class="n">o_idx_sc</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">arangei</span><span class="p">(</span><span class="n">other</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">sc</span><span class="o">.</span><span class="n">n_s</span><span class="p">)</span>
+        <span class="c1"># Remove couplings along axis</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">3</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="n">axis</span><span class="p">:</span>
+                <span class="n">idx</span> <span class="o">=</span> <span class="p">(</span><span class="n">other</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">sc</span><span class="o">.</span><span class="n">sc_off</span><span class="p">[:,</span> <span class="n">axis</span><span class="p">]</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">nonzero</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">elif</span> <span class="ow">not</span> <span class="n">allclose</span><span class="p">(</span><span class="n">geom</span><span class="o">.</span><span class="n">cell</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="p">:],</span> <span class="n">other</span><span class="o">.</span><span class="n">cell</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="p">:]):</span>
+                <span class="c1"># This will happen in case `axis` is None</span>
+                <span class="n">idx</span> <span class="o">=</span> <span class="p">(</span><span class="n">other</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">sc</span><span class="o">.</span><span class="n">sc_off</span><span class="p">[:,</span> <span class="n">i</span><span class="p">]</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">nonzero</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># When axis is not specified and cell parameters</span>
+                <span class="c1"># are commensurate, then we will not change couplings</span>
+                <span class="k">continue</span>
+            <span class="c1"># Tell the routine to delete these indices</span>
+            <span class="n">transfer_idx</span><span class="p">[</span><span class="n">idx</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">full_no_s</span> <span class="o">+</span> <span class="mi">1</span>
+
+        <span class="n">idx</span> <span class="o">=</span> <span class="n">array_arange</span><span class="p">(</span><span class="n">other</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">ptr</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">n</span><span class="o">=</span><span class="n">other</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">ncol</span><span class="p">)</span>
+        <span class="n">o_col</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">transfer_idx</span><span class="o">.</span><span class="n">ravel</span><span class="p">()[</span><span class="n">o_col</span><span class="p">[</span><span class="n">idx</span><span class="p">]]</span>
+
+        <span class="c1"># Now we need to decide whether the</span>
+        <span class="k">del</span> <span class="n">transfer_idx</span><span class="p">,</span> <span class="n">idx</span>
+        <span class="n">full</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">col</span> <span class="o">=</span> <span class="n">concatenate</span><span class="p">([</span><span class="n">s_col</span><span class="p">,</span> <span class="n">o_col</span><span class="p">])</span>
+
+        <span class="c1"># Clean up (they could potentially be very large arrays)</span>
+        <span class="k">del</span> <span class="n">s_col</span><span class="p">,</span> <span class="n">o_col</span>
+
+        <span class="c1"># Ensure we remove the elements</span>
+        <span class="n">full</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">_clean_columns</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="n">full</span></div>
+
 <div class="viewcode-block" id="SparseOrbital.prepend"><a class="viewcode-back" href="../../api-generated/sisl.SparseOrbital.html#sisl.SparseOrbital.prepend">[docs]</a>    <span class="k">def</span> <span class="nf">prepend</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">,</span> <span class="n">axis</span><span class="p">,</span> <span class="n">eps</span><span class="o">=</span><span class="mf">0.01</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot; See `append` for details</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot; See `append` for details</span>
 
 <span class="sd">        This is currently equivalent to:</span>
 
@@ -2247,7 +2370,7 @@
         <span class="k">return</span> <span class="n">other</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">axis</span><span class="p">,</span> <span class="n">eps</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="SparseOrbital.append"><a class="viewcode-back" href="../../api-generated/sisl.SparseOrbital.html#sisl.SparseOrbital.append">[docs]</a>    <span class="k">def</span> <span class="nf">append</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">,</span> <span class="n">axis</span><span class="p">,</span> <span class="n">eps</span><span class="o">=</span><span class="mf">0.01</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot; Append `other` along `axis` to construct a new connected sparse matrix</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot; Append `other` along `axis` to construct a new connected sparse matrix</span>
 
 <span class="sd">        This method tries to append two sparse geometry objects together by</span>
 <span class="sd">        the following these steps:</span>
@@ -2256,7 +2379,7 @@
 <span class="sd">        2. Use neighbor cell couplings from `self` as the couplings to `other`</span>
 <span class="sd">           This *may* cause problems if the coupling atoms are not exactly equi-positioned.</span>
 <span class="sd">           If the coupling coordinates and the coordinates in `other` differ by more than</span>
-<span class="sd">           0.001 Ang, a warning will be issued.</span>
+<span class="sd">           0.01 Ang, a warning will be issued.</span>
 <span class="sd">           If this difference is above `eps` the couplings will be removed.</span>
 
 <span class="sd">        When appending sparse matrices made up of atoms, this method assumes that</span>
@@ -2272,10 +2395,12 @@
 <span class="sd">        True</span>
 
 <span class="sd">        To retain couplings only from the *left* sparse matrix, do:</span>
+
 <span class="sd">        &gt;&gt;&gt; sporb = left.append(right, 0, scale=(2, 0))</span>
 <span class="sd">        &gt;&gt;&gt; sporb = (sporb + sporb.transpose()) * 0.5</span>
 
 <span class="sd">        To retain couplings only from the *right* sparse matrix, do:</span>
+
 <span class="sd">        &gt;&gt;&gt; sporb = left.append(right, 0, scale=(0, 2.))</span>
 <span class="sd">        &gt;&gt;&gt; sporb = (sporb + sporb.transpose()) * 0.5</span>
 
@@ -2308,6 +2433,7 @@
 <span class="sd">        See Also</span>
 <span class="sd">        --------</span>
 <span class="sd">        prepend : equivalent scheme as this method</span>
+<span class="sd">        add : merge two matrices without considering overlap or commensurability</span>
 <span class="sd">        transpose : ensure hermiticity by using this routine</span>
 <span class="sd">        Geometry.append</span>
 <span class="sd">        Geometry.prepend</span>
@@ -2372,7 +2498,7 @@
         <span class="n">o_col</span> <span class="o">=</span> <span class="n">other</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">col</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
         <span class="c1"># transfer</span>
         <span class="n">transfer_idx</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">arangei</span><span class="p">(</span><span class="n">other</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">no_s</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">other</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">no</span><span class="p">)</span>
-        <span class="n">transfer_idx</span> <span class="o">+=</span> <span class="p">(</span><span class="n">_a</span><span class="o">.</span><span class="n">arangei</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">other</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">n_s</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">no</span>
+        <span class="n">transfer_idx</span> <span class="o">+=</span> <span class="n">_a</span><span class="o">.</span><span class="n">arangei</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">other</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">n_s</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">no</span>
         <span class="n">idx</span> <span class="o">=</span> <span class="n">array_arange</span><span class="p">(</span><span class="n">other</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">ptr</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">n</span><span class="o">=</span><span class="n">other</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">ncol</span><span class="p">)</span>
         <span class="n">o_col</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">transfer_idx</span><span class="o">.</span><span class="n">ravel</span><span class="p">()[</span><span class="n">o_col</span><span class="p">[</span><span class="n">idx</span><span class="p">]]</span>
 

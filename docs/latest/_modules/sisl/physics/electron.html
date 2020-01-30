@@ -191,6 +191,7 @@
 <span class="sd">   velocity</span>
 <span class="sd">   velocity_matrix</span>
 <span class="sd">   berry_phase</span>
+<span class="sd">   berry_curvature</span>
 <span class="sd">   wavefunction</span>
 <span class="sd">   spin_moment</span>
 <span class="sd">   spin_orbital_moment</span>
@@ -251,7 +252,8 @@
 <span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;DOS&#39;</span><span class="p">,</span> <span class="s1">&#39;PDOS&#39;</span><span class="p">]</span>
 <span class="n">__all__</span> <span class="o">+=</span> <span class="p">[</span><span class="s1">&#39;velocity&#39;</span><span class="p">,</span> <span class="s1">&#39;velocity_matrix&#39;</span><span class="p">]</span>
 <span class="n">__all__</span> <span class="o">+=</span> <span class="p">[</span><span class="s1">&#39;spin_moment&#39;</span><span class="p">,</span> <span class="s1">&#39;spin_orbital_moment&#39;</span><span class="p">]</span>
-<span class="n">__all__</span> <span class="o">+=</span> <span class="p">[</span><span class="s1">&#39;inv_eff_mass_tensor&#39;</span><span class="p">,</span> <span class="s1">&#39;berry_phase&#39;</span><span class="p">]</span>
+<span class="n">__all__</span> <span class="o">+=</span> <span class="p">[</span><span class="s1">&#39;inv_eff_mass_tensor&#39;</span><span class="p">]</span>
+<span class="n">__all__</span> <span class="o">+=</span> <span class="p">[</span><span class="s1">&#39;berry_phase&#39;</span><span class="p">,</span> <span class="s1">&#39;berry_curvature&#39;</span><span class="p">]</span>
 <span class="n">__all__</span> <span class="o">+=</span> <span class="p">[</span><span class="s1">&#39;wavefunction&#39;</span><span class="p">]</span>
 <span class="n">__all__</span> <span class="o">+=</span> <span class="p">[</span><span class="s1">&#39;CoefficientElectron&#39;</span><span class="p">,</span> <span class="s1">&#39;StateElectron&#39;</span><span class="p">,</span> <span class="s1">&#39;StateCElectron&#39;</span><span class="p">]</span>
 <span class="n">__all__</span> <span class="o">+=</span> <span class="p">[</span><span class="s1">&#39;EigenvalueElectron&#39;</span><span class="p">,</span> <span class="s1">&#39;EigenvectorElectron&#39;</span><span class="p">,</span> <span class="s1">&#39;EigenstateElectron&#39;</span><span class="p">]</span>
@@ -898,6 +900,106 @@
     <span class="k">return</span> <span class="n">v</span> <span class="o">*</span> <span class="n">_velocity_const</span>
 
 
+<div class="viewcode-block" id="berry_curvature"><a class="viewcode-back" href="../../../api-generated/sisl.physics.electron.berry_curvature.html#sisl.physics.berry_curvature">[docs]</a><span class="k">def</span> <span class="nf">berry_curvature</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">energy</span><span class="p">,</span> <span class="n">dHk</span><span class="p">,</span> <span class="n">dSk</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">degenerate</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sa">r</span><span class="sd">&quot;&quot;&quot; Calculate the Berry curvature matrix for a set of states (using Kubo)</span>
+
+<span class="sd">    The Berry curvature is calculated using the following expression (:math:`\alpha`, :math:`\beta` corresponding to Cartesian directions):</span>
+
+<span class="sd">    .. math::</span>
+
+<span class="sd">       \boldsymbol\Sigma_{n,\alpha\beta} = - \frac2\hbar^2 \Im\sum_{m\neq n}</span>
+<span class="sd">                \frac{v_{nm,\alpha} v_{mn,\beta}}</span>
+<span class="sd">                     {[\epsilon_m - \epsilon_n]^2}</span>
+
+<span class="sd">    For details see [1]_.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    state : array_like</span>
+<span class="sd">       vectors describing the electronic states, 2nd dimension contains the states. In case of degenerate</span>
+<span class="sd">       states the vectors *may* be rotated upon return.</span>
+<span class="sd">    energy : array_like, optional</span>
+<span class="sd">       energies of the states. In case of degenerate</span>
+<span class="sd">       states the eigenvalues of the states will be averaged in the degenerate sub-space.</span>
+<span class="sd">    dHk : list of array_like</span>
+<span class="sd">       Hamiltonian derivative with respect to :math:`\mathbf k`. This needs to be a tuple or</span>
+<span class="sd">       list of the Hamiltonian derivative along the 3 Cartesian directions.</span>
+<span class="sd">    dSk : list of array_like, optional</span>
+<span class="sd">       :math:`\delta \mathbf S_k` matrix required for non-orthogonal basis.</span>
+<span class="sd">       Same derivative as `dHk`.</span>
+<span class="sd">       NOTE: Using non-orthogonal basis sets are not tested.</span>
+<span class="sd">    degenerate : list of array_like, optional</span>
+<span class="sd">       a list containing the indices of degenerate states. In that case a prior diagonalization</span>
+<span class="sd">       is required to decouple them. This is done 3 times along each of the Cartesian directions.</span>
+
+<span class="sd">    See Also</span>
+<span class="sd">    --------</span>
+<span class="sd">    velocity : calculate state velocities</span>
+<span class="sd">    velocity_matrix : calculate state velocities between all states</span>
+
+<span class="sd">    References</span>
+<span class="sd">    ----------</span>
+<span class="sd">    .. [1] X. Wang, J. R. Yates, I. Souza, D. Vanderbilt, &quot;Ab initio calculation of the anomalous Hall conductivity by Wannier interpolation&quot;, PRB, *74*, 195118 (2006)</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    numpy.ndarray</span>
+<span class="sd">        Berry curvature with final dimension ``(state.shape[0], 3, 3)``.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">state</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">berry_curvature</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">),</span> <span class="n">energy</span><span class="p">,</span> <span class="n">dHk</span><span class="p">,</span> <span class="n">dSk</span><span class="p">,</span> <span class="n">degenerate</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
+
+    <span class="k">if</span> <span class="n">degenerate</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="c1"># Fix following routine</span>
+        <span class="n">degenerate</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="n">dtype</span> <span class="o">=</span> <span class="n">find_common_type</span><span class="p">([</span><span class="n">state</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">dHk</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">dtype</span><span class="p">],</span> <span class="p">[])</span>
+    <span class="k">if</span> <span class="n">dSk</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">v_matrix</span> <span class="o">=</span> <span class="n">_velocity_matrix_ortho</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">dHk</span><span class="p">,</span> <span class="n">degenerate</span><span class="p">,</span> <span class="n">dtype</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">v_matrix</span> <span class="o">=</span> <span class="n">_velocity_matrix_non_ortho</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">dHk</span><span class="p">,</span> <span class="n">energy</span><span class="p">,</span> <span class="n">dSk</span><span class="p">,</span> <span class="n">degenerate</span><span class="p">,</span> <span class="n">dtype</span><span class="p">)</span>
+        <span class="n">warn</span><span class="p">(</span><span class="s1">&#39;berry_curvature calculation for non-orthogonal basis sets are not tested! Do not expect this to be correct!&#39;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">_berry_curvature</span><span class="p">(</span><span class="n">v_matrix</span><span class="p">,</span> <span class="n">energy</span><span class="p">,</span> <span class="n">degenerate</span><span class="p">)</span></div>
+
+
+<span class="c1"># This reverses the velocity unit (squared since Berry curvature is v.v)</span>
+<span class="n">_berry_curvature_const</span> <span class="o">=</span> <span class="n">constant</span><span class="o">.</span><span class="n">hbar</span><span class="p">(</span><span class="s1">&#39;eV ps&#39;</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span>
+
+
+<span class="k">def</span> <span class="nf">_berry_curvature</span><span class="p">(</span><span class="n">v_M</span><span class="p">,</span> <span class="n">energy</span><span class="p">,</span> <span class="n">degenerate</span><span class="p">):</span>
+    <span class="sa">r</span><span class="sd">&quot;&quot;&quot; Calculate Berry curvature for a given velocity matrix &quot;&quot;&quot;</span>
+
+    <span class="c1"># All matrix elements along the 3 directions</span>
+    <span class="n">N</span> <span class="o">=</span> <span class="n">v_M</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="c1"># For cases where all states are degenerate then we would not be able</span>
+    <span class="c1"># to calculate anything. Hence we need to initialize as zero</span>
+    <span class="c1"># This is a vector of matrices</span>
+    <span class="c1">#   \Sigma_{n, \alpha \beta}</span>
+    <span class="n">sigma</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">([</span><span class="n">N</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype_complex_to_real</span><span class="p">(</span><span class="n">v_M</span><span class="o">.</span><span class="n">dtype</span><span class="p">))</span>
+
+    <span class="c1"># Fast index deletion</span>
+    <span class="n">index</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">arangei</span><span class="p">(</span><span class="n">N</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">N</span><span class="p">):</span>
+
+        <span class="c1"># Calculate the Berry-curvature from the velocity matrix</span>
+        <span class="n">idx</span> <span class="o">=</span> <span class="n">index</span>
+        <span class="k">for</span> <span class="n">deg</span> <span class="ow">in</span> <span class="n">degenerate</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">deg</span><span class="p">:</span>
+                <span class="c1"># We skip degenerate states as that would lead to overflow</span>
+                <span class="n">idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">deg</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">idx</span><span class="p">)</span> <span class="o">==</span> <span class="n">N</span><span class="p">:</span>
+            <span class="n">idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">n</span><span class="p">)</span>
+
+        <span class="c1"># Note we do not use an epsilon for accuracy</span>
+        <span class="n">fac</span> <span class="o">=</span> <span class="o">-</span> <span class="mi">2</span> <span class="o">/</span> <span class="p">(</span><span class="n">energy</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span> <span class="o">-</span> <span class="n">energy</span><span class="p">[</span><span class="n">n</span><span class="p">])</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span>
+        <span class="n">sigma</span><span class="p">[</span><span class="n">n</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="p">(</span><span class="n">v_M</span><span class="p">[</span><span class="n">idx</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">v_M</span><span class="p">[</span><span class="n">n</span><span class="p">,</span> <span class="n">idx</span><span class="p">,</span> <span class="p">:]</span> <span class="o">*</span> <span class="n">fac</span><span class="p">)</span><span class="o">.</span><span class="n">imag</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">sigma</span><span class="p">[</span><span class="n">n</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="p">(</span><span class="n">v_M</span><span class="p">[</span><span class="n">idx</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">v_M</span><span class="p">[</span><span class="n">n</span><span class="p">,</span> <span class="n">idx</span><span class="p">,</span> <span class="p">:]</span> <span class="o">*</span> <span class="n">fac</span><span class="p">)</span><span class="o">.</span><span class="n">imag</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">sigma</span><span class="p">[</span><span class="n">n</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="p">(</span><span class="n">v_M</span><span class="p">[</span><span class="n">idx</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">v_M</span><span class="p">[</span><span class="n">n</span><span class="p">,</span> <span class="n">idx</span><span class="p">,</span> <span class="p">:]</span> <span class="o">*</span> <span class="n">fac</span><span class="p">)</span><span class="o">.</span><span class="n">imag</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">sigma</span> <span class="o">*</span> <span class="n">_berry_curvature_const</span>
+
+
 <span class="k">def</span> <span class="nf">inv_eff_mass_tensor</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">ddHk</span><span class="p">,</span> <span class="n">energy</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">ddSk</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">degenerate</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">as_matrix</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
     <span class="sa">r</span><span class="sd">&quot;&quot;&quot; Calculate the effective mass tensor for a set of states (missing off-diagonal terms)</span>
 
@@ -916,7 +1018,7 @@
 <span class="sd">    of :math:`\mathbf M`.</span>
 
 <span class="sd">    Currently this routine only returns the above quations, however, the inverse effective mass tensor</span>
-<span class="sd">    also has contributions from some off-diagonal elements, see PRB 75 (195121) 2007.</span>
+<span class="sd">    also has contributions from some off-diagonal elements, see [1]_.</span>
 
 <span class="sd">    Notes</span>
 <span class="sd">    -----</span>
@@ -949,6 +1051,10 @@
 <span class="sd">    See Also</span>
 <span class="sd">    --------</span>
 <span class="sd">    velocity : band velocity</span>
+
+<span class="sd">    References</span>
+<span class="sd">    ----------</span>
+<span class="sd">    .. [1] J. R. Yates, X. Wang, D. Vanderbilt, I. Souza, &quot;Spectral and Fermi surface properties from Wannier interpolation&quot;, PRB, *75*, 195121 (2007)</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
@@ -1899,6 +2005,41 @@
         <span class="k">except</span><span class="p">:</span>
             <span class="k">raise</span> <span class="n">SislError</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39;.velocity_matrix requires the parent to have a spin associated.&#39;</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">velocity_matrix</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">dHk</span><span class="p">(</span><span class="o">**</span><span class="n">opt</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">c</span><span class="p">,</span> <span class="n">dSk</span><span class="p">,</span> <span class="n">degenerate</span><span class="o">=</span><span class="n">deg</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="StateCElectron.berry_curvature"><a class="viewcode-back" href="../../../api-generated/sisl.physics.electron.StateCElectron.html#sisl.physics.StateCElectron.berry_curvature">[docs]</a>    <span class="k">def</span> <span class="nf">berry_curvature</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">eps</span><span class="o">=</span><span class="mf">1e-4</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot; Calculate Berry curvature for the states</span>
+
+<span class="sd">        This routine calls `~sisl.physics.electron.berry_curvature` with appropriate arguments</span>
+<span class="sd">        and returns the Berry curvature for the states.</span>
+
+<span class="sd">        Note that the coefficients associated with the `StateCElectron` *must* correspond</span>
+<span class="sd">        to the energies of the states.</span>
+
+<span class="sd">        See `~sisl.physics.electron.berry_curvature` for details.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        eps : float, optional</span>
+<span class="sd">           precision used to find degenerate states.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">opt</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;k&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">info</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;k&#39;</span><span class="p">,</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">))}</span>
+            <span class="n">gauge</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">info</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;gauge&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">gauge</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">opt</span><span class="p">[</span><span class="s1">&#39;gauge&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">gauge</span>
+
+            <span class="c1"># Get dSk before spin</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">orthogonal</span><span class="p">:</span>
+                <span class="n">dSk</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">dSk</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">dSk</span><span class="p">(</span><span class="o">**</span><span class="n">opt</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="s1">&#39;spin&#39;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">info</span><span class="p">:</span>
+                <span class="n">opt</span><span class="p">[</span><span class="s1">&#39;spin&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">info</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;spin&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+            <span class="n">deg</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">degenerate</span><span class="p">(</span><span class="n">eps</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">SislError</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39;.berry_curvature requires the parent to have a spin associated.&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">berry_curvature</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">c</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">dHk</span><span class="p">(</span><span class="o">**</span><span class="n">opt</span><span class="p">),</span> <span class="n">dSk</span><span class="p">,</span> <span class="n">degenerate</span><span class="o">=</span><span class="n">deg</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="StateCElectron.inv_eff_mass_tensor"><a class="viewcode-back" href="../../../api-generated/sisl.physics.electron.StateCElectron.html#sisl.physics.StateCElectron.inv_eff_mass_tensor">[docs]</a>    <span class="k">def</span> <span class="nf">inv_eff_mass_tensor</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">as_matrix</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">eps</span><span class="o">=</span><span class="mf">1e-3</span><span class="p">):</span>
         <span class="sa">r</span><span class="sd">&quot;&quot;&quot; Calculate inverse effective mass tensor for the states</span>
