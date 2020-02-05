@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>velocity &mdash; sisl |release| documentation</title>
+  <title>berry_flux &mdash; sisl |release| documentation</title>
   
 
   
@@ -38,8 +38,8 @@
   <link rel="stylesheet" href="../_static/graphviz.css" type="text/css" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="displacement" href="sisl.physics.phonon.displacement.html" />
-    <link rel="prev" title="PDOS" href="sisl.physics.phonon.PDOS.html" /> 
+    <link rel="next" title="conductivity" href="sisl.physics.electron.conductivity.html" />
+    <link rel="prev" title="berry_phase" href="sisl.physics.electron.berry_phase.html" /> 
 </head>
 
 <body class="wy-body-for-nav">
@@ -157,13 +157,13 @@
         
           <li><a href="sisl.physics.html">Physical objects (<code class="xref py py-mod docutils literal notranslate"><span class="pre">sisl.physics</span></code>)</a> &raquo;</li>
         
-      <li>velocity</li>
+      <li>berry_flux</li>
     
     
       <li class="wy-breadcrumbs-aside">
         
             
-            <a href="../_sources/api-generated/sisl.physics.phonon.velocity.rst.txt" rel="nofollow"> View page source</a>
+            <a href="../_sources/api-generated/sisl.physics.electron.berry_flux.rst.txt" rel="nofollow"> View page source</a>
           
         
       </li>
@@ -200,34 +200,61 @@
     text-align: unset;
 }
 </style>
-<div class="section" id="velocity">
-<h1>velocity<a class="headerlink" href="#velocity" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="berry-flux">
+<h1>berry_flux<a class="headerlink" href="#berry-flux" title="Permalink to this headline">¶</a></h1>
 <dl class="function">
-<dt id="sisl.physics.phonon.velocity">
-<code class="sig-prename descclassname">sisl.physics.phonon.</code><code class="sig-name descname">velocity</code><span class="sig-paren">(</span><em class="sig-param">mode</em>, <em class="sig-param">hw</em>, <em class="sig-param">dDk</em>, <em class="sig-param">degenerate=None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/sisl/physics/phonon.html#velocity"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sisl.physics.phonon.velocity" title="Permalink to this definition">¶</a></dt>
-<dd><p>Calculate the velocity of a set of modes</p>
-<p>These are calculated using the analytic expression (<span class="math notranslate nohighlight">\(\alpha\)</span> corresponding to the Cartesian directions):</p>
+<dt id="sisl.physics.electron.berry_flux">
+<code class="sig-prename descclassname">sisl.physics.electron.</code><code class="sig-name descname">berry_flux</code><span class="sig-paren">(</span><em class="sig-param">state</em>, <em class="sig-param">energy</em>, <em class="sig-param">dHk</em>, <em class="sig-param">dSk=None</em>, <em class="sig-param">degenerate=None</em>, <em class="sig-param">complex=False</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/sisl/physics/electron.html#berry_flux"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sisl.physics.electron.berry_flux" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate the Berry curvature matrix for a set of states (using Kubo)</p>
+<p>The Berry curvature is calculated using the following expression (<span class="math notranslate nohighlight">\(\alpha\)</span>, <span class="math notranslate nohighlight">\(\beta\)</span> corresponding to Cartesian directions):</p>
 <div class="math notranslate nohighlight">
-\[\mathbf{v}_{i\alpha} = \frac1{2\hbar\omega} \langle \epsilon_i |
-         \frac{\partial}{\partial\mathbf k}_\alpha \mathbf D(\mathbf k) | \epsilon_i \rangle\]</div>
+\[\boldsymbol\Sigma_{n,\alpha\beta} = - \frac2\hbar^2\Im\sum_{m\neq n}
+         \frac{v_{nm,\alpha} v_{mn,\beta}}
+              {[\epsilon_m - \epsilon_n]^2}\]</div>
+<p>Note that one should take the imaginary part of the returned value to retrieve the actual
+flux.</p>
+<p>For details see <a class="footnote-reference brackets" href="#id2" id="id1">1</a>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>mode</strong> (<em>array_like</em>) – vectors describing the phonon modes, 2nd dimension contains the modes. In case of degenerate
-modes the vectors <em>may</em> be rotated upon return.</p></li>
-<li><p><strong>hw</strong> (<em>array_like</em>) – frequencies of the modes, for any negative frequency the velocity will be set to 0.</p></li>
-<li><p><strong>dDk</strong> (<em>list of array_like</em>) – Dynamical matrix derivative with respect to <span class="math notranslate nohighlight">\(\mathbf k\)</span>. This needs to be a tuple or
-list of the dynamical matrix derivative along the 3 Cartesian directions.</p></li>
-<li><p><strong>degenerate</strong> (<em>list of array_like</em><em>, </em><em>optional</em>) – a list containing the indices of degenerate modes. In that case a prior diagonalization
+<li><p><strong>state</strong> (<em>array_like</em>) – vectors describing the electronic states, 2nd dimension contains the states. In case of degenerate
+states the vectors <em>may</em> be rotated upon return.</p></li>
+<li><p><strong>energy</strong> (<em>array_like</em><em>, </em><em>optional</em>) – energies of the states. In case of degenerate
+states the eigenvalues of the states will be averaged in the degenerate sub-space.</p></li>
+<li><p><strong>dHk</strong> (<em>list of array_like</em>) – Hamiltonian derivative with respect to <span class="math notranslate nohighlight">\(\mathbf k\)</span>. This needs to be a tuple or
+list of the Hamiltonian derivative along the 3 Cartesian directions.</p></li>
+<li><p><strong>dSk</strong> (<em>list of array_like</em><em>, </em><em>optional</em>) – <span class="math notranslate nohighlight">\(\delta \mathbf S_k\)</span> matrix required for non-orthogonal basis.
+Same derivative as <em class="xref py py-obj">dHk</em>.
+NOTE: Using non-orthogonal basis sets are not tested.</p></li>
+<li><p><strong>degenerate</strong> (<em>list of array_like</em><em>, </em><em>optional</em>) – a list containing the indices of degenerate states. In that case a prior diagonalization
 is required to decouple them. This is done 3 times along each of the Cartesian directions.</p></li>
+<li><p><strong>complex</strong> (<em>logical</em><em>, </em><em>optional</em>) – whether the returned quantity is complex valued (i.e. not <em>only</em> the imaginary part is returned)</p></li>
 </ul>
 </dd>
-<dt class="field-even">Returns</dt>
-<dd class="field-even"><p>velocities per mode with final dimension <code class="docutils literal notranslate"><span class="pre">(mode.shape[0],</span> <span class="pre">3)</span></code>, the velocity unit is Ang/ps
-Units <em>may</em> change in future releases.</p>
+</dl>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<dl class="simple">
+<dt><a class="reference internal" href="sisl.physics.electron.velocity.html#sisl.physics.electron.velocity" title="sisl.physics.electron.velocity"><code class="xref py py-func docutils literal notranslate"><span class="pre">velocity</span></code></a></dt><dd><p>calculate state velocities</p>
 </dd>
-<dt class="field-odd">Return type</dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)">numpy.ndarray</a></p>
+<dt><a class="reference internal" href="sisl.physics.electron.velocity_matrix.html#sisl.physics.electron.velocity_matrix" title="sisl.physics.electron.velocity_matrix"><code class="xref py py-func docutils literal notranslate"><span class="pre">velocity_matrix</span></code></a></dt><dd><p>calculate state velocities between all states</p>
+</dd>
+</dl>
+</div>
+<p class="rubric">References</p>
+<dl class="footnote brackets">
+<dt class="label" id="id2"><span class="brackets"><a class="fn-backref" href="#id1">1</a></span></dt>
+<dd><ol class="upperalpha simple" start="24">
+<li><p>Wang, J. R. Yates, I. Souza, D. Vanderbilt, “Ab initio calculation of the anomalous Hall conductivity by Wannier interpolation”, PRB, <em>74</em>, 195118 (2006)</p></li>
+</ol>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>Berry flux with final dimension <code class="docutils literal notranslate"><span class="pre">(state.shape[0],</span> <span class="pre">3,</span> <span class="pre">3)</span></code> (complex if <em class="xref py py-obj">complex</em> is True).</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)">numpy.ndarray</a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -242,10 +269,10 @@ Units <em>may</em> change in future releases.</p>
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="sisl.physics.phonon.displacement.html" class="btn btn-neutral float-right" title="displacement" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="sisl.physics.electron.conductivity.html" class="btn btn-neutral float-right" title="conductivity" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="sisl.physics.phonon.PDOS.html" class="btn btn-neutral float-left" title="PDOS" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="sisl.physics.electron.berry_phase.html" class="btn btn-neutral float-left" title="berry_phase" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   
