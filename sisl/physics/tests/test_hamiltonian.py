@@ -9,7 +9,7 @@ from sisl import Geometry, Atom, SuperCell, Hamiltonian, Spin, BandStructure, Mo
 from sisl import get_distribution
 from sisl import oplist
 from sisl import Grid, SphericalOrbital, SislError
-from sisl.physics.electron import berry_phase, spin_squared
+from sisl.physics.electron import berry_phase, spin_squared, conductivity
 
 
 pytestmark = pytest.mark.hamiltonian
@@ -643,16 +643,25 @@ class TestHamiltonian(object):
         bz = BrillouinZone(H, K)
         berry_phase(bz, method='unknown')
 
-    def test_berry_curvature(self, setup):
+    def test_berry_flux(self, setup):
         R, param = [0.1, 1.5], [1., 0.1]
         g = setup.g.tile(2, 0).tile(2, 1).tile(2, 2)
         H = Hamiltonian(g)
         H.construct((R, param))
 
         k = [0.1] * 3
-        ie1 = H.eigenstate(k, gauge='R').berry_curvature()
-        ie2 = H.eigenstate(k, gauge='r').berry_curvature()
+        ie1 = H.eigenstate(k, gauge='R').berry_flux()
+        ie2 = H.eigenstate(k, gauge='r').berry_flux()
         assert np.allclose(ie1, ie2)
+
+    def test_conductivity(self, setup):
+        R, param = [0.1, 1.5], [1., 0.1]
+        g = setup.g.tile(2, 0).tile(2, 1).tile(2, 2)
+        H = Hamiltonian(g)
+        H.construct((R, param))
+
+        mp = MonkhorstPack(H, [11, 11, 1])
+        cond = conductivity(mp)
 
     def test_gauge_inv_eff(self, setup):
         R, param = [0.1, 1.5], [1., 0.1]
@@ -692,14 +701,14 @@ class TestHamiltonian(object):
             es = H.eigenstate(k)
 
             d = es.expectation(D)
-            assert np.allclose(d - D, 0)
+            assert np.allclose(d, D)
             d = es.expectation(D, diag=False)
-            assert np.allclose(d - I, 0)
+            assert np.allclose(d, I)
 
             d = es.expectation(I)
-            assert np.allclose(d - D, 0)
+            assert np.allclose(d, D)
             d = es.expectation(I, diag=False)
-            assert np.allclose(d - I, 0)
+            assert np.allclose(d, I)
 
     def test_velocity_orthogonal(self, setup):
         H = setup.H.copy()
