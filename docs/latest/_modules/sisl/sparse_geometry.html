@@ -169,9 +169,7 @@
            <div itemprop="articleBody">
             
   <h1>Source code for sisl.sparse_geometry</h1><div class="highlight"><pre>
-<span></span><span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">print_function</span><span class="p">,</span> <span class="n">division</span>
-
-<span class="kn">import</span> <span class="nn">warnings</span>
+<span></span><span class="kn">import</span> <span class="nn">warnings</span>
 <span class="kn">import</span> <span class="nn">functools</span> <span class="k">as</span> <span class="nn">ftool</span>
 <span class="kn">from</span> <span class="nn">numbers</span> <span class="k">import</span> <span class="n">Integral</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
@@ -187,14 +185,14 @@
 <span class="kn">from</span> <span class="nn">.messages</span> <span class="k">import</span> <span class="n">warn</span><span class="p">,</span> <span class="n">SislError</span><span class="p">,</span> <span class="n">SislWarning</span><span class="p">,</span> <span class="n">tqdm_eta</span>
 <span class="kn">from</span> <span class="nn">._indices</span> <span class="k">import</span> <span class="n">indices_only</span>
 <span class="kn">from</span> <span class="nn">._help</span> <span class="k">import</span> <span class="n">get_dtype</span>
-<span class="kn">from</span> <span class="nn">._help</span> <span class="k">import</span> <span class="n">_zip</span> <span class="k">as</span> <span class="nb">zip</span><span class="p">,</span> <span class="n">_range</span> <span class="k">as</span> <span class="nb">range</span><span class="p">,</span> <span class="n">_map</span> <span class="k">as</span> <span class="nb">map</span>
 <span class="kn">from</span> <span class="nn">.utils.ranges</span> <span class="k">import</span> <span class="n">array_arange</span><span class="p">,</span> <span class="n">list2str</span>
 <span class="kn">from</span> <span class="nn">.sparse</span> <span class="k">import</span> <span class="n">SparseCSR</span><span class="p">,</span> <span class="n">isspmatrix</span>
+
 
 <span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;SparseAtom&#39;</span><span class="p">,</span> <span class="s1">&#39;SparseOrbital&#39;</span><span class="p">]</span>
 
 
-<span class="k">class</span> <span class="nc">_SparseGeometry</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+<span class="k">class</span> <span class="nc">_SparseGeometry</span><span class="p">:</span>
     <span class="sd">&quot;&quot;&quot; Sparse object containing sparse elements for a given geometry.</span>
 
 <span class="sd">    This is a base class intended to be sub-classed because the sparsity information</span>
@@ -385,7 +383,7 @@
 
     <span class="k">def</span> <span class="nf">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Representation of the sparse model &quot;&quot;&quot;</span>
-        <span class="n">s</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39;{{dim: </span><span class="si">{0}</span><span class="s1">, non-zero: </span><span class="si">{1}</span><span class="s1">, kind=</span><span class="si">{2}</span><span class="se">\n</span><span class="s1"> &#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dim</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">nnz</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dkind</span><span class="p">)</span>
+        <span class="n">s</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="n">f</span><span class="s1">&#39;{{dim: </span><span class="si">{self.dim}</span><span class="s1">, non-zero: </span><span class="si">{self.nnz}</span><span class="s1">, kind=</span><span class="si">{self.dkind}</span><span class="se">\n</span><span class="s1"> &#39;</span>
         <span class="n">s</span> <span class="o">+=</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">geometry</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">,</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1"> &#39;</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">s</span> <span class="o">+</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">}&#39;</span>
 
@@ -623,8 +621,7 @@
 <span class="sd">        &gt;&gt;&gt; for i, j in self.iter_nnz():</span>
 <span class="sd">        ...    self[i, j] # is then the non-zero value</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">j</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span><span class="p">:</span>
-            <span class="k">yield</span> <span class="n">i</span><span class="p">,</span> <span class="n">j</span>
+        <span class="k">yield from</span> <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span>
 
     <span class="fm">__iter__</span> <span class="o">=</span> <span class="n">iter_nnz</span>
 
@@ -1107,12 +1104,10 @@
 <span class="sd">            only loop on the non-zero elements coinciding with the atoms</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">atom</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">j</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span><span class="p">:</span>
-                <span class="k">yield</span> <span class="n">i</span><span class="p">,</span> <span class="n">j</span>
+            <span class="k">yield from</span> <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">atom</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">asarrayi</span><span class="p">(</span><span class="n">atom</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
-            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">j</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">iter_nnz</span><span class="p">(</span><span class="n">atom</span><span class="p">):</span>
-                <span class="k">yield</span> <span class="n">i</span><span class="p">,</span> <span class="n">j</span></div>
+            <span class="k">yield from</span> <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">iter_nnz</span><span class="p">(</span><span class="n">atom</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="SparseAtom.set_nsc"><a class="viewcode-back" href="../../api-generated/sisl.SparseAtom.html#sisl.SparseAtom.set_nsc">[docs]</a>    <span class="k">def</span> <span class="nf">set_nsc</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Reset the number of allowed supercells in the sparse atom</span>
@@ -1126,7 +1121,7 @@
 <span class="sd">        --------</span>
 <span class="sd">        SuperCell.set_nsc : the underlying called method</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="nb">super</span><span class="p">(</span><span class="n">SparseAtom</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">set_nsc</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">na</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">set_nsc</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">na</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="SparseAtom.cut"><a class="viewcode-back" href="../../api-generated/sisl.SparseAtom.html#sisl.SparseAtom.cut">[docs]</a>    <span class="k">def</span> <span class="nf">cut</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">seps</span><span class="p">,</span> <span class="n">axis</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Cuts the sparse atom model into different parts.</span>
@@ -1201,7 +1196,7 @@
             <span class="n">nsc</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span> <span class="o">=</span> <span class="n">isc</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span> <span class="o">*</span> <span class="n">seps</span> <span class="o">+</span> <span class="n">i</span>
 
             <span class="k">if</span> <span class="n">out</span><span class="p">:</span>
-                <span class="n">warn</span><span class="p">(</span><span class="s1">&#39;Cut the connection at nsc=</span><span class="si">{0}</span><span class="s1"> in direction </span><span class="si">{1}</span><span class="s1">.&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">nsc</span><span class="p">[</span><span class="n">axis</span><span class="p">],</span> <span class="n">axis</span><span class="p">))</span>
+                <span class="n">warn</span><span class="p">(</span><span class="s1">&#39;Cut the connection at nsc=</span><span class="si">{}</span><span class="s1"> in direction </span><span class="si">{}</span><span class="s1">.&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">nsc</span><span class="p">[</span><span class="n">axis</span><span class="p">],</span> <span class="n">axis</span><span class="p">))</span>
 
         <span class="c1"># Update number of super-cells</span>
         <span class="n">nsc</span><span class="p">[:]</span> <span class="o">=</span> <span class="n">nsc</span><span class="p">[:]</span> <span class="o">*</span> <span class="mi">2</span> <span class="o">+</span> <span class="mi">1</span>
@@ -1621,11 +1616,9 @@
         <span class="k">elif</span> <span class="ow">not</span> <span class="n">orbital</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">orbital</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">asarrayi</span><span class="p">(</span><span class="n">orbital</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">orbital</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">j</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span><span class="p">:</span>
-                <span class="k">yield</span> <span class="n">i</span><span class="p">,</span> <span class="n">j</span>
+            <span class="k">yield from</span> <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">j</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">iter_nnz</span><span class="p">(</span><span class="n">orbital</span><span class="p">):</span>
-                <span class="k">yield</span> <span class="n">i</span><span class="p">,</span> <span class="n">j</span></div>
+            <span class="k">yield from</span> <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">iter_nnz</span><span class="p">(</span><span class="n">orbital</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="SparseOrbital.set_nsc"><a class="viewcode-back" href="../../api-generated/sisl.SparseOrbital.html#sisl.SparseOrbital.set_nsc">[docs]</a>    <span class="k">def</span> <span class="nf">set_nsc</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Reset the number of allowed supercells in the sparse orbital</span>
@@ -1639,7 +1632,7 @@
 <span class="sd">        --------</span>
 <span class="sd">        SuperCell.set_nsc : the underlying called method</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="nb">super</span><span class="p">(</span><span class="n">SparseOrbital</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">set_nsc</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">no</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">set_nsc</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">no</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="SparseOrbital.cut"><a class="viewcode-back" href="../../api-generated/sisl.SparseOrbital.html#sisl.SparseOrbital.cut">[docs]</a>    <span class="k">def</span> <span class="nf">cut</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">seps</span><span class="p">,</span> <span class="n">axis</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Cuts the sparse orbital model into different parts.</span>
@@ -1714,7 +1707,7 @@
             <span class="n">nsc</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span> <span class="o">=</span> <span class="n">isc</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span> <span class="o">*</span> <span class="n">seps</span> <span class="o">+</span> <span class="n">i</span>
 
             <span class="k">if</span> <span class="n">out</span><span class="p">:</span>
-                <span class="n">warn</span><span class="p">(</span><span class="s1">&#39;Cut the connection at nsc=</span><span class="si">{0}</span><span class="s1"> in direction </span><span class="si">{1}</span><span class="s1">.&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">nsc</span><span class="p">[</span><span class="n">axis</span><span class="p">],</span> <span class="n">axis</span><span class="p">))</span>
+                <span class="n">warn</span><span class="p">(</span><span class="s1">&#39;Cut the connection at nsc=</span><span class="si">{}</span><span class="s1"> in direction </span><span class="si">{}</span><span class="s1">.&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">nsc</span><span class="p">[</span><span class="n">axis</span><span class="p">],</span> <span class="n">axis</span><span class="p">))</span>
 
         <span class="c1"># Update number of super-cells</span>
         <span class="n">nsc</span><span class="p">[:]</span> <span class="o">=</span> <span class="n">nsc</span><span class="p">[:]</span> <span class="o">*</span> <span class="mi">2</span> <span class="o">+</span> <span class="mi">1</span>
@@ -1772,7 +1765,7 @@
             <span class="n">atom</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">atoms</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">atom</span><span class="p">)</span>
             <span class="n">atom</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">atoms</span><span class="o">.</span><span class="n">specie</span> <span class="o">==</span> <span class="n">atom</span><span class="p">)</span><span class="o">.</span><span class="n">nonzero</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
         <span class="c1"># This will digress to call .sub</span>
-        <span class="k">return</span> <span class="nb">super</span><span class="p">(</span><span class="n">SparseOrbital</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">atom</span><span class="p">)</span></div>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">atom</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="SparseOrbital.remove_orbital"><a class="viewcode-back" href="../../api-generated/sisl.SparseOrbital.html#sisl.SparseOrbital.remove_orbital">[docs]</a>    <span class="k">def</span> <span class="nf">remove_orbital</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">atom</span><span class="p">,</span> <span class="n">orbital</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Remove a subset of orbitals on `atom` according to `orbital`</span>
@@ -2259,7 +2252,7 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># Check that the sparse matrices are compatible</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="ow">is</span> <span class="nb">type</span><span class="p">(</span><span class="n">other</span><span class="p">)):</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39;.add requires other to be of same type: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">other</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="p">))</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="n">f</span><span class="s1">&#39;.add requires other to be of same type: </span><span class="si">{other.__class__.__name__}</span><span class="s1">&#39;</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dtype</span> <span class="o">!=</span> <span class="n">other</span><span class="o">.</span><span class="n">dtype</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39;.add requires the same datatypes in the two matrices.&#39;</span><span class="p">)</span>
@@ -2446,7 +2439,7 @@
 <span class="sd">            a new instance with two sparse matrices joined and appended together</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="ow">is</span> <span class="nb">type</span><span class="p">(</span><span class="n">other</span><span class="p">)):</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39;.append requires other to be of same type: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">other</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="p">))</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="n">f</span><span class="s1">&#39;.append requires other to be of same type: </span><span class="si">{other.__class__.__name__}</span><span class="s1">&#39;</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">nsc</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">3</span> <span class="ow">or</span> <span class="n">other</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">nsc</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">3</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39;.append requires sparse-geometries to maximally &#39;</span>
