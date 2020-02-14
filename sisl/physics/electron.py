@@ -1,4 +1,4 @@
-"""Electron related functions and classes
+r"""Electron related functions and classes
 =========================================
 
 .. module:: sisl.physics.electron
@@ -50,7 +50,6 @@ automatically passes the correct ``S`` because it knows the states :math:`k`-poi
    EigenstateElectron
 
 """
-from __future__ import print_function, division
 
 from functools import reduce
 import numpy as np
@@ -73,7 +72,6 @@ from sisl.linalg import svd_destroy, eigvals_destroy
 from sisl.linalg import eigh_destroy, det_destroy
 from sisl.messages import info, warn, SislError, tqdm_eta
 from sisl._help import dtype_complex_to_real, dtype_real_to_complex
-from sisl._help import _range as range
 from .distribution import get_distribution
 from .spin import Spin
 from .sparse import SparseOrbitalBZSpin
@@ -161,7 +159,7 @@ def PDOS(E, eig, state, S=None, distribution='gaussian', spin=None):
 
     .. math::
 
-       \mathrm{PDOS}_\nu^\Sigma(E) &= \sum_i \psi^*_{i,\nu} \boldsymbol\sigma_z \boldsymbol\sigma_z [\mathbf S | \psi_{i}\rangle]_\nu D(E-\epsilon_i)
+       \mathrm{PDOS}_\nu^\sigma(E) &= \sum_i \psi^*_{i,\nu} \boldsymbol\sigma_z \boldsymbol\sigma_z [\mathbf S | \psi_{i}\rangle]_\nu D(E-\epsilon_i)
        \\
        \mathrm{PDOS}_\nu^x(E) &= \sum_i \psi^*_{i,\nu} \boldsymbol\sigma_x [\mathbf S | \psi_{i}\rangle]_\nu D(E-\epsilon_i)
        \\
@@ -210,7 +208,7 @@ def PDOS(E, eig, state, S=None, distribution='gaussian', spin=None):
 
     # Figure out whether we are dealing with a non-colinear calculation
     if S is None:
-        class S(object):
+        class S:
             __slots__ = []
             shape = (state.shape[1], state.shape[1])
             @staticmethod
@@ -313,7 +311,7 @@ def spin_moment(state, S=None):
         return spin_moment(state.reshape(1, -1), S).ravel()
 
     if S is None:
-        class S(object):
+        class S:
             __slots__ = []
             shape = (state.shape[1] // 2, state.shape[1] // 2)
             @staticmethod
@@ -393,7 +391,7 @@ def spin_orbital_moment(state, S=None):
         return spin_orbital_moment(state.reshape(1, -1), S)[0]
 
     if S is None:
-        class S(object):
+        class S:
             __slots__ = []
             shape = (state.shape[1] // 2, state.shape[1] // 2)
             @staticmethod
@@ -464,7 +462,7 @@ def spin_squared(state_alpha, state_beta, S=None):
         raise ValueError('spin_squared requires alpha and beta states to have same number of orbitals')
 
     if S is None:
-        class S(object):
+        class S:
             __slots__ = []
             shape = (state_alpha.shape[1], state_alpha.shape[1])
             @staticmethod
@@ -739,7 +737,7 @@ def berry_flux(state, energy, dHk, dSk=None, degenerate=None, complex=False):
 
     .. math::
 
-       \boldsymbol\Sigma_{n,\alpha\beta} = - \frac2\hbar^2\Im\sum_{m\neq n}
+       \boldsymbol\Omega_{n,\alpha\beta} = - \frac2\hbar^2\Im\sum_{m\neq n}
                 \frac{v_{nm,\alpha} v_{mn,\beta}}
                      {[\epsilon_m - \epsilon_n]^2}
 
@@ -813,7 +811,7 @@ def _berry_flux(v_M, energy, degenerate):
     # For cases where all states are degenerate then we would not be able
     # to calculate anything. Hence we need to initialize as zero
     # This is a vector of matrices
-    #   \Sigma_{n, \alpha \beta}
+    #   \Omega_{n, \alpha \beta}
     sigma = np.zeros([N, 3, 3], dtype=dtype_real_to_complex(v_M.dtype))
 
     # Fast index deletion
@@ -844,9 +842,9 @@ def conductivity(bz, distribution='fermi-dirac', method='ahc', complex=False):
     which may be calculated as:
 
     .. math::
-       \sigma_{\alpha\beta} = \frac{-e^2}{\hbar}\int\,\mathrm d\mathbf k\sum_nf_n(\mathbf k)\Sigma_{n,\alpha\beta}(\mathbf k)
+       \sigma_{\alpha\beta} = \frac{-e^2}{\hbar}\int\,\mathrm d\mathbf k\sum_nf_n(\mathbf k)\Omega_{n,\alpha\beta}(\mathbf k)
 
-    where :math:`\Sigma_{n,\alpha\beta}` is the Berry curvature for state :math:`n` and :math:`f_n` is
+    where :math:`\Omega_{n,\alpha\beta}` is the Berry curvature for state :math:`n` and :math:`f_n` is
     the occupation for state :math:`n`.
 
     Parameters
@@ -1444,7 +1442,7 @@ def wavefunction(v, grid, geometry=None, k=None, spinor=0, spin=None, eta=False)
         # Extract maximum R
         R = atom.maxR()
         if R <= 0.:
-            warn("wavefunction: Atom '{}' does not have a wave-function, skipping atom.".format(atom))
+            warn(f"wavefunction: Atom '{atom}' does not have a wave-function, skipping atom.")
             eta.update()
             continue
 
@@ -1495,7 +1493,7 @@ def wavefunction(v, grid, geometry=None, k=None, spinor=0, spin=None, eta=False)
             oR = os[0].R
 
             if oR <= 0.:
-                warn("wavefunction: Orbital(s) '{}' does not have a wave-function, skipping orbital!".format(os))
+                warn(f"wavefunction: Orbital(s) '{os}' does not have a wave-function, skipping orbital!")
                 # Skip these orbitals
                 io += len(os)
                 continue
@@ -1539,7 +1537,7 @@ def wavefunction(v, grid, geometry=None, k=None, spinor=0, spin=None, eta=False)
     np.seterr(**old_err)
 
 
-class _electron_State(object):
+class _electron_State:
     __slots__ = []
 
     def __is_nc(self):
@@ -1581,7 +1579,7 @@ class _electron_State(object):
         else:
             n = self.shape[1]
 
-        class __FakeSk(object):
+        class __FakeSk:
             """ Replacement object which superseedes a matrix """
             __slots__ = []
             shape = (n, n)

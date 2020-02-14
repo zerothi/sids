@@ -1,5 +1,3 @@
-from __future__ import print_function, division
-
 import sys
 import pytest
 import os.path as osp
@@ -51,6 +49,21 @@ def test_md_nose_out(sisl_files):
     for S, T, D in zip(sstatic, stotal, sdata):
         assert not np.allclose(S, T)
         assert np.allclose(D, T)
+
+    # Ensure SCF reads are consistent
+    scf_last = out.read_scf()
+    scf = out.read_scf(imd=-1)
+    assert np.allclose(scf_last[-1], scf)
+    for i in range(len(scf_last)):
+        scf = out.read_scf(imd=i + 1)
+        assert np.allclose(scf_last[i], scf)
+
+    scf_all = out.read_scf(iscf=None, imd=-1)
+    scf = out.read_scf(imd=-1)
+    assert np.allclose(scf_all[-1], scf)
+    for i in range(len(scf_all)):
+        scf = out.read_scf(iscf=i + 1, imd=-1)
+        assert np.allclose(scf_all[i], scf)
 
 
 @pytest.mark.skipif(sys.version_info < (3, 6), reason="requires python3.6 or higher for ordered kwargs")
