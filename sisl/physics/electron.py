@@ -1269,7 +1269,6 @@ def wavefunction(v, grid, geometry=None, k=None, spinor=0, spin=None, eta=False)
     """
     if geometry is None:
         geometry = grid.geometry
-        warn('wavefunction was not passed a geometry associated, will use the geometry associated with the Grid.')
     if geometry is None:
         raise SislError('wavefunction: did not find a usable Geometry through keywords or the Grid!')
 
@@ -1799,17 +1798,17 @@ class _electron_State:
 
 
 class CoefficientElectron(Coefficient):
-    """ Coefficients describing some physical quantity related to electrons """
+    r""" Coefficients describing some physical quantity related to electrons """
     __slots__ = []
 
 
 class StateElectron(_electron_State, State):
-    """ A state describing a physical quantity related to electrons """
+    r""" A state describing a physical quantity related to electrons """
     __slots__ = []
 
 
 class StateCElectron(_electron_State, StateC):
-    """ A state describing a physical quantity related to electrons, with associated coefficients of the state """
+    r""" A state describing a physical quantity related to electrons, with associated coefficients of the state """
     __slots__ = []
 
     def velocity(self, eps=1e-4):
@@ -1972,7 +1971,7 @@ class StateCElectron(_electron_State, StateC):
 
 
 class EigenvalueElectron(CoefficientElectron):
-    """ Eigenvalues of electronic states, no eigenvectors retained
+    r""" Eigenvalues of electronic states, no eigenvectors retained
 
     This holds routines that enable the calculation of density of states.
     """
@@ -1984,7 +1983,7 @@ class EigenvalueElectron(CoefficientElectron):
         return self.c
 
     def occupation(self, distribution='fermi_dirac'):
-        """ Calculate the occupations for the states according to a distribution function
+        r""" Calculate the occupations for the states according to a distribution function
 
         Parameters
         ----------
@@ -2012,7 +2011,7 @@ class EigenvalueElectron(CoefficientElectron):
 
 
 class EigenvectorElectron(StateElectron):
-    """ Eigenvectors of electronic states, no eigenvalues retained
+    r""" Eigenvectors of electronic states, no eigenvalues retained
 
     This holds routines that enable the calculation of spin moments.
     """
@@ -2020,7 +2019,7 @@ class EigenvectorElectron(StateElectron):
 
 
 class EigenstateElectron(StateCElectron):
-    """ Eigen states of electrons with eigenvectors and eigenvalues.
+    r""" Eigen states of electrons with eigenvectors and eigenvalues.
 
     This holds routines that enable the calculation of (projected) density of states,
     spin moments (spin texture).
@@ -2029,11 +2028,11 @@ class EigenstateElectron(StateCElectron):
 
     @property
     def eig(self):
-        """ Eigenvalues for each state """
+        r""" Eigenvalues for each state """
         return self.c
 
     def occupation(self, distribution='fermi_dirac'):
-        """ Calculate the occupations for the states according to a distribution function
+        r""" Calculate the occupations for the states according to a distribution function
 
         Parameters
         ----------

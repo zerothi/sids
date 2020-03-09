@@ -1029,6 +1029,8 @@ class Atom(metaclass=AtomMeta):
 
     def index(self, orbital):
         """ Return the index of the orbital in the atom object """
+        if not isinstance(orbital, Orbital):
+            orbital = self[orbital]
         for i, o in enumerate(self.orbital):
             if o == orbital:
                 return i
@@ -1106,6 +1108,12 @@ class Atom(metaclass=AtomMeta):
             return [self.orbital[o] for o in range(ol[0], ol[1], ol[2])]
         elif isinstance(key, Integral):
             return self.orbital[key]
+        elif isinstance(key, str):
+            orbs = [orb for orb in self.orbital if key in orb.name()]
+            # In case none are found, None will be returned
+            if not orbs:
+                return None
+            return orbs if len(orbs) != 1 else orbs[0]
         return [self.orbital[o] for o in np.asarray(key).ravel()]
 
     def maxR(self):
@@ -1388,11 +1396,15 @@ class Atoms:
 
     def orbital(self, io):
         """ Return an array of orbital of the contained objects """
-        io = _a.asarrayi(io).ravel() % self.no
+        io = _a.asarrayi(io)
+        ndim = io.ndim
+        io = io.ravel() % self.no
         a = list_index_le(io, self.lasto)
         io = io - self.firsto[a]
         a = self.specie[a]
         # Now extract the list of orbitals
+        if ndim == 0:
+            return self.atom[a[0]].orbital[io[0]]
         return [self.atom[ia].orbital[o] for ia, o in zip(a, io)]
 
     def maxR(self, all=False):
@@ -1437,9 +1449,11 @@ class Atoms:
 
     def index(self, atom):
         """ Return the species index of the atom object """
-        for i, a in enumerate(self.atom):
+        if not isinstance(atom, Atom):
+            atom = self[atom]
+        for s, a in enumerate(self.atom):
             if a == atom:
-                return i
+                return s
         raise KeyError('Could not find `atom` in the list of atoms.')
 
     def reorder(self, in_place=False):
@@ -1679,10 +1693,20 @@ class Atoms:
             return [self.atom[self._specie[s]] for s in range(sl[0], sl[1], sl[2])]
         elif isinstance(key, Integral):
             return self.atom[self._specie[key]]
+        elif isinstance(key, str):
+            for at in self.atom:
+                if at.tag == key:
+                    return at
+            return None
         return [self.atom[i] for i in self._specie[_a.asarrayi(key).ravel()]]
 
     def __setitem__(self, key, value):
         """ Overwrite an `Atom` object corresponding to the key(s) """
+        #If key is a string, we replace the atom that matches 'key'
+        if isinstance(key, str):
+            self.replace_atom(self[key], value)
+            return
+
         # Convert to array
         if isinstance(key, slice):
             sl = key.indices(len(self))
@@ -1763,6 +1787,7 @@ class Atoms:
 
         Raises
         ------
+        KeyError : if `atom_from` does not exist in the list of atoms
         UserWarning : if the atoms does not have the same number of orbitals.
         """
         if not isinstance(atom_from, Atom):
@@ -1772,17 +1797,27 @@ class Atoms:
             raise ValueError(self.__class__.__name__ + '.replace_atom requires input arguments to '
                              'be of the class Atom')
 
-        update_orbitals = False
-        for i, atom in enumerate(self.atom):
-            if atom == atom_from:
-                if atom.no != atom_to.no:
-                    a1 = '  ' + str(atom).replace('\n', '\n  ')
-                    a2 = '  ' + str(atom_to).replace('\n', '\n  ')
-                    info(f'Replacing atom\n{a1}\n->\n{a2}\nwith a different number of orbitals!')
-                    update_orbitals = True
-                self._atom[i] = atom_to
+        # Get index of `atom_from`
+        idx_from = self.index(atom_from)
+        try:
+            idx_to = self.index(atom_to)
 
-        if update_orbitals:
+            # Decrement indices of the atoms that are
+            # changed to one already there
+            self._specie[self.specie == idx_from] = idx_to
+            self._specie[self.specie > idx_from] -= 1
+            # Now delete the old index, we replace, so we *have* to remove it
+            self._atom.pop(idx_from)
+        except KeyError:
+            # The atom_to is not in the list
+            # Simply change
+            self._atom[idx_from] = atom_to
+
+        if atom_from.no != atom_to.no:
+            a1 = '  ' + str(atom_from).replace('\n', '\n  ')
+            a2 = '  ' + str(atom_to).replace('\n', '\n  ')
+            info(f'Replacing atom\n{a1}\n->\n{a2}\nwith a different number of orbitals!')
+
             # Update orbital counts...
             self._update_orbitals()
 
