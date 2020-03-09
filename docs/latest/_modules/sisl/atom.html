@@ -101,6 +101,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../../tutorials.html">Tutorials</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../examples.html">Examples</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../scripts/scripts.html">Scripts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../visualization/visualization.html">Visualization</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../rst/files.html">File formats</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Reference documentation</span></p>
@@ -1200,6 +1201,8 @@
 
 <div class="viewcode-block" id="Atom.index"><a class="viewcode-back" href="../../api-generated/sisl.Atom.html#sisl.Atom.index">[docs]</a>    <span class="k">def</span> <span class="nf">index</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">orbital</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Return the index of the orbital in the atom object &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">orbital</span><span class="p">,</span> <span class="n">Orbital</span><span class="p">):</span>
+            <span class="n">orbital</span> <span class="o">=</span> <span class="bp">self</span><span class="p">[</span><span class="n">orbital</span><span class="p">]</span>
         <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">o</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">orbital</span><span class="p">):</span>
             <span class="k">if</span> <span class="n">o</span> <span class="o">==</span> <span class="n">orbital</span><span class="p">:</span>
                 <span class="k">return</span> <span class="n">i</span>
@@ -1277,6 +1280,12 @@
             <span class="k">return</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">orbital</span><span class="p">[</span><span class="n">o</span><span class="p">]</span> <span class="k">for</span> <span class="n">o</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">ol</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">ol</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">ol</span><span class="p">[</span><span class="mi">2</span><span class="p">])]</span>
         <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">Integral</span><span class="p">):</span>
             <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">orbital</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="n">orbs</span> <span class="o">=</span> <span class="p">[</span><span class="n">orb</span> <span class="k">for</span> <span class="n">orb</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">orbital</span> <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">orb</span><span class="o">.</span><span class="n">name</span><span class="p">()]</span>
+            <span class="c1"># In case none are found, None will be returned</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">orbs</span><span class="p">:</span>
+                <span class="k">return</span> <span class="kc">None</span>
+            <span class="k">return</span> <span class="n">orbs</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">orbs</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">1</span> <span class="k">else</span> <span class="n">orbs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
         <span class="k">return</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">orbital</span><span class="p">[</span><span class="n">o</span><span class="p">]</span> <span class="k">for</span> <span class="n">o</span> <span class="ow">in</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">key</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()]</span>
 
 <div class="viewcode-block" id="Atom.maxR"><a class="viewcode-back" href="../../api-generated/sisl.Atom.html#sisl.Atom.maxR">[docs]</a>    <span class="k">def</span> <span class="nf">maxR</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -1559,11 +1568,15 @@
 
 <div class="viewcode-block" id="Atoms.orbital"><a class="viewcode-back" href="../../api-generated/sisl.Atoms.html#sisl.Atoms.orbital">[docs]</a>    <span class="k">def</span> <span class="nf">orbital</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">io</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Return an array of orbital of the contained objects &quot;&quot;&quot;</span>
-        <span class="n">io</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">asarrayi</span><span class="p">(</span><span class="n">io</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">no</span>
+        <span class="n">io</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">asarrayi</span><span class="p">(</span><span class="n">io</span><span class="p">)</span>
+        <span class="n">ndim</span> <span class="o">=</span> <span class="n">io</span><span class="o">.</span><span class="n">ndim</span>
+        <span class="n">io</span> <span class="o">=</span> <span class="n">io</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">no</span>
         <span class="n">a</span> <span class="o">=</span> <span class="n">list_index_le</span><span class="p">(</span><span class="n">io</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">lasto</span><span class="p">)</span>
         <span class="n">io</span> <span class="o">=</span> <span class="n">io</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">firsto</span><span class="p">[</span><span class="n">a</span><span class="p">]</span>
         <span class="n">a</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">specie</span><span class="p">[</span><span class="n">a</span><span class="p">]</span>
         <span class="c1"># Now extract the list of orbitals</span>
+        <span class="k">if</span> <span class="n">ndim</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">atom</span><span class="p">[</span><span class="n">a</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span><span class="o">.</span><span class="n">orbital</span><span class="p">[</span><span class="n">io</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span>
         <span class="k">return</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">atom</span><span class="p">[</span><span class="n">ia</span><span class="p">]</span><span class="o">.</span><span class="n">orbital</span><span class="p">[</span><span class="n">o</span><span class="p">]</span> <span class="k">for</span> <span class="n">ia</span><span class="p">,</span> <span class="n">o</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">io</span><span class="p">)]</span></div>
 
 <div class="viewcode-block" id="Atoms.maxR"><a class="viewcode-back" href="../../api-generated/sisl.Atoms.html#sisl.Atoms.maxR">[docs]</a>    <span class="k">def</span> <span class="nf">maxR</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">all</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
@@ -1608,9 +1621,11 @@
 
 <div class="viewcode-block" id="Atoms.index"><a class="viewcode-back" href="../../api-generated/sisl.Atoms.html#sisl.Atoms.index">[docs]</a>    <span class="k">def</span> <span class="nf">index</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">atom</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Return the species index of the atom object &quot;&quot;&quot;</span>
-        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">a</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">atom</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">atom</span><span class="p">,</span> <span class="n">Atom</span><span class="p">):</span>
+            <span class="n">atom</span> <span class="o">=</span> <span class="bp">self</span><span class="p">[</span><span class="n">atom</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">s</span><span class="p">,</span> <span class="n">a</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">atom</span><span class="p">):</span>
             <span class="k">if</span> <span class="n">a</span> <span class="o">==</span> <span class="n">atom</span><span class="p">:</span>
-                <span class="k">return</span> <span class="n">i</span>
+                <span class="k">return</span> <span class="n">s</span>
         <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span><span class="s1">&#39;Could not find `atom` in the list of atoms.&#39;</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="Atoms.reorder"><a class="viewcode-back" href="../../api-generated/sisl.Atoms.html#sisl.Atoms.reorder">[docs]</a>    <span class="k">def</span> <span class="nf">reorder</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">in_place</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
@@ -1850,10 +1865,20 @@
             <span class="k">return</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">atom</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_specie</span><span class="p">[</span><span class="n">s</span><span class="p">]]</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">sl</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">sl</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">sl</span><span class="p">[</span><span class="mi">2</span><span class="p">])]</span>
         <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">Integral</span><span class="p">):</span>
             <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">atom</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_specie</span><span class="p">[</span><span class="n">key</span><span class="p">]]</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">at</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">atom</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">at</span><span class="o">.</span><span class="n">tag</span> <span class="o">==</span> <span class="n">key</span><span class="p">:</span>
+                    <span class="k">return</span> <span class="n">at</span>
+            <span class="k">return</span> <span class="kc">None</span>
         <span class="k">return</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">atom</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_specie</span><span class="p">[</span><span class="n">_a</span><span class="o">.</span><span class="n">asarrayi</span><span class="p">(</span><span class="n">key</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()]]</span>
 
     <span class="k">def</span> <span class="nf">__setitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Overwrite an `Atom` object corresponding to the key(s) &quot;&quot;&quot;</span>
+        <span class="c1">#If key is a string, we replace the atom that matches &#39;key&#39;</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">replace_atom</span><span class="p">(</span><span class="bp">self</span><span class="p">[</span><span class="n">key</span><span class="p">],</span> <span class="n">value</span><span class="p">)</span>
+            <span class="k">return</span>
+
         <span class="c1"># Convert to array</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="nb">slice</span><span class="p">):</span>
             <span class="n">sl</span> <span class="o">=</span> <span class="n">key</span><span class="o">.</span><span class="n">indices</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span>
@@ -1934,6 +1959,7 @@
 
 <span class="sd">        Raises</span>
 <span class="sd">        ------</span>
+<span class="sd">        KeyError : if `atom_from` does not exist in the list of atoms</span>
 <span class="sd">        UserWarning : if the atoms does not have the same number of orbitals.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">atom_from</span><span class="p">,</span> <span class="n">Atom</span><span class="p">):</span>
@@ -1943,17 +1969,27 @@
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39;.replace_atom requires input arguments to &#39;</span>
                              <span class="s1">&#39;be of the class Atom&#39;</span><span class="p">)</span>
 
-        <span class="n">update_orbitals</span> <span class="o">=</span> <span class="kc">False</span>
-        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">atom</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">atom</span><span class="p">):</span>
-            <span class="k">if</span> <span class="n">atom</span> <span class="o">==</span> <span class="n">atom_from</span><span class="p">:</span>
-                <span class="k">if</span> <span class="n">atom</span><span class="o">.</span><span class="n">no</span> <span class="o">!=</span> <span class="n">atom_to</span><span class="o">.</span><span class="n">no</span><span class="p">:</span>
-                    <span class="n">a1</span> <span class="o">=</span> <span class="s1">&#39;  &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">atom</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">,</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">  &#39;</span><span class="p">)</span>
-                    <span class="n">a2</span> <span class="o">=</span> <span class="s1">&#39;  &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">atom_to</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">,</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">  &#39;</span><span class="p">)</span>
-                    <span class="n">info</span><span class="p">(</span><span class="n">f</span><span class="s1">&#39;Replacing atom</span><span class="se">\n</span><span class="si">{a1}</span><span class="se">\n</span><span class="s1">-&gt;</span><span class="se">\n</span><span class="si">{a2}</span><span class="se">\n</span><span class="s1">with a different number of orbitals!&#39;</span><span class="p">)</span>
-                    <span class="n">update_orbitals</span> <span class="o">=</span> <span class="kc">True</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_atom</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">atom_to</span>
+        <span class="c1"># Get index of `atom_from`</span>
+        <span class="n">idx_from</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">atom_from</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">idx_to</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">atom_to</span><span class="p">)</span>
 
-        <span class="k">if</span> <span class="n">update_orbitals</span><span class="p">:</span>
+            <span class="c1"># Decrement indices of the atoms that are</span>
+            <span class="c1"># changed to one already there</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_specie</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">specie</span> <span class="o">==</span> <span class="n">idx_from</span><span class="p">]</span> <span class="o">=</span> <span class="n">idx_to</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_specie</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">specie</span> <span class="o">&gt;</span> <span class="n">idx_from</span><span class="p">]</span> <span class="o">-=</span> <span class="mi">1</span>
+            <span class="c1"># Now delete the old index, we replace, so we *have* to remove it</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_atom</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">idx_from</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+            <span class="c1"># The atom_to is not in the list</span>
+            <span class="c1"># Simply change</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_atom</span><span class="p">[</span><span class="n">idx_from</span><span class="p">]</span> <span class="o">=</span> <span class="n">atom_to</span>
+
+        <span class="k">if</span> <span class="n">atom_from</span><span class="o">.</span><span class="n">no</span> <span class="o">!=</span> <span class="n">atom_to</span><span class="o">.</span><span class="n">no</span><span class="p">:</span>
+            <span class="n">a1</span> <span class="o">=</span> <span class="s1">&#39;  &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">atom_from</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">,</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">  &#39;</span><span class="p">)</span>
+            <span class="n">a2</span> <span class="o">=</span> <span class="s1">&#39;  &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">atom_to</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">,</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">  &#39;</span><span class="p">)</span>
+            <span class="n">info</span><span class="p">(</span><span class="n">f</span><span class="s1">&#39;Replacing atom</span><span class="se">\n</span><span class="si">{a1}</span><span class="se">\n</span><span class="s1">-&gt;</span><span class="se">\n</span><span class="si">{a2}</span><span class="se">\n</span><span class="s1">with a different number of orbitals!&#39;</span><span class="p">)</span>
+
             <span class="c1"># Update orbital counts...</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_update_orbitals</span><span class="p">()</span></div>
 

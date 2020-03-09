@@ -101,6 +101,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../../tutorials.html">Tutorials</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../examples.html">Examples</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../scripts/scripts.html">Scripts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../visualization/visualization.html">Visualization</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../rst/files.html">File formats</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Reference documentation</span></p>
@@ -203,7 +204,7 @@
 <span class="sd">  Func - 1</span>
 
 <span class="sd">In certain cases one may wish to limit the search for a selected routine</span>
-<span class="sd">by only searching until the performance of the *next* called routine drops.</span>
+<span class="sd">by only searching until the metric of the *next* called routine drops.</span>
 <span class="sd">This is called an *ordered* selector because it tries them in order, and</span>
 <span class="sd">once one is slower than the former tested ones, it will not test any further.</span>
 <span class="sd">For the above same functions we may do::</span>
@@ -228,10 +229,14 @@
 
 
 <div class="viewcode-block" id="Selector"><a class="viewcode-back" href="../../api-generated/sisl.Selector.html#sisl.Selector">[docs]</a><span class="k">class</span> <span class="nc">Selector</span><span class="p">:</span>
-    <span class="sd">&quot;&quot;&quot; Base class for implementing a selector of class routines</span>
+    <span class="sa">r</span><span class="sd">&quot;&quot;&quot; Base class for implementing a selector of class routines</span>
 
 <span class="sd">    This class should contain a list of routines and may then be used</span>
-<span class="sd">    to always return the best performant routine.</span>
+<span class="sd">    to always return the best performant routine. The *performance*</span>
+<span class="sd">    of a method is based on a pre-selected metric (time, memory, etc.).</span>
+
+<span class="sd">    The chosen method will be based on the routine which has the highest</span>
+<span class="sd">    metric. E.g. for time the metric could be :math:`1/(stop - start)`.</span>
 
 <span class="sd">    This is done on a per-class basis where this class should initially</span>
 <span class="sd">    determine which routine is the best performing one and then always return</span>
@@ -244,11 +249,11 @@
 <span class="sd">    ordered : bool</span>
 <span class="sd">      If False a simple selection of the most performant one will be chosen.</span>
 <span class="sd">      If True, it will check the routines in order and once *one* of the</span>
-<span class="sd">      routines is less performant it will choose from the setof runned</span>
-<span class="sd">      routines.</span>
+<span class="sd">      routines is less performant it will choose from the setof currently</span>
+<span class="sd">      runned routines.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="vm">__slots__</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;_routines&#39;</span><span class="p">,</span> <span class="s1">&#39;_performances&#39;</span><span class="p">,</span> <span class="s1">&#39;_best&#39;</span><span class="p">,</span> <span class="s1">&#39;_ordered&#39;</span><span class="p">]</span>
+    <span class="vm">__slots__</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;_routines&#39;</span><span class="p">,</span> <span class="s1">&#39;_metric&#39;</span><span class="p">,</span> <span class="s1">&#39;_best&#39;</span><span class="p">,</span> <span class="s1">&#39;_ordered&#39;</span><span class="p">]</span>
 
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">routines</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">ordered</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
 
@@ -260,8 +265,8 @@
 
         <span class="bp">self</span><span class="o">.</span><span class="n">_ordered</span> <span class="o">=</span> <span class="n">ordered</span>
 
-        <span class="c1"># Create a list of performance identifiers</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_performances</span> <span class="o">=</span> <span class="p">[</span><span class="kc">None</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">routines</span><span class="p">)</span>
+        <span class="c1"># Create a list of metric identifiers</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_metric</span> <span class="o">=</span> <span class="p">[</span><span class="kc">None</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">routines</span><span class="p">)</span>
 
         <span class="c1"># Initialize no best routine</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_best</span> <span class="o">=</span> <span class="kc">None</span>
@@ -271,13 +276,11 @@
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_routines</span>
 
     <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">performances</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_performances</span>
+    <span class="k">def</span> <span class="nf">metric</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_metric</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">best</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_best</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">return</span> <span class="kc">None</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_best</span>
 
     <span class="nd">@property</span>
@@ -291,7 +294,7 @@
     <span class="k">def</span> <span class="nf">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; A representation of the current selector state &quot;&quot;&quot;</span>
         <span class="n">s</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39;{{n=</span><span class="si">{0}</span><span class="s1">, </span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span>
-        <span class="k">for</span> <span class="n">r</span><span class="p">,</span> <span class="n">p</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">routines</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">performances</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">r</span><span class="p">,</span> <span class="n">p</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">routines</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">metric</span><span class="p">):</span>
             <span class="k">if</span> <span class="n">p</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
                 <span class="n">s</span> <span class="o">+=</span> <span class="n">f</span><span class="s1">&#39;  {{</span><span class="si">{r.__name__}</span><span class="s1">: &lt;not tried&gt;}},</span><span class="se">\n</span><span class="s1">&#39;</span>
             <span class="k">else</span><span class="p">:</span>
@@ -307,7 +310,7 @@
 <span class="sd">           the new routine to be tested in the selector</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_routines</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">routine</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_performances</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_metric</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
         <span class="c1"># Ensure that the best routine has not been chosen</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_best</span> <span class="o">=</span> <span class="kc">None</span></div>
 
@@ -320,10 +323,10 @@
 <span class="sd">           the new routine to be tested in the selector</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_routines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">routine</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_performances</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_metric</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
         <span class="c1"># Ensure that the best routine has not been chosen</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">ordered</span><span class="p">:</span>
-            <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">performances</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">metric</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
                 <span class="c1"># Reset the best chosen routine.</span>
                 <span class="c1"># This is because if the last routine has been checked it means</span>
                 <span class="c1"># that we may possibly use the new routine.</span>
@@ -334,8 +337,8 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">_best</span> <span class="o">=</span> <span class="kc">None</span></div>
 
 <div class="viewcode-block" id="Selector.reset"><a class="viewcode-back" href="../../api-generated/sisl.Selector.html#sisl.Selector.reset">[docs]</a>    <span class="k">def</span> <span class="nf">reset</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot; Reset the performance table to redo the performance checks &quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_performances</span> <span class="o">=</span> <span class="p">[</span><span class="kc">None</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_performances</span><span class="p">)</span>
+        <span class="sd">&quot;&quot;&quot; Reset the metric table to redo the performance checks &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_metric</span> <span class="o">=</span> <span class="p">[</span><span class="kc">None</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_metric</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_best</span> <span class="o">=</span> <span class="kc">None</span></div>
 
 <div class="viewcode-block" id="Selector.select_best"><a class="viewcode-back" href="../../api-generated/sisl.Selector.html#sisl.Selector.select_best">[docs]</a>    <span class="k">def</span> <span class="nf">select_best</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">routine</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
@@ -352,8 +355,8 @@
 <span class="sd">        ----------</span>
 <span class="sd">        routine : func or str</span>
 <span class="sd">           If `None` is passed (the default) it will select the best</span>
-<span class="sd">           default routine based on the stored performances.</span>
-<span class="sd">           If, however, not all performance values has been created</span>
+<span class="sd">           default routine based on the stored metrics.</span>
+<span class="sd">           If, however, not all metric values has been created</span>
 <span class="sd">           no routine will be selected.</span>
 
 <span class="sd">           If passing a `func` that function will be chosen as the</span>
@@ -362,20 +365,20 @@
         <span class="k">if</span> <span class="n">routine</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
 
             <span class="c1"># Try and select the routine based on the internal runned</span>
-            <span class="c1"># performance specifiers</span>
-            <span class="n">selected</span><span class="p">,</span> <span class="n">perf</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mf">0.</span>
-            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">performances</span><span class="p">):</span>
+            <span class="c1"># metric specifiers</span>
+            <span class="n">selected</span><span class="p">,</span> <span class="n">metric</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mf">0.</span>
+            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">metric</span><span class="p">):</span>
                 <span class="k">if</span> <span class="n">v</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
                     <span class="c1"># Quick return if we are not done</span>
                     <span class="k">return</span>
 
-                <span class="k">if</span> <span class="n">v</span> <span class="o">&gt;</span> <span class="n">perf</span><span class="p">:</span>
-                    <span class="n">perf</span> <span class="o">=</span> <span class="n">v</span>
+                <span class="k">if</span> <span class="n">v</span> <span class="o">&gt;</span> <span class="n">metric</span><span class="p">:</span>
+                    <span class="n">metric</span> <span class="o">=</span> <span class="n">v</span>
                     <span class="n">selected</span> <span class="o">=</span> <span class="n">i</span>
 
                 <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">ordered</span> <span class="ow">and</span> <span class="n">selected</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">:</span>
                     <span class="c1"># We have an ordered selector</span>
-                    <span class="c1"># I.e. if the performance is decreasing,</span>
+                    <span class="c1"># I.e. if the metric is decreasing,</span>
                     <span class="c1"># we simply choose the last one.</span>
                     <span class="k">break</span>
 
@@ -399,7 +402,7 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">_best</span> <span class="o">=</span> <span class="n">routine</span></div>
 
 <div class="viewcode-block" id="Selector.next"><a class="viewcode-back" href="../../api-generated/sisl.Selector.html#sisl.Selector.next">[docs]</a>    <span class="k">def</span> <span class="nf">next</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot; Choose the next routine that requires performance analysis</span>
+        <span class="sd">&quot;&quot;&quot; Choose the next routine that requires metric analysis</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
@@ -409,7 +412,7 @@
 <span class="sd">           `func` is the routine that is to be runned next (or if index is negative, then</span>
 <span class="sd">           it refers to the most optimal routine</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">performances</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">metric</span><span class="p">):</span>
             <span class="k">if</span> <span class="n">v</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
                 <span class="c1"># Quick return the routine to test next time</span>
                 <span class="k">return</span> <span class="n">i</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">routines</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
@@ -422,24 +425,22 @@
 <span class="sd">        The first argument *must* be an object (`self`) while all remaining</span>
 <span class="sd">        arguments are transferred to the routine calls</span>
 <span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">best</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">best</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 
-        <span class="n">best</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">best</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">best</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">return</span> <span class="n">best</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
-
-        <span class="c1"># Figure out if we have the performance for all the routines</span>
+        <span class="c1"># Figure out if we have the metric for all the routines</span>
         <span class="n">idx</span><span class="p">,</span> <span class="n">routine</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">next</span><span class="p">()</span>
         <span class="k">if</span> <span class="n">idx</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">routine</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 
-        <span class="c1"># Start the performance profile</span>
+        <span class="c1"># Start the metric profile</span>
         <span class="n">start</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
 
         <span class="c1"># Run the routine</span>
         <span class="n">returns</span> <span class="o">=</span> <span class="n">routine</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 
-        <span class="c1"># Update the internal data in the performance list</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_performances</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">stop</span><span class="p">(</span><span class="n">start</span><span class="p">)</span>
+        <span class="c1"># Update the internal data in the metric list</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_metric</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">stop</span><span class="p">(</span><span class="n">start</span><span class="p">)</span>
 
         <span class="c1"># Update the best method, if possible</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">select_best</span><span class="p">()</span>
@@ -447,45 +448,50 @@
         <span class="k">return</span> <span class="n">returns</span>
 
 <div class="viewcode-block" id="Selector.start"><a class="viewcode-back" href="../../api-generated/sisl.Selector.html#sisl.Selector.start">[docs]</a>    <span class="k">def</span> <span class="nf">start</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot; Start the performance profiler</span>
+        <span class="sd">&quot;&quot;&quot; Start the metric profiler</span>
 
 <span class="sd">        This routine should return an initial state value.</span>
 <span class="sd">        The difference between `stop() - start()` should yield a</span>
-<span class="sd">        performance identifier which may be used to control the</span>
+<span class="sd">        metric identifier which may be used to control the</span>
 <span class="sd">        used algorithm.</span>
 
-<span class="sd">        A large performance identifier results in the use of the routine.</span>
+<span class="sd">        The *best* method</span>
+<span class="sd">        A large metric identifier results in the use of the routine.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">raise</span> <span class="ne">NotImplementedError</span></div>
 
 <div class="viewcode-block" id="Selector.stop"><a class="viewcode-back" href="../../api-generated/sisl.Selector.html#sisl.Selector.stop">[docs]</a>    <span class="k">def</span> <span class="nf">stop</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">start</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot; Stop the performance profiler</span>
+        <span class="sd">&quot;&quot;&quot; Stop the metric profiler</span>
 
-<span class="sd">        This routine should return an initial state value.</span>
-<span class="sd">        The difference between `stop() - start()` should yield a</span>
-<span class="sd">        performance identifier which may be used to control the</span>
-<span class="sd">        used algorithm.</span>
+<span class="sd">        This routine returns the actual metric for the method.</span>
+<span class="sd">        Its input is what `start` returns and it may be of any</span>
+<span class="sd">        value.</span>
 
-<span class="sd">        A large performance identifier results in the use of the routine.</span>
+<span class="sd">        A large metric identifier results in the use of the routine.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
-<span class="sd">        start : float</span>
-<span class="sd">            the output of the `start()` routine to convert to actual performance</span>
+<span class="sd">        start : obj</span>
+<span class="sd">            the output of the `start()` routine to convert to actual metric</span>
 <span class="sd">            identifier</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">raise</span> <span class="ne">NotImplementedError</span></div></div>
 
 
 <span class="k">class</span> <span class="nc">TimeSelector</span><span class="p">(</span><span class="n">Selector</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot; Routine performance selector based on timings for the routines &quot;&quot;&quot;</span>
+    <span class="sd">&quot;&quot;&quot; Routine metric selector based on timings for the routines &quot;&quot;&quot;</span>
 
     <span class="k">def</span> <span class="nf">start</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Start the timing routine &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
 
     <span class="k">def</span> <span class="nf">stop</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">start</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot; Stop the timing routine &quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot; Stop the timing routine</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        inv_time : metric for time</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="mf">1.</span> <span class="o">/</span> <span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">start</span><span class="p">)</span>
 </pre></div>
 

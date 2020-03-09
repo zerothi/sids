@@ -101,6 +101,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../../../../tutorials.html">Tutorials</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../../examples.html">Examples</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../../scripts/scripts.html">Scripts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../visualization/visualization.html">Visualization</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../../rst/files.html">File formats</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Reference documentation</span></p>
@@ -195,7 +196,7 @@
 <span class="kn">from</span> <span class="nn">.basis</span> <span class="k">import</span> <span class="n">ionxmlSileSiesta</span><span class="p">,</span> <span class="n">ionncSileSiesta</span>
 <span class="kn">from</span> <span class="nn">.orb_indx</span> <span class="k">import</span> <span class="n">orbindxSileSiesta</span>
 <span class="kn">from</span> <span class="nn">.xv</span> <span class="k">import</span> <span class="n">xvSileSiesta</span>
-<span class="kn">from</span> <span class="nn">sisl</span> <span class="k">import</span> <span class="n">Geometry</span><span class="p">,</span> <span class="n">Orbital</span><span class="p">,</span> <span class="n">Atom</span><span class="p">,</span> <span class="n">SuperCell</span><span class="p">,</span> <span class="n">DynamicalMatrix</span>
+<span class="kn">from</span> <span class="nn">sisl</span> <span class="k">import</span> <span class="n">Geometry</span><span class="p">,</span> <span class="n">Orbital</span><span class="p">,</span> <span class="n">Atom</span><span class="p">,</span> <span class="n">Atoms</span><span class="p">,</span> <span class="n">SuperCell</span><span class="p">,</span> <span class="n">DynamicalMatrix</span>
 
 <span class="kn">from</span> <span class="nn">sisl.utils.cmd</span> <span class="k">import</span> <span class="n">default_ArgumentParser</span><span class="p">,</span> <span class="n">default_namespace</span>
 <span class="kn">from</span> <span class="nn">sisl.utils.misc</span> <span class="k">import</span> <span class="n">merge_instances</span>
@@ -1407,7 +1408,10 @@
         <span class="n">lor</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;AtomicCoordinatesOrigin&#39;</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">lor</span><span class="p">:</span>
             <span class="k">if</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;origin&#39;</span><span class="p">,</span> <span class="kc">True</span><span class="p">):</span>
-                <span class="n">origo</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">asarrayd</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="nb">float</span><span class="p">,</span> <span class="n">lor</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">()[:</span><span class="mi">3</span><span class="p">])))</span> <span class="o">*</span> <span class="n">s</span>
+                <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">lor</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+                    <span class="n">origo</span> <span class="o">=</span> <span class="n">lor</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">origo</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">asarrayd</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="nb">float</span><span class="p">,</span> <span class="n">lor</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">()[:</span><span class="mi">3</span><span class="p">])))</span> <span class="o">*</span> <span class="n">s</span>
         <span class="c1"># Origo cannot be interpreted with fractional coordinates</span>
         <span class="c1"># hence, it is not transformed.</span>
 
@@ -1440,7 +1444,6 @@
         <span class="k">if</span> <span class="n">is_frac</span><span class="p">:</span>
             <span class="n">xyz</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">xyz</span><span class="p">,</span> <span class="n">sc</span><span class="o">.</span><span class="n">cell</span><span class="p">)</span>
         <span class="n">xyz</span> <span class="o">*=</span> <span class="n">s</span>
-        <span class="n">xyz</span> <span class="o">+=</span> <span class="n">origo</span>
 
         <span class="c1"># Read the block (not strictly needed, if so we simply set all atoms to H)</span>
         <span class="n">atom</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">read_basis</span><span class="p">()</span>
@@ -1451,6 +1454,35 @@
             <span class="n">atom</span> <span class="o">=</span> <span class="n">Atom</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">atom</span> <span class="o">=</span> <span class="p">[</span><span class="n">atom</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">species</span><span class="p">]</span>
+        <span class="n">atom</span> <span class="o">=</span> <span class="n">Atoms</span><span class="p">(</span><span class="n">atom</span><span class="p">,</span> <span class="n">na</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">xyz</span><span class="p">))</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">origo</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="n">opt</span> <span class="o">=</span> <span class="n">origo</span>
+            <span class="k">if</span> <span class="n">opt</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;cop&#39;</span><span class="p">):</span>
+                <span class="n">origo</span> <span class="o">=</span> <span class="n">sc</span><span class="o">.</span><span class="n">cell</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span> <span class="o">*</span> <span class="mf">0.5</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">average</span><span class="p">(</span><span class="n">xyz</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">opt</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;com&#39;</span><span class="p">):</span>
+                <span class="c1"># TODO for ghost atoms its mass should not be used</span>
+                <span class="n">w</span> <span class="o">=</span> <span class="n">atom</span><span class="o">.</span><span class="n">mass</span>
+                <span class="n">w</span> <span class="o">/=</span> <span class="n">w</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+                <span class="n">origo</span> <span class="o">=</span> <span class="n">sc</span><span class="o">.</span><span class="n">cell</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span> <span class="o">*</span> <span class="mf">0.5</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">average</span><span class="p">(</span><span class="n">xyz</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">weights</span><span class="o">=</span><span class="n">w</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">opt</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;min&#39;</span><span class="p">):</span>
+                <span class="n">origo</span> <span class="o">=</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">amin</span><span class="p">(</span><span class="n">xyz</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">opt</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">4</span><span class="p">:</span>
+                <span class="n">opt</span> <span class="o">=</span> <span class="n">opt</span><span class="p">[</span><span class="mi">4</span><span class="p">:]</span>
+                <span class="k">if</span> <span class="n">opt</span> <span class="o">==</span> <span class="s1">&#39;x&#39;</span><span class="p">:</span>
+                    <span class="n">origo</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span> <span class="o">=</span> <span class="mf">0.</span>
+                <span class="k">elif</span> <span class="n">opt</span> <span class="o">==</span> <span class="s1">&#39;y&#39;</span><span class="p">:</span>
+                    <span class="n">origo</span><span class="p">[[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">]]</span> <span class="o">=</span> <span class="mf">0.</span>
+                <span class="k">elif</span> <span class="n">opt</span> <span class="o">==</span> <span class="s1">&#39;z&#39;</span><span class="p">:</span>
+                    <span class="n">origo</span><span class="p">[:</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.</span>
+                <span class="k">elif</span> <span class="n">opt</span> <span class="o">==</span> <span class="s1">&#39;xy&#39;</span> <span class="ow">or</span> <span class="n">opt</span> <span class="o">==</span> <span class="s1">&#39;yx&#39;</span><span class="p">:</span>
+                    <span class="n">origo</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.</span>
+                <span class="k">elif</span> <span class="n">opt</span> <span class="o">==</span> <span class="s1">&#39;xz&#39;</span> <span class="ow">or</span> <span class="n">opt</span> <span class="o">==</span> <span class="s1">&#39;zx&#39;</span><span class="p">:</span>
+                    <span class="n">origo</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.</span>
+                <span class="k">elif</span> <span class="n">opt</span> <span class="o">==</span> <span class="s1">&#39;yz&#39;</span> <span class="ow">or</span> <span class="n">opt</span> <span class="o">==</span> <span class="s1">&#39;zy&#39;</span><span class="p">:</span>
+                    <span class="n">origo</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.</span>
+
+        <span class="n">xyz</span> <span class="o">+=</span> <span class="n">origo</span>
 
         <span class="c1"># Create and return geometry object</span>
         <span class="k">return</span> <span class="n">Geometry</span><span class="p">(</span><span class="n">xyz</span><span class="p">,</span> <span class="n">atom</span><span class="o">=</span><span class="n">atom</span><span class="p">,</span> <span class="n">sc</span><span class="o">=</span><span class="n">sc</span><span class="p">)</span>
@@ -1855,6 +1887,11 @@
                 <span class="c1"># to ensure we get the correct orbital count</span>
                 <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;geometry&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">read_geometry</span><span class="p">(</span><span class="kc">True</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;nc&#39;</span><span class="p">,</span> <span class="s1">&#39;TSHS&#39;</span><span class="p">,</span> <span class="s1">&#39;fdf&#39;</span><span class="p">])</span>
             <span class="n">H</span> <span class="o">=</span> <span class="n">hsxSileSiesta</span><span class="p">(</span><span class="n">f</span><span class="p">)</span><span class="o">.</span><span class="n">read_hamiltonian</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+            <span class="n">Ef</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">read_fermi_level</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">Ef</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">info</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;.read_hamiltonian from HSX file failed shifting to the Fermi-level.&#39;</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">H</span><span class="o">.</span><span class="n">shift</span><span class="p">(</span><span class="o">-</span><span class="n">Ef</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">H</span>
 
     <span class="nd">@default_ArgumentParser</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="s2">&quot;Manipulate a FDF file.&quot;</span><span class="p">)</span>
