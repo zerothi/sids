@@ -239,7 +239,7 @@ class outSileSiesta(SileSiesta):
         return next_geom()[1]
 
     @sile_fh_open()
-    def read_force(self, last=True, all=False):
+    def read_force(self, last=True, all=False, total=False, max=False):
         """ Reads the forces from the Siesta output file
 
         Parameters
@@ -249,18 +249,39 @@ class outSileSiesta(SileSiesta):
         all: bool, optional
            return a list of all forces (like an MD)
            If `True` `last` is ignored
+        total: bool, optional
+            return the total forces instead of the atomic forces.
+        max: bool, optional
+            whether only the maximum atomic force should be returned for each step.
+
+            Setting it to `True` is equivalent to `max(outSile.read_force())` in case atomic forces
+            are written in the output file (`WriteForces .true.` in the fdf file)
+
+            Note that this is not the same as doing `max(outSile.read_force(total=True))` since
+            the forces returned in that case are averages on each axis.
 
         Returns
         -------
         numpy.ndarray or None
             returns ``None`` if the forces are not found in the
             output, otherwise forces will be returned
+
+            The shape of the array will be different depending on the type of forces requested:
+                - atomic (default): (nMDsteps, nAtoms, 3)
+                - total: (nMDsteps, 3)
+                - max: (nMDsteps, )
+
+            If `all` is `False`, the first dimension does not exist. In the case of max, the returned value
+            will therefore be just a float, not an array.
+
+            If `total` and `max` are both `True`, they are returned separately as a tuple: ``(total, max)``
         """
         if all:
             last = False
 
         # Read until forces are found
         def next_force():
+
             line = self.readline()
             while not 'siesta: Atomic forces' in line:
                 line = self.readline()
@@ -270,19 +291,50 @@ class outSileSiesta(SileSiesta):
             # Now read data
             F = []
             line = self.readline()
+
+            # First, we encounter the atomic forces
             while '---' not in line:
                 line = line.split()
-                F.append([float(x) for x in line[-3:]])
+                if not total or max:
+                    F.append([float(x) for x in line[-3:]])
                 line = self.readline()
                 if line == '':
                     break
 
+            line = self.readline()
+            # Then, the total forces
+            if total:
+                F = [float(x) for x in line.split()[-3:]]
+
+            line = self.readline()
+            #And after that we can read the max force
+            if max and len(line.split()) != 0:
+                line = self.readline()
+                maxF = float(line.split()[1])
+
+                # In case total is also requested, we are going to store it all in the same variable
+                # It will be separated later
+                if total:
+                    F = (*F, maxF)
+                else:
+                    F = maxF
+
             return np.array(F)
 
-        # list of all forces
-        Fs = []
+        def return_forces(Fs):
+            # Handle cases where we can't now if they are found
+            if Fs is None: return None
+            Fs = np.array(Fs)
+            if max and total:
+                return (Fs[..., :-1], Fs[..., -1])
+            elif max and not all:
+                # This will return a float (or actually a numpy.dtype)
+                return Fs[0]
+            return Fs
 
         if all or last:
+            # list of all forces
+            Fs = []
             while True:
                 F = next_force()
                 if F is None:
@@ -290,12 +342,14 @@ class outSileSiesta(SileSiesta):
                 Fs.append(F)
 
             if last:
-                return Fs[-1]
+                return return_forces(Fs[-2])
+                # F[-2] is really the same as F[-1], the last forces are stated twice
+                # However, the maxForce is not stated in the final summary, that's why we use F[-2]
             if self.job_completed:
-                return Fs[:-1]
-            return Fs
+                return return_forces(Fs[:-1])
+            return return_forces(Fs)
 
-        return next_force()
+        return return_forces(next_force())
 
     @sile_fh_open()
     def read_stress(self, key='static', last=True, all=False):
