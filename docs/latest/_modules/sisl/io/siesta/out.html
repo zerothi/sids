@@ -411,7 +411,7 @@
         <span class="k">return</span> <span class="n">next_geom</span><span class="p">()[</span><span class="mi">1</span><span class="p">]</span></div>
 
 <div class="viewcode-block" id="outSileSiesta.read_force"><a class="viewcode-back" href="../../../../api-generated/sisl.io.siesta.outSileSiesta.html#sisl.io.siesta.outSileSiesta.read_force">[docs]</a>    <span class="nd">@sile_fh_open</span><span class="p">()</span>
-    <span class="k">def</span> <span class="nf">read_force</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">last</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="nb">all</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">read_force</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">last</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="nb">all</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">total</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="nb">max</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Reads the forces from the Siesta output file</span>
 
 <span class="sd">        Parameters</span>
@@ -421,18 +421,39 @@
 <span class="sd">        all: bool, optional</span>
 <span class="sd">           return a list of all forces (like an MD)</span>
 <span class="sd">           If `True` `last` is ignored</span>
+<span class="sd">        total: bool, optional</span>
+<span class="sd">            return the total forces instead of the atomic forces.</span>
+<span class="sd">        max: bool, optional</span>
+<span class="sd">            whether only the maximum atomic force should be returned for each step.</span>
+
+<span class="sd">            Setting it to `True` is equivalent to `max(outSile.read_force())` in case atomic forces</span>
+<span class="sd">            are written in the output file (`WriteForces .true.` in the fdf file)</span>
+
+<span class="sd">            Note that this is not the same as doing `max(outSile.read_force(total=True))` since</span>
+<span class="sd">            the forces returned in that case are averages on each axis.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
 <span class="sd">        numpy.ndarray or None</span>
 <span class="sd">            returns ``None`` if the forces are not found in the</span>
 <span class="sd">            output, otherwise forces will be returned</span>
+
+<span class="sd">            The shape of the array will be different depending on the type of forces requested:</span>
+<span class="sd">                - atomic (default): (nMDsteps, nAtoms, 3)</span>
+<span class="sd">                - total: (nMDsteps, 3)</span>
+<span class="sd">                - max: (nMDsteps, )</span>
+
+<span class="sd">            If `all` is `False`, the first dimension does not exist. In the case of max, the returned value</span>
+<span class="sd">            will therefore be just a float, not an array.</span>
+
+<span class="sd">            If `total` and `max` are both `True`, they are returned separately as a tuple: ``(total, max)``</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="nb">all</span><span class="p">:</span>
             <span class="n">last</span> <span class="o">=</span> <span class="kc">False</span>
 
         <span class="c1"># Read until forces are found</span>
         <span class="k">def</span> <span class="nf">next_force</span><span class="p">():</span>
+
             <span class="n">line</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">readline</span><span class="p">()</span>
             <span class="k">while</span> <span class="ow">not</span> <span class="s1">&#39;siesta: Atomic forces&#39;</span> <span class="ow">in</span> <span class="n">line</span><span class="p">:</span>
                 <span class="n">line</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">readline</span><span class="p">()</span>
@@ -442,19 +463,50 @@
             <span class="c1"># Now read data</span>
             <span class="n">F</span> <span class="o">=</span> <span class="p">[]</span>
             <span class="n">line</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">readline</span><span class="p">()</span>
+
+            <span class="c1"># First, we encounter the atomic forces</span>
             <span class="k">while</span> <span class="s1">&#39;---&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">line</span><span class="p">:</span>
                 <span class="n">line</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
-                <span class="n">F</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="nb">float</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">line</span><span class="p">[</span><span class="o">-</span><span class="mi">3</span><span class="p">:]])</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">total</span> <span class="ow">or</span> <span class="nb">max</span><span class="p">:</span>
+                    <span class="n">F</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="nb">float</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">line</span><span class="p">[</span><span class="o">-</span><span class="mi">3</span><span class="p">:]])</span>
                 <span class="n">line</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">readline</span><span class="p">()</span>
                 <span class="k">if</span> <span class="n">line</span> <span class="o">==</span> <span class="s1">&#39;&#39;</span><span class="p">:</span>
                     <span class="k">break</span>
 
+            <span class="n">line</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">readline</span><span class="p">()</span>
+            <span class="c1"># Then, the total forces</span>
+            <span class="k">if</span> <span class="n">total</span><span class="p">:</span>
+                <span class="n">F</span> <span class="o">=</span> <span class="p">[</span><span class="nb">float</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">()[</span><span class="o">-</span><span class="mi">3</span><span class="p">:]]</span>
+
+            <span class="n">line</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">readline</span><span class="p">()</span>
+            <span class="c1">#And after that we can read the max force</span>
+            <span class="k">if</span> <span class="nb">max</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">())</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">line</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">readline</span><span class="p">()</span>
+                <span class="n">maxF</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">()[</span><span class="mi">1</span><span class="p">])</span>
+
+                <span class="c1"># In case total is also requested, we are going to store it all in the same variable</span>
+                <span class="c1"># It will be separated later</span>
+                <span class="k">if</span> <span class="n">total</span><span class="p">:</span>
+                    <span class="n">F</span> <span class="o">=</span> <span class="p">(</span><span class="o">*</span><span class="n">F</span><span class="p">,</span> <span class="n">maxF</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">F</span> <span class="o">=</span> <span class="n">maxF</span>
+
             <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">F</span><span class="p">)</span>
 
-        <span class="c1"># list of all forces</span>
-        <span class="n">Fs</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">def</span> <span class="nf">return_forces</span><span class="p">(</span><span class="n">Fs</span><span class="p">):</span>
+            <span class="c1"># Handle cases where we can&#39;t now if they are found</span>
+            <span class="k">if</span> <span class="n">Fs</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span> <span class="k">return</span> <span class="kc">None</span>
+            <span class="n">Fs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">Fs</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">max</span> <span class="ow">and</span> <span class="n">total</span><span class="p">:</span>
+                <span class="k">return</span> <span class="p">(</span><span class="n">Fs</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">Fs</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+            <span class="k">elif</span> <span class="nb">max</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">all</span><span class="p">:</span>
+                <span class="c1"># This will return a float (or actually a numpy.dtype)</span>
+                <span class="k">return</span> <span class="n">Fs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">return</span> <span class="n">Fs</span>
 
         <span class="k">if</span> <span class="nb">all</span> <span class="ow">or</span> <span class="n">last</span><span class="p">:</span>
+            <span class="c1"># list of all forces</span>
+            <span class="n">Fs</span> <span class="o">=</span> <span class="p">[]</span>
             <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
                 <span class="n">F</span> <span class="o">=</span> <span class="n">next_force</span><span class="p">()</span>
                 <span class="k">if</span> <span class="n">F</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
@@ -462,12 +514,14 @@
                 <span class="n">Fs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">F</span><span class="p">)</span>
 
             <span class="k">if</span> <span class="n">last</span><span class="p">:</span>
-                <span class="k">return</span> <span class="n">Fs</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+                <span class="k">return</span> <span class="n">return_forces</span><span class="p">(</span><span class="n">Fs</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">])</span>
+                <span class="c1"># F[-2] is really the same as F[-1], the last forces are stated twice</span>
+                <span class="c1"># However, the maxForce is not stated in the final summary, that&#39;s why we use F[-2]</span>
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">job_completed</span><span class="p">:</span>
-                <span class="k">return</span> <span class="n">Fs</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
-            <span class="k">return</span> <span class="n">Fs</span>
+                <span class="k">return</span> <span class="n">return_forces</span><span class="p">(</span><span class="n">Fs</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+            <span class="k">return</span> <span class="n">return_forces</span><span class="p">(</span><span class="n">Fs</span><span class="p">)</span>
 
-        <span class="k">return</span> <span class="n">next_force</span><span class="p">()</span></div>
+        <span class="k">return</span> <span class="n">return_forces</span><span class="p">(</span><span class="n">next_force</span><span class="p">())</span></div>
 
 <div class="viewcode-block" id="outSileSiesta.read_stress"><a class="viewcode-back" href="../../../../api-generated/sisl.io.siesta.outSileSiesta.html#sisl.io.siesta.outSileSiesta.read_stress">[docs]</a>    <span class="nd">@sile_fh_open</span><span class="p">()</span>
     <span class="k">def</span> <span class="nf">read_stress</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="s1">&#39;static&#39;</span><span class="p">,</span> <span class="n">last</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="nb">all</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
