@@ -45,32 +45,31 @@ def sisl_tmp(request, tmpdir_factory):
         def __init__(self):
             # Force use of Path
             self.base = Path(tmpdir_factory.getbasetemp())
-            self.dirs = []
+            self.dirs = [self.base]
             self.files = []
 
         def dir(self, name='sisl'):
             # Make name a path
-            name = Path(name)
-            D = self.base
-            for d in name.parts:
-                # Collect tree...
-                D /= d
-                if D not in self.dirs:
-                    if not D.is_dir():
-                        tmpdir_factory.mktemp(str(D), numbered=False)
-                    self.dirs.append(D)
+            D = Path(name.replace('/', '-'))
+            if not (self.base / D).is_dir():
+                # Apparently tmpdir_factory.mktemp returns a LocalPath
+                # which is really annoying
+                # We have to cast to Path to use pathlib methods
+                d = Path(tmpdir_factory.mktemp(str(D), numbered=False))
+                self.dirs.append(d)
+
             return self.dirs[-1]
 
         def file(self, name, dir_name='sisl'):
             # self.base *is* a pathlib
-            D = self.base / dir_name
+            D = self.base / dir_name.replace('/', '-')
             if D in self.dirs:
                 i = self.dirs.index(D)
             else:
                 self.dir(dir_name)
                 i = -1
             self.files.append(self.dirs[i] / name)
-            return self.files[-1]
+            return str(self.files[-1])
 
         def getbase(self):
             return self.dirs[-1]
@@ -167,7 +166,7 @@ def pytest_configure(config):
                  'version', 'bz', 'brillouinzone', 'inv', 'eig', 'linalg',
                  'density_matrix', 'dynamicalmatrix', 'energydensity_matrix',
                  'siesta', 'tbtrans', 'ham', 'vasp', 'w90', 'wannier90', 'gulp', 'fdf',
-                 'table', 'cube', 'slow', 'selector']:
+                 'table', 'cube', 'slow', 'selector', 'overlap', 'mixing']:
         config.addinivalue_line(
             "markers", f"{mark}: mark test to run only on named environment"
         )
