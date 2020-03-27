@@ -172,6 +172,7 @@
   <h1>Source code for sisl.io.siesta.bands</h1><div class="highlight"><pre>
 <span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 
+<span class="kn">import</span> <span class="nn">sisl._array</span> <span class="k">as</span> <span class="nn">_a</span>
 <span class="kn">from</span> <span class="nn">sisl.utils</span> <span class="k">import</span> <span class="n">strmap</span>
 <span class="kn">from</span> <span class="nn">sisl.utils.cmd</span> <span class="k">import</span> <span class="n">default_ArgumentParser</span><span class="p">,</span> <span class="n">default_namespace</span>
 <span class="kn">from</span> <span class="nn">..sile</span> <span class="k">import</span> <span class="n">add_sile</span><span class="p">,</span> <span class="n">sile_fh_open</span>
@@ -185,8 +186,16 @@
     <span class="sd">&quot;&quot;&quot; Bandstructure information &quot;&quot;&quot;</span>
 
 <div class="viewcode-block" id="bandsSileSiesta.read_data"><a class="viewcode-back" href="../../../../api-generated/sisl.io.siesta.bandsSileSiesta.html#sisl.io.siesta.bandsSileSiesta.read_data">[docs]</a>    <span class="nd">@sile_fh_open</span><span class="p">()</span>
-    <span class="k">def</span> <span class="nf">read_data</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot; Returns data associated with the bands file &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">read_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">as_dataarray</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Returns data associated with the bands file</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters</span>
+<span class="sd">        --------</span>
+<span class="sd">        as_dataarray: boolean, optional</span>
+<span class="sd">            if `True`, the information is returned as an `xarray.DataArray`</span>
+<span class="sd">            Ticks (if read) are stored as an attribute of the DataArray </span>
+<span class="sd">            (under `array.ticks` and `array.ticklabels`)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">band_lines</span> <span class="o">=</span> <span class="kc">False</span>
 
         <span class="c1"># Luckily the data is in eV</span>
@@ -207,11 +216,11 @@
         <span class="n">no</span><span class="p">,</span> <span class="n">ns</span><span class="p">,</span> <span class="n">nk</span> <span class="o">=</span> <span class="nb">map</span><span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="n">l</span><span class="o">.</span><span class="n">split</span><span class="p">())</span>
 
         <span class="c1"># Create the data to contain all band points</span>
-        <span class="n">b</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">([</span><span class="n">nk</span><span class="p">,</span> <span class="n">ns</span><span class="p">,</span> <span class="n">no</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+        <span class="n">b</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">emptyd</span><span class="p">([</span><span class="n">nk</span><span class="p">,</span> <span class="n">ns</span><span class="p">,</span> <span class="n">no</span><span class="p">])</span>
 
         <span class="c1"># for band-lines</span>
         <span class="k">if</span> <span class="n">band_lines</span><span class="p">:</span>
-            <span class="n">k</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">([</span><span class="n">nk</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+            <span class="n">k</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">emptyd</span><span class="p">([</span><span class="n">nk</span><span class="p">])</span>
             <span class="k">for</span> <span class="n">ik</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nk</span><span class="p">):</span>
                 <span class="n">l</span> <span class="o">=</span> <span class="p">[</span><span class="nb">float</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">readline</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">()]</span>
                 <span class="n">k</span><span class="p">[</span><span class="n">ik</span><span class="p">]</span> <span class="o">=</span> <span class="n">l</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
@@ -219,7 +228,7 @@
                 <span class="c1"># Now populate the eigenvalues</span>
                 <span class="k">while</span> <span class="nb">len</span><span class="p">(</span><span class="n">l</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">ns</span> <span class="o">*</span> <span class="n">no</span><span class="p">:</span>
                     <span class="n">l</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="nb">float</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">readline</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">()])</span>
-                <span class="n">l</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">l</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+                <span class="n">l</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">arrayd</span><span class="p">(</span><span class="n">l</span><span class="p">)</span>
                 <span class="n">l</span><span class="o">.</span><span class="n">shape</span> <span class="o">=</span> <span class="p">(</span><span class="n">ns</span><span class="p">,</span> <span class="n">no</span><span class="p">)</span>
                 <span class="n">b</span><span class="p">[</span><span class="n">ik</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">l</span><span class="p">[:,</span> <span class="p">:]</span> <span class="o">-</span> <span class="n">Ef</span>
             <span class="c1"># Now we need to read the labels for the points</span>
@@ -233,7 +242,7 @@
             <span class="n">vals</span> <span class="o">=</span> <span class="p">(</span><span class="n">xlabels</span><span class="p">,</span> <span class="n">labels</span><span class="p">),</span> <span class="n">k</span><span class="p">,</span> <span class="n">b</span>
 
         <span class="k">else</span><span class="p">:</span>
-            <span class="n">k</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">([</span><span class="n">nk</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+            <span class="n">k</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">emptyd</span><span class="p">([</span><span class="n">nk</span><span class="p">,</span> <span class="mi">3</span><span class="p">])</span>
             <span class="k">for</span> <span class="n">ik</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nk</span><span class="p">):</span>
                 <span class="n">l</span> <span class="o">=</span> <span class="p">[</span><span class="nb">float</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">readline</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">()]</span>
                 <span class="n">k</span><span class="p">[</span><span class="n">ik</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">l</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="mi">3</span><span class="p">]</span>
@@ -243,10 +252,21 @@
                 <span class="c1"># Now populate the eigenvalues</span>
                 <span class="k">while</span> <span class="nb">len</span><span class="p">(</span><span class="n">l</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">ns</span> <span class="o">*</span> <span class="n">no</span><span class="p">:</span>
                     <span class="n">l</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="nb">float</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">readline</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">()])</span>
-                <span class="n">l</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">l</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+                <span class="n">l</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">arrayd</span><span class="p">(</span><span class="n">l</span><span class="p">)</span>
                 <span class="n">l</span><span class="o">.</span><span class="n">shape</span> <span class="o">=</span> <span class="p">(</span><span class="n">ns</span><span class="p">,</span> <span class="n">no</span><span class="p">)</span>
                 <span class="n">b</span><span class="p">[</span><span class="n">ik</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">l</span><span class="p">[:,</span> <span class="p">:]</span> <span class="o">-</span> <span class="n">Ef</span>
             <span class="n">vals</span> <span class="o">=</span> <span class="n">k</span><span class="p">,</span> <span class="n">b</span>
+        
+        <span class="k">if</span> <span class="n">as_dataarray</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">xarray</span> <span class="k">import</span> <span class="n">DataArray</span>
+
+            <span class="n">ticks</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;ticks&quot;</span><span class="p">:</span> <span class="n">xlabels</span><span class="p">,</span> <span class="s2">&quot;ticklabels&quot;</span><span class="p">:</span> <span class="n">labels</span><span class="p">}</span> <span class="k">if</span> <span class="n">band_lines</span> <span class="k">else</span> <span class="p">{}</span>
+            
+            <span class="k">return</span> <span class="n">DataArray</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;Energy&quot;</span><span class="p">,</span> <span class="n">attrs</span><span class="o">=</span><span class="n">ticks</span><span class="p">,</span>
+                             <span class="n">coords</span><span class="o">=</span><span class="p">[(</span><span class="s2">&quot;k&quot;</span><span class="p">,</span> <span class="n">k</span><span class="p">),</span>
+                                     <span class="p">(</span><span class="s2">&quot;spin&quot;</span><span class="p">,</span> <span class="n">_a</span><span class="o">.</span><span class="n">arangei</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">b</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">])),</span>
+                                     <span class="p">(</span><span class="s2">&quot;band&quot;</span><span class="p">,</span> <span class="n">_a</span><span class="o">.</span><span class="n">arangei</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">b</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">]))])</span>
+
         <span class="k">return</span> <span class="n">vals</span></div>
 
     <span class="nd">@default_ArgumentParser</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="s2">&quot;Manipulate bands file in sisl.&quot;</span><span class="p">)</span>
