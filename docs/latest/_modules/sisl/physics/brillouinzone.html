@@ -273,6 +273,12 @@
 <span class="kn">from</span> <span class="nn">sisl.supercell</span> <span class="k">import</span> <span class="n">SuperCell</span>
 <span class="kn">from</span> <span class="nn">sisl.grid</span> <span class="k">import</span> <span class="n">Grid</span>
 
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">import</span> <span class="nn">xarray</span>
+    <span class="n">_has_xarray</span> <span class="o">=</span> <span class="kc">True</span>
+<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+    <span class="n">_has_xarray</span> <span class="o">=</span> <span class="kc">False</span>
+
 
 <span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;BrillouinZone&#39;</span><span class="p">,</span> <span class="s1">&#39;MonkhorstPack&#39;</span><span class="p">,</span> <span class="s1">&#39;BandStructure&#39;</span><span class="p">]</span>
 
@@ -649,7 +655,7 @@
 <span class="sd">        ...    spin_moment = (es.spin_moment(E, distribution=dist) * occ.reshape(-1, 1)).sum(0)</span>
 <span class="sd">        ...    return oplist([DOS, PDOS, spin_moment])</span>
 <span class="sd">        &gt;&gt;&gt; bz = BrillouinZone(hamiltonian)</span>
-<span class="sd">        &gt;&gt;&gt; DOS, PDOS, spin_moment = bz.asaverage().eigenstate(wrap=wrap)</span>
+<span class="sd">        &gt;&gt;&gt; DOS, PDOS, spin_moment = bz.asarray().eigenstate(wrap=wrap)</span>
 
 <span class="sd">        See Also</span>
 <span class="sd">        --------</span>
@@ -738,6 +744,100 @@
         <span class="c1"># Set instance __call__</span>
         <span class="nb">setattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;_bz_call&#39;</span><span class="p">,</span> <span class="n">types</span><span class="o">.</span><span class="n">MethodType</span><span class="p">(</span><span class="n">_call</span><span class="p">,</span> <span class="bp">self</span><span class="p">))</span>
         <span class="k">return</span> <span class="bp">self</span></div>
+
+    <span class="k">if</span> <span class="n">_has_xarray</span><span class="p">:</span>
+        <span class="k">def</span> <span class="nf">asdataarray</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+            <span class="sa">r</span><span class="sd">&quot;&quot;&quot; Return `self` with `xarray.DataArray` returned quantities</span>
+
+<span class="sd">            This forces the `__call__` routine to return a single `xarray.DataArray`.</span>
+
+<span class="sd">            Notes</span>
+<span class="sd">            -----</span>
+<span class="sd">            If you wrap the sub-method to return multiple data-sets, you should use `asdataset`</span>
+<span class="sd">            instead which returns a combination of data-arrays (so-called `xarray.Dataset`).</span>
+
+<span class="sd">            All invocations of sub-methods are added these keyword-only arguments:</span>
+
+<span class="sd">            eta : bool, optional</span>
+<span class="sd">                if true a progress-bar is created, default false.</span>
+<span class="sd">            wrap : callable, optional</span>
+<span class="sd">                a function that accepts the output of the given routine and post-process</span>
+<span class="sd">                it. Defaults to ``lambda x: x``.</span>
+<span class="sd">            coords : list of str or list of (str, array), optional</span>
+<span class="sd">                a list of coordinates used in ``xarray.DataArray(..., coords=coords)``.</span>
+<span class="sd">                By default the coordinates are named ``[&#39;k&#39;, &#39;v1&#39;, &#39;v2&#39;, ...]``</span>
+<span class="sd">                depending on the shape of the returned quantity.</span>
+<span class="sd">                These may optionally be a list of tuples (not a dictionary)!</span>
+
+<span class="sd">            Examples</span>
+<span class="sd">            --------</span>
+<span class="sd">            &gt;&gt;&gt; obj = BrillouinZone(...)</span>
+<span class="sd">            &gt;&gt;&gt; obj.asdataarray().eigh(eta=True)</span>
+
+<span class="sd">            See Also</span>
+<span class="sd">            --------</span>
+<span class="sd">            asyield : all output returned through an iterator</span>
+<span class="sd">            asaverage : take the average (with k-weights) of the Brillouin zone</span>
+<span class="sd">            assum : return the sum of values in the Brillouin zone</span>
+<span class="sd">            aslist : all output returned as a Python list</span>
+<span class="sd">            &quot;&quot;&quot;</span>
+
+            <span class="k">def</span> <span class="nf">_call</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+                <span class="n">func</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_bz_get_func</span><span class="p">()</span>
+
+                <span class="c1"># xarray specific data (default to function name)</span>
+                <span class="n">name</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;name&#39;</span><span class="p">,</span> <span class="n">func</span><span class="o">.</span><span class="vm">__name__</span><span class="p">)</span>
+                <span class="n">coords</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;coords&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+
+                <span class="n">has_wrap</span> <span class="o">=</span> <span class="s1">&#39;wrap&#39;</span> <span class="ow">in</span> <span class="n">kwargs</span>
+                <span class="k">if</span> <span class="n">has_wrap</span><span class="p">:</span>
+                    <span class="n">wrap</span> <span class="o">=</span> <span class="n">allow_kwargs</span><span class="p">(</span><span class="s1">&#39;parent&#39;</span><span class="p">,</span> <span class="s1">&#39;k&#39;</span><span class="p">,</span> <span class="s1">&#39;weight&#39;</span><span class="p">)(</span><span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;wrap&#39;</span><span class="p">))</span>
+                <span class="n">eta</span> <span class="o">=</span> <span class="n">tqdm_eta</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39;.asarray&#39;</span><span class="p">,</span>
+                               <span class="s1">&#39;k&#39;</span><span class="p">,</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;eta&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">))</span>
+                <span class="n">parent</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span>
+                <span class="n">k</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">k</span>
+                <span class="n">w</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">weight</span>
+                <span class="k">if</span> <span class="n">has_wrap</span><span class="p">:</span>
+                    <span class="n">v</span> <span class="o">=</span> <span class="n">wrap</span><span class="p">(</span><span class="n">func</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="n">k</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">),</span> <span class="n">parent</span><span class="o">=</span><span class="n">parent</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="n">k</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">weight</span><span class="o">=</span><span class="n">w</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">v</span> <span class="o">=</span> <span class="n">func</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="n">k</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">v</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="n">a</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">([</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">)],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">v</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">a</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">),</span> <span class="p">)</span> <span class="o">+</span> <span class="n">v</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">v</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+                <span class="n">a</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">v</span>
+                <span class="k">del</span> <span class="n">v</span>
+                <span class="n">eta</span><span class="o">.</span><span class="n">update</span><span class="p">()</span>
+                <span class="k">if</span> <span class="n">has_wrap</span><span class="p">:</span>
+                    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">k</span><span class="p">)):</span>
+                        <span class="n">a</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">wrap</span><span class="p">(</span><span class="n">func</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="n">k</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">),</span> <span class="n">parent</span><span class="o">=</span><span class="n">parent</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="n">k</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">weight</span><span class="o">=</span><span class="n">w</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+                        <span class="n">eta</span><span class="o">.</span><span class="n">update</span><span class="p">()</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">k</span><span class="p">)):</span>
+                        <span class="n">a</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">func</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="n">k</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+                        <span class="n">eta</span><span class="o">.</span><span class="n">update</span><span class="p">()</span>
+                <span class="n">eta</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+                <span class="c1"># Create coords</span>
+                <span class="k">if</span> <span class="n">coords</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="n">coords</span> <span class="o">=</span> <span class="p">[(</span><span class="s1">&#39;k&#39;</span><span class="p">,</span> <span class="n">_a</span><span class="o">.</span><span class="n">arangei</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">)))]</span>
+                    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">a</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">:]):</span>
+                        <span class="n">coords</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">f</span><span class="s2">&quot;v{i+1}&quot;</span><span class="p">,</span> <span class="n">_a</span><span class="o">.</span><span class="n">arangei</span><span class="p">(</span><span class="n">v</span><span class="p">)))</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">coords</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">coords</span><span class="p">)</span>
+                    <span class="n">coords</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="p">(</span><span class="s1">&#39;k&#39;</span><span class="p">,</span> <span class="n">_a</span><span class="o">.</span><span class="n">arangei</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">))))</span>
+                    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">coords</span><span class="p">)):</span>
+                        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">coords</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="nb">str</span><span class="p">):</span>
+                            <span class="n">coords</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">coords</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">_a</span><span class="o">.</span><span class="n">arangei</span><span class="p">(</span><span class="n">a</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="n">i</span><span class="p">]))</span>
+                <span class="n">attrs</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;bz&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="p">,</span>
+                         <span class="s1">&#39;parent&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span>
+                <span class="p">}</span>
+
+                <span class="k">return</span> <span class="n">xarray</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">coords</span><span class="o">=</span><span class="n">coords</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span> <span class="n">attrs</span><span class="o">=</span><span class="n">attrs</span><span class="p">)</span>
+
+            <span class="c1"># Set instance __bz_call</span>
+            <span class="nb">setattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;_bz_call&#39;</span><span class="p">,</span> <span class="n">types</span><span class="o">.</span><span class="n">MethodType</span><span class="p">(</span><span class="n">_call</span><span class="p">,</span> <span class="bp">self</span><span class="p">))</span>
+            <span class="k">return</span> <span class="bp">self</span>
 
 <div class="viewcode-block" id="BrillouinZone.aslist"><a class="viewcode-back" href="../../../api-generated/sisl.physics.brillouinzone.BrillouinZone.html#sisl.physics.BrillouinZone.aslist">[docs]</a>    <span class="k">def</span> <span class="nf">aslist</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Return `self` with `list` returned quantities</span>
@@ -1748,13 +1848,11 @@
 <span class="sd">        ticks : bool, optional</span>
 <span class="sd">           if `True` the ticks for the points are also returned</span>
 
-<span class="sd">           lk, ticks, ticklabels = BandStructure.lineark(True)</span>
-
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
 <span class="sd">        linear_k : The positions in reciprocal space determined by the distance between points</span>
 <span class="sd">        ticks : Linear k-positions of the points, only returned if `ticks` is ``True``</span>
-<span class="sd">        ticklabels : Labels at `k_tick`, only returned if `ticks` is ``True``</span>
+<span class="sd">        ticklabels : Labels at `ticks`, only returned if `ticks` is ``True``</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># Calculate points</span>
         <span class="n">k</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">tocartesian</span><span class="p">(</span><span class="n">pnt</span><span class="p">)</span> <span class="k">for</span> <span class="n">pnt</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">point</span><span class="p">]</span>

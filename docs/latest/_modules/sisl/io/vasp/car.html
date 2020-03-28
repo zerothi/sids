@@ -177,6 +177,7 @@
 <span class="kn">from</span> <span class="nn">..sile</span> <span class="k">import</span> <span class="o">*</span>
 
 <span class="c1"># Import the geometry object</span>
+<span class="kn">import</span> <span class="nn">sisl._array</span> <span class="k">as</span> <span class="nn">_a</span>
 <span class="kn">from</span> <span class="nn">sisl.messages</span> <span class="k">import</span> <span class="n">warn</span>
 <span class="kn">from</span> <span class="nn">sisl</span> <span class="k">import</span> <span class="n">Geometry</span><span class="p">,</span> <span class="n">PeriodicTable</span><span class="p">,</span> <span class="n">Atom</span><span class="p">,</span> <span class="n">SuperCell</span>
 
@@ -194,13 +195,22 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_scale</span> <span class="o">=</span> <span class="mf">1.</span>
 
 <div class="viewcode-block" id="carSileVASP.write_geometry"><a class="viewcode-back" href="../../../../api-generated/sisl.io.vasp.carSileVASP.html#sisl.io.vasp.carSileVASP.write_geometry">[docs]</a>    <span class="nd">@sile_fh_open</span><span class="p">()</span>
-    <span class="k">def</span> <span class="nf">write_geometry</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">geometry</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot; Writes the geometry to the contained file</span>
+    <span class="k">def</span> <span class="nf">write_geometry</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">geometry</span><span class="p">,</span> <span class="n">fixed</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot; Writes the geometry to the contained file</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
 <span class="sd">        geometry : Geometry</span>
 <span class="sd">           geometry to be written to the file</span>
+<span class="sd">        fixed : bool or list, optional</span>
+<span class="sd">           define which atoms to be fixed in the VASP run</span>
+
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
+<span class="sd">        &gt;&gt;&gt; car = carSileVASP(&#39;POSCAR&#39;, &#39;w&#39;)</span>
+<span class="sd">        &gt;&gt;&gt; geom = geom.graphene()</span>
+<span class="sd">        &gt;&gt;&gt; geom.write(car, fixed=False) # fix none</span>
+<span class="sd">        &gt;&gt;&gt; geom.write(car, fixed=[True, (False, True, False)]) # fix 1st and y coordinate of 2nd</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># Check that we can write to the file</span>
         <span class="n">sile_raise_write</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
@@ -239,11 +249,21 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_write</span><span class="p">(</span><span class="n">fmt</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="o">*</span><span class="n">s</span><span class="p">))</span>
         <span class="n">fmt</span> <span class="o">=</span> <span class="s1">&#39; </span><span class="si">{:d}</span><span class="s1">&#39;</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">d</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_write</span><span class="p">(</span><span class="n">fmt</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="o">*</span><span class="n">d</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_write</span><span class="p">(</span><span class="s1">&#39;Selective dynamics</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_write</span><span class="p">(</span><span class="s1">&#39;Cartesian</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
 
-        <span class="n">fmt</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="si">{:18.9f}</span><span class="s1">&#39;</span> <span class="o">*</span> <span class="mi">3</span> <span class="o">+</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">fixed</span><span class="p">,</span> <span class="nb">bool</span><span class="p">):</span>
+            <span class="n">fixed</span> <span class="o">=</span> <span class="p">[</span><span class="n">fixed</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">geometry</span><span class="p">)</span>
+
+        <span class="n">b2s</span> <span class="o">=</span> <span class="p">{</span><span class="kc">True</span><span class="p">:</span> <span class="s1">&#39;T&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">:</span> <span class="s1">&#39;F&#39;</span><span class="p">}</span>
+        <span class="k">def</span> <span class="nf">todyn</span><span class="p">(</span><span class="n">fix</span><span class="p">):</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">fix</span><span class="p">,</span> <span class="nb">bool</span><span class="p">):</span>
+                <span class="k">return</span> <span class="s1">&#39;</span><span class="si">{0}</span><span class="s1"> </span><span class="si">{0}</span><span class="s1"> </span><span class="si">{0}</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">b2s</span><span class="p">[</span><span class="n">fix</span><span class="p">])</span>
+            <span class="k">return</span> <span class="s1">&#39;</span><span class="si">{}</span><span class="s1"> </span><span class="si">{}</span><span class="s1"> </span><span class="si">{}</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">b2s</span><span class="p">[</span><span class="n">fix</span><span class="p">[</span><span class="mi">0</span><span class="p">]],</span> <span class="n">b2s</span><span class="p">[</span><span class="n">fix</span><span class="p">[</span><span class="mi">1</span><span class="p">]],</span> <span class="n">b2s</span><span class="p">[</span><span class="n">fix</span><span class="p">[</span><span class="mi">2</span><span class="p">]])</span>
+
+        <span class="n">fmt</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="si">{:18.9f}</span><span class="s1"> &#39;</span> <span class="o">*</span> <span class="mi">3</span>
         <span class="k">for</span> <span class="n">ia</span> <span class="ow">in</span> <span class="n">geometry</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_write</span><span class="p">(</span><span class="n">fmt</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="o">*</span><span class="n">geometry</span><span class="o">.</span><span class="n">xyz</span><span class="p">[</span><span class="n">ia</span><span class="p">,</span> <span class="p">:]))</span></div>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_write</span><span class="p">(</span><span class="n">fmt</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="o">*</span><span class="n">geometry</span><span class="o">.</span><span class="n">xyz</span><span class="p">[</span><span class="n">ia</span><span class="p">,</span> <span class="p">:])</span> <span class="o">+</span> <span class="n">todyn</span><span class="p">(</span><span class="n">fixed</span><span class="p">[</span><span class="n">ia</span><span class="p">]))</span></div>
 
 <div class="viewcode-block" id="carSileVASP.read_supercell"><a class="viewcode-back" href="../../../../api-generated/sisl.io.vasp.carSileVASP.html#sisl.io.vasp.carSileVASP.read_supercell">[docs]</a>    <span class="nd">@sile_fh_open</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
     <span class="k">def</span> <span class="nf">read_supercell</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -263,8 +283,15 @@
         <span class="k">return</span> <span class="n">SuperCell</span><span class="p">(</span><span class="n">cell</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="carSileVASP.read_geometry"><a class="viewcode-back" href="../../../../api-generated/sisl.io.vasp.carSileVASP.html#sisl.io.vasp.carSileVASP.read_geometry">[docs]</a>    <span class="nd">@sile_fh_open</span><span class="p">()</span>
-    <span class="k">def</span> <span class="nf">read_geometry</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot; Returns Geometry object from the CONTCAR/POSCAR file</span>
+    <span class="k">def</span> <span class="nf">read_geometry</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ret_fixed</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot; Returns Geometry object from the CONTCAR/POSCAR file</span>
+
+<span class="sd">        Possibly also return the dynamics (if present)</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        ret_fixed : bool, optional</span>
+<span class="sd">           also read selective dynamics (if present), if not, a list of False will be returned</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">sc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">read_supercell</span><span class="p">()</span>
 
@@ -295,9 +322,9 @@
         <span class="c1"># Read whether this is selective or direct</span>
         <span class="c1"># Currently direct is not used</span>
         <span class="n">opt</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">readline</span><span class="p">()</span>
-        <span class="c1">#direct = True</span>
+        <span class="n">dynamics</span> <span class="o">=</span> <span class="kc">False</span>
         <span class="k">if</span> <span class="n">opt</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">in</span> <span class="s1">&#39;Ss&#39;</span><span class="p">:</span>
-            <span class="c1">#direct = False</span>
+            <span class="n">dynamics</span> <span class="o">=</span> <span class="kc">True</span>
             <span class="n">opt</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">readline</span><span class="p">()</span>
 
         <span class="c1"># Check whether this is in fractional or direct</span>
@@ -308,18 +335,27 @@
 
         <span class="c1"># Number of atoms</span>
         <span class="n">na</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">atom</span><span class="p">)</span>
+        <span class="c1"># pre-create the fixed list</span>
+        <span class="n">fixed</span> <span class="o">=</span> <span class="p">[[</span><span class="kc">False</span><span class="p">]</span> <span class="o">*</span> <span class="mi">3</span><span class="p">]</span> <span class="o">*</span> <span class="n">na</span>
 
-        <span class="n">xyz</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">([</span><span class="n">na</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+        <span class="n">xyz</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">emptyd</span><span class="p">([</span><span class="n">na</span><span class="p">,</span> <span class="mi">3</span><span class="p">])</span>
         <span class="k">for</span> <span class="n">ia</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">na</span><span class="p">):</span>
-            <span class="n">xyz</span><span class="p">[</span><span class="n">ia</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="nb">float</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">readline</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">()[:</span><span class="mi">3</span><span class="p">]))</span>
+            <span class="n">line</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">readline</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+            <span class="n">xyz</span><span class="p">[</span><span class="n">ia</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="nb">float</span><span class="p">,</span> <span class="n">line</span><span class="p">[:</span><span class="mi">3</span><span class="p">]))</span>
+            <span class="k">if</span> <span class="n">dynamics</span><span class="p">:</span>
+                <span class="n">fixed</span><span class="p">[</span><span class="n">ia</span><span class="p">]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;t&#39;</span><span class="p">,</span> <span class="n">line</span><span class="p">[</span><span class="mi">3</span><span class="p">:</span><span class="mi">6</span><span class="p">]))</span>
+
         <span class="k">if</span> <span class="n">cart</span><span class="p">:</span>
             <span class="c1"># The unit of the coordinates are cartesian</span>
             <span class="n">xyz</span> <span class="o">*=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_scale</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="n">xyz</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">xyz</span><span class="p">,</span> <span class="n">sc</span><span class="o">.</span><span class="n">cell</span><span class="p">)</span>
+            <span class="n">xyz</span> <span class="o">=</span> <span class="n">xyz</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">sc</span><span class="o">.</span><span class="n">cell</span><span class="p">)</span>
 
         <span class="c1"># The POT/CONT-CAR does not contain information on the atomic species</span>
-        <span class="k">return</span> <span class="n">Geometry</span><span class="p">(</span><span class="n">xyz</span><span class="o">=</span><span class="n">xyz</span><span class="p">,</span> <span class="n">atom</span><span class="o">=</span><span class="n">atom</span><span class="p">,</span> <span class="n">sc</span><span class="o">=</span><span class="n">sc</span><span class="p">)</span></div>
+        <span class="n">geom</span> <span class="o">=</span> <span class="n">Geometry</span><span class="p">(</span><span class="n">xyz</span><span class="o">=</span><span class="n">xyz</span><span class="p">,</span> <span class="n">atom</span><span class="o">=</span><span class="n">atom</span><span class="p">,</span> <span class="n">sc</span><span class="o">=</span><span class="n">sc</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">ret_fixed</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">geom</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">fixed</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">bool_</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">geom</span></div>
 
     <span class="k">def</span> <span class="nf">ArgumentParser</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">p</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Returns the arguments that is available for this Sile &quot;&quot;&quot;</span>
