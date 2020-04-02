@@ -172,6 +172,7 @@
   <h1>Source code for sisl.physics.state</h1><div class="highlight"><pre>
 <span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">einsum</span>
+<span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">ndarray</span><span class="p">,</span> <span class="n">bool_</span>
 
 <span class="kn">import</span> <span class="nn">sisl._array</span> <span class="k">as</span> <span class="nn">_a</span>
 <span class="kn">from</span> <span class="nn">sisl.messages</span> <span class="k">import</span> <span class="n">warn</span>
@@ -202,6 +203,14 @@
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="p">,</span> <span class="o">**</span><span class="n">info</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">parent</span> <span class="o">=</span> <span class="n">parent</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">info</span> <span class="o">=</span> <span class="n">info</span>
+
+    <span class="k">def</span> <span class="nf">_sanitize_index</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">idx</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot; Ensure indices are transferred to acceptable integers &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">idx</span><span class="p">,</span> <span class="n">ndarray</span><span class="p">)</span> <span class="ow">and</span> <span class="n">idx</span><span class="o">.</span><span class="n">dtype</span> <span class="o">==</span> <span class="n">bool_</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">flatnonzero</span><span class="p">(</span><span class="n">idx</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">idx</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">))</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">idx</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="nb">bool</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">flatnonzero</span><span class="p">(</span><span class="n">idx</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">_a</span><span class="o">.</span><span class="n">asarrayi</span><span class="p">(</span><span class="n">idx</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
 
 
 <div class="viewcode-block" id="Coefficient"><a class="viewcode-back" href="../../../api-generated/sisl.physics.Coefficient.html#sisl.physics.Coefficient">[docs]</a><span class="k">class</span> <span class="nc">Coefficient</span><span class="p">(</span><span class="n">ParentContainer</span><span class="p">):</span>
@@ -308,7 +317,7 @@
 <span class="sd">        Coefficient</span>
 <span class="sd">            a new coefficient only containing the requested elements</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">idx</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">asarrayi</span><span class="p">(</span><span class="n">idx</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span> <span class="c1"># this ensures that the first dimension is preserved</span>
+        <span class="n">idx</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sanitize_index</span><span class="p">(</span><span class="n">idx</span><span class="p">)</span>
         <span class="n">sub</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">c</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">(),</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="p">)</span>
         <span class="n">sub</span><span class="o">.</span><span class="n">info</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">info</span>
         <span class="k">return</span> <span class="n">sub</span></div>
@@ -434,7 +443,7 @@
 <span class="sd">        State</span>
 <span class="sd">           a new state only containing the requested elements</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">idx</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">asarrayi</span><span class="p">(</span><span class="n">idx</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span> <span class="c1"># this ensures that the first dimension is preserved</span>
+        <span class="n">idx</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sanitize_index</span><span class="p">(</span><span class="n">idx</span><span class="p">)</span>
         <span class="n">sub</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">(),</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="p">)</span>
         <span class="n">sub</span><span class="o">.</span><span class="n">info</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">info</span>
         <span class="k">return</span> <span class="n">sub</span></div>
@@ -877,7 +886,7 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">idx</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;k,ki,kj-&gt;ij&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">c</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">,</span> <span class="n">_conj</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">))</span>
-        <span class="n">idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">idx</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
+        <span class="n">idx</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sanitize_index</span><span class="p">(</span><span class="n">idx</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;k,ki,kj-&gt;ij&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">c</span><span class="p">[</span><span class="n">idx</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="n">idx</span><span class="p">],</span> <span class="n">_conj</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="n">idx</span><span class="p">]))</span></div>
 
 <div class="viewcode-block" id="StateC.sort"><a class="viewcode-back" href="../../../api-generated/sisl.physics.StateC.html#sisl.physics.StateC.sort">[docs]</a>    <span class="k">def</span> <span class="nf">sort</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ascending</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
@@ -935,7 +944,7 @@
 <span class="sd">        -------</span>
 <span class="sd">        StateC : a new object with a subset of the states</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">idx</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">asarrayi</span><span class="p">(</span><span class="n">idx</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
+        <span class="n">idx</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sanitize_index</span><span class="p">(</span><span class="n">idx</span><span class="p">)</span>
         <span class="n">sub</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="n">idx</span><span class="p">,</span> <span class="o">...</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">c</span><span class="p">[</span><span class="n">idx</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="p">)</span>
         <span class="n">sub</span><span class="o">.</span><span class="n">info</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">info</span>
         <span class="k">return</span> <span class="n">sub</span></div>
