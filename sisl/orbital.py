@@ -11,11 +11,11 @@ from numpy import take, sqrt, square
 from scipy.special import lpmv
 from scipy.interpolate import UnivariateSpline
 
-
+from ._internal import set_module
 from . import _plot as plt
 from . import _array as _a
 from .shape import Sphere
-from sisl.utils.mathematics import cart2spher
+from .utils.mathematics import cart2spher
 
 
 __all__ = ['Orbital', 'SphericalOrbital', 'AtomicOrbital']
@@ -77,6 +77,7 @@ def _rspherical_harm(m, l, theta, cos_phi):
     return _rspher_harm_fact[l][m] * (lpmv(m, l, cos_phi) * cos(m*theta))
 
 
+@set_module("sisl")
 class Orbital:
     """ Base class for orbital information.
 
@@ -126,6 +127,11 @@ class Orbital:
         if len(self.tag) > 0:
             return self.__class__.__name__ + f'{{R: {self.R:.5f}, q0: {self.q0}, tag: {self.tag}}}'
         return self.__class__.__name__ + f'{{R: {self.R:.5f}, q0: {self.q0}}}'
+
+    def __repr__(self):
+        if self.tag:
+            return f"<{self.__module__}.{self.__class__.__name__} R={self.R:.3f}, q0={self.q0}, tag={self.tag}>"
+        return f"<{self.__module__}.{self.__class__.__name__} R={self.R:.3f}, q0={self.q0}>"
 
     def name(self, tex=False):
         """ Return a named specification of the orbital (`tag`) """
@@ -291,6 +297,7 @@ class Orbital:
         self.__init__(d['R'], q0=d['q0'], tag=d['tag'])
 
 
+@set_module("sisl")
 class SphericalOrbital(Orbital):
     r""" An *arbitrary* orbital class where :math:`\phi(\mathbf r)=f(|\mathbf r|)Y_l^m(\theta,\varphi)`
 
@@ -449,6 +456,8 @@ class SphericalOrbital(Orbital):
             def f0(R):
                 return R * 0.
             self.set_radial(f0)
+            if 'R' in kwargs:
+                self.R = kwargs['R']
         elif len(args) == 1 and callable(args[0]):
             self.f = args[0]
             # Determine the maximum R
@@ -512,6 +521,11 @@ class SphericalOrbital(Orbital):
         if len(self.tag) > 0:
             return self.__class__.__name__ + f'{{l: {self.l}, R: {self.R}, q0: {self.q0}, tag: {self.tag}}}'
         return self.__class__.__name__ + f'{{l: {self.l}, R: {self.R}, q0: {self.q0}}}'
+
+    def __repr__(self):
+        if self.tag:
+            return f"<{self.__module__}.{self.__class__.__name__} l={self.l}, R={self.R:.3f}, q0={self.q0}, tag={self.tag}>"
+        return f"<{self.__module__}.{self.__class__.__name__} l={self.l}, R={self.R:.3f}, q0={self.q0}>"
 
     def radial(self, r, is_radius=True):
         r""" Calculate the radial part of the wavefunction :math:`f(\mathbf R)`
@@ -671,6 +685,7 @@ class SphericalOrbital(Orbital):
         self.__init__(d['l'], (d['r'], d['f']), q0=d['q0'], tag=d['tag'])
 
 
+@set_module("sisl")
 class AtomicOrbital(Orbital):
     r""" A projected atomic orbital consisting of real harmonics
 
@@ -955,6 +970,11 @@ class AtomicOrbital(Orbital):
             return self.__class__.__name__ + '{{{0}, q0: {1}, tag: {2}, {3}}}'.format(self.name(), self.q0, self.tag, str(self.orb))
         return self.__class__.__name__ + '{{{0}, q0: {1}, {2}}}'.format(self.name(), self.q0, str(self.orb))
 
+    def __repr__(self):
+        if self.tag:
+            return f"<{self.__module__}.{self.__class__.__name__} {self.name()} q0={self.q0}, tag={self.tag}>"
+        return f"<{self.__module__}.{self.__class__.__name__} {self.name()} q0={self.q0}>"
+
     def set_radial(self, *args):
         r""" Update the internal radial function used as a :math:`f(|\mathbf r|)`
 
@@ -1047,10 +1067,19 @@ class AtomicOrbital(Orbital):
         """ Return the state of this object """
         # A function is not necessarily pickable, so we store interpolated
         # data which *should* ensure the correct pickable state (to close agreement)
-        r = np.linspace(0, self.R, 1000)
-        f = self.orb.f(r)
+        try:
+            # this will tricker the AttributeError
+            # before we create the data-array
+            f = self.orb.f
+            r = np.linspace(0, self.R, 1000)
+            f = f(r)
+        except AttributeError:
+            r, f = None, None
         return {'name': self.name(), 'r': r, 'f': f, 'q0': self.q0, 'tag': self.tag}
 
     def __setstate__(self, d):
         """ Re-create the state of this object """
-        self.__init__(d['name'], (d['r'], d['f']), q0=d['q0'], tag=d['tag'])
+        if d["r"] is None:
+            self.__init__(d['name'], q0=d['q0'], tag=d['tag'])
+        else:
+            self.__init__(d['name'], (d['r'], d['f']), q0=d['q0'], tag=d['tag'])

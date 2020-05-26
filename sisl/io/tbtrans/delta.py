@@ -3,6 +3,7 @@ import numpy as np
 # Import sile objects
 from ..sile import add_sile, sile_raise_write, SileWarning
 from .sile import SileCDFTBtrans
+from sisl._internal import set_module
 from sisl.utils import *
 import sisl._array as _a
 
@@ -22,6 +23,7 @@ eV2Ry = unit_convert('eV', 'Ry')
 
 
 # The delta nc file
+@set_module("sisl.io.tbtrans")
 class deltancSileTBtrans(SileCDFTBtrans):
     r""" TBtrans :math:`\delta` file object
 
@@ -272,7 +274,7 @@ class deltancSileTBtrans(SileCDFTBtrans):
         delta.finalize()
 
         # Ensure that the geometry is written
-        self.write_geometry(delta.geom)
+        self.write_geometry(delta.geometry)
 
         self._crt_dim(self, 'spin', len(delta.spin))
 
@@ -331,11 +333,11 @@ class deltancSileTBtrans(SileCDFTBtrans):
             # point, this warning will proceed...
             # I.e. even though the variable has not been set, it will WARN
             # Hence we out-comment this for now...
-            warn(SileWarning(f'Overwriting k-point {ik} and energy point {iE} correction.'))
+            warn(f"Overwriting k-point {ik} and energy point {iE} correction.")
         elif ilvl == 3 and warn_E:
-            warn(SileWarning(f'Overwriting energy point {iE} correction.'))
+            warn(f"Overwriting energy point {iE} correction.")
         elif ilvl == 2 and warn_k:
-            warn(SileWarning(f'Overwriting k-point {ik} correction.'))
+            warn(f"Overwriting k-point {ik} correction.")
 
         if ilvl == 1:
             dim = ('spin', 'nnzs')
@@ -362,7 +364,8 @@ class deltancSileTBtrans(SileCDFTBtrans):
         csize[-1] = delta.nnz
 
         if delta.spin.kind > delta.spin.POLARIZED:
-            raise ValueError(self.__class__.__name__ + '.write_delta only allows spin-polarized delta values')
+            print(delta.spin)
+            raise ValueError(f"{self.__class__.__name__}.write_delta only allows spin-polarized delta values")
 
         if delta.dtype.kind == 'c':
             v1 = self._crt_var(lvl, 'Redelta', 'f8', dim,
@@ -460,6 +463,7 @@ class deltancSileTBtrans(SileCDFTBtrans):
     def read_delta(self, **kwargs):
         """ Reads a delta model from the file """
         return self._read_class(SparseOrbitalBZSpin, **kwargs)
+
 
 add_sile('delta.nc', deltancSileTBtrans)
 add_sile('dH.nc', deltancSileTBtrans)

@@ -7,11 +7,12 @@ from numpy import insert, unique, take, delete, argsort
 from numpy import diff, allclose
 from numpy import tile, repeat, concatenate
 
+from ._internal import set_module
 from . import _array as _a
 from .atom import Atom
 from .orbital import Orbital
 from .geometry import Geometry
-from .messages import warn, SislError, SislWarning, tqdm_eta
+from .messages import warn, SislError, SislWarning, tqdm_eta, deprecate_method
 from ._indices import indices_only
 from ._help import get_dtype
 from .utils.ranges import array_arange, list2str
@@ -59,7 +60,12 @@ class _SparseGeometry:
     def geometry(self):
         """ Associated geometry """
         return self._geometry
-    geom = geometry
+
+    @property
+    @deprecate_method(f"*.geom is deprecated, use *.geometry instead")
+    def geom(self):
+        """ deprecated geometry """
+        return self._geometry
 
     @property
     def _size(self):
@@ -216,6 +222,10 @@ class _SparseGeometry:
         s += str(self.geometry).replace('\n', '\n ')
         return s + '\n}'
 
+    def __repr__(self):
+        g = self.geometry
+        return f"<{self.__module__}.{self.__class__.__name__} shape={self._csr.shape[:-1]}, dim={self.dim}, nnz={self.nnz}, kind={self.dkind}>"
+
     def __getattr__(self, attr):
         """ Overload attributes from the hosting geometry
 
@@ -356,17 +366,20 @@ class _SparseGeometry:
         """
         # Create a temporary copy to put data into
         T = self.copy()
+        # clean memory to not crowd memory too much
         T._csr.ptr = None
         T._csr.col = None
         T._csr.ncol = None
         T._csr._D = None
 
-        # Short-linkes
+        # Short-links
         sc = self.geometry.sc
 
         # Create "DOK" format indices
         csr = self._csr
         # Number of rows (used for converting to supercell indices)
+        # With this we don't need to figure out if we are dealing with
+        # atoms or orbitals
         size = csr.shape[0]
 
         # First extract the actual data
@@ -374,17 +387,18 @@ class _SparseGeometry:
         if csr.finalized:
             ptr = csr.ptr.view()
             col = csr.col.copy()
+            D = csr._D.copy()
         else:
             idx = array_arange(csr.ptr[:-1], n=ncol, dtype=int32)
             ptr = insert(_a.cumsumi(ncol), 0, 0)
             col = csr.col[idx]
+            D = csr._D[idx, :].copy()
             del idx
 
         # Create an array ready for holding all transposed columns
         row = _a.zerosi(len(col))
         row[ptr[1:-1]] = 1
         _a.cumsumi(row, out=row)
-        D = csr._D.copy()
 
         # Now we have the DOK format
         #  row, col, _D
@@ -408,9 +422,9 @@ class _SparseGeometry:
         idx = argsort(col)
 
         # Our new data will then be
-        T._csr.col = take(row, idx, out=row).astype(int32, copy=False)
+        T._csr.col = row[idx]
         del row
-        T._csr._D = take(D, idx, axis=0)
+        T._csr._D = D[idx]
         del D
         T._csr.ncol = nrow.astype(int32, copy=False)
         T._csr.ptr = insert(_a.cumsumi(nrow), 0, 0)
@@ -859,6 +873,7 @@ class _SparseGeometry:
         self._def_dim = -1
 
 
+@set_module("sisl")
 class SparseAtom(_SparseGeometry):
     """ Sparse object with number of rows equal to the total number of atoms in the `Geometry` """
 
@@ -1056,7 +1071,7 @@ class SparseAtom(_SparseGeometry):
         for ja, ia in self.iter_nnz(range(geom.na)):
 
             # Get the equivalent orbital in the smaller cell
-            a, afp, afm = _sca2sca(self.geometry, ia, S.geom, seps, axis)
+            a, afp, afm = _sca2sca(self.geometry, ia, S.geometry, seps, axis)
             if a is None:
                 continue
             S[ja, a + afp] = self[ja, ia]
@@ -1145,7 +1160,7 @@ class SparseAtom(_SparseGeometry):
 
         # Information for the new Hamiltonian sparse matrix
         na_n = int32(S.na)
-        geom_n = S.geom
+        geom_n = S.geometry
 
         # First loop on axis tiling and local
         # atoms in the geometry
@@ -1225,7 +1240,7 @@ class SparseAtom(_SparseGeometry):
 
         # Information for the new Hamiltonian sparse matrix
         na_n = int32(S.na)
-        geom_n = S.geom
+        geom_n = S.geometry
 
         # First loop on axis tiling and local
         # atoms in the geometry
@@ -1333,6 +1348,7 @@ class SparseAtom(_SparseGeometry):
         return R
 
 
+@set_module("sisl")
 class SparseOrbital(_SparseGeometry):
     """ Sparse object with number of rows equal to the total number of orbitals in the `Geometry` """
 
@@ -1567,7 +1583,7 @@ class SparseOrbital(_SparseGeometry):
         for jo, io in self.iter_nnz(orbital=range(geom.no)):
 
             # Get the equivalent orbital in the smaller cell
-            o, ofp, ofm = _sco2sco(self.geometry, io, S.geom, seps, axis)
+            o, ofp, ofm = _sco2sco(self.geometry, io, S.geometry, seps, axis)
             if o is None:
                 continue
             d = self[jo, io]
@@ -1819,7 +1835,7 @@ class SparseOrbital(_SparseGeometry):
 
         # Information for the new Hamiltonian sparse matrix
         no_n = int32(S.no)
-        geom_n = S.geom
+        geom_n = S.geometry
 
         # First loop on axis tiling and local
         # atoms in the geometry
@@ -1897,7 +1913,7 @@ class SparseOrbital(_SparseGeometry):
 
         # Information for the new Hamiltonian sparse matrix
         no_n = int32(S.no)
-        geom_n = S.geom
+        geom_n = S.geometry
 
         # First loop on axis tiling and local
         # orbitals in the geometry

@@ -4,14 +4,16 @@ This class is the basis of many different objects.
 """
 
 import math
+import warnings
 from numbers import Integral
 import numpy as np
 from numpy import dot
 
+from ._internal import set_module
 from . import _plot as plt
 from . import _array as _a
-from sisl.utils.mathematics import fnorm
-from sisl.shape.prism4 import Cuboid
+from .utils.mathematics import fnorm
+from .shape.prism4 import Cuboid
 from .quaternion import Quaternion
 from ._math_small import cross3, dot3
 from ._supercell import cell_invert, cell_reciprocal
@@ -20,6 +22,7 @@ from ._supercell import cell_invert, cell_reciprocal
 __all__ = ['SuperCell', 'SuperCellChild']
 
 
+@set_module("sisl")
 class SuperCell:
     r""" A cell class to retain lattice vectors and a supercell structure
 
@@ -923,6 +926,10 @@ class SuperCell:
         s = ',\n '.join(['ABC'[i] + '=[{:.3f}, {:.3f}, {:.3f}]'.format(*self.cell[i]) for i in (0, 1, 2)])
         return self.__class__.__name__ + ('{{nsc: [{:} {:} {:}],\n ' + s + ',\n}}').format(*self.nsc)
 
+    def __repr__(self):
+        a, b, c, alpha, beta, gamma = map(lambda r: round(r, 3), self.parameters())
+        return f"<{self.__module__}.{self.__class__.__name__} a={a}, b={b}, c={c}, α={alpha}, β={beta}, γ={gamma}, nsc={self.nsc}>"
+
     def __eq__(self, other):
         """ Equality check """
         return self.equal(other)
@@ -1039,12 +1046,14 @@ class SuperCellChild:
         # set_sc on that too.
         # Sadly, getattr fails for @property methods
         # which forces us to use try ... except
-        for a in dir(self):
-            try:
-                if isinstance(getattr(self, a), SuperCellChild):
-                    getattr(self, a).set_supercell(self.sc)
-            except:
-                pass
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            for a in dir(self):
+                try:
+                    if isinstance(getattr(self, a), SuperCellChild):
+                        getattr(self, a).set_supercell(self.sc)
+                except:
+                    pass
 
     set_sc = set_supercell
 

@@ -9,6 +9,7 @@ from functools import lru_cache
 from ..sile import SileWarning
 from .sile import SileCDFTBtrans
 from sisl.messages import warn, info
+from sisl._internal import set_module
 from sisl.utils import *
 import sisl._array as _a
 from sisl._indices import indices
@@ -26,6 +27,7 @@ Ry2K = unit_convert('Ry', 'K')
 eV2Ry = unit_convert('eV', 'Ry')
 
 
+@set_module("sisl.io.tbtrans")
 class _ncSileTBtrans(SileCDFTBtrans):
     r""" Common TBtrans NetCDF file object due to a lot of the files having common entries
 
@@ -156,12 +158,15 @@ class _ncSileTBtrans(SileCDFTBtrans):
 
         Parameters
         ----------
-        E : float or int
-           if ``int``, return it-self, else return the energy index which is
+        E : float or int or str
+           if `int`, return it-self, else return the energy index which is
            closests to the energy.
+           For a `str` it will be parsed to a float and treated as such.
         """
         if isinstance(E, Integral):
             return E
+        elif isinstance(E, str):
+            E = float(E)
         idxE = np.abs(self.E - E).argmin()
         ret_E = self.E[idxE]
         if abs(ret_E - E) > 5e-3:
@@ -193,6 +198,7 @@ class _ncSileTBtrans(SileCDFTBtrans):
         return ik
 
 
+@set_module("sisl.io.tbtrans")
 class _devncSileTBtrans(_ncSileTBtrans):
     r""" Common TBtrans NetCDF file object due to a lot of the files having common entries
 
