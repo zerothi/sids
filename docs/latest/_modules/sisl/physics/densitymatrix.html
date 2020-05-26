@@ -201,10 +201,10 @@
 <span class="k">class</span> <span class="nc">_densitymatrix</span><span class="p">(</span><span class="n">SparseOrbitalBZSpin</span><span class="p">):</span>
 
     <span class="k">def</span> <span class="nf">spin_rotate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">angles</span><span class="p">,</span> <span class="n">rad</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
-        <span class="sa">r</span><span class="sd">&quot;&quot;&quot; Rotates the spin-boxes by fixed angles around the :math:`x`, :math:`y` and :math`z` axis, respectively.</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot; Rotates spin-boxes by fixed angles around the :math:`x`, :math:`y` and :math:`z` axis, respectively.</span>
 
 <span class="sd">        The angles are with respect to each spin-boxes initial angle.</span>
-<span class="sd">        One should use `spin_align` to fix all angles along a specific vector.</span>
+<span class="sd">        One should use `spin_align` to fix all angles along a specific direction.</span>
 
 <span class="sd">        Notes</span>
 <span class="sd">        -----</span>
@@ -225,7 +225,8 @@
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
-<span class="sd">        object : an equivalent object with rotated spins</span>
+<span class="sd">        object</span>
+<span class="sd">             a new object with rotated spins</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">angles</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">asarrayd</span><span class="p">(</span><span class="n">angles</span><span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">rad</span><span class="p">:</span>
@@ -334,12 +335,8 @@
 
         <span class="k">return</span> <span class="n">out</span>
 
-
     <span class="k">def</span> <span class="nf">spin_align</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">vec</span><span class="p">):</span>
         <span class="sa">r</span><span class="sd">&quot;&quot;&quot; Aligns *all* spin along the vector `vec`</span>
-
-<span class="sd">        After this routine all spins will point along `vec` with their initial</span>
-<span class="sd">        magnitude.</span>
 
 <span class="sd">        In case the matrix is polarized and `vec` is not aligned at the z-axis, the returned</span>
 <span class="sd">        matrix will be a non-collinear spin configuration.</span>
@@ -347,15 +344,16 @@
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
 <span class="sd">        vec : (3,)</span>
-<span class="sd">           vector to align the spin boxes</span>
+<span class="sd">           vector to align the spin boxes against</span>
 
 <span class="sd">        See Also</span>
 <span class="sd">        --------</span>
-<span class="sd">        spin_rotate : rotate spin-boxes by a fixed amount (does not align all spins)</span>
+<span class="sd">        spin_rotate : rotate spin-boxes by a fixed amount (does not align spins)</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
-<span class="sd">        object : an equivalent object with rotated spins</span>
+<span class="sd">        object</span>
+<span class="sd">            a new object with aligned spins</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">vec</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">asarrayd</span><span class="p">(</span><span class="n">vec</span><span class="p">)</span>
         <span class="c1"># normalize vector</span>
@@ -438,16 +436,17 @@
                     <span class="n">out</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">_D</span><span class="p">[:,</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">4</span><span class="p">]]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">_D</span><span class="p">[:,</span> <span class="p">:]</span>
                 <span class="n">out</span> <span class="o">=</span> <span class="n">out</span><span class="o">.</span><span class="n">spin_align</span><span class="p">(</span><span class="n">vec</span><span class="p">)</span>
 
-            <span class="k">else</span><span class="p">:</span>
+            <span class="k">elif</span> <span class="n">vec</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
                 <span class="c1"># flip spin</span>
                 <span class="n">out</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
                 <span class="n">out</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">_D</span><span class="p">[:,</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]]</span> <span class="o">=</span> <span class="n">out</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">_D</span><span class="p">[:,</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">]]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">out</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
 
         <span class="k">else</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;</span><span class="si">{self.__class__.__name__}</span><span class="s2">.spin_align requires a matrix with some spin configuration, not an unpolarized matrix.&quot;</span><span class="p">)</span>
 
         <span class="k">return</span> <span class="n">out</span>
-
 
     <span class="k">def</span> <span class="nf">mulliken</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">projection</span><span class="o">=</span><span class="s1">&#39;orbital&#39;</span><span class="p">):</span>
         <span class="sa">r</span><span class="sd">&quot;&quot;&quot; Calculate Mulliken charges from the density matrix</span>
@@ -1277,7 +1276,8 @@
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
-<span class="sd">        object : the density matrix at :math:`k`. The returned object depends on `format`.</span>
+<span class="sd">        matrix : numpy.ndarray or scipy.sparse.*_matrix</span>
+<span class="sd">            the density matrix at :math:`k`. The returned object depends on `format`.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">pass</span></div>
 
@@ -1331,7 +1331,8 @@
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
-<span class="sd">        tuple : for each of the Cartesian directions a :math:`\partial \mathbf D(k)/\partial k` is returned.</span>
+<span class="sd">        tuple</span>
+<span class="sd">             for each of the Cartesian directions a :math:`\partial \mathbf D(k)/\partial k` is returned.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">pass</span></div>
 
@@ -1385,7 +1386,8 @@
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
-<span class="sd">        tuple of tuples : for each of the Cartesian directions</span>
+<span class="sd">        tuple of tuples</span>
+<span class="sd">            for each of the Cartesian directions</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">pass</span></div>
 
