@@ -154,6 +154,12 @@
         
           <li><a href="../../../index.html">Module code</a> &raquo;</li>
         
+          <li><a href="../../../sisl.html">sisl</a> &raquo;</li>
+        
+          <li><a href="../../io.html">sisl.io</a> &raquo;</li>
+        
+          <li><a href="../siesta.html">sisl.io.siesta</a> &raquo;</li>
+        
       <li>sisl.io.siesta.fc</li>
     
     
@@ -173,14 +179,18 @@
 <span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 
 <span class="kn">from</span> <span class="nn">..sile</span> <span class="k">import</span> <span class="n">add_sile</span><span class="p">,</span> <span class="n">sile_fh_open</span>
-<span class="kn">from</span> <span class="nn">.sile</span> <span class="k">import</span> <span class="o">*</span>
+<span class="kn">from</span> <span class="nn">.sile</span> <span class="k">import</span> <span class="n">SileSiesta</span>
+
+<span class="kn">from</span> <span class="nn">sisl._internal</span> <span class="k">import</span> <span class="n">set_module</span>
+<span class="kn">from</span> <span class="nn">sisl.messages</span> <span class="k">import</span> <span class="n">warn</span>
 <span class="kn">from</span> <span class="nn">sisl.unit.siesta</span> <span class="k">import</span> <span class="n">unit_convert</span>
 
 
 <span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;fcSileSiesta&#39;</span><span class="p">]</span>
 
 
-<div class="viewcode-block" id="fcSileSiesta"><a class="viewcode-back" href="../../../../api-generated/sisl.io.siesta.fcSileSiesta.html#sisl.io.siesta.fcSileSiesta">[docs]</a><span class="k">class</span> <span class="nc">fcSileSiesta</span><span class="p">(</span><span class="n">SileSiesta</span><span class="p">):</span>
+<span class="nd">@set_module</span><span class="p">(</span><span class="s2">&quot;sisl.io.siesta&quot;</span><span class="p">)</span>
+<span class="k">class</span> <span class="nc">fcSileSiesta</span><span class="p">(</span><span class="n">SileSiesta</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot; Force constant file &quot;&quot;&quot;</span>
 
 <div class="viewcode-block" id="fcSileSiesta.read_force"><a class="viewcode-back" href="../../../../api-generated/sisl.io.siesta.fcSileSiesta.html#sisl.io.siesta.fcSileSiesta.read_force">[docs]</a>    <span class="nd">@sile_fh_open</span><span class="p">()</span>
@@ -205,13 +215,13 @@
 <span class="sd">           If prior Siesta versions are used and this is not supplied the 0.04 Bohr displacement</span>
 <span class="sd">           will be assumed.</span>
 <span class="sd">        na : int, optional</span>
-<span class="sd">           number of atoms (for returning correct number of atoms), since Siesta 4.1-b4 this value</span>
-<span class="sd">           is written in the FC file and hence not required.</span>
+<span class="sd">           number of atoms in geometry (for returning correct number of atoms), since Siesta 4.1-b4</span>
+<span class="sd">           this value is written in the FC file and hence not required.</span>
 <span class="sd">           If prior Siesta versions are used then the file is expected to only contain 1-atom displacement.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
-<span class="sd">        numpy.ndarray : (displacement, d[xyz], [-+], atoms, xyz)</span>
+<span class="sd">        numpy.ndarray : (displaced atoms, d[xyz], [-+], total atoms, xyz)</span>
 <span class="sd">             force constant matrix times the displacement, see `read_force_constant` for details regarding</span>
 <span class="sd">             data layout.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -221,6 +231,7 @@
             <span class="k">try</span><span class="p">:</span>
                 <span class="n">displacement</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">line</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
             <span class="k">except</span><span class="p">:</span>
+                <span class="n">warn</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;</span><span class="si">{self.__class__.__name__}</span><span class="s2">.read_force assumes displacement=0.04 Bohr!&quot;</span><span class="p">)</span>
                 <span class="n">displacement</span> <span class="o">=</span> <span class="mf">0.04</span> <span class="o">*</span> <span class="n">unit_convert</span><span class="p">(</span><span class="s1">&#39;Bohr&#39;</span><span class="p">,</span> <span class="s1">&#39;Ang&#39;</span><span class="p">)</span>
 
         <span class="c1"># Since the displacements changes sign (starting with a negative sign)</span>
@@ -271,7 +282,7 @@
         <span class="c1"># Correct shape of matrix</span>
         <span class="n">fc</span><span class="o">.</span><span class="n">shape</span> <span class="o">=</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">na</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
 
-        <span class="k">return</span> <span class="n">fc</span></div></div>
+        <span class="k">return</span> <span class="n">fc</span></div>
 
 
 <span class="n">add_sile</span><span class="p">(</span><span class="s1">&#39;FC&#39;</span><span class="p">,</span> <span class="n">fcSileSiesta</span><span class="p">,</span> <span class="n">case</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">gzip</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>

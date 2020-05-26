@@ -154,6 +154,10 @@
         
           <li><a href="../../index.html">Module code</a> &raquo;</li>
         
+          <li><a href="../../sisl.html">sisl</a> &raquo;</li>
+        
+          <li><a href="../io.html">sisl.io</a> &raquo;</li>
+        
       <li>sisl.io.xsf</li>
     
     
@@ -176,7 +180,7 @@
 <span class="c1"># Import sile objects</span>
 <span class="kn">from</span> <span class="nn">.sile</span> <span class="k">import</span> <span class="o">*</span>
 
-<span class="c1"># Import the geometry object</span>
+<span class="kn">from</span> <span class="nn">sisl._internal</span> <span class="k">import</span> <span class="n">set_module</span>
 <span class="kn">from</span> <span class="nn">sisl</span> <span class="k">import</span> <span class="n">Geometry</span><span class="p">,</span> <span class="n">Atom</span><span class="p">,</span> <span class="n">SuperCell</span>
 <span class="kn">from</span> <span class="nn">sisl.utils</span> <span class="k">import</span> <span class="n">str_spec</span>
 
@@ -184,7 +188,8 @@
 <span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;xsfSile&#39;</span><span class="p">,</span> <span class="s1">&#39;axsfSile&#39;</span><span class="p">]</span>
 
 
-<div class="viewcode-block" id="xsfSile"><a class="viewcode-back" href="../../../api-generated/sisl.io.xsf.xsfSile.html#sisl.io.xsf.xsfSile">[docs]</a><span class="k">class</span> <span class="nc">xsfSile</span><span class="p">(</span><span class="n">Sile</span><span class="p">):</span>
+<span class="nd">@set_module</span><span class="p">(</span><span class="s2">&quot;sisl.io&quot;</span><span class="p">)</span>
+<span class="k">class</span> <span class="nc">xsfSile</span><span class="p">(</span><span class="n">Sile</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot; XSF file for XCrySDen &quot;&quot;&quot;</span>
 
     <span class="k">def</span> <span class="nf">_setup</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
@@ -459,15 +464,21 @@
 <span class="sd">           the parser which gets amended the additional output options.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="kn">import</span> <span class="nn">argparse</span>
+        <span class="n">ns</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;namespace&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">ns</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">class</span> <span class="nc">_</span><span class="p">():</span>
+                <span class="k">pass</span>
+            <span class="n">ns</span> <span class="o">=</span> <span class="n">_</span><span class="p">()</span>
 
         <span class="c1"># We will add the vector data</span>
         <span class="k">class</span> <span class="nc">VectorNoScale</span><span class="p">(</span><span class="n">argparse</span><span class="o">.</span><span class="n">Action</span><span class="p">):</span>
-
             <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parser</span><span class="p">,</span> <span class="n">ns</span><span class="p">,</span> <span class="n">no_value</span><span class="p">,</span> <span class="n">option_string</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-                <span class="nb">setattr</span><span class="p">(</span><span class="n">ns</span><span class="p">,</span> <span class="s1">&#39;_vector_scale&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
-        <span class="n">p</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--no-vector-scale&#39;</span><span class="p">,</span> <span class="s1">&#39;-nsv&#39;</span><span class="p">,</span> <span class="n">nargs</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+                <span class="nb">setattr</span><span class="p">(</span><span class="n">ns</span><span class="p">,</span> <span class="s2">&quot;_vector_scale&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+        <span class="n">p</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--no-vector-scale&quot;</span><span class="p">,</span> <span class="s2">&quot;-nsv&quot;</span><span class="p">,</span> <span class="n">nargs</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
                        <span class="n">action</span><span class="o">=</span><span class="n">VectorNoScale</span><span class="p">,</span>
                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;&#39;&#39;Do not modify vector components (same as --vector-scale 1.)&#39;&#39;&#39;</span><span class="p">)</span>
+        <span class="c1"># Default to scale the vectors</span>
+        <span class="nb">setattr</span><span class="p">(</span><span class="n">ns</span><span class="p">,</span> <span class="s2">&quot;_vector_scale&quot;</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
 
         <span class="c1"># We will add the vector data</span>
         <span class="k">class</span> <span class="nc">VectorScale</span><span class="p">(</span><span class="n">argparse</span><span class="o">.</span><span class="n">Action</span><span class="p">):</span>
@@ -510,6 +521,13 @@
                     <span class="n">d</span> <span class="o">=</span> <span class="p">{</span><span class="n">routine</span><span class="p">:</span> <span class="kc">True</span><span class="p">}</span>
                     <span class="n">vector</span> <span class="o">=</span> <span class="n">input_sile</span><span class="o">.</span><span class="n">read_data</span><span class="p">(</span><span class="o">*</span><span class="n">values</span><span class="p">,</span> <span class="o">**</span><span class="n">d</span><span class="p">)</span>
 
+                <span class="k">if</span> <span class="n">vector</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">values</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+                    <span class="c1"># try and see if the first argument is a str, if</span>
+                    <span class="c1"># so use that as a keyword</span>
+                    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">values</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="nb">str</span><span class="p">):</span>
+                        <span class="n">d</span> <span class="o">=</span> <span class="p">{</span><span class="n">values</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span> <span class="kc">True</span><span class="p">}</span>
+                        <span class="n">vector</span> <span class="o">=</span> <span class="n">input_sile</span><span class="o">.</span><span class="n">read_data</span><span class="p">(</span><span class="o">*</span><span class="n">values</span><span class="p">[</span><span class="mi">1</span><span class="p">:],</span> <span class="o">**</span><span class="n">d</span><span class="p">)</span>
+
                 <span class="c1"># Clean the sile</span>
                 <span class="k">del</span> <span class="n">input_sile</span>
 
@@ -520,7 +538,7 @@
                 <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">vector</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">ns</span><span class="o">.</span><span class="n">_geometry</span><span class="p">):</span>
                     <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">f</span><span class="s1">&#39;read_</span><span class="si">{routine}</span><span class="s1"> could read from file: </span><span class="si">{input_file}</span><span class="s1">, sizes does not conform to geometry.&#39;</span><span class="p">)</span>
                 <span class="nb">setattr</span><span class="p">(</span><span class="n">ns</span><span class="p">,</span> <span class="s1">&#39;_vector&#39;</span><span class="p">,</span> <span class="n">vector</span><span class="p">)</span>
-        <span class="n">p</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--vector&#39;</span><span class="p">,</span> <span class="s1">&#39;-v&#39;</span><span class="p">,</span> <span class="n">metavar</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;DATA&#39;</span><span class="p">,</span> <span class="s1">&#39;*ARGS, FILE&#39;</span><span class="p">),</span> <span class="n">nargs</span><span class="o">=</span><span class="s1">&#39;+&#39;</span><span class="p">,</span>
+        <span class="n">p</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--vector&#39;</span><span class="p">,</span> <span class="s1">&#39;-v&#39;</span><span class="p">,</span> <span class="n">metavar</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;DATA&#39;</span><span class="p">,</span> <span class="s1">&#39;*ARGS[, FILE]&#39;</span><span class="p">),</span> <span class="n">nargs</span><span class="o">=</span><span class="s1">&#39;+&#39;</span><span class="p">,</span>
                        <span class="n">action</span><span class="o">=</span><span class="n">Vectors</span><span class="p">,</span>
                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;&#39;&#39;Adds vector arrows for each atom, first argument is type (force, moment, ...).</span>
 <span class="s1">If the current input file contains the vectors no second argument is necessary, else</span>
@@ -531,12 +549,8 @@
 <span class="s1">By default the vectors scaled by 1 / max(|V|) such that the longest vector has length 1.</span>
 <span class="s1">                       &#39;&#39;&#39;</span><span class="p">)</span>
 
-        <span class="c1"># currently adding an argument that is already there does not remove the</span>
-        <span class="c1"># old one...</span>
-        <span class="n">p</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--out&#39;</span><span class="p">,</span> <span class="s1">&#39;-o&#39;</span><span class="p">,</span> <span class="n">nargs</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="n">Out</span><span class="p">,</span>
-                       <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Store the geometry/grid (plus any vector fields) the out file.&#39;</span><span class="p">)</span></div>
 
-
+<span class="nd">@set_module</span><span class="p">(</span><span class="s2">&quot;sisl.io&quot;</span><span class="p">)</span>
 <span class="k">class</span> <span class="nc">axsfSile</span><span class="p">(</span><span class="n">xsfSile</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot; AXSF file for XCrySDen</span>
 
