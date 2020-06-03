@@ -172,14 +172,17 @@
            <div itemprop="articleBody">
             
   <h1>Source code for sisl.sparse_geometry</h1><div class="highlight"><pre>
-<span></span><span class="kn">import</span> <span class="nn">warnings</span>
+<span></span><span class="kn">from</span> <span class="nn">numbers</span> <span class="k">import</span> <span class="n">Integral</span>
+<span class="kn">import</span> <span class="nn">warnings</span>
 <span class="kn">import</span> <span class="nn">functools</span> <span class="k">as</span> <span class="nn">ftool</span>
-<span class="kn">from</span> <span class="nn">numbers</span> <span class="k">import</span> <span class="n">Integral</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-<span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">int32</span>
-<span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">insert</span><span class="p">,</span> <span class="n">unique</span><span class="p">,</span> <span class="n">take</span><span class="p">,</span> <span class="n">delete</span><span class="p">,</span> <span class="n">argsort</span>
-<span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">diff</span><span class="p">,</span> <span class="n">allclose</span>
-<span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">tile</span><span class="p">,</span> <span class="n">repeat</span><span class="p">,</span> <span class="n">concatenate</span>
+<span class="kn">from</span> <span class="nn">numpy.lib.mixins</span> <span class="k">import</span> <span class="n">NDArrayOperatorsMixin</span>
+<span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="p">(</span>
+    <span class="n">int32</span><span class="p">,</span>
+    <span class="n">insert</span><span class="p">,</span> <span class="n">take</span><span class="p">,</span> <span class="n">delete</span><span class="p">,</span> <span class="n">argsort</span><span class="p">,</span>
+    <span class="n">unique</span><span class="p">,</span> <span class="n">diff</span><span class="p">,</span> <span class="n">allclose</span><span class="p">,</span>
+    <span class="n">tile</span><span class="p">,</span> <span class="n">repeat</span><span class="p">,</span> <span class="n">concatenate</span>
+<span class="p">)</span>
 
 <span class="kn">from</span> <span class="nn">._internal</span> <span class="k">import</span> <span class="n">set_module</span>
 <span class="kn">from</span> <span class="nn">.</span> <span class="k">import</span> <span class="n">_array</span> <span class="k">as</span> <span class="n">_a</span>
@@ -196,7 +199,7 @@
 <span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;SparseAtom&#39;</span><span class="p">,</span> <span class="s1">&#39;SparseOrbital&#39;</span><span class="p">]</span>
 
 
-<span class="k">class</span> <span class="nc">_SparseGeometry</span><span class="p">:</span>
+<span class="k">class</span> <span class="nc">_SparseGeometry</span><span class="p">(</span><span class="n">NDArrayOperatorsMixin</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot; Sparse object containing sparse elements for a given geometry.</span>
 
 <span class="sd">    This is a base class intended to be sub-classed because the sparsity information</span>
@@ -210,18 +213,6 @@
 <span class="sd">     - geometry</span>
 
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="c1"># These overrides are necessary to be able to perform</span>
-    <span class="c1"># ufunc operations with numpy.</span>
-    <span class="c1"># The reason is that the ufunc in numpy arrays are first</span>
-    <span class="c1"># tried when encountering operations:</span>
-    <span class="c1">#   np.int + object will invoke __add__ from ndarray, regardless</span>
-    <span class="c1"># of objects __radd__ routine.</span>
-    <span class="c1"># We thus need to define the ufunc method in this object</span>
-    <span class="c1"># to tell numpy that using numpy.ndarray.__array_ufunc__ won&#39;t work.</span>
-    <span class="c1"># Prior to 1.13 the ufunc is named numpy_ufunc, subsequent versions</span>
-    <span class="c1"># are using array_ufunc.</span>
-    <span class="n">__numpy_ufunc__</span> <span class="o">=</span> <span class="kc">None</span>
-    <span class="n">__array_ufunc__</span> <span class="o">=</span> <span class="kc">None</span>
 
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">geometry</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">nnzpr</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Create sparse object with element between orbitals &quot;&quot;&quot;</span>
@@ -920,114 +911,36 @@
 
         <span class="k">return</span> <span class="n">p</span>
 
-    <span class="c1">###############################</span>
-    <span class="c1"># Overload of math operations #</span>
-    <span class="c1">###############################</span>
-    <span class="k">def</span> <span class="nf">__add__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">b</span><span class="p">):</span>
-        <span class="n">c</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="n">get_dtype</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="n">other</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">))</span>
-        <span class="n">c</span> <span class="o">+=</span> <span class="n">b</span>
-        <span class="k">return</span> <span class="n">c</span>
-    <span class="fm">__radd__</span> <span class="o">=</span> <span class="fm">__add__</span>
+    <span class="c1"># numpy dispatch methods (same priority as SparseCSR!)</span>
+    <span class="n">__array_priority__</span> <span class="o">=</span> <span class="mi">14</span>
 
-    <span class="k">def</span> <span class="nf">__iadd__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">b</span><span class="p">):</span>
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="n">_SparseGeometry</span><span class="p">):</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span> <span class="o">+=</span> <span class="n">b</span><span class="o">.</span><span class="n">_csr</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span> <span class="o">+=</span> <span class="n">b</span>
-        <span class="k">return</span> <span class="bp">self</span>
+    <span class="k">def</span> <span class="nf">__array_ufunc__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ufunc</span><span class="p">,</span> <span class="n">method</span><span class="p">,</span> <span class="o">*</span><span class="n">inputs</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="c1"># grab the inputs and convert to the respective csr matrices</span>
+        <span class="c1"># such that we can defer the call to that function</span>
+        <span class="c1"># while converting, also grab the first _SparseGeometry</span>
+        <span class="c1"># object such that we may create the output matrix</span>
+        <span class="n">sp_inputs</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">obj</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">for</span> <span class="n">inp</span> <span class="ow">in</span> <span class="n">inputs</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">inp</span><span class="p">,</span> <span class="n">_SparseGeometry</span><span class="p">):</span>
+                <span class="c1"># simply store a reference</span>
+                <span class="c1"># if needed we will copy it later</span>
+                <span class="n">obj</span> <span class="o">=</span> <span class="n">inp</span>
+                <span class="n">sp_inputs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">inp</span><span class="o">.</span><span class="n">_csr</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">sp_inputs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">inp</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">__sub__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">b</span><span class="p">):</span>
-        <span class="n">c</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="n">get_dtype</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="n">other</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">))</span>
-        <span class="n">c</span> <span class="o">-=</span> <span class="n">b</span>
-        <span class="k">return</span> <span class="n">c</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;out&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">out</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="p">(</span><span class="n">out</span><span class="p">,)</span> <span class="o">=</span> <span class="n">out</span>
+            <span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;out&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">out</span><span class="o">.</span><span class="n">_csr</span><span class="p">,)</span>
 
-    <span class="k">def</span> <span class="nf">__rsub__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">b</span><span class="p">):</span>
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="n">_SparseGeometry</span><span class="p">):</span>
-            <span class="n">c</span> <span class="o">=</span> <span class="n">b</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="n">get_dtype</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="o">=</span><span class="n">b</span><span class="o">.</span><span class="n">dtype</span><span class="p">))</span>
-            <span class="n">c</span><span class="o">.</span><span class="n">_csr</span> <span class="o">+=</span> <span class="o">-</span><span class="mi">1</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">c</span> <span class="o">=</span> <span class="n">b</span> <span class="o">+</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span>
-        <span class="k">return</span> <span class="n">c</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">__array_ufunc__</span><span class="p">(</span><span class="n">ufunc</span><span class="p">,</span> <span class="n">method</span><span class="p">,</span> <span class="o">*</span><span class="n">sp_inputs</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">__isub__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">b</span><span class="p">):</span>
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="n">_SparseGeometry</span><span class="p">):</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span> <span class="o">-=</span> <span class="n">b</span><span class="o">.</span><span class="n">_csr</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span> <span class="o">-=</span> <span class="n">b</span>
-        <span class="k">return</span> <span class="bp">self</span>
-
-    <span class="k">def</span> <span class="nf">__mul__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">b</span><span class="p">):</span>
-        <span class="n">c</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="n">get_dtype</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="n">other</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">))</span>
-        <span class="n">c</span> <span class="o">*=</span> <span class="n">b</span>
-        <span class="k">return</span> <span class="n">c</span>
-    <span class="fm">__rmul__</span> <span class="o">=</span> <span class="fm">__mul__</span>
-
-    <span class="k">def</span> <span class="nf">__imul__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">b</span><span class="p">):</span>
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="n">_SparseGeometry</span><span class="p">):</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span> <span class="o">*=</span> <span class="n">b</span><span class="o">.</span><span class="n">_csr</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span> <span class="o">*=</span> <span class="n">b</span>
-        <span class="k">return</span> <span class="bp">self</span>
-
-    <span class="k">def</span> <span class="nf">__div__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">b</span><span class="p">):</span>
-        <span class="n">c</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="n">get_dtype</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="n">other</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">))</span>
-        <span class="n">c</span> <span class="o">/=</span> <span class="n">b</span>
-        <span class="k">return</span> <span class="n">c</span>
-
-    <span class="k">def</span> <span class="nf">__rdiv__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">b</span><span class="p">):</span>
-        <span class="n">c</span> <span class="o">=</span> <span class="n">b</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="n">get_dtype</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="o">=</span><span class="n">b</span><span class="o">.</span><span class="n">dtype</span><span class="p">))</span>
-        <span class="n">c</span> <span class="o">/=</span> <span class="bp">self</span>
-        <span class="k">return</span> <span class="n">c</span>
-
-    <span class="k">def</span> <span class="nf">__idiv__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">b</span><span class="p">):</span>
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="n">_SparseGeometry</span><span class="p">):</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span> <span class="o">/=</span> <span class="n">b</span><span class="o">.</span><span class="n">_csr</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span> <span class="o">/=</span> <span class="n">b</span>
-        <span class="k">return</span> <span class="bp">self</span>
-
-    <span class="k">def</span> <span class="nf">__floordiv__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">b</span><span class="p">):</span>
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="n">_SparseGeometry</span><span class="p">):</span>
-            <span class="k">raise</span> <span class="ne">NotImplementedError</span>
-        <span class="n">c</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="n">get_dtype</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="n">other</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">))</span>
-        <span class="n">c</span> <span class="o">//=</span> <span class="n">b</span>
-        <span class="k">return</span> <span class="n">c</span>
-
-    <span class="k">def</span> <span class="nf">__ifloordiv__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">b</span><span class="p">):</span>
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="n">_SparseGeometry</span><span class="p">):</span>
-            <span class="k">raise</span> <span class="ne">NotImplementedError</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span> <span class="o">//=</span> <span class="n">b</span>
-        <span class="k">return</span> <span class="bp">self</span>
-
-    <span class="k">def</span> <span class="nf">__truediv__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">b</span><span class="p">):</span>
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="n">_SparseGeometry</span><span class="p">):</span>
-            <span class="k">raise</span> <span class="ne">NotImplementedError</span>
-        <span class="n">c</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="n">get_dtype</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="n">other</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">))</span>
-        <span class="n">c</span> <span class="o">/=</span> <span class="n">b</span>
-        <span class="k">return</span> <span class="n">c</span>
-
-    <span class="k">def</span> <span class="nf">__itruediv__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">b</span><span class="p">):</span>
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="n">_SparseGeometry</span><span class="p">):</span>
-            <span class="k">raise</span> <span class="ne">NotImplementedError</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span> <span class="o">/=</span> <span class="n">b</span>
-        <span class="k">return</span> <span class="bp">self</span>
-
-    <span class="k">def</span> <span class="nf">__pow__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">b</span><span class="p">):</span>
-        <span class="n">c</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="n">get_dtype</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="n">other</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">))</span>
-        <span class="n">c</span> <span class="o">**=</span> <span class="n">b</span>
-        <span class="k">return</span> <span class="n">c</span>
-
-    <span class="k">def</span> <span class="nf">__rpow__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">b</span><span class="p">):</span>
-        <span class="n">c</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="n">get_dtype</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="n">other</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">))</span>
-        <span class="n">c</span><span class="o">.</span><span class="n">_csr</span> <span class="o">=</span> <span class="n">b</span> <span class="o">**</span> <span class="n">c</span><span class="o">.</span><span class="n">_csr</span>
-        <span class="k">return</span> <span class="n">c</span>
-
-    <span class="k">def</span> <span class="nf">__ipow__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">b</span><span class="p">):</span>
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="n">_SparseGeometry</span><span class="p">):</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span> <span class="o">**=</span> <span class="n">b</span><span class="o">.</span><span class="n">_csr</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span> <span class="o">**=</span> <span class="n">b</span>
-        <span class="k">return</span> <span class="bp">self</span>
+        <span class="k">if</span> <span class="n">out</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">out</span> <span class="o">=</span> <span class="n">obj</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+            <span class="n">out</span><span class="o">.</span><span class="n">_csr</span> <span class="o">=</span> <span class="n">result</span>
+        <span class="k">return</span> <span class="n">out</span>
 
     <span class="k">def</span> <span class="nf">__getstate__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Return dictionary with the current state &quot;&quot;&quot;</span>
@@ -1577,7 +1490,7 @@
 <span class="sd">            the edges are returned only for the given atom (but by using  all orbitals of the</span>
 <span class="sd">            requested atom). The returned edges are also atoms.</span>
 <span class="sd">        exclude : int or list of int or None, optional</span>
-<span class="sd">           remove edges which are in the `exclude` list.</span>
+<span class="sd">           remove edges which are in the `exclude` list, this list refers to orbitals.</span>
 <span class="sd">        orbital : int or list of int</span>
 <span class="sd">            the edges are returned only for the given orbital. The returned edges are orbitals.</span>
 
@@ -1586,7 +1499,7 @@
 <span class="sd">        SparseCSR.edges: the underlying routine used for extracting the edges</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">atom</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">orbital</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39;.edges must have either &quot;atom&quot; or &quot;orbital&quot; keyword defined.&#39;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;</span><span class="si">{self.__class__.__name__}</span><span class="s2">.edges must have either &#39;atom&#39; or &#39;orbital&#39; keyword defined.&quot;</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">orbital</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">unique</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">o2a</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">edges</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">a2o</span><span class="p">(</span><span class="n">atom</span><span class="p">,</span> <span class="kc">True</span><span class="p">),</span> <span class="n">exclude</span><span class="p">)))</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">edges</span><span class="p">(</span><span class="n">orbital</span><span class="p">,</span> <span class="n">exclude</span><span class="p">)</span></div>

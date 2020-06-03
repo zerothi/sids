@@ -384,6 +384,7 @@
         <span class="n">S</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">_D</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">dS</span><span class="p">[:]</span>
 
         <span class="c1"># Convert to sisl supercell</span>
+        <span class="c1"># equivalent as _csr_from_siesta with explicit isc from file</span>
         <span class="n">_csr_from_sc_off</span><span class="p">(</span><span class="n">S</span><span class="o">.</span><span class="n">geometry</span><span class="p">,</span> <span class="n">isc</span><span class="p">,</span> <span class="n">S</span><span class="o">.</span><span class="n">_csr</span><span class="p">)</span>
 
         <span class="k">return</span> <span class="n">S</span></div>
@@ -444,6 +445,7 @@
         <span class="n">_mat_spin_convert</span><span class="p">(</span><span class="n">H</span><span class="p">)</span>
 
         <span class="c1"># Convert to sisl supercell</span>
+        <span class="c1"># equivalent as _csr_from_siesta with explicit isc from file</span>
         <span class="n">_csr_from_sc_off</span><span class="p">(</span><span class="n">H</span><span class="o">.</span><span class="n">geometry</span><span class="p">,</span> <span class="n">isc</span><span class="p">,</span> <span class="n">H</span><span class="o">.</span><span class="n">_csr</span><span class="p">)</span>
 
         <span class="c1"># Find all indices where dS == 1 (remember col is in fortran indices)</span>
@@ -465,11 +467,7 @@
 
         <span class="c1"># Convert to siesta CSR</span>
         <span class="n">_csr_to_siesta</span><span class="p">(</span><span class="n">H</span><span class="o">.</span><span class="n">geometry</span><span class="p">,</span> <span class="n">csr</span><span class="p">)</span>
-        <span class="c1"># TODO consider removing finalize here!</span>
-        <span class="c1"># If tbtrans really needs this, then we should definitely do this</span>
-        <span class="c1"># in tbtrans!</span>
-        <span class="c1"># I.e. we should probably just do finalize(sort=False)</span>
-        <span class="n">csr</span><span class="o">.</span><span class="n">finalize</span><span class="p">()</span>
+        <span class="n">csr</span><span class="o">.</span><span class="n">finalize</span><span class="p">(</span><span class="n">sort</span><span class="o">=</span><span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;sort&quot;</span><span class="p">,</span> <span class="kc">True</span><span class="p">))</span>
         <span class="n">_mat_spin_convert</span><span class="p">(</span><span class="n">csr</span><span class="p">,</span> <span class="n">H</span><span class="o">.</span><span class="n">spin</span><span class="p">)</span>
 
         <span class="c1"># Extract the data to pass to the fortran routine</span>
@@ -480,9 +478,9 @@
         <span class="k">if</span> <span class="n">H</span><span class="o">.</span><span class="n">orthogonal</span><span class="p">:</span>
             <span class="n">h</span> <span class="o">=</span> <span class="n">csr</span><span class="o">.</span><span class="n">_D</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">,</span> <span class="s1">&#39;C&#39;</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
             <span class="n">s</span> <span class="o">=</span> <span class="n">csr</span><span class="o">.</span><span class="n">diags</span><span class="p">(</span><span class="mf">1.</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
-            <span class="c1"># Ensure all data is correctly formatted (i.e. have the same sparsity pattern</span>
+            <span class="c1"># Ensure all data is correctly formatted (i.e. have the same sparsity pattern)</span>
             <span class="n">s</span><span class="o">.</span><span class="n">align</span><span class="p">(</span><span class="n">csr</span><span class="p">)</span>
-            <span class="n">s</span><span class="o">.</span><span class="n">finalize</span><span class="p">()</span>
+            <span class="n">s</span><span class="o">.</span><span class="n">finalize</span><span class="p">(</span><span class="n">sort</span><span class="o">=</span><span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;sort&quot;</span><span class="p">,</span> <span class="kc">True</span><span class="p">))</span>
             <span class="k">if</span> <span class="n">s</span><span class="o">.</span><span class="n">nnz</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">h</span><span class="p">):</span>
                 <span class="k">raise</span> <span class="n">SislError</span><span class="p">(</span><span class="s1">&#39;The diagonal elements of your orthogonal Hamiltonian &#39;</span>
                                 <span class="s1">&#39;have not been defined, this is a requirement.&#39;</span><span class="p">)</span>
@@ -568,12 +566,14 @@
         <span class="sd">&quot;&quot;&quot; Writes the density matrix to a siesta.DM file &quot;&quot;&quot;</span>
         <span class="n">csr</span> <span class="o">=</span> <span class="n">DM</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
         <span class="c1"># This ensures that we don&#39;t have any *empty* elements</span>
-        <span class="n">csr</span><span class="o">.</span><span class="n">finalize</span><span class="p">(</span><span class="n">sort</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">csr</span><span class="o">.</span><span class="n">nnz</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
             <span class="k">raise</span> <span class="n">SileError</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;.write_density_matrix cannot write &#39;</span>
                             <span class="s1">&#39;a zero element sparse matrix!&#39;</span><span class="p">)</span>
 
         <span class="n">_csr_to_siesta</span><span class="p">(</span><span class="n">DM</span><span class="o">.</span><span class="n">geometry</span><span class="p">,</span> <span class="n">csr</span><span class="p">)</span>
+        <span class="c1"># We do not really need to sort this one, but we do for consistency</span>
+        <span class="c1"># of the interface.</span>
+        <span class="n">csr</span><span class="o">.</span><span class="n">finalize</span><span class="p">(</span><span class="n">sort</span><span class="o">=</span><span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;sort&quot;</span><span class="p">,</span> <span class="kc">True</span><span class="p">))</span>
         <span class="n">_mat_spin_convert</span><span class="p">(</span><span class="n">csr</span><span class="p">,</span> <span class="n">DM</span><span class="o">.</span><span class="n">spin</span><span class="p">)</span>
 
         <span class="c1"># Get DM</span>
@@ -658,7 +658,7 @@
         <span class="n">_bin_check</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;read_fermi_level&#39;</span><span class="p">,</span> <span class="s1">&#39;could not read fermi-level.&#39;</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">Ef</span></div>
 
-<div class="viewcode-block" id="tsdeSileSiesta.write_density_matrices"><a class="viewcode-back" href="../../../../api-generated/sisl.io.siesta.tsdeSileSiesta.html#sisl.io.siesta.tsdeSileSiesta.write_density_matrices">[docs]</a>    <span class="k">def</span> <span class="nf">write_density_matrices</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">DM</span><span class="p">,</span> <span class="n">EDM</span><span class="p">,</span> <span class="n">Ef</span><span class="o">=</span><span class="mf">0.</span><span class="p">):</span>
+<div class="viewcode-block" id="tsdeSileSiesta.write_density_matrices"><a class="viewcode-back" href="../../../../api-generated/sisl.io.siesta.tsdeSileSiesta.html#sisl.io.siesta.tsdeSileSiesta.write_density_matrices">[docs]</a>    <span class="k">def</span> <span class="nf">write_density_matrices</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">DM</span><span class="p">,</span> <span class="n">EDM</span><span class="p">,</span> <span class="n">Ef</span><span class="o">=</span><span class="mf">0.</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="sa">r</span><span class="sd">&quot;&quot;&quot; Writes the density matrix to a siesta.DM file</span>
 
 <span class="sd">        Parameters</span>
@@ -674,9 +674,6 @@
         <span class="n">EDMcsr</span> <span class="o">=</span> <span class="n">EDM</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
         <span class="n">DMcsr</span><span class="o">.</span><span class="n">align</span><span class="p">(</span><span class="n">EDMcsr</span><span class="p">)</span>
         <span class="n">EDMcsr</span><span class="o">.</span><span class="n">align</span><span class="p">(</span><span class="n">DMcsr</span><span class="p">)</span>
-        <span class="c1"># This ensures that we don&#39;t have any *empty* elements</span>
-        <span class="n">DMcsr</span><span class="o">.</span><span class="n">finalize</span><span class="p">(</span><span class="n">sort</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
-        <span class="n">EDMcsr</span><span class="o">.</span><span class="n">finalize</span><span class="p">(</span><span class="n">sort</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="n">DMcsr</span><span class="o">.</span><span class="n">nnz</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
             <span class="k">raise</span> <span class="n">SileError</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;.write_density_matrices cannot write &#39;</span>
@@ -684,6 +681,9 @@
 
         <span class="n">_csr_to_siesta</span><span class="p">(</span><span class="n">DM</span><span class="o">.</span><span class="n">geometry</span><span class="p">,</span> <span class="n">DMcsr</span><span class="p">)</span>
         <span class="n">_csr_to_siesta</span><span class="p">(</span><span class="n">DM</span><span class="o">.</span><span class="n">geometry</span><span class="p">,</span> <span class="n">EDMcsr</span><span class="p">)</span>
+        <span class="n">sort</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;sort&quot;</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+        <span class="n">DMcsr</span><span class="o">.</span><span class="n">finalize</span><span class="p">(</span><span class="n">sort</span><span class="o">=</span><span class="n">sort</span><span class="p">)</span>
+        <span class="n">EDMcsr</span><span class="o">.</span><span class="n">finalize</span><span class="p">(</span><span class="n">sort</span><span class="o">=</span><span class="n">sort</span><span class="p">)</span>
         <span class="n">_mat_spin_convert</span><span class="p">(</span><span class="n">DMcsr</span><span class="p">,</span> <span class="n">DM</span><span class="o">.</span><span class="n">spin</span><span class="p">)</span>
         <span class="n">_mat_spin_convert</span><span class="p">(</span><span class="n">EDMcsr</span><span class="p">,</span> <span class="n">EDM</span><span class="o">.</span><span class="n">spin</span><span class="p">)</span>
 
