@@ -25,7 +25,7 @@ try:
     import sisl
     print(f"Located sisl here: {sisl.__path__}")
 except:
-    _pp = os.environ["PYTHONPATH"]
+    _pp = os.environ.get("PYTHONPATH", "")
     if len(_pp) > 0:
         os.environ["PYTHONPATH"] = f"{_root}:{_pp}"
     else:
@@ -418,10 +418,10 @@ numpydoc_show_class_members = False
 # Python, numpy, scipy and matplotlib specify https as the default objects.inv
 # directory. So please retain these links.
 intersphinx_mapping = {
-    'python': ('https://docs.python.org/3', None),
-    'numpy': ('https://docs.scipy.org/doc/numpy', None),
-    'scipy': ('https://docs.scipy.org/doc/scipy/reference', None),
-    'matplotlib': ('https://matplotlib.org', None),
+    'python': ('https://docs.python.org/3/', None),
+    'numpy': ('https://numpy.org/doc/stable/', None),
+    'scipy': ('https://docs.scipy.org/doc/scipy/reference/', None),
+    'matplotlib': ('https://matplotlib.org/', None),
     'xarray': ('https://xarray.pydata.org/en/stable/', None),
 }
 
