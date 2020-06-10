@@ -109,7 +109,7 @@ if not cython:
 
 
 # Custom command classes
-cmdclass = {"sdist": sdist}
+cmdclass = {}
 
 
 # Now create the build extensions
@@ -146,6 +146,30 @@ macros.append(("NPY_NO_DEPRECATED_API", "0"))
 # We do not need it
 #  https://cython.readthedocs.io/en/latest/src/userguide/source_files_and_compilation.html#integrating-multiple-modules
 macros.append(("CYTHON_NO_PYINIT_EXPORT", "1"))
+
+
+class EnsureSource_sdist(sdist):
+    """Ensure Cython has runned on all pyx files (i.e. we need c sources)."""
+
+    def initialize_options(self):
+        super().initialize_options()
+
+    def run(self):
+        if "cython" in cmdclass:
+            self.run_command("cython")
+        else:
+            pyx_files = [(_pyxfiles, "c"), (self._cpp_pyxfiles, "cpp")]
+
+            for pyxfiles, extension in [(_pyxfiles, "c")]:
+                for pyxfile in pyxfiles:
+                    sourcefile = pyxfile[:-3] + extension
+                    msg = (f"{extension}-source file '{sourcefile}' not found.\n"
+                           "Run 'setup.py cython' before sdist."
+                    )
+                    assert os.path.isfile(sourcefile), msg
+        super().run()
+
+cmdclass["sdist"] = EnsureSource_sdist
 
 
 _pyxfiles = [
@@ -196,13 +220,10 @@ extensions = []
 for name, data in ext_cython.items():
     sources = [data["pyxfile"] + suffix] + data.get("sources", [])
 
-    # Get options for extensions
-    include = data.get("include", None)
-
     ext = Extension(name,
         sources=sources,
         depends=data.get("depends", []),
-        include_dirs=include,
+        include_dirs=data.get("include", None),
         language=data.get("language", "c"),
         define_macros=macros + data.get("macros", []),
         extra_compile_args=extra_compile_args,
@@ -231,15 +252,10 @@ ext_fortran = {
 }
 
 for name, data in ext_fortran.items():
-    sources = data.get("sources")
-
-    # Get options for extensions
-    include = data.get("include", None)
-
     ext = FortranExtension(name,
-        sources=sources,
+        sources=data.get("sources"),
         depends=data.get("depends", []),
-        include_dirs=include,
+        include_dirs=data.get("include", None),
         define_macros=macros + data.get("macros", []),
         extra_compile_args=extra_compile_args,
         extra_link_args=extra_link_args,
@@ -341,18 +357,18 @@ def cythonizer(extensions, *args, **kwargs):
 
 
 MAJOR = 0
-MINOR = 9
-MICRO = 8
+MINOR = 10
+MICRO = 0
 ISRELEASED = True
 VERSION = '%d.%d.%d' % (MAJOR, MINOR, MICRO)
-GIT_REVISION = "13a327bd8e27d689f119bafdf38519bab7f6e0f6"
+GIT_REVISION = "ed02b72d44a47c475a253874e51683ed6a6cc169"
 REVISION_YEAR = 2020
 
 
 DISTNAME = "sisl"
-LICENSE = "LGPLv3",
+LICENSE = "LGPLv3"
 AUTHOR = "sisl developers"
-URL = "https://github.com/zerothi/sisl",
+URL = "https://github.com/zerothi/sisl"
 DOWNLOAD_URL = "https://github.com/zerothi/sisl/releases"
 PROJECT_URLS = {
     "Bug Tracker": "https://github.com/zerothi/sisl/issues",
@@ -415,17 +431,31 @@ metadata = dict(
     description="Python interface for tight-binding model creation and analysis of DFT output. Input mechanism for large scale transport calculations using NEGF TBtrans (TranSiesta)",
     long_description=readme(),
     long_description_content_type="text/markdown",
-    url="http://github.com/zerothi/sisl",
+    url="https://github.com/zerothi/sisl",
     download_url=DOWNLOAD_URL,
     license=LICENSE,
-    packages=find_packages(include=["sisl", "sisl.*"]),
+    # Ensure the packages are being found in the correct locations
+    package_dir={"sisl_toolbox": "toolbox"},
+    packages=
+    # We need to add sisl.* since that recursively adds modules
+    find_packages(include=["sisl", "sisl.*"])
+    +
+    # Add toolboxes
+    # This requires some name-mangling since we can't place them
+    # in the correct place unless we use 'package_dir' and this trick.
+    # 1. Here we list files as they should appear in packages for end-users
+    # 2. In 'package_dir' we defer the package name to the local file path
+    list(map(lambda x: f"sisl_toolbox.{x}", find_packages("toolbox"))),
     ext_modules=cythonizer(extensions, compiler_directives=directives),
     entry_points={
         "console_scripts":
         ["sgeom = sisl.geometry:sgeom",
          "sgrid = sisl.grid:sgrid",
          "sdata = sisl.utils._sisl_cmd:sisl_cmd",
-         "sisl = sisl.utils._sisl_cmd:sisl_cmd"]
+         "sisl = sisl.utils._sisl_cmd:sisl_cmd",
+         # Add toolbox CLI
+         "ts_poisson = sisl_toolbox.transiesta.poisson.poisson_explicit:poisson_explicit_cli",
+        ],
     },
     classifiers=CLASSIFIERS,
     platforms="any",
@@ -557,5 +587,4 @@ if __name__ == "__main__":
 
     # Freeze to support parallel compilation when using spawn instead of fork
     multiprocessing.freeze_support()
-    # Main setup of python modules
     setup(**metadata)

@@ -181,7 +181,7 @@ class xsfSile(Sile):
         elif len(atom) == 1 and atom[0] == -999:
             geom = None
         else:
-            geom = Geometry(xyz, atom=atom, sc=SuperCell(cell))
+            geom = Geometry(xyz, atoms=atom, sc=SuperCell(cell))
 
         if data:
             return geom, dat
@@ -213,7 +213,7 @@ class xsfSile(Sile):
         """
         sile_raise_write(self)
 
-        geom = kwargs.get('geometry', args[0].geom)
+        geom = kwargs.get('geometry', args[0].geometry)
         if geom is None:
             geom = Geometry([0, 0, 0], Atom(-999), sc=args[0].sc)
         self.write_geometry(geom)
