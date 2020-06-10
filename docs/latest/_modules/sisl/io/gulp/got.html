@@ -315,7 +315,7 @@
                         <span class="k">break</span>
 
                     <span class="n">ls</span> <span class="o">=</span> <span class="n">l</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
-                    <span class="n">Z</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Atom</span><span class="p">(</span><span class="n">ls</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">orbital</span><span class="o">=</span><span class="n">orbs</span><span class="p">))</span>
+                    <span class="n">Z</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Atom</span><span class="p">(</span><span class="n">ls</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">orbitals</span><span class="o">=</span><span class="n">orbs</span><span class="p">))</span>
                     <span class="n">xyz</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="nb">float</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">ls</span><span class="p">[</span><span class="mi">3</span><span class="p">:</span><span class="mi">6</span><span class="p">]])</span>
 
                 <span class="c1"># Convert to array and correct size</span>
@@ -373,7 +373,6 @@
                 <span class="n">v</span><span class="o">.</span><span class="n">data</span> <span class="o">*=</span> <span class="n">scale</span> <span class="o">**</span> <span class="mi">2</span>
                 <span class="n">v</span> <span class="o">=</span> <span class="n">DynamicalMatrix</span><span class="o">.</span><span class="n">fromsp</span><span class="p">(</span><span class="n">geom</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span>
                 <span class="k">if</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;hermitian&quot;</span><span class="p">,</span> <span class="kc">True</span><span class="p">):</span>
-                    <span class="n">v</span><span class="o">.</span><span class="n">finalize</span><span class="p">()</span>
                     <span class="n">v</span> <span class="o">=</span> <span class="p">(</span><span class="n">v</span> <span class="o">+</span> <span class="n">v</span><span class="o">.</span><span class="n">transpose</span><span class="p">())</span> <span class="o">*</span> <span class="mf">0.5</span>
                 <span class="k">return</span> <span class="n">v</span>
 
@@ -456,8 +455,11 @@
 
         <span class="n">fc</span> <span class="o">=</span> <span class="n">fcSileGULP</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">read_force_constant</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 
-        <span class="k">if</span> <span class="n">fc</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="n">geometry</span><span class="o">.</span><span class="n">no</span><span class="p">:</span>
-            <span class="n">warn</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39;read_dynamical_matrix(FC) inconsistent force constant file, number of atoms not correct!&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">fc</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">//</span> <span class="mi">3</span> <span class="o">!=</span> <span class="n">geometry</span><span class="o">.</span><span class="n">na</span><span class="p">:</span>
+            <span class="n">warn</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;</span><span class="si">{self.__class__.__name__}</span><span class="s2">.read_dynamical_matrix(FC) inconsistent force constant file, na_file={fc.shape[0]//3}, na_geom=</span><span class="si">{geometry.na}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="kc">None</span>
+        <span class="k">elif</span> <span class="n">fc</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="n">geometry</span><span class="o">.</span><span class="n">no</span><span class="p">:</span>
+            <span class="n">warn</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;</span><span class="si">{self.__class__.__name__}</span><span class="s2">.read_dynamical_matrix(FC) inconsistent geometry, no_file=</span><span class="si">{fc.shape[0]}</span><span class="s2">, no_geom=</span><span class="si">{geometry.no}</span><span class="s2">&quot;</span><span class="p">)</span>
             <span class="k">return</span> <span class="kc">None</span>
 
         <span class="c1"># Construct orbital mass ** (-.5)</span>
