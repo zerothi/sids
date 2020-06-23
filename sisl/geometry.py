@@ -3490,8 +3490,8 @@ class Geometry(SuperCellChild):
         atoms = self._sanitize_atoms(atoms)
         if not all:
             return self.firsto[atoms % self.na] + (atoms // self.na) * self.no
-        off = (atoms // self.na) * self.no
-        atoms = atoms % self.na
+        off = np.divmod(atoms, self.na, out=(None, atoms))[0]
+        off *= self.no
         ob = self.firsto[atoms] + off
         oe = self.lasto[atoms] + off + 1
 
@@ -3520,10 +3520,11 @@ class Geometry(SuperCellChild):
                 return np.unique(np.argmax(io % self.no <= self.lasto) + (io // self.no) * self.na)
             return np.argmax(io % self.no <= self.lasto) + (io // self.no) * self.na
 
-        a = list_index_le(_a.asarrayi(io).ravel() % self.no, self.lasto)
+        isc, io = np.divmod(_a.asarrayi(io).ravel(), self.no)
+        a = list_index_le(io, self.lasto)
         if unique:
-            return np.unique(a + (io // self.no) * self.na)
-        return a + (io // self.no) * self.na
+            return np.unique(a + isc * self.na)
+        return a + isc * self.na
 
     def uc2sc(self, atoms, unique=False):
         """ Returns atom from unit-cell indices to supercell indices, possibly removing dublicates
@@ -3706,7 +3707,7 @@ class Geometry(SuperCellChild):
         """ Returns the geometry as an ASE ``Atoms`` object """
         from ase import Atoms as ASE_Atoms
         return ASE_Atoms(symbols=self.atoms.Z, positions=self.xyz.tolist(),
-                         cell=self.cell.tolist())
+                         cell=self.cell.tolist(), pbc=self.nsc > 1)
 
     def equal(self, other, R=True, tol=1e-4):
         """ Whether two geometries are the same (optional not check of the orbital radius)

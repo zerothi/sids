@@ -5,9 +5,11 @@ import ast
 import operator as op
 from numbers import Integral
 from math import pi
+from importlib import import_module
 
-__all__ = ['merge_instances', 'str_spec', 'direction', 'angle']
-__all__ += ['iter_shape', 'math_eval', 'allow_kwargs']
+__all__ = ["merge_instances", "str_spec", "direction", "angle"]
+__all__ += ["iter_shape", "math_eval", "allow_kwargs"]
+__all__ += ["import_attr"]
 
 
 # supported operators
@@ -26,14 +28,14 @@ def math_eval(expr):
 
     Examples
     --------
-    >>> math_eval('2^6')
+    >>> math_eval("2^6")
     4
-    >>> math_eval('2**6')
+    >>> math_eval("2**6")
     64
-    >>> math_eval('1 + 2*3**(4^5) / (6 + -7)')
+    >>> math_eval("1 + 2*3**(4^5) / (6 + -7)")
     -5.0
     """
-    return _eval(ast.parse(expr, mode='eval').body)
+    return _eval(ast.parse(expr, mode="eval").body)
 
 
 def _eval(node):
@@ -56,9 +58,9 @@ def merge_instances(*args, **kwargs):
        all objects dictionaries gets appended to a new class
        which is returned.
     name : str, optional
-       name of class to merge, default to ``'MergedClass'``
+       name of class to merge, default to ``"MergedClass"``
     """
-    name = kwargs.get('name', 'MergedClass')
+    name = kwargs.get("name", "MergedClass")
     # We must make a new-type class
     cls = type(name, (object,), {})
     # Create holder of class
@@ -129,16 +131,16 @@ def str_spec(name):
 
     Examples
     --------
-    >>> str_spec('hello')
-    ('hello', None)
-    >>> str_spec('hello{TEST}')
-    ('hello', 'TEST')
+    >>> str_spec("hello")
+    ("hello", None)
+    >>> str_spec("hello{TEST}")
+    ("hello", "TEST")
     """
-    if not name.endswith('}'):
+    if not name.endswith("}"):
         return name, None
 
-    lname = name[:-1].split('{')
-    return '{'.join(lname[:-1]), lname[-1]
+    lname = name[:-1].split("{")
+    return "{".join(lname[:-1]), lname[-1]
 
 
 # Transform a string to a Cartesian direction
@@ -147,7 +149,7 @@ def direction(d):
 
     Parameters
     ----------
-    d : {0, 'X', 'x', 1, 'Y', 'y',  2, 'Z', 'z'}
+    d : {0, "X", "x", 1, "Y", "y",  2, "Z", "z"}
        returns the integer that corresponds to the coordinate index.
        If it is an integer, it is returned *as is*.
 
@@ -160,15 +162,15 @@ def direction(d):
     --------
     >>> direction(0)
     0
-    >>> direction('Y')
+    >>> direction("Y")
     1
-    >>> direction('z')
+    >>> direction("z")
     2
-    >>> direction('2')
+    >>> direction("2")
     2
-    >>> direction(' 2')
+    >>> direction(" 2")
     2
-    >>> direction('b')
+    >>> direction("b")
     1
     """
     if isinstance(d, Integral):
@@ -177,10 +179,10 @@ def direction(d):
     # We take it as a string
     d = d.lower().strip()
     # We must use an array to not allow 'xy' input
-    if d in 'x y z a b c 0 1 2'.split():
-        return 'xa0yb1zc2'.index(d) // 3
+    if d in ("x", "y", "z", "a", "b", "c", "0", "1", "2"):
+        return "xa0yb1zc2".index(d) // 3
 
-    raise ValueError('Input direction is not an integer, nor a string in "xyz/abc/012".')
+    raise ValueError("direction: Input direction is not an integer, nor a string in 'xyz/abc/012'")
 
 
 # Transform an input to an angle
@@ -211,20 +213,20 @@ def angle(s, rad=True, in_rad=True):
     """
     s = s.lower()
 
-    if s.startswith('r'):
+    if s.startswith("r"):
         in_rad = True
-    elif s.startswith('a'):
+    elif s.startswith("a"):
         in_rad = False
-    if s.endswith('r'):
+    if s.endswith("r"):
         rad = True
-    elif s.endswith('a'):
+    elif s.endswith("a"):
         rad = False
 
     # Remove all r/a's and remove white-space
-    s = s.replace('r', '').replace('a', '').replace(' ', '')
+    s = s.replace("r", "").replace("a", "").replace(" ", "")
 
     # Figure out if Pi is circumfered by */+-
-    spi = s.split('pi')
+    spi = s.split("pi")
     nspi = len(spi)
     if nspi > 1:
         # We have pi at least in one place.
@@ -233,13 +235,13 @@ def angle(s, rad=True, in_rad=True):
             if len(si) == 0:
                 continue
             if i < nspi - 1:
-                if not si.endswith(('*', '/', '+', '-')):
-                    # it *MUST* be '*'
-                    spi[i] = spi[i] + '*'
+                if not si.endswith(("*", "/", "+", "-")):
+                    # it *MUST* be "*"
+                    spi[i] = spi[i] + "*"
             if 0 < i:
-                if not si.startswith(('*', '/', '+', '-')):
-                    # it *MUST* be '*'
-                    spi[i] = '*' + spi[i]
+                if not si.startswith(("*", "/", "+", "-")):
+                    # it *MUST* be "*"
+                    spi[i] = "*" + spi[i]
 
         # Now insert Pi dependent on the input type
         if in_rad:
@@ -247,7 +249,7 @@ def angle(s, rad=True, in_rad=True):
         else:
             Pi = 180.
 
-        s = (f'{Pi}').join(spi)
+        s = (f"{Pi}").join(spi)
 
     # We have now transformed all values
     # to the correct numerical values and we calculate
@@ -261,9 +263,6 @@ def angle(s, rad=True, in_rad=True):
     # Both radians and in_radians are equivalent
     # so return as-is
     return ra
-
-
-_ispy3 = sys.version[0] == '3'
 
 
 def allow_kwargs(*args):
@@ -282,20 +281,16 @@ def allow_kwargs(*args):
         if func is None:
             return None
 
-        # Retrieve names
-        if _ispy3:
-            # Build list of arguments and keyword arguments
-            sig = inspect.signature(func)
-            arg_names = []
-            kwargs_name = None
-            for name, p in sig.parameters.items():
-                if p.kind == p.POSITIONAL_ONLY or p.kind == p.POSITIONAL_OR_KEYWORD \
-                   or p.kind == p.KEYWORD_ONLY:
-                    arg_names.append(name)
-                elif p.kind == p.VAR_KEYWORD:
-                    kwargs_name = name
-        else:
-            arg_names, _, kwargs_name, _ = inspect.getargspec(func)
+        # Build list of arguments and keyword arguments
+        sig = inspect.signature(func)
+        arg_names = []
+        kwargs_name = None
+        for name, p in sig.parameters.items():
+            if p.kind == p.POSITIONAL_ONLY or p.kind == p.POSITIONAL_OR_KEYWORD \
+               or p.kind == p.KEYWORD_ONLY:
+                arg_names.append(name)
+            elif p.kind == p.VAR_KEYWORD:
+                kwargs_name = name
 
         if not kwargs_name is None:
             return func
@@ -321,3 +316,22 @@ def allow_kwargs(*args):
         return dec_func
 
     return deco
+
+
+def import_attr(attr_path):
+    """ Returns an attribute from a full module path
+
+    Examples
+    --------
+    >>> func = import_attr("sisl.utils.import_attr")
+    >>> assert func is import_attr
+
+    Parameters
+    -----------
+    attr_path: str
+        the module path to the attribute
+    """
+    module, variable = attr_path.rsplit(".", 1)
+
+    module = import_module(module)
+    return getattr(module, variable)
