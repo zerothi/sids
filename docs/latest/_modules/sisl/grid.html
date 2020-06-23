@@ -182,6 +182,7 @@
 <span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">ogrid</span><span class="p">,</span> <span class="n">take</span>
 <span class="kn">from</span> <span class="nn">scipy.sparse</span> <span class="k">import</span> <span class="n">diags</span> <span class="k">as</span> <span class="n">sp_diags</span>
 <span class="kn">from</span> <span class="nn">scipy.sparse</span> <span class="k">import</span> <span class="n">SparseEfficiencyWarning</span>
+<span class="kn">from</span> <span class="nn">scipy.ndimage</span> <span class="k">import</span> <span class="n">zoom</span> <span class="k">as</span> <span class="n">ndimage_zoom</span>
 
 <span class="kn">from</span> <span class="nn">._internal</span> <span class="k">import</span> <span class="n">set_module</span>
 <span class="kn">from</span> <span class="nn">.</span> <span class="k">import</span> <span class="n">_array</span> <span class="k">as</span> <span class="n">_a</span>
@@ -191,6 +192,7 @@
 <span class="kn">from</span> <span class="nn">.utils</span> <span class="k">import</span> <span class="n">default_ArgumentParser</span><span class="p">,</span> <span class="n">default_namespace</span>
 <span class="kn">from</span> <span class="nn">.utils</span> <span class="k">import</span> <span class="n">cmd</span><span class="p">,</span> <span class="n">strseq</span><span class="p">,</span> <span class="n">direction</span><span class="p">,</span> <span class="n">str_spec</span>
 <span class="kn">from</span> <span class="nn">.utils</span> <span class="k">import</span> <span class="n">array_arange</span>
+<span class="kn">from</span> <span class="nn">.utils</span> <span class="k">import</span> <span class="n">import_attr</span>
 <span class="kn">from</span> <span class="nn">.utils.mathematics</span> <span class="k">import</span> <span class="n">fnorm</span>
 
 <span class="kn">from</span> <span class="nn">.supercell</span> <span class="k">import</span> <span class="n">SuperCellChild</span>
@@ -313,59 +315,114 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">fill</span><span class="p">(</span><span class="n">val</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="Grid.interp"><a class="viewcode-back" href="../../api-generated/sisl.Grid.html#sisl.Grid.interp">[docs]</a>    <span class="k">def</span> <span class="nf">interp</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">shape</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s1">&#39;linear&#39;</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot; Interpolate grid values to a new grid</span>
+<div class="viewcode-block" id="Grid.interp"><a class="viewcode-back" href="../../api-generated/sisl.Grid.html#sisl.Grid.interp">[docs]</a>    <span class="k">def</span> <span class="nf">interp</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">shape</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;wrap&quot;</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Interpolate grid values to a new grid of a different shape</span>
+
+<span class="sd">        It uses the `scipy.ndimage.zoom`, which creates a finer or</span>
+<span class="sd">        more spaced grid using spline interpolation.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
-<span class="sd">        shape : int, array_like</span>
-<span class="sd">            the new shape of the grid</span>
-<span class="sd">        method : str</span>
-<span class="sd">            the method used to perform the interpolation,</span>
-<span class="sd">            see `scipy.interpolate.interpn` for further details.</span>
-<span class="sd">        **kwargs : dict</span>
+<span class="sd">        shape : int, array_like of len 3</span>
+<span class="sd">            the new shape of the grid.</span>
+<span class="sd">        order : int 0-5, optional</span>
+<span class="sd">            the order of the spline interpolation.</span>
+<span class="sd">            1 means linear, 2 quadratic, etc...</span>
+<span class="sd">        mode: {&#39;wrap&#39;, &#39;mirror&#39;, &#39;constant&#39;, &#39;reflect&#39;, &#39;nearest&#39;}, optional</span>
+<span class="sd">            determines how to compute the borders of the grid.</span>
+<span class="sd">            The default is ``&quot;wrap&quot;``, which accounts for periodic conditions.</span>
+<span class="sd">        **kwargs :</span>
 <span class="sd">            optional arguments passed to the interpolation algorithm</span>
-<span class="sd">            The interpolation routine is `scipy.interpolate.interpn`</span>
+<span class="sd">            The interpolation routine is `scipy.ndimage.zoom`</span>
+
+<span class="sd">        See Also</span>
+<span class="sd">        --------</span>
+<span class="sd">        scipy.ndimage.zoom : method used for interpolation</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="c1"># Interpolate function</span>
-        <span class="kn">from</span> <span class="nn">scipy.interpolate</span> <span class="k">import</span> <span class="n">RegularGridInterpolator</span>
+        <span class="c1"># For backwards compatibility</span>
+        <span class="n">method</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;method&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="c1"># Maybe the method was passed as a positional argument</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">order</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="n">method</span> <span class="o">=</span> <span class="n">order</span>
+        <span class="k">if</span> <span class="n">method</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">order</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;linear&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">}</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">method</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
 
-        <span class="c1"># Current dimensions of size 1</span>
-        <span class="n">idx</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">)</span>
-        <span class="n">idx_1</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">idx</span><span class="p">)</span>
+        <span class="c1"># And now we do the actual interpolation</span>
+        <span class="c1"># Calculate the zoom_factors</span>
+        <span class="n">zoom_factors</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">shape</span><span class="p">)</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape</span>
 
-        <span class="c1"># Get current grid spacing</span>
-        <span class="n">dold</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">_a</span><span class="o">.</span><span class="n">linspacef</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="n">i</span><span class="p">])</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">idx</span><span class="p">)</span>
+        <span class="c1"># Apply the scipy.ndimage.zoom function and return a new grid</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">ndimage_zoom</span><span class="p">,</span> <span class="n">zoom_factors</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="n">mode</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="n">order</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
 
-        <span class="c1"># Create new grid and clean-up to reduce memory</span>
+<div class="viewcode-block" id="Grid.smooth"><a class="viewcode-back" href="../../api-generated/sisl.Grid.html#sisl.Grid.smooth">[docs]</a>    <span class="k">def</span> <span class="nf">smooth</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">r</span><span class="o">=</span><span class="mf">0.7</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s2">&quot;gaussian&quot;</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;wrap&quot;</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Make a smoother grid by applying a filter.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        -----------</span>
+<span class="sd">        r: float or array-like of len 3, optional</span>
+<span class="sd">            the radius of the filter in Angstrom for each axis.</span>
+<span class="sd">            If the method is ``&quot;gaussian&quot;``, this is the standard deviation!</span>
+
+<span class="sd">            If a single float is provided, then the same distance will be used for all axes.</span>
+<span class="sd">        method: {&#39;gaussian&#39;, &#39;uniform&#39;}, optional</span>
+<span class="sd">            the type of filter to apply to smoothen the grid.</span>
+<span class="sd">        mode: {&#39;wrap&#39;, &#39;mirror&#39;, &#39;constant&#39;, &#39;reflect&#39;, &#39;nearest&#39;}, optional</span>
+<span class="sd">            determines how to compute the borders of the grid.</span>
+<span class="sd">            The default is wrap, which accounts for periodic conditions.</span>
+
+<span class="sd">        See Also</span>
+<span class="sd">        --------</span>
+<span class="sd">        scipy.ndimage.gaussian_filter</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c1"># Normalize the radius input to a list of radius</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">)):</span>
+            <span class="n">r</span> <span class="o">=</span> <span class="p">[</span><span class="n">r</span><span class="p">]</span><span class="o">*</span><span class="mi">3</span>
+
+        <span class="c1"># Calculate the size of the kernel in pixels (in case the</span>
+        <span class="c1"># gaussian filter is used, this is the standard deviation)</span>
+        <span class="n">pixels_r</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">r</span><span class="o">/</span><span class="n">fnorm</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dcell</span><span class="p">))</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
+
+        <span class="c1"># Update the kwargs accordingly</span>
+        <span class="k">if</span> <span class="n">method</span> <span class="o">==</span> <span class="s2">&quot;gaussian&quot;</span><span class="p">:</span>
+            <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;sigma&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">pixels_r</span>
+        <span class="k">elif</span> <span class="n">method</span> <span class="o">==</span> <span class="s2">&quot;uniform&quot;</span><span class="p">:</span>
+            <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;size&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">pixels_r</span> <span class="o">*</span> <span class="mi">2</span>
+
+        <span class="c1"># This should raise an import error if the method does not exist</span>
+        <span class="n">func</span> <span class="o">=</span> <span class="n">import_attr</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;scipy.ndimage.</span><span class="si">{method}</span><span class="s2">_filter&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">func</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="n">mode</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Grid.apply"><a class="viewcode-back" href="../../api-generated/sisl.Grid.html#sisl.Grid.apply">[docs]</a>    <span class="k">def</span> <span class="nf">apply</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">function_</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Applies a function to the grid and returns a new grid.</span>
+
+<span class="sd">        You can also apply a function that does not return a grid (maybe you want to do</span>
+<span class="sd">        some measurement). In that case, you will get the result instead of a `Grid`.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        -----------</span>
+<span class="sd">        function_: str or function</span>
+<span class="sd">            for a string the full module path to the function should be given.</span>
+<span class="sd">            The function that will be called should have the grid as the first argument in its</span>
+<span class="sd">            interface.</span>
+<span class="sd">        *args and **kwargs:</span>
+<span class="sd">            arguments that go directly to the function call</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">function_</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="n">function_</span> <span class="o">=</span> <span class="n">import_attr</span><span class="p">(</span><span class="n">function_</span><span class="p">)</span>
+
+        <span class="n">result</span> <span class="o">=</span> <span class="n">function_</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">grid</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="c1"># Maybe the result is not a grid, because there are methods that actually</span>
+        <span class="c1"># do measurements of the grid</span>
+        <span class="c1"># TODO what to do about functions that squeeze shape == 1 dimensions?</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="ow">or</span> <span class="n">result</span><span class="o">.</span><span class="n">ndim</span> <span class="o">!=</span> <span class="mi">3</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">result</span>
+
+        <span class="c1"># If the result is a grid, we will generate a copy of this one with the new grid values</span>
         <span class="n">grid</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
-        <span class="k">del</span> <span class="n">grid</span><span class="o">.</span><span class="n">grid</span>
-
-        <span class="c1"># Create the interpolator!</span>
-        <span class="c1"># And remove 1 dimensions</span>
-        <span class="n">f</span> <span class="o">=</span> <span class="n">RegularGridInterpolator</span><span class="p">(</span><span class="n">dold</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">grid</span><span class="p">),</span> <span class="n">method</span><span class="o">=</span><span class="n">method</span><span class="p">)</span>
-        <span class="k">del</span> <span class="n">dold</span>
-
-        <span class="c1"># Create new interpolation points</span>
-        <span class="n">dnew</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">_a</span><span class="o">.</span><span class="n">linspacef</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">shape</span><span class="p">[</span><span class="n">i</span><span class="p">])</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">idx</span><span class="p">)</span>
-
-        <span class="n">grid</span><span class="o">.</span><span class="n">grid</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="n">shape</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
-
-        <span class="c1"># Special case where grid has different dimensionality</span>
-        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">dnew</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="c1"># all is copied</span>
-            <span class="n">grid</span><span class="o">.</span><span class="n">grid</span><span class="p">[</span><span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
-        <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">dnew</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">3</span><span class="p">:</span>
-            <span class="n">reshape</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">shape</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">if</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">idx</span> <span class="k">else</span> <span class="mi">1</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">3</span><span class="p">))</span>
-            <span class="n">sl</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="nb">slice</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">shape</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">*</span> <span class="mi">1</span><span class="n">j</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">idx</span><span class="p">)</span>
-            <span class="n">dnew</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mgrid</span><span class="p">[</span><span class="n">sl</span><span class="p">]</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">sl</span><span class="p">),</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">T</span>
-            <span class="n">grid</span><span class="o">.</span><span class="n">grid</span><span class="p">[:,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">f</span><span class="p">(</span><span class="n">dnew</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">reshape</span><span class="p">)</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="k">for</span> <span class="n">iz</span><span class="p">,</span> <span class="n">dz</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">dnew</span><span class="p">[</span><span class="mi">2</span><span class="p">]):</span>
-                <span class="n">dnew</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mgrid</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="mi">1</span><span class="p">:</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="mi">1</span><span class="n">j</span><span class="p">,</span> <span class="mi">0</span><span class="p">:</span><span class="mi">1</span><span class="p">:</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="mi">1</span><span class="n">j</span><span class="p">,</span> <span class="n">dz</span><span class="p">:</span><span class="n">dz</span><span class="o">+</span><span class="mf">0.1</span><span class="p">:</span><span class="mi">1</span><span class="n">j</span><span class="p">]</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">T</span>
-                <span class="n">grid</span><span class="o">.</span><span class="n">grid</span><span class="p">[:,</span> <span class="p">:,</span> <span class="n">iz</span><span class="p">]</span> <span class="o">=</span> <span class="n">f</span><span class="p">(</span><span class="n">dnew</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
-
-        <span class="k">del</span> <span class="n">dnew</span>
+        <span class="n">grid</span><span class="o">.</span><span class="n">grid</span> <span class="o">=</span> <span class="n">result</span>
 
         <span class="k">return</span> <span class="n">grid</span></div>
 

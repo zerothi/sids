@@ -268,15 +268,12 @@
 
 <span class="kn">import</span> <span class="nn">types</span>
 <span class="kn">from</span> <span class="nn">numbers</span> <span class="k">import</span> <span class="n">Integral</span><span class="p">,</span> <span class="n">Real</span>
-<span class="kn">from</span> <span class="nn">functools</span> <span class="k">import</span> <span class="n">wraps</span><span class="p">,</span> <span class="n">reduce</span>
-<span class="kn">import</span> <span class="nn">operator</span> <span class="k">as</span> <span class="nn">op</span>
 <span class="kn">import</span> <span class="nn">warnings</span>
 
 <span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">pi</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="nb">sum</span><span class="p">,</span> <span class="n">dot</span><span class="p">,</span> <span class="n">cross</span><span class="p">,</span> <span class="n">argsort</span>
 
-<span class="kn">from</span> <span class="nn">sisl._dispatcher</span> <span class="k">import</span> <span class="n">ClassDispatcher</span><span class="p">,</span> <span class="n">AbstractDispatch</span>
 <span class="kn">from</span> <span class="nn">sisl._internal</span> <span class="k">import</span> <span class="n">set_module</span>
 <span class="kn">from</span> <span class="nn">sisl.oplist</span> <span class="k">import</span> <span class="n">oplist</span>
 <span class="kn">from</span> <span class="nn">sisl.unit</span> <span class="k">import</span> <span class="n">units</span>
@@ -295,22 +292,7 @@
     <span class="n">_has_xarray</span> <span class="o">=</span> <span class="kc">False</span>
 
 
-<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;BrillouinZone&#39;</span><span class="p">,</span> <span class="s1">&#39;MonkhorstPack&#39;</span><span class="p">,</span> <span class="s1">&#39;BandStructure&#39;</span><span class="p">]</span>
-<span class="n">__all__</span> <span class="o">+=</span> <span class="p">[</span><span class="s2">&quot;BrillouinZoneApply&quot;</span><span class="p">,</span> <span class="s2">&quot;BrillouinZoneParentApply&quot;</span><span class="p">]</span>
-
-
-<span class="k">def</span> <span class="nf">_asoplist</span><span class="p">(</span><span class="n">arg</span><span class="p">):</span>
-    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">arg</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">):</span>
-        <span class="k">return</span> <span class="n">oplist</span><span class="p">(</span><span class="n">arg</span><span class="p">)</span>
-    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">arg</span><span class="p">,</span> <span class="nb">list</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">arg</span><span class="p">,</span> <span class="n">oplist</span><span class="p">):</span>
-        <span class="k">return</span> <span class="n">oplist</span><span class="p">(</span><span class="n">arg</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">arg</span>
-
-
-<span class="k">def</span> <span class="nf">_apply_str</span><span class="p">(</span><span class="n">s</span><span class="p">):</span>
-    <span class="k">def</span> <span class="nf">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">return</span> <span class="n">f</span><span class="s2">&quot;Apply{{</span><span class="si">{s}</span><span class="s2">}}&quot;</span>
-    <span class="k">return</span> <span class="fm">__str__</span>
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;BrillouinZone&quot;</span><span class="p">,</span> <span class="s2">&quot;MonkhorstPack&quot;</span><span class="p">,</span> <span class="s2">&quot;BandStructure&quot;</span><span class="p">]</span>
 
 
 <span class="nd">@set_module</span><span class="p">(</span><span class="s2">&quot;sisl.physics&quot;</span><span class="p">)</span>
@@ -1236,226 +1218,6 @@
 
 
 <span class="nd">@set_module</span><span class="p">(</span><span class="s2">&quot;sisl.physics&quot;</span><span class="p">)</span>
-<span class="k">class</span> <span class="nc">BrillouinZoneApply</span><span class="p">(</span><span class="n">AbstractDispatch</span><span class="p">):</span>
-    <span class="c1"># this dispatch function will do stuff on the BrillouinZone object</span>
-    <span class="k">pass</span>
-
-
-<span class="nd">@set_module</span><span class="p">(</span><span class="s2">&quot;sisl.physics&quot;</span><span class="p">)</span>
-<span class="k">class</span> <span class="nc">BrillouinZoneParentApply</span><span class="p">(</span><span class="n">BrillouinZoneApply</span><span class="p">):</span>
-
-    <span class="fm">__str__</span> <span class="o">=</span> <span class="n">_apply_str</span><span class="p">(</span><span class="s2">&quot;parent apply over k&quot;</span><span class="p">)</span>
-
-    <span class="k">def</span> <span class="nf">_parse_kwargs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wrap</span><span class="p">,</span> <span class="n">eta</span><span class="p">,</span> <span class="n">eta_key</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot; Parse kwargs &quot;&quot;&quot;</span>
-        <span class="n">bz</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_obj</span>
-        <span class="n">parent</span> <span class="o">=</span> <span class="n">bz</span><span class="o">.</span><span class="n">parent</span>
-        <span class="k">if</span> <span class="n">wrap</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="c1"># we always return a wrap</span>
-            <span class="k">def</span> <span class="nf">wrap</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">parent</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">weight</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-                <span class="k">return</span> <span class="n">v</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">wrap</span> <span class="o">=</span> <span class="n">allow_kwargs</span><span class="p">(</span><span class="s2">&quot;parent&quot;</span><span class="p">,</span> <span class="s2">&quot;k&quot;</span><span class="p">,</span> <span class="s2">&quot;weight&quot;</span><span class="p">)(</span><span class="n">wrap</span><span class="p">)</span>
-        <span class="n">eta</span> <span class="o">=</span> <span class="n">tqdm_eta</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">bz</span><span class="p">),</span> <span class="n">f</span><span class="s2">&quot;</span><span class="si">{bz.__class__.__name__}</span><span class="s2">.</span><span class="si">{eta_key}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="s2">&quot;k&quot;</span><span class="p">,</span> <span class="n">eta</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">bz</span><span class="p">,</span> <span class="n">parent</span><span class="p">,</span> <span class="n">wrap</span><span class="p">,</span> <span class="n">eta</span>
-
-    <span class="k">def</span> <span class="nf">__getattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">):</span>
-        <span class="c1"># We need to offload the dispatcher to retrieve</span>
-        <span class="c1"># methods from the parent object</span>
-        <span class="c1"># This dispatch will _never_ do anything to the BrillouinZone</span>
-        <span class="n">method</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_obj</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span> <span class="n">key</span><span class="p">)</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">dispatch</span><span class="p">(</span><span class="n">method</span><span class="p">)</span>
-
-
-<span class="nd">@set_module</span><span class="p">(</span><span class="s2">&quot;sisl.physics&quot;</span><span class="p">)</span>
-<span class="k">class</span> <span class="nc">IteratorApply</span><span class="p">(</span><span class="n">BrillouinZoneParentApply</span><span class="p">):</span>
-    <span class="fm">__str__</span> <span class="o">=</span> <span class="n">_apply_str</span><span class="p">(</span><span class="s2">&quot;iter&quot;</span><span class="p">)</span>
-
-    <span class="k">def</span> <span class="nf">dispatch</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">method</span><span class="p">,</span> <span class="n">eta_key</span><span class="o">=</span><span class="s2">&quot;iter&quot;</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot; Dispatch the method by iterating values &quot;&quot;&quot;</span>
-        <span class="nd">@wraps</span><span class="p">(</span><span class="n">method</span><span class="p">)</span>
-        <span class="k">def</span> <span class="nf">func</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="n">wrap</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">eta</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-            <span class="n">bz</span><span class="p">,</span> <span class="n">parent</span><span class="p">,</span> <span class="n">wrap</span><span class="p">,</span> <span class="n">eta</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parse_kwargs</span><span class="p">(</span><span class="n">wrap</span><span class="p">,</span> <span class="n">eta</span><span class="p">,</span> <span class="n">eta_key</span><span class="o">=</span><span class="n">eta_key</span><span class="p">)</span>
-            <span class="n">k</span> <span class="o">=</span> <span class="n">bz</span><span class="o">.</span><span class="n">k</span>
-            <span class="n">w</span> <span class="o">=</span> <span class="n">bz</span><span class="o">.</span><span class="n">weight</span>
-            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">k</span><span class="p">)):</span>
-                <span class="k">yield</span> <span class="n">wrap</span><span class="p">(</span><span class="n">method</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="n">k</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">),</span> <span class="n">parent</span><span class="o">=</span><span class="n">parent</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="n">k</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">weight</span><span class="o">=</span><span class="n">w</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
-                <span class="n">eta</span><span class="o">.</span><span class="n">update</span><span class="p">()</span>
-            <span class="n">eta</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
-
-        <span class="k">return</span> <span class="n">func</span>
-
-
-<span class="nd">@set_module</span><span class="p">(</span><span class="s2">&quot;sisl.physics&quot;</span><span class="p">)</span>
-<span class="k">class</span> <span class="nc">SumApply</span><span class="p">(</span><span class="n">IteratorApply</span><span class="p">):</span>
-    <span class="fm">__str__</span> <span class="o">=</span> <span class="n">_apply_str</span><span class="p">(</span><span class="s2">&quot;sum over k&quot;</span><span class="p">)</span>
-
-    <span class="k">def</span> <span class="nf">dispatch</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">method</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot; Dispatch the method by summing &quot;&quot;&quot;</span>
-        <span class="n">iter_func</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">dispatch</span><span class="p">(</span><span class="n">method</span><span class="p">,</span> <span class="n">eta_key</span><span class="o">=</span><span class="s2">&quot;sum&quot;</span><span class="p">)</span>
-
-        <span class="nd">@wraps</span><span class="p">(</span><span class="n">method</span><span class="p">)</span>
-        <span class="k">def</span> <span class="nf">func</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-            <span class="n">it</span> <span class="o">=</span> <span class="n">iter_func</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
-            <span class="c1"># next will be called before anything else</span>
-            <span class="k">return</span> <span class="n">reduce</span><span class="p">(</span><span class="n">op</span><span class="o">.</span><span class="n">add</span><span class="p">,</span> <span class="n">it</span><span class="p">,</span> <span class="n">_asoplist</span><span class="p">(</span><span class="nb">next</span><span class="p">(</span><span class="n">it</span><span class="p">)))</span>
-
-        <span class="k">return</span> <span class="n">func</span>
-
-
-<span class="nd">@set_module</span><span class="p">(</span><span class="s2">&quot;sisl.physics&quot;</span><span class="p">)</span>
-<span class="k">class</span> <span class="nc">NoneApply</span><span class="p">(</span><span class="n">IteratorApply</span><span class="p">):</span>
-    <span class="fm">__str__</span> <span class="o">=</span> <span class="n">_apply_str</span><span class="p">(</span><span class="s2">&quot;return None&quot;</span><span class="p">)</span>
-
-    <span class="k">def</span> <span class="nf">dispatch</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">method</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot; Dispatch the method by doing nothing (mostly useful if wrapped) &quot;&quot;&quot;</span>
-        <span class="n">iter_func</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">dispatch</span><span class="p">(</span><span class="n">method</span><span class="p">,</span> <span class="n">eta_key</span><span class="o">=</span><span class="s2">&quot;none&quot;</span><span class="p">)</span>
-
-        <span class="nd">@wraps</span><span class="p">(</span><span class="n">method</span><span class="p">)</span>
-        <span class="k">def</span> <span class="nf">func</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-            <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">iter_func</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-                <span class="k">pass</span>
-            <span class="k">return</span> <span class="kc">None</span>
-
-        <span class="k">return</span> <span class="n">func</span>
-
-
-<span class="nd">@set_module</span><span class="p">(</span><span class="s2">&quot;sisl.physics&quot;</span><span class="p">)</span>
-<span class="k">class</span> <span class="nc">ListApply</span><span class="p">(</span><span class="n">IteratorApply</span><span class="p">):</span>
-    <span class="fm">__str__</span> <span class="o">=</span> <span class="n">_apply_str</span><span class="p">(</span><span class="s2">&quot;return list&quot;</span><span class="p">)</span>
-
-    <span class="k">def</span> <span class="nf">dispatch</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">method</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot; Dispatch the method by returning list of values &quot;&quot;&quot;</span>
-        <span class="n">iter_func</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">dispatch</span><span class="p">(</span><span class="n">method</span><span class="p">,</span> <span class="n">eta_key</span><span class="o">=</span><span class="s2">&quot;list&quot;</span><span class="p">)</span>
-        <span class="nd">@wraps</span><span class="p">(</span><span class="n">method</span><span class="p">)</span>
-        <span class="k">def</span> <span class="nf">func</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-            <span class="k">return</span> <span class="p">[</span><span class="n">v</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">iter_func</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)]</span>
-        <span class="k">return</span> <span class="n">func</span>
-
-
-<span class="nd">@set_module</span><span class="p">(</span><span class="s2">&quot;sisl.physics&quot;</span><span class="p">)</span>
-<span class="k">class</span> <span class="nc">OpListApply</span><span class="p">(</span><span class="n">IteratorApply</span><span class="p">):</span>
-    <span class="fm">__str__</span> <span class="o">=</span> <span class="n">_apply_str</span><span class="p">(</span><span class="s2">&quot;return oplist&quot;</span><span class="p">)</span>
-
-    <span class="k">def</span> <span class="nf">dispatch</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">method</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot; Dispatch the method by returning oplist of values &quot;&quot;&quot;</span>
-        <span class="n">iter_func</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">dispatch</span><span class="p">(</span><span class="n">method</span><span class="p">,</span> <span class="n">eta_key</span><span class="o">=</span><span class="s2">&quot;oplist&quot;</span><span class="p">)</span>
-        <span class="nd">@wraps</span><span class="p">(</span><span class="n">method</span><span class="p">)</span>
-        <span class="k">def</span> <span class="nf">func</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-            <span class="k">return</span> <span class="n">oplist</span><span class="p">(</span><span class="n">v</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">iter_func</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">))</span>
-        <span class="k">return</span> <span class="n">func</span>
-
-
-<span class="nd">@set_module</span><span class="p">(</span><span class="s2">&quot;sisl.physics&quot;</span><span class="p">)</span>
-<span class="k">class</span> <span class="nc">ArrayApply</span><span class="p">(</span><span class="n">BrillouinZoneParentApply</span><span class="p">):</span>
-    <span class="fm">__str__</span> <span class="o">=</span> <span class="n">_apply_str</span><span class="p">(</span><span class="s2">&quot;return numpy.ndarray&quot;</span><span class="p">)</span>
-
-    <span class="k">def</span> <span class="nf">dispatch</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">method</span><span class="p">,</span> <span class="n">eta_key</span><span class="o">=</span><span class="s2">&quot;array&quot;</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot; Dispatch the method by one array &quot;&quot;&quot;</span>
-        <span class="nd">@wraps</span><span class="p">(</span><span class="n">method</span><span class="p">)</span>
-        <span class="k">def</span> <span class="nf">func</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="n">wrap</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">eta</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-            <span class="n">bz</span><span class="p">,</span> <span class="n">parent</span><span class="p">,</span> <span class="n">wrap</span><span class="p">,</span> <span class="n">eta</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parse_kwargs</span><span class="p">(</span><span class="n">wrap</span><span class="p">,</span> <span class="n">eta</span><span class="p">,</span> <span class="n">eta_key</span><span class="o">=</span><span class="n">eta_key</span><span class="p">)</span>
-            <span class="n">k</span> <span class="o">=</span> <span class="n">bz</span><span class="o">.</span><span class="n">k</span>
-            <span class="n">w</span> <span class="o">=</span> <span class="n">bz</span><span class="o">.</span><span class="n">weight</span>
-
-            <span class="c1"># Get first values</span>
-            <span class="n">v</span> <span class="o">=</span> <span class="n">wrap</span><span class="p">(</span><span class="n">method</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="n">k</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">),</span> <span class="n">parent</span><span class="o">=</span><span class="n">parent</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="n">k</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">weight</span><span class="o">=</span><span class="n">w</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
-            <span class="n">eta</span><span class="o">.</span><span class="n">update</span><span class="p">()</span>
-
-            <span class="c1"># Create full array</span>
-            <span class="k">if</span> <span class="n">v</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-                <span class="n">a</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">([</span><span class="nb">len</span><span class="p">(</span><span class="n">k</span><span class="p">)],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">v</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="n">a</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="n">k</span><span class="p">),</span> <span class="p">)</span> <span class="o">+</span> <span class="n">v</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">v</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
-            <span class="n">a</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">v</span>
-            <span class="k">del</span> <span class="n">v</span>
-
-            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">k</span><span class="p">)):</span>
-                <span class="n">a</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">wrap</span><span class="p">(</span><span class="n">method</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="n">k</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">),</span> <span class="n">parent</span><span class="o">=</span><span class="n">parent</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="n">k</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">weight</span><span class="o">=</span><span class="n">w</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
-                <span class="n">eta</span><span class="o">.</span><span class="n">update</span><span class="p">()</span>
-            <span class="n">eta</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
-
-            <span class="k">return</span> <span class="n">a</span>
-        <span class="k">return</span> <span class="n">func</span>
-
-
-<span class="nd">@set_module</span><span class="p">(</span><span class="s2">&quot;sisl.physics&quot;</span><span class="p">)</span>
-<span class="k">class</span> <span class="nc">AverageApply</span><span class="p">(</span><span class="n">BrillouinZoneParentApply</span><span class="p">):</span>
-    <span class="fm">__str__</span> <span class="o">=</span> <span class="n">_apply_str</span><span class="p">(</span><span class="s2">&quot;return average&quot;</span><span class="p">)</span>
-
-    <span class="k">def</span> <span class="nf">dispatch</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">method</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot; Dispatch the method by averaging &quot;&quot;&quot;</span>
-        <span class="nd">@wraps</span><span class="p">(</span><span class="n">method</span><span class="p">)</span>
-        <span class="k">def</span> <span class="nf">func</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="n">wrap</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">eta</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-            <span class="n">bz</span><span class="p">,</span> <span class="n">parent</span><span class="p">,</span> <span class="n">wrap</span><span class="p">,</span> <span class="n">eta</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parse_kwargs</span><span class="p">(</span><span class="n">wrap</span><span class="p">,</span> <span class="n">eta</span><span class="p">,</span> <span class="n">eta_key</span><span class="o">=</span><span class="s2">&quot;average&quot;</span><span class="p">)</span>
-            <span class="c1"># Do actual average</span>
-            <span class="n">k</span> <span class="o">=</span> <span class="n">bz</span><span class="o">.</span><span class="n">k</span>
-            <span class="n">w</span> <span class="o">=</span> <span class="n">bz</span><span class="o">.</span><span class="n">weight</span>
-            <span class="n">v</span> <span class="o">=</span> <span class="n">_asoplist</span><span class="p">(</span><span class="n">wrap</span><span class="p">(</span><span class="n">method</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="n">k</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">),</span> <span class="n">parent</span><span class="o">=</span><span class="n">parent</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="n">k</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">weight</span><span class="o">=</span><span class="n">w</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span> <span class="o">*</span> <span class="n">w</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-            <span class="n">eta</span><span class="o">.</span><span class="n">update</span><span class="p">()</span>
-            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">k</span><span class="p">)):</span>
-                <span class="n">v</span> <span class="o">+=</span> <span class="n">_asoplist</span><span class="p">(</span><span class="n">wrap</span><span class="p">(</span><span class="n">method</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="n">k</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">),</span> <span class="n">parent</span><span class="o">=</span><span class="n">parent</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="n">k</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">weight</span><span class="o">=</span><span class="n">w</span><span class="p">[</span><span class="n">i</span><span class="p">]))</span> <span class="o">*</span> <span class="n">w</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
-                <span class="n">eta</span><span class="o">.</span><span class="n">update</span><span class="p">()</span>
-            <span class="n">eta</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
-            <span class="k">return</span> <span class="n">v</span>
-
-        <span class="k">return</span> <span class="n">func</span>
-
-
-<span class="nd">@set_module</span><span class="p">(</span><span class="s2">&quot;sisl.physics&quot;</span><span class="p">)</span>
-<span class="k">class</span> <span class="nc">DataArrayApply</span><span class="p">(</span><span class="n">ArrayApply</span><span class="p">):</span>
-    <span class="fm">__str__</span> <span class="o">=</span> <span class="n">_apply_str</span><span class="p">(</span><span class="s2">&quot;return xarray.DataArray&quot;</span><span class="p">)</span>
-
-    <span class="k">def</span> <span class="nf">dispatch</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">method</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot; Dispatch the method by returning a DataArray &quot;&quot;&quot;</span>
-        <span class="c1"># Get data as array</span>
-        <span class="n">array_func</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">dispatch</span><span class="p">(</span><span class="n">method</span><span class="p">,</span> <span class="n">eta_key</span><span class="o">=</span><span class="s2">&quot;dataarray&quot;</span><span class="p">)</span>
-
-        <span class="nd">@wraps</span><span class="p">(</span><span class="n">method</span><span class="p">)</span>
-        <span class="k">def</span> <span class="nf">func</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="n">coords</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="n">method</span><span class="o">.</span><span class="vm">__name__</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-            <span class="c1"># xarray specific data (default to function name)</span>
-            <span class="n">bz</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_obj</span>
-
-            <span class="c1"># retrieve ALL data</span>
-            <span class="n">array</span> <span class="o">=</span> <span class="n">array_func</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
-
-            <span class="c1"># Create coords</span>
-            <span class="k">if</span> <span class="n">coords</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-                <span class="n">coords</span> <span class="o">=</span> <span class="p">[(</span><span class="s1">&#39;k&#39;</span><span class="p">,</span> <span class="n">_a</span><span class="o">.</span><span class="n">arangei</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">bz</span><span class="p">)))]</span>
-                <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">array</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">:]):</span>
-                    <span class="n">coords</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">f</span><span class="s2">&quot;v{i+1}&quot;</span><span class="p">,</span> <span class="n">_a</span><span class="o">.</span><span class="n">arangei</span><span class="p">(</span><span class="n">v</span><span class="p">)))</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="n">coords</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">coords</span><span class="p">)</span>
-                <span class="n">coords</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="p">(</span><span class="s1">&#39;k&#39;</span><span class="p">,</span> <span class="n">_a</span><span class="o">.</span><span class="n">arangei</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">bz</span><span class="p">))))</span>
-                <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">coords</span><span class="p">)):</span>
-                    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">coords</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="nb">str</span><span class="p">):</span>
-                        <span class="n">coords</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">coords</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">_a</span><span class="o">.</span><span class="n">arangei</span><span class="p">(</span><span class="n">array</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="n">i</span><span class="p">]))</span>
-            <span class="n">attrs</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;bz&#39;</span><span class="p">:</span> <span class="n">bz</span><span class="p">,</span> <span class="s1">&#39;parent&#39;</span><span class="p">:</span> <span class="n">bz</span><span class="o">.</span><span class="n">parent</span><span class="p">}</span>
-
-            <span class="k">return</span> <span class="n">xarray</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span><span class="n">array</span><span class="p">,</span> <span class="n">coords</span><span class="o">=</span><span class="n">coords</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span> <span class="n">attrs</span><span class="o">=</span><span class="n">attrs</span><span class="p">)</span>
-
-        <span class="k">return</span> <span class="n">func</span>
-
-<span class="c1"># Add apply functions</span>
-<span class="c1"># Since apply is a built-in, we cannot assign as a class variable. :(</span>
-<span class="nb">setattr</span><span class="p">(</span><span class="n">BrillouinZone</span><span class="p">,</span> <span class="s2">&quot;apply&quot;</span><span class="p">,</span>
-        <span class="n">ClassDispatcher</span><span class="p">(</span><span class="s2">&quot;apply&quot;</span><span class="p">,</span>
-                        <span class="n">obj_getattr</span><span class="o">=</span><span class="k">lambda</span> <span class="n">obj</span><span class="p">,</span> <span class="n">key</span><span class="p">:</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">obj</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span> <span class="n">key</span><span class="p">)</span>
-        <span class="p">)</span>
-<span class="p">)</span>
-<span class="c1"># Register dispatched functions</span>
-<span class="n">BrillouinZone</span><span class="o">.</span><span class="n">apply</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="s2">&quot;average&quot;</span><span class="p">,</span> <span class="n">AverageApply</span><span class="p">)</span>
-<span class="n">BrillouinZone</span><span class="o">.</span><span class="n">apply</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="s2">&quot;sum&quot;</span><span class="p">,</span> <span class="n">SumApply</span><span class="p">)</span>
-<span class="n">BrillouinZone</span><span class="o">.</span><span class="n">apply</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="s2">&quot;array&quot;</span><span class="p">,</span> <span class="n">ArrayApply</span><span class="p">)</span>
-<span class="n">BrillouinZone</span><span class="o">.</span><span class="n">apply</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="s2">&quot;none&quot;</span><span class="p">,</span> <span class="n">NoneApply</span><span class="p">)</span>
-<span class="n">BrillouinZone</span><span class="o">.</span><span class="n">apply</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="s2">&quot;iter&quot;</span><span class="p">,</span> <span class="n">IteratorApply</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-<span class="n">BrillouinZone</span><span class="o">.</span><span class="n">apply</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="s2">&quot;list&quot;</span><span class="p">,</span> <span class="n">ListApply</span><span class="p">)</span>
-<span class="n">BrillouinZone</span><span class="o">.</span><span class="n">apply</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="s2">&quot;oplist&quot;</span><span class="p">,</span> <span class="n">OpListApply</span><span class="p">)</span>
-<span class="k">if</span> <span class="n">_has_xarray</span><span class="p">:</span>
-    <span class="n">BrillouinZone</span><span class="o">.</span><span class="n">apply</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="s2">&quot;dataarray&quot;</span><span class="p">,</span> <span class="n">DataArrayApply</span><span class="p">)</span>
-
-
-<span class="nd">@set_module</span><span class="p">(</span><span class="s2">&quot;sisl.physics&quot;</span><span class="p">)</span>
 <span class="k">class</span> <span class="nc">MonkhorstPack</span><span class="p">(</span><span class="n">BrillouinZone</span><span class="p">):</span>
     <span class="sa">r</span><span class="sd">&quot;&quot;&quot; Create a Monkhorst-Pack grid for the Brillouin zone</span>
 
@@ -1464,7 +1226,7 @@
 <span class="sd">    parent : object or array_like</span>
 <span class="sd">       An object with associated `parent.cell` and `parent.rcell` or</span>
 <span class="sd">       an array of floats which may be turned into a `SuperCell`</span>
-<span class="sd">    nktp : array_like of ints</span>
+<span class="sd">    nkpt : array_like of ints</span>
 <span class="sd">       a list of number of k-points along each cell direction</span>
 <span class="sd">    displacement : float or array_like of float, optional</span>
 <span class="sd">       the displacement of the evenly spaced grid, a single floating</span>
