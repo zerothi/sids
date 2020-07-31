@@ -100,17 +100,19 @@ def add_sisl_version_cite_arg(parser):
     """
     from sisl.info import version, git_revision, git_count, bibtex
 
+    group = parser.add_argument_group("version information")
+
     class PrintVersion(argparse.Action):
         def __call__(self, parser, ns, values, option_string=None):
             print(f"sisl: {version}\ngit-hash: {git_count}")
-    parser.add_argument('--version', nargs=0, action=PrintVersion,
-                        help=f'Show detailed sisl version information (v{version})')
+    group.add_argument('--version', nargs=0, action=PrintVersion,
+                       help=f'Show detailed sisl version information (v{version})')
 
     class PrintCite(argparse.Action):
         def __call__(self, parser, ns, values, option_string=None):
             print(f"BibTeX:\n{bibtex}")
-    parser.add_argument('--cite', nargs=0, action=PrintCite,
-                        help='Show the citation required when using sisl')
+    group.add_argument('--cite', nargs=0, action=PrintCite,
+                       help='Show the citation required when using sisl')
 
 
 def collect_arguments(argv, input=False,
@@ -165,7 +167,7 @@ def collect_arguments(argv, input=False,
             setattr(namespace, '_input_file', input_file)
         except Exception as e:
             print(e)
-            raise ValueError("File: '"+input_file+"' cannot be found. Please supply a readable file!")
+            raise ValueError(f"File: '{input_file}' cannot be found. Please supply a readable file!")
 
     if args.out is not None:
         try:

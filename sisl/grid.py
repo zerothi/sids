@@ -180,6 +180,70 @@ class Grid(SuperCellChild):
         # Apply the scipy.ndimage.zoom function and return a new grid
         return self.apply(ndimage_zoom, zoom_factors, mode=mode, order=order, **kwargs)
 
+    def isosurface(self, level, step_size=1, **kwargs):
+        """Calculates the isosurface for a given value.
+
+        It uses `skimage.measure.marching_cubes`, so you need to have scikit-image installed.
+
+        Parameters
+        ----------
+        level: float
+            contour value to search for isosurfaces in the grid. 
+            If not given or None, the average of the min and max of the grid is used.
+        step_size: int, optional
+            step size in voxels. Larger steps yield faster but coarser results. 
+            The result will always be topologically correct though.
+        **kwargs:
+            optional arguments passed directly to `skimage.measure.marching_cubes`
+            for the calculation of isosurfaces.
+
+        Returns
+        ----------
+        numpy array of shape (V, 3)
+            Verts. Spatial coordinates for V unique mesh vertices.
+
+        numpy array of shape (n_faces, 3)
+            Faces. Define triangular faces via referencing vertex indices from verts. 
+            This algorithm specifically outputs triangles, so each face has exactly three indices.
+
+        numpy array of shape (V, 3)
+            Normals. The normal direction at each vertex, as calculated from the data.
+
+        numpy array of shape (V, 3)
+            Values. Gives a measure for the maximum value of the data in the local region near each vertex. 
+            This can be used by visualization tools to apply a colormap to the mesh.
+
+        See Also
+        --------
+        skimage.measure.marching_cubes : method used to calculate the isosurface.
+
+        """
+        try:
+            import skimage.measure
+        except ModuleNotFoundError:
+            raise ModuleNotFoundError(
+                f"{self.__class__.__name__}.isosurface requires scikit-image to be installed"
+            )
+
+        # Run the marching cubes algorithm to calculate the vertices and faces
+        # of the requested isosurface.
+        verts, *returns = skimage.measure.marching_cubes(
+            self.grid, level=level, spacing=fnorm(self.dcell), step_size=step_size, **kwargs
+        )
+
+        # Define the transformation matrix to get the real vertices
+        # This is because skimage calculates the vertices as if it was an orthogonal cell
+        T = self.cell / fnorm(self.cell).T
+
+        # Check that the transformation matrix is definite positive
+        if np.linalg.det(T) < 0:
+            T[:, 2] = -T[:, 2]  # change the orientation of the third vector
+
+        # Apply the transformation and get the real coordinates of the vertices
+        verts = T.dot(verts.T).T
+
+        return (verts, *returns)
+
     def smooth(self, r=0.7, method="gaussian", mode="wrap", **kwargs):
         """
         Make a smoother grid by applying a filter.
@@ -565,6 +629,33 @@ class Grid(SuperCellChild):
         """
         ret_idx = np.delete(_a.arangei(self.shape[axis]), _a.asarrayi(idx))
         return self.sub(ret_idx, axis)
+
+    def tile(self, reps, axis):
+        """ Tile grid to create a bigger one
+
+        The atomic indices for the base Geometry will be retained.
+
+        Parameters
+        ----------
+        reps : int
+           number of tiles (repetitions)
+        axis : int
+           direction of tiling, 0, 1, 2 according to the cell-direction
+
+        See Also
+        --------
+        Geometry.tile : equivalent method for Geometry class
+        """
+        grid = self.copy()
+        grid.grid = None
+        reps_all = [1, 1, 1]
+        reps_all[axis] = reps
+        grid.grid = np.tile(self.grid, reps_all)
+        if self.geometry is None:
+            grid.set_sc(self.sc.tile(reps, axis))
+        else:
+            grid.set_geometry(self.geometry.tile(reps, axis))
+        return grid
 
     def index2xyz(self, index):
         """ Real-space coordinates of indices related to the grid

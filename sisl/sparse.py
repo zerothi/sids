@@ -774,7 +774,7 @@ class SparseCSR(NDArrayOperatorsMixin):
         if asarray(i).size == 0:
             return arrayi([])
         if i < 0 or i >= self.shape[0]:
-            raise IndexError('row index is out-of-bounds')
+            raise IndexError(f"row index is out-of-bounds {i} : {self.shape[0]}")
         i1 = int(i) + 1
         # We skip this check and let sisl die if wrong input is given...
         #if not isinstance(i, Integral):
@@ -786,7 +786,7 @@ class SparseCSR(NDArrayOperatorsMixin):
         if len(j) == 0:
             return arrayi([])
         if np_any(j < 0) or np_any(j >= self.shape[1]):
-            raise IndexError('column index is out-of-bounds')
+            raise IndexError(f"column index is out-of-bounds {j} : {self.shape[1]}")
 
         # fast reference
         ptr = self.ptr
@@ -821,7 +821,7 @@ class SparseCSR(NDArrayOperatorsMixin):
         new_nnz = new_n - int(ptr[i1]) + ncol_ptr_i
 
         if new_nnz > 0:
-
+            #print(f"new_nnz {i} : {new_nnz}")
             # Ensure that it is not-set as finalized
             # There is no need to set it all the time.
             # Simply because the first call to finalize
@@ -875,7 +875,7 @@ class SparseCSR(NDArrayOperatorsMixin):
             return indices(col[ptr_i:ncol_ptr_i], j, ptr_i)
 
     def _extend_empty(self, i, n):
-        """ Extends the sparsity pattern to retain elements `j` in row `i`
+        """ Extends the sparsity pattern with `n` elements in row `i`
 
         Parameters
         ----------
@@ -1024,7 +1024,7 @@ class SparseCSR(NDArrayOperatorsMixin):
             n = len(get_idx)
 
         # Indices of existing values in return array
-        ret_idx = (get_idx >= 0).nonzero()[0]
+        ret_idx = atleast_1d(get_idx >= 0).nonzero()[0]
         # Indices of existing values in get array
         get_idx = get_idx.ravel()[ret_idx]
 
@@ -1321,26 +1321,26 @@ class SparseCSR(NDArrayOperatorsMixin):
 
     @classmethod
     def fromsp(cls, *sps, **kwargs):
+        sps = list(map(lambda x: x.tocsr(), sps))
         shape = sps[0].shape
         dtype = kwargs.get("dtype", np.result_type(*tuple(sp.dtype for sp in sps)))
-        out = cls(shape + (len(sps), ), dtype=dtype)
-
-        ptr = out.ptr
-        ncol = out.ncol
-        col = out.col
+        # create a single sparse matrix to get the final size
+        # this will also error out if the shapes are not coherent
+        full_sp = reduce(lambda x, y: x + y, sps, 0.)
+        nnzpr = np.diff(full_sp.indptr).max() + 3
+        out = cls(shape + (len(sps), ), nnzpr=nnzpr, dtype=dtype)
+        del full_sp
 
         # Now we need to add things to the sparsity pattern
         for iD, sp in enumerate(sps):
-            sp = sp.tocsr()
+            ptr = sp.indptr
             if sp.shape != shape:
                 raise ValueError(f"{cls.__name__}.fromsp found non compatible shapes")
 
             # Loop stuff
             for r in range(shape[0]):
-                sl = slice(sp.indptr[r], sp.indptr[r+1])
-                cols = sp.indices[sl]
-                idx = out._extend(r, cols)
-                out._D[idx, iD] += sp.data[sl]
+                idx = out._extend(r, sp.indices[ptr[r]:ptr[r+1]])
+                out._D[idx, iD] += sp.data[ptr[r]:ptr[r+1]]
 
         return out
 

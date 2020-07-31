@@ -22,6 +22,12 @@ notifications:
     on_failure: always
     on_start: never
 
+
+# Signal we are running travis
+env:
+  global: SISL_TRAVIS_CI=true
+
+
 matrix:
   include:
   - env:
@@ -49,6 +55,7 @@ before_install:
   fi
 
 install:
+- env | grep TRAVIS 
 - conda env create -n test_env --file ci/requirements-$CONDA_ENV.yml
 - source activate test_env
 - conda info --envs
@@ -61,7 +68,7 @@ install:
 - "$FC --version"
 - python -c 'import sys ; print(sys.version)'
 - unset LDFLAGS
-- pip install --no-deps -v -v -v -e .
+- pip install --no-deps -vvv -e .
 
 script:
 - which python
@@ -70,7 +77,7 @@ script:
 - |
   if [[ ${COVERAGE:-true} == true ]]; then
       echo "Running coverage tests..." ;
-      py.test --pyargs sisl -rX --cov=sisl --cov-report term-missing --cov-config=.coveragerc ;
+      py.test -vvv --pyargs sisl -rX --cov=sisl --cov-report term-missing --cov-config=.coveragerc ;
   else
       echo "Running non-coverage tests..." ;
       py.test --doctest-modules sisl ;

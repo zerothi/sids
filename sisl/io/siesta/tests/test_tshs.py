@@ -56,7 +56,9 @@ def test_tshs_soc_pt2_xx(sisl_files, sisl_tmp):
 
 def test_tshs_soc_pt2_xx_pdos(sisl_files):
     fdf = sisl.get_sile(sisl_files(_dir, 'SOC_Pt2_xx.fdf'), base=sisl_files(_dir))
+    sc = fdf.read_supercell(order='TSHS')
     HS = fdf.read_hamiltonian()
+    assert np.allclose(sc.cell, HS.geometry.sc.cell)
     HS.eigenstate().PDOS(np.linspace(-2, 2, 400))
 
 
@@ -88,14 +90,15 @@ def test_tshs_warn(sisl_files):
         si.read_hamiltonian(geometry=geom)
 
 
-@pytest.mark.xfail(raises=sisl.SileError)
 def test_tshs_error(sisl_files):
+    # reading with a wrong geometry
     si = sisl.get_sile(sisl_files(_dir, 'si_pdos_kgrid.TSHS'))
 
     # check number of orbitals
     geom = si.read_geometry()
     geom = sisl.Geometry(np.random.rand(geom.na + 1, 3))
-    si.read_hamiltonian(geometry=geom)
+    with pytest.raises(sisl.SileError):
+        si.read_hamiltonian(geometry=geom)
 
 
 def test_tshs_si_pdos_kgrid_overlap(sisl_files):
@@ -133,13 +136,20 @@ def test_tshs_spin_orbit_tshs2nc2tshs(sisl_tmp):
                   [[0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8],
                    [0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]]))
 
+    fdf_file = sisl_tmp('RUN.fdf', _dir)
     f1 = sisl_tmp('tmp1.TSHS', _dir)
-    f2 = sisl_tmp('tmp2.nc', _dir)
+    f2 = sisl_tmp('tmp1.nc', _dir)
     H1.write(f1)
     H1.finalize()
     H2 = sisl.get_sile(f1).read_hamiltonian()
     H2.write(f2)
     H3 = sisl.get_sile(f2).read_hamiltonian()
+    open(fdf_file, 'w').writelines([
+        "SystemLabel tmp1"
+    ])
+    fdf = sisl.get_sile(fdf_file)
+    assert np.allclose(fdf.read_supercell(order='nc').cell,
+                       fdf.read_supercell(order='TSHS').cell)
     assert H1._csr.spsame(H2._csr)
     assert np.allclose(H1._csr._D, H2._csr._D)
     assert H1._csr.spsame(H3._csr)

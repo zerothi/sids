@@ -50,9 +50,10 @@ def test_get_sile1():
     assert issubclass(cls, fdfSileSiesta)
 
 
-@pytest.mark.xfail(raises=NotImplementedError)
 def test_get_sile2():
-    gsc("test.this_file_does_not_exist")
+    # requesting non implemented files
+    with pytest.raises(NotImplementedError):
+        gsc("test.this_file_does_not_exist")
 
 
 class TestObject:
@@ -340,6 +341,7 @@ class TestObject:
         except UnicodeDecodeError as e:
             pass
 
+    @pytest.mark.filterwarnings("ignore:gridncSileSiesta.read_grid cannot determine")
     @pytest.mark.parametrize("sile", _my_intersect(["read_grid"], ["write_grid"]))
     def test_read_write_grid(self, sisl_tmp, sisl_system, sile):
         g = sisl_system.g.rotate(-30, sisl_system.g.cell[2, :])

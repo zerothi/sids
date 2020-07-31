@@ -50,9 +50,9 @@ class TestBrillouinZone:
         assert len(bz) == 2
         assert len(bz.copy()) == 2
 
-    @pytest.mark.xfail(raises=ValueError)
     def test_bz_fail(self, setup):
-        BrillouinZone(setup.s1, [0] * 3, [.5] * 2)
+        with pytest.raises(ValueError):
+            BrillouinZone(setup.s1, [0] * 3, [.5] * 2)
 
     def test_to_reduced(self, setup):
         bz = BrillouinZone(setup.s2)
@@ -142,7 +142,6 @@ class TestBrillouinZone:
             shape[i] = 3
             assert np.allclose(grid.shape, shape)
 
-    @pytest.mark.xfail(raises=SislError)
     def test_mp_asgrid_fail(self, setup):
         class Test(SuperCellChild):
             def __init__(self, sc):
@@ -150,7 +149,8 @@ class TestBrillouinZone:
             def eigh(self, k, *args, **kwargs):
                 return np.arange(3)
         bz = MonkhorstPack(Test(setup.s1), [2] * 3, displacement=[0.1] * 3).asgrid()
-        bz.eigh(wrap=lambda eig: eig[0])
+        with pytest.raises(SislError):
+            bz.eigh(wrap=lambda eig: eig[0])
 
     def test_mp1(self, setup):
         bz = MonkhorstPack(setup.s1, [2] * 3, trs=False)
@@ -253,10 +253,7 @@ class TestBrillouinZone:
         apply.none.eigh()
 
     def test_as_dataarray(self):
-        try:
-            import xarray
-        except ImportError:
-            pytest.skip("xarray not available")
+        pytest.importorskip("xarray", reason="xarray not available")
 
         from sisl import geom, Hamiltonian
         g = geom.graphene()
@@ -278,10 +275,7 @@ class TestBrillouinZone:
         assert asdarray.dims == ('k', 'orb')
 
     def test_pathos(self):
-        try:
-            import pathos
-        except ImportError:
-            pytest.skip("pathos not available")
+        pytest.importorskip("pathos", reason="pathos not available")
 
         from sisl import geom, Hamiltonian
         g = geom.graphene()

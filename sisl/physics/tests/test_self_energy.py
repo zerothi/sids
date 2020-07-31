@@ -6,7 +6,7 @@ import numpy as np
 
 from sisl import Geometry, Atom, SuperCell, Hamiltonian
 from sisl import BrillouinZone
-from sisl import SelfEnergy, SemiInfinite, RecursiveSI
+from sisl import SelfEnergy, WideBandSE, SemiInfinite, RecursiveSI
 from sisl import RealSpaceSE, RealSpaceSI
 
 
@@ -71,7 +71,7 @@ def test_sancho_scattering_matrix(setup):
     assert np.allclose(SE.scattering_matrix(0.1), SE.se2scat(SE.self_energy(0.1)))
 
 
-def test_sancho_non_orthogonal(setup):
+def test_sancho_non_orthogonal_dtype(setup):
     SE = RecursiveSI(setup.HS, '-A')
     s64 = SE.self_energy(0.1, dtype=np.complex64)
     s128 = SE.self_energy(0.1)
@@ -128,6 +128,17 @@ def test_sancho_green(setup):
     G = SL.green(E, k)
     assert np.allclose(g, G)
     assert np.allclose(SL.green(E, k), SR.green(E, k))
+
+
+def test_wideband_1(setup):
+    SE = WideBandSE(10, 1e-2)
+    assert SE.self_energy().shape == (10, 10)
+    assert np.allclose(np.diag(SE.self_energy()), -1j*1e-2)
+    assert np.allclose(np.diag(SE.self_energy(eta=1)), -1j*1.)
+    assert np.allclose(np.diag(SE.scattering_matrix(eta=1)), 2.)
+    # ensure our custom function works!
+    assert np.allclose(SE.scattering_matrix(eta=1),
+                       SE.se2scat(SE.self_energy(eta=1)))
 
 
 @pytest.mark.parametrize("k_axes", [0, 1])
@@ -246,7 +257,6 @@ def test_real_space_HS_SE_unfold_with_k():
         assert not np.allclose(SE1, SE2)
 
 
-@pytest.mark.xfail(raises=ValueError)
 def test_real_space_SE_fail_k_trs():
     sq = Geometry([0] * 3, Atom(1, 1.01), [1])
     sq.set_nsc([3] * 3)
@@ -254,47 +264,48 @@ def test_real_space_SE_fail_k_trs():
     H.construct([(0.1, 1.1), (4, -1)])
 
     RSE = RealSpaceSE(H, 0, 1, (3, 4, 1))
-    RSE.green(0.1, [0, 0, 0.2])
+    with pytest.raises(ValueError):
+        RSE.green(0.1, [0, 0, 0.2])
 
 
-@pytest.mark.xfail(raises=ValueError)
 def test_real_space_SE_fail_k_semi_same():
     sq = Geometry([0] * 3, Atom(1, 1.01), [1])
     sq.set_nsc([3] * 3)
     H = Hamiltonian(sq)
     H.construct([(0.1, 1.1), (4, -1)])
 
-    RSE = RealSpaceSE(H, 0, 0, (3, 4, 1))
+    with pytest.raises(ValueError):
+        RSE = RealSpaceSE(H, 0, 0, (3, 4, 1))
 
 
-@pytest.mark.xfail(raises=ValueError)
 def test_real_space_SE_fail_nsc_semi():
     sq = Geometry([0] * 3, Atom(1, 1.01), [1])
     sq.set_nsc([5, 3, 1])
     H = Hamiltonian(sq)
     H.construct([(0.1, 1.1), (4, -1)])
 
-    RSE = RealSpaceSE(H, 0, 1, (3, 4, 1), dk=100)
+    with pytest.raises(ValueError):
+        RSE = RealSpaceSE(H, 0, 1, (3, 4, 1), dk=100)
 
 
-@pytest.mark.xfail(raises=ValueError)
 def test_real_space_SE_fail_nsc_k():
     sq = Geometry([0] * 3, Atom(1, 1.01), [1])
     sq.set_nsc([3, 1, 1])
     H = Hamiltonian(sq)
     H.construct([(0.1, 1.1), (4, -1)])
 
-    RSE = RealSpaceSE(H, 0, 1, (3, 4, 1), dk=100)
+    with pytest.raises(ValueError):
+        RSE = RealSpaceSE(H, 0, 1, (3, 4, 1), dk=100)
 
 
-@pytest.mark.xfail(raises=ValueError)
-def test_real_space_SE_fail_nsc_semi():
+def test_real_space_SE_fail_nsc_semi_fully_periodic():
     sq = Geometry([0] * 3, Atom(1, 1.01), [1])
     sq.set_nsc([3, 5, 3])
     H = Hamiltonian(sq)
     H.construct([(0.1, 1.1), (4, -1)])
 
-    RSE = RealSpaceSE(H, 1, 0, (3, 4, 1), dk=100)
+    with pytest.raises(ValueError):
+        RSE = RealSpaceSE(H, 1, 0, (3, 4, 1), dk=100)
 
 
 @pytest.mark.parametrize("k_axes", [0])
@@ -303,7 +314,7 @@ def test_real_space_SE_fail_nsc_semi():
 @pytest.mark.parametrize("unfold", [1, 3])
 @pytest.mark.parametrize("bulk", [True, False])
 @pytest.mark.parametrize("coupling", [True, False])
-def test_real_space_HS(setup, k_axes, trs, bz, unfold, bulk, coupling):
+def test_real_space_SI_HS(setup, k_axes, trs, bz, unfold, bulk, coupling):
     semi = RecursiveSI(setup.HS, '-B')
     surf = setup.HS.tile(4, 1)
     surf.set_nsc(b=1)
@@ -321,7 +332,7 @@ def test_real_space_HS(setup, k_axes, trs, bz, unfold, bulk, coupling):
 @pytest.mark.parametrize("bulk", [True, False])
 @pytest.mark.parametrize("semi_bulk", [True, False])
 @pytest.mark.parametrize("coupling", [True, False])
-def test_real_space_H(setup, semi_dir, k_axes, trs, bz, unfold, bulk, semi_bulk, coupling):
+def test_real_space_SI_H(setup, semi_dir, k_axes, trs, bz, unfold, bulk, semi_bulk, coupling):
     semi = RecursiveSI(setup.H, semi_dir)
     surf = setup.H.tile(4, 1)
     surf.set_nsc(b=1)
@@ -331,7 +342,7 @@ def test_real_space_H(setup, semi_dir, k_axes, trs, bz, unfold, bulk, semi_bulk,
     RSI.self_energy(0.1, bulk=bulk, coupling=coupling)
 
 
-def test_real_space_H_test(setup):
+def test_real_space_SI_H_test(setup):
     semi = RecursiveSI(setup.H, '-B')
     surf = setup.H.tile(4, 1)
     surf.set_nsc(b=1)
@@ -343,43 +354,43 @@ def test_real_space_H_test(setup):
     RSI.clear()
 
 
-@pytest.mark.xfail(raises=ValueError)
-def test_real_space_H_k_trs(setup):
+def test_real_space_SI_H_k_trs(setup):
     semi = RecursiveSI(setup.H, '-B')
     surf = setup.H.tile(4, 1)
     surf.set_nsc(b=1)
     RSI = RealSpaceSI(semi, surf, 0, (3, 1, 3))
     RSI.set_options(dk=100, trs=True, bz=None)
     RSI.initialize()
-    RSI.green(0.1, [0, 0, 0.1], dtype=np.complex128)
+    with pytest.raises(ValueError):
+        RSI.green(0.1, [0, 0, 0.1], dtype=np.complex128)
 
 
-@pytest.mark.xfail(raises=ValueError)
 def test_real_space_SI_fail_semi_in_k(setup):
     semi = RecursiveSI(setup.H, '-B')
     surf = setup.H.tile(4, 1)
     surf.set_nsc(b=1)
-    RSI = RealSpaceSI(semi, surf, [0, 1], (2, 1, 1))
+    with pytest.raises(ValueError):
+        RSI = RealSpaceSI(semi, surf, [0, 1], (2, 1, 1))
 
 
-@pytest.mark.xfail(raises=ValueError)
 def test_real_space_SI_fail_surf_nsc(setup):
     semi = RecursiveSI(setup.H, '-B')
     surf = setup.H.tile(4, 1)
-    RSI = RealSpaceSI(semi, surf, 0, (2, 1, 1))
+    with pytest.raises(ValueError):
+        RSI = RealSpaceSI(semi, surf, 0, (2, 1, 1))
 
 
-@pytest.mark.xfail(raises=ValueError)
 def test_real_space_SI_fail_k_no_nsc(setup):
     semi = RecursiveSI(setup.H, '-B')
     surf = setup.H.tile(4, 1)
     surf.set_nsc([1] * 3)
-    RSI = RealSpaceSI(semi, surf, 0, (2, 1, 1))
+    with pytest.raises(ValueError):
+        RSI = RealSpaceSI(semi, surf, 0, (2, 1, 1))
 
 
-@pytest.mark.xfail(raises=ValueError)
 def test_real_space_SI_fail_unfold_in_semi(setup):
     semi = RecursiveSI(setup.H, '-B')
     surf = setup.H.tile(4, 1)
     surf.set_nsc(b=1)
-    RSI = RealSpaceSI(semi, surf, 0, (2, 2, 1))
+    with pytest.raises(ValueError):
+        RSI = RealSpaceSI(semi, surf, 0, (2, 2, 1))

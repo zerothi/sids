@@ -106,8 +106,8 @@ class tbtncSileTBtrans(_devncSileTBtrans):
             elif not tree is None:
                 group = tree
             if not group is None:
-                raise KeyError(self.__class__.__name__ + f' could not retrieve key "{group}.{name}" due to missing flags in the input file.')
-            raise KeyError(self.__class__.__name__ + f' could not retrieve key "{name}" due to missing flags in the input file.')
+                raise KeyError(f"{self.__class__.__name__} could not retrieve key '{group}.{name}' due to missing flags in the input file.")
+            raise KeyError(f"{self.__class__.__name__} could not retrieve key '{name}' due to missing flags in the input file.")
 
         if self._k_avg:
             return v[:]
@@ -130,7 +130,7 @@ class tbtncSileTBtrans(_devncSileTBtrans):
             data.shape = orig_shape[1:]
 
         else:
-            raise ValueError(self.__class__.__name__ + ' requires kavg argument to be either bool or an integer corresponding to the k-point index.')
+            raise ValueError(f"{self.__class__.__name__} requires kavg argument to be either bool or an integer corresponding to the k-point index.")
 
         # Return data
         return data
@@ -152,8 +152,8 @@ class tbtncSileTBtrans(_devncSileTBtrans):
             elif not tree is None:
                 group = tree
             if not group is None:
-                raise KeyError(self.__class__.__name__ + f' could not retrieve key "{group}.{name}" due to missing flags in the input file.')
-            raise KeyError(self.__class__.__name__ + f' could not retrieve key "{name}" due to missing flags in the input file.')
+                raise KeyError(f"{self.__class__.__name__} could not retrieve key '{group}.{name}' due to missing flags in the input file.")
+            raise KeyError(f"{self.__class__.__name__} could not retrieve key '{name}' due to missing flags in the input file.")
         if self._k_avg:
             return v[iE, ...]
 
@@ -177,7 +177,7 @@ class tbtncSileTBtrans(_devncSileTBtrans):
             data.shape = orig_shape[2:]
 
         else:
-            raise ValueError(self.__class__.__name__ + ' requires kavg argument to be either bool or an integer corresponding to the k-point index.')
+            raise ValueError(f"{self.__class__.__name__} requires kavg argument to be either bool or an integer corresponding to the k-point index.")
 
         # Return data
         return data
@@ -215,9 +215,9 @@ class tbtncSileTBtrans(_devncSileTBtrans):
         elec_from = self._elec(elec_from)
         elec_to = self._elec(elec_to)
         if elec_from == elec_to:
-            raise ValueError(self.__class__.__name__ + ".transmission elec_from and elec_to must not be the same.")
+            raise ValueError(f"{self.__class__.__name__}.transmission elec_from[{elec_from}] and elec_to[{elec_to}] must not be the same.")
 
-        return self._value_avg(elec_to + '.T', elec_from, kavg=kavg)
+        return self._value_avg(f"{elec_to}.T", elec_from, kavg=kavg)
 
     def reflection(self, elec=0, kavg=True, from_single=False):
         r""" Reflection into electrode `elec`
@@ -260,7 +260,7 @@ class tbtncSileTBtrans(_devncSileTBtrans):
 
         # Find full transmission out of electrode
         if from_single:
-            T = self._value_avg(elec + '.T', elec, kavg=kavg) - self._value_avg(elec + '.C', elec, kavg=kavg)
+            T = self._value_avg(f"{elec}.T", elec, kavg=kavg) - self._value_avg(f"{elec}.C", elec, kavg=kavg)
         else:
             T = 0.
             for to in self.elecs:
@@ -292,9 +292,9 @@ class tbtncSileTBtrans(_devncSileTBtrans):
         elec_from = self._elec(elec_from)
         elec_to = self._elec(elec_to)
         if elec_from == elec_to:
-            raise ValueError(self.__class__.__name__ + ".transmission_eig elec_from and elec_to must not be the same.")
+            raise ValueError(f"{self.__class__.__name__}.transmission_eig elec_from[{elec_from}] and elec_to[{elec_to}] must not be the same.")
 
-        return self._value_avg(elec_to + '.T.Eig', elec_from, kavg=kavg)
+        return self._value_avg(f"{elec_to}.T.Eig", elec_from, kavg=kavg)
 
     def transmission_bulk(self, elec=0, kavg=True):
         """ Bulk transmission for the `elec` electrode
@@ -316,7 +316,7 @@ class tbtncSileTBtrans(_devncSileTBtrans):
         transmission_eig : the transmission decomposed in eigenchannels
         reflection : total reflection back into the electrode
         """
-        return self._value_avg('T', self._elec(elec), kavg=kavg)
+        return self._value_avg("T", self._elec(elec), kavg=kavg)
 
     def norm(self, atoms=None, orbitals=None, norm='none'):
         r""" Normalization factor depending on the input
@@ -415,8 +415,8 @@ class tbtncSileTBtrans(_devncSileTBtrans):
         if isinstance(orbitals, bool):
             if not orbitals: orbitals = None
         if not atoms is None and not orbitals is None:
-            raise ValueError('Both atoms and orbitals keyword in DOS request '
-                              'cannot be specified, only one at a time.')
+            raise ValueError("Both atoms and orbitals keyword in DOS request "
+                             "cannot be specified, only one at a time.")
         # Cast to lower
         norm = norm.lower()
         if norm == 'none':
@@ -424,7 +424,7 @@ class tbtncSileTBtrans(_devncSileTBtrans):
         elif norm in ['all', 'atom', 'orbital']:
             NORM = float(self.no_d)
         else:
-            raise ValueError('Error on norm keyword in DOS request')
+            raise ValueError("Error on norm keyword in DOS request")
 
         geom = self.geometry
 
@@ -723,9 +723,9 @@ class tbtncSileTBtrans(_devncSileTBtrans):
             max_e = max(mu_from + kt_from * 3, mu_to + kt_to * 3)
             s += ("{:"+str(m)+"s} {:9.3f} : {:9.3f} eV\n").format('dFermi function', min_e, max_e)
 
-            warn(self.__class__.__name__ + ".current_parameter cannot "
+            warn(f"{self.__class__.__name__}.current_parameter cannot "
                  "accurately calculate the current due to the calculated energy range. "
-                 "Increase the calculated energy-range.\n" + s)
+                 "Increase the calculated energy-range.\n{s}")
 
         I = (T * dE * (fermi_dirac(E, kt_from, mu_from) - fermi_dirac(E, kt_to, mu_to))).sum()
         return I * constant.q / constant.h('eV s')
@@ -733,9 +733,8 @@ class tbtncSileTBtrans(_devncSileTBtrans):
     def _check_Teig(self, func_name, TE, eps=0.001):
         """ Internal method to check whether all transmission eigenvalues are present """
         if np.any(np.logical_and.reduce(TE > eps, axis=-1)):
-            info('{}.{} does possibly not have all relevant transmission eigenvalues in the '
-                 'calculation. For some energy values all transmission eigenvalues are above {}!'.format(self.__class__.__name__,
-                                                                                                         func_name, eps))
+            info(f"{self.__class__.__name__}.{func_name} does possibly not have all relevant transmission eigenvalues in the "
+                 "calculation. For some energy values all transmission eigenvalues are above {eps}!")
 
     def shot_noise(self, elec_from=0, elec_to=1, classical=False, kavg=True):
         r""" Shot-noise term `from` to `to` using the k-weights
@@ -1186,8 +1185,8 @@ class tbtncSileTBtrans(_devncSileTBtrans):
         elif only == '-':
             J.data[J.data > 0] = 0
         elif only != 'all':
-            raise ValueError(self.__class__.__name__ + '.orbital_current "only" keyword has '
-                             'wrong value ["all", "+", "-"] allowed.')
+            raise ValueError(f"{self.__class__.__name__}.orbital_current 'only'' keyword has "
+                             "wrong value ['all', '+', '-'] allowed.")
 
         return J
 
@@ -1244,8 +1243,8 @@ class tbtncSileTBtrans(_devncSileTBtrans):
         elif only == '-':
             Jab.data[Jab.data > 0] = 0
         elif only != 'all':
-            raise ValueError(self.__class__.__name__ + '.bond_current_from_orbital "only" keyword has '
-                             'wrong value ["+", "-", "all"] allowed.')
+            raise ValueError(f"{self.__class__.__name__}.bond_current_from_orbital 'only' keyword has "
+                             "wrong value ['+', '-', 'all'] allowed.")
 
         # Do in-place operations by removing all the things not required
         Jab.sum_duplicates()
@@ -1597,7 +1596,7 @@ class tbtncSileTBtrans(_devncSileTBtrans):
             DM = DensityMatrix.fromsp(geom, dm)
         else:
             if geom.no != geometry.no:
-                raise ValueError(self.__class__.__name__ + '.Adensity_matrix requires input geometry to contain the correct number of orbitals. Please correct input!')
+                raise ValueError(f"{self.__class__.__name__}.Adensity_matrix requires input geometry to contain the correct number of orbitals. Please correct input!")
             DM = DensityMatrix.fromsp(geometry, dm)
         return DM
 
@@ -2065,9 +2064,9 @@ class tbtncSileTBtrans(_devncSileTBtrans):
 
         def truefalse(bol, string, fdf=None):
             if bol:
-                prnt("  + " + string + ": true")
+                prnt(f"  + {string}: true")
             else:
-                prnt("  - " + string + ": false", option=fdf)
+                prnt(f"  - {string}: false", option=fdf)
 
         # Retrieve the device atoms
         prnt("Device information:")
@@ -2138,15 +2137,15 @@ class tbtncSileTBtrans(_devncSileTBtrans):
             truefalse('COOP' in gelec.variables, "COOP spectral", ['TBT.COOP.A'])
             truefalse('COHP' in gelec.variables, "COHP spectral", ['TBT.COHP.A'])
             truefalse('T' in gelec.variables, "transmission bulk", ['TBT.T.Bulk'])
-            truefalse(elec + '.T' in gelec.variables, "transmission out", ['TBT.T.Out'])
-            truefalse(elec + '.C' in gelec.variables, "transmission out correction", ['TBT.T.Out'])
-            truefalse(elec + '.C.Eig' in gelec.variables, "transmission out correction (eigen)", ['TBT.T.Out', 'TBT.T.Eig'])
+            truefalse(f"{elec}.T" in gelec.variables, "transmission out", ['TBT.T.Out'])
+            truefalse(f"{elec}.C" in gelec.variables, "transmission out correction", ['TBT.T.Out'])
+            truefalse(f"{elec}.C.Eig" in gelec.variables, "transmission out correction (eigen)", ['TBT.T.Out', 'TBT.T.Eig'])
             for elec2 in self.elecs:
                 # Skip it self, checked above in .T and .C
                 if elec2 == elec:
                     continue
-                truefalse(elec2 + '.T' in gelec.variables, "transmission -> " + elec2)
-                truefalse(elec2 + '.T.Eig' in gelec.variables, "transmission (eigen) -> " + elec2, ['TBT.T.Eig'])
+                truefalse(f"{elec2}.T" in gelec.variables, f"transmission -> {elec2}")
+                truefalse(f"{elec2}.T.Eig" in gelec.variables, f"transmission (eigen) -> {elec2}", ['TBT.T.Eig'])
 
         s = out.getvalue()
         out.close()
@@ -2240,7 +2239,7 @@ class tbtncSileTBtrans(_devncSileTBtrans):
                         k = map(float, value.split())
                     k = list(k)
                     if len(k) != 3:
-                        raise ValueError('Argument --kpoint *must* be an integer or 3 values to find the corresponding k-index')
+                        raise ValueError("Argument --kpoint *must* be an integer or 3 values to find the corresponding k-index")
                     ns._krng = ns._tbt.kindex(k)
                 # Add a description on which k-point this is
                 k = ns._tbt.k[ns._krng]
@@ -2364,7 +2363,7 @@ class tbtncSileTBtrans(_devncSileTBtrans):
             def __call__(self, parser, ns, values, option_string=None):
                 e1 = ns._tbt._elec(values[0])
                 if e1 not in ns._tbt.elecs:
-                    raise ValueError('Electrode: "'+e1+'" cannot be found in the specified file.')
+                    raise ValueError(f"Electrode: '{e1}' cannot be found in the specified file.")
                 e2 = ns._tbt._elec(values[1])
                 if e2 not in ns._tbt.elecs:
                     if e2.strip() == '.':
@@ -2375,7 +2374,7 @@ class tbtncSileTBtrans(_devncSileTBtrans):
                                 except:
                                     pass
                         return
-                    raise ValueError('Electrode: "'+e2+'" cannot be found in the specified file.')
+                    raise ValueError(f"Electrode: '{e2}' cannot be found in the specified file.")
 
                 # Grab the information
                 data = ns._tbt.transmission(e1, e2, kavg=ns._krng)[ns._Erng]
@@ -2401,7 +2400,7 @@ class tbtncSileTBtrans(_devncSileTBtrans):
                             except:
                                 pass
                         return
-                    raise ValueError('Electrode: "'+e+'" cannot be found in the specified file.')
+                    raise ValueError(f"Electrode: '{e}' cannot be found in the specified file.")
 
                 # Grab the information
                 data = ns._tbt.transmission_bulk(e, kavg=ns._krng)[ns._Erng]
@@ -2422,7 +2421,7 @@ class tbtncSileTBtrans(_devncSileTBtrans):
                     # we are storing the spectral DOS
                     e = ns._tbt._elec(value)
                     if e not in ns._tbt.elecs:
-                        raise ValueError('Electrode: "'+e+'" cannot be found in the specified file.')
+                        raise ValueError(f"Electrode: '{e}' cannot be found in the specified file.")
                     data = ns._tbt.ADOS(e, kavg=ns._krng, orbitals=ns._Orng, norm=ns._norm)
                     ns._data_header.append(f'ADOS[1/eV]:{e}')
                 else:
@@ -2454,7 +2453,7 @@ class tbtncSileTBtrans(_devncSileTBtrans):
                 # we are storing the Bulk DOS
                 e = ns._tbt._elec(value[0])
                 if e not in ns._tbt.elecs:
-                    raise ValueError('Electrode: "'+e+'" cannot be found in the specified file.')
+                    raise ValueError(f"Electrode: '{e}' cannot be found in the specified file.")
                 # Grab the information
                 data = ns._tbt.BDOS(e, kavg=ns._krng, sum=False)
                 ns._data_header.append(f'BDOS[1/eV]:{e}')
@@ -2474,7 +2473,7 @@ class tbtncSileTBtrans(_devncSileTBtrans):
             def __call__(self, parser, ns, values, option_string=None):
                 e1 = ns._tbt._elec(values[0])
                 if e1 not in ns._tbt.elecs:
-                    raise ValueError('Electrode: "'+e1+'" cannot be found in the specified file.')
+                    raise ValueError(f"Electrode: '{e1}' cannot be found in the specified file.")
                 e2 = ns._tbt._elec(values[1])
                 if e2 not in ns._tbt.elecs:
                     if e2.strip() == '.':
@@ -2485,7 +2484,7 @@ class tbtncSileTBtrans(_devncSileTBtrans):
                                 except:
                                     pass
                         return
-                    raise ValueError('Electrode: "'+e2+'" cannot be found in the specified file.')
+                    raise ValueError(f"Electrode: '{e2}' cannot be found in the specified file.")
 
                 # Grab the information
                 data = ns._tbt.transmission_eig(e1, e2, kavg=ns._krng)

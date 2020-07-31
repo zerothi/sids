@@ -91,10 +91,10 @@ class TestGrid:
         assert np.allclose(g.grid, setup.g.grid * 2)
         assert np.allclose((g - setup.g).grid, setup.g.grid)
 
-    @pytest.mark.xfail(raises=ValueError)
     def test_add_fail1(self, setup):
         g = Grid(np.array(setup.g.shape) // 2 + 1, sc=setup.g.sc.copy())
-        setup.g + g
+        with pytest.raises(ValueError):
+            setup.g + g
 
     def test_iadd1(self):
         g = Grid([10, 10, 10])
@@ -182,6 +182,37 @@ class TestGrid:
         # grid... Perhaps this is ok, but not good... :(
         assert np.allclose(setup.g.sum(2).grid, g1.grid)
 
+    def test_isosurface_orthogonal(self, setup):
+
+        pytest.importorskip("skimage", reason="scikit-image not available")
+
+        # Build an empty grid
+        grid = Grid(0.1, sc=[[1, 0, 0], [0, 1, 0], [0, 0, 1]])
+
+        # Fill it with some values that have a clear isosurface
+        grid.grid = np.tile([1, 2, 3, 4, 5, 4, 3, 2, 1, 0], 100).reshape(10, 10, 10)
+
+        # Calculate the isosurface for the value of 2.5
+        verts, *returns = grid.isosurface(2.5)
+
+        # The third dimension should contain only two coordinates
+        # [1, 2, (HERE) 3, 4, 5, 4, 3, (HERE) 2, 1, 0]
+        assert np.unique(verts[:, 2]).shape == (2,)
+
+    def test_isosurface_non_orthogonal(self, setup):
+
+        pytest.importorskip("skimage", reason="scikit-image not available")
+
+        # If the grid is non-orthogonal, there should be 20 unique values
+        # (10 for each (HERE), see test_isosurface_orthogonal)
+        grid = Grid(0.1, sc=[[1, 0, 0], [0, 1, 0], [0, 2, 1]])
+
+        grid.grid = np.tile([1, 2, 3, 4, 5, 4, 3, 2, 1, 0], 100).reshape(10, 10, 10)
+
+        verts, *returns = grid.isosurface(2.5)
+
+        assert np.unique(verts[:, 2]).shape == (20,)
+
     def test_smooth_gaussian(self, setup):
         g = Grid(0.1, sc=[[2, 0, 0], [0, 2, 0], [0, 0, 2]])
         g[10, 10, 10] = 1
@@ -217,9 +248,9 @@ class TestGrid:
             idx = setup.g.index(setup.sc.center() - v, axis=i)
             assert idx == mid[i]
 
-    @pytest.mark.xfail(raises=ValueError)
     def test_index_fail(self, setup):
-        setup.g.index([0.1, 0.2])
+        with pytest.raises(ValueError):
+            setup.g.index([0.1, 0.2])
 
     def test_index_ndim2(self, setup):
         mid = np.array(setup.g.shape, np.int32) // 2 - 1
@@ -295,18 +326,18 @@ class TestGrid:
         for i in range(3):
             assert setup.g.cross_section(1, i).shape[i] == 1
 
-    @pytest.mark.xfail(raises=ValueError)
     def test_cross_section_fail(self, setup):
-        setup.g.cross_section(1, -1)
+        with pytest.raises(ValueError):
+            setup.g.cross_section(1, -1)
 
     def test_remove_part(self, setup):
         for i in range(3):
             assert setup.g.remove_part(1, i, above=True).shape[i] == 1
 
-    @pytest.mark.xfail(raises=ValueError)
     def test_sub_fail(self, setup):
         g = Grid(np.array(setup.g.shape) // 2 + 1, sc=setup.g.sc.copy())
-        g.sub([], 0)
+        with pytest.raises(ValueError):
+            g.sub([], 0)
 
     def test_sub_part(self, setup):
         for i in range(3):
@@ -332,10 +363,10 @@ class TestGrid:
         g.set_grid([2, 2, 3])
         assert np.all(np.array(g.shape) == [2, 2, 3])
 
-    @pytest.mark.xfail(raises=ValueError)
     def test_set_grid2(self, setup):
         g = setup.g.copy()
-        g.set_grid([2, 2, 2, 4])
+        with pytest.raises(ValueError):
+            g.set_grid([2, 2, 2, 4])
 
     def test_bc1(self, setup):
         assert np.all(setup.g.bc == setup.g.PERIODIC)
@@ -418,3 +449,33 @@ def test_grid_fold():
     assert np.all(grid.index_fold(idx, False) == idx)
     assert not np.all(grid.index_fold(idx) == idx) # sorted from unique
     assert np.all(grid.index_fold(idx) == np.sort(idx, axis=0))
+
+
+def test_grid_tile_sc():
+    grid = Grid([4, 5, 6])
+    grid2 = grid.tile(2, 2)
+    assert grid.shape[:2] == grid2.shape[:2]
+    assert grid.shape[2] == grid2.shape[2] // 2
+    assert grid.volume * 2 == pytest.approx(grid2.volume)
+
+    grid4 = grid2.tile(2, 1)
+    assert grid.shape[0] == grid4.shape[0]
+    assert grid.shape[1] == grid4.shape[1] // 2
+    assert grid.shape[2] == grid4.shape[2] // 2
+    assert grid.volume * 4 == pytest.approx(grid4.volume)
+
+
+def test_grid_tile_geom():
+    grid = Grid([4, 5, 6], geometry=Geometry([0] * 3, Atom[4], sc=4.))
+    grid2 = grid.tile(2, 2)
+    assert grid.shape[:2] == grid2.shape[:2]
+    assert grid.shape[2] == grid2.shape[2] // 2
+    assert grid.volume * 2 == pytest.approx(grid2.volume)
+    assert grid.geometry.na * 2 == grid2.geometry.na
+
+    grid4 = grid2.tile(2, 1)
+    assert grid.shape[0] == grid4.shape[0]
+    assert grid.shape[1] == grid4.shape[1] // 2
+    assert grid.shape[2] == grid4.shape[2] // 2
+    assert grid.volume * 4 == pytest.approx(grid4.volume)
+    assert grid.geometry.na * 4 == grid4.geometry.na

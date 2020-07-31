@@ -4,6 +4,9 @@ import numpy as np
 
 import sisl
 
+
+pytestmark = pytest.mark.plot
+
 mlib = pytest.importorskip('matplotlib')
 plt = pytest.importorskip('matplotlib.pyplot')
 mlib3d = pytest.importorskip('mpl_toolkits.mplot3d')
@@ -14,6 +17,7 @@ def test_supercell_2d():
     sisl.plot(g.sc, axis=[0, 1])
     sisl.plot(g.sc, axis=[0, 2])
     sisl.plot(g.sc, axis=[1, 2])
+    plt.close('all')
 
     ax = plt.subplot(111)
     sisl.plot(g.sc, axis=[1, 2], axes=ax)
@@ -31,6 +35,7 @@ def test_geometry_2d():
     sisl.plot(g, axis=[0, 1])
     sisl.plot(g, axis=[0, 2])
     sisl.plot(g, axis=[1, 2])
+    plt.close('all')
 
     ax = plt.subplot(111)
     sisl.plot(g, axis=[1, 2], axes=ax)
@@ -42,6 +47,7 @@ def test_geometry_2d_atom_indices():
     sisl.plot(g, axis=[0, 1])
     sisl.plot(g, axis=[0, 2])
     sisl.plot(g, axis=[1, 2])
+    plt.close('all')
 
     ax = plt.subplot(111)
     sisl.plot(g, axis=[1, 2], axes=ax, atom_indices=True)
@@ -65,6 +71,7 @@ def test_orbital_radial():
     f = np.exp(- r)
     o = sisl.SphericalOrbital(2, (r, f))
     sisl.plot(o)
+    plt.close('all')
 
     fig = plt.figure()
     sisl.plot(o, axes=fig.gca())
@@ -79,9 +86,9 @@ def test_orbital_harmonics():
     plt.close('all')
 
 
-@pytest.mark.xfail(raises=NotImplementedError)
 def test_not_implemented():
     class Test:
         pass
     t = Test()
-    sisl.plot(t)
+    with pytest.raises(NotImplementedError):
+        sisl.plot(t)
