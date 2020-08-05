@@ -261,6 +261,55 @@
 
 <span class="sd">Which does mathematical operations (averaging/summing) using `~sisl.oplist`.</span>
 
+
+<span class="sd">Parallel calculations</span>
+<span class="sd">---------------------</span>
+
+<span class="sd">The ``apply`` method looping k-points may be explicitly parallelized.</span>
+<span class="sd">To run parallel do:</span>
+
+<span class="sd">&gt;&gt;&gt; H = Hamiltonian(...)</span>
+<span class="sd">&gt;&gt;&gt; mp = MonkhorstPack(H, [10, 10, 10])</span>
+<span class="sd">&gt;&gt;&gt; with mp.apply(pool=True) as par:</span>
+<span class="sd">...     par.eigh()</span>
+
+<span class="sd">This requires you also have the package ``pathos`` available.</span>
+<span class="sd">The above will run in parallel using a default number of processors</span>
+<span class="sd">in priority:</span>
+
+<span class="sd">1. Environment variable ``SISL_NPROCS``</span>
+<span class="sd">2. Return value of ``os.cpu_count()``.</span>
+
+<span class="sd">Note that this may interfere with BLAS implementation which defaults</span>
+<span class="sd">to use all CPU&#39;s for threading. The total processors/threads that will</span>
+<span class="sd">be created is ``SISL_NPROCS * OMP_NUM_THREADS``. Try and ensure this is below</span>
+<span class="sd">the actual core-count of your machine (or the number of requested cores in a</span>
+<span class="sd">HPC environment).</span>
+
+
+<span class="sd">Alternatively one can control the number of processors locally by doing:</span>
+
+<span class="sd">&gt;&gt;&gt; H = Hamiltonian(...)</span>
+<span class="sd">&gt;&gt;&gt; mp = MonkhorstPack(H, [10, 10, 10])</span>
+<span class="sd">&gt;&gt;&gt; with mp.apply(pool=2) as par:</span>
+<span class="sd">...     par.eigh()</span>
+
+<span class="sd">which will request 2 processors (regardless of core-count).</span>
+<span class="sd">As a last resort you can pass your own ``Pool`` of workers that</span>
+<span class="sd">will be used for the parallel processing.</span>
+
+<span class="sd">&gt;&gt;&gt; from multiprocessing import Pool</span>
+<span class="sd">&gt;&gt;&gt; pool = Pool(4)</span>
+<span class="sd">&gt;&gt;&gt; H = Hamiltonian(...)</span>
+<span class="sd">&gt;&gt;&gt; mp = MonkhorstPack(H, [10, 10, 10])</span>
+<span class="sd">&gt;&gt;&gt; with mp.apply(pool=pool) as par:</span>
+<span class="sd">...     par.eigh()</span>
+
+<span class="sd">The ``Pool`` should implement some standard methods that are</span>
+<span class="sd">existing in the ``pathos`` enviroment such as ``Pool.restart`` and ``Pool.terminate``</span>
+<span class="sd">and ``imap`` and ``uimap`` methods. See the ``pathos`` documentation for detalis.</span>
+
+
 <span class="sd">.. autosummary::</span>
 <span class="sd">   :toctree:</span>
 
@@ -348,6 +397,42 @@
         <span class="k">with</span> <span class="n">warnings</span><span class="o">.</span><span class="n">catch_warnings</span><span class="p">():</span>
             <span class="n">warnings</span><span class="o">.</span><span class="n">filterwarnings</span><span class="p">(</span><span class="s1">&#39;ignore&#39;</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">asarray</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">apply</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">attrs</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot; Loop over all k-points by applying `parent` methods for all k.</span>
+
+<span class="sd">        This allows great potential for running and collecting various computationally</span>
+<span class="sd">        heavy methods from a single point on all k-points.</span>
+
+<span class="sd">        The `apply` method will *dispatch* the parent methods through all k-points</span>
+<span class="sd">        and passing `k` as arguments to the parent methods in a straight-forward manner.</span>
+
+<span class="sd">        For instance to iterate over all eigenvalues of a Hamiltonian</span>
+
+<span class="sd">        &gt;&gt;&gt; H = Hamiltonian(...)</span>
+<span class="sd">        &gt;&gt;&gt; bz = BrillouinZone(H)</span>
+<span class="sd">        &gt;&gt;&gt; for ik, eigh in enumerate(bz.apply.eigh()):</span>
+<span class="sd">        ...    # do something with eigh which corresponds to bz.k[ik]</span>
+
+<span class="sd">        By default the `apply` method exposes a set of dispatch methods:</span>
+
+<span class="sd">        - `apply.iter`, the default iterator module</span>
+<span class="sd">        - `apply.average` reduced result by averaging (using `BrillouinZone.weight`</span>
+<span class="sd">           as the weight per k-point.</span>
+<span class="sd">        - `apply.sum` reduced result without weighing</span>
+<span class="sd">        - `apply.array` return a single array with all values; has `len` equal to</span>
+<span class="sd">           number of k-points</span>
+<span class="sd">        - `apply.none`, specialized method that is mainly useful when wrapping</span>
+<span class="sd">           methods</span>
+<span class="sd">        - `apply.list` same as `apply.array` but using Python list as return value</span>
+<span class="sd">        - `apply.oplist` using `sisl.oplist` allows greater flexibility for mathematical</span>
+<span class="sd">           operations element wise</span>
+<span class="sd">        - `apply.datarray` if `xarray` is available one can retrieve an `xarray.DataArray`</span>
+<span class="sd">           instance</span>
+
+<span class="sd">        Please see `sisl.physics.brillouinzone` for further examples.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">pass</span>
 
 <div class="viewcode-block" id="BrillouinZone.set_parent"><a class="viewcode-back" href="../../../api-generated/sisl.physics.brillouinzone.BrillouinZone.html#sisl.physics.BrillouinZone.set_parent">[docs]</a>    <span class="k">def</span> <span class="nf">set_parent</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Update the parent associated to this object</span>

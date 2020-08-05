@@ -273,6 +273,49 @@ to use <a class="reference internal" href="sisl.oplist.html#sisl.oplist" title="
 </pre></div>
 </div>
 <p>Which does mathematical operations (averaging/summing) using <a class="reference internal" href="sisl.oplist.html#sisl.oplist" title="sisl.oplist"><code class="xref py py-obj docutils literal notranslate"><span class="pre">oplist</span></code></a>.</p>
+<div class="section" id="parallel-calculations">
+<h2>Parallel calculations<a class="headerlink" href="#parallel-calculations" title="Permalink to this headline">¶</a></h2>
+<p>The <code class="docutils literal notranslate"><span class="pre">apply</span></code> method looping k-points may be explicitly parallelized.
+To run parallel do:</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">H</span> <span class="o">=</span> <span class="n">Hamiltonian</span><span class="p">(</span><span class="o">...</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">mp</span> <span class="o">=</span> <span class="n">MonkhorstPack</span><span class="p">(</span><span class="n">H</span><span class="p">,</span> <span class="p">[</span><span class="mi">10</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">10</span><span class="p">])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">with</span> <span class="n">mp</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">pool</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="k">as</span> <span class="n">par</span><span class="p">:</span>
+<span class="gp">... </span>    <span class="n">par</span><span class="o">.</span><span class="n">eigh</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>This requires you also have the package <code class="docutils literal notranslate"><span class="pre">pathos</span></code> available.
+The above will run in parallel using a default number of processors
+in priority:</p>
+<ol class="arabic simple">
+<li><p>Environment variable <code class="docutils literal notranslate"><span class="pre">SISL_NPROCS</span></code></p></li>
+<li><p>Return value of <code class="docutils literal notranslate"><span class="pre">os.cpu_count()</span></code>.</p></li>
+</ol>
+<p>Note that this may interfere with BLAS implementation which defaults
+to use all CPU’s for threading. The total processors/threads that will
+be created is <code class="docutils literal notranslate"><span class="pre">SISL_NPROCS</span> <span class="pre">*</span> <span class="pre">OMP_NUM_THREADS</span></code>. Try and ensure this is below
+the actual core-count of your machine (or the number of requested cores in a
+HPC environment).</p>
+<p>Alternatively one can control the number of processors locally by doing:</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">H</span> <span class="o">=</span> <span class="n">Hamiltonian</span><span class="p">(</span><span class="o">...</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">mp</span> <span class="o">=</span> <span class="n">MonkhorstPack</span><span class="p">(</span><span class="n">H</span><span class="p">,</span> <span class="p">[</span><span class="mi">10</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">10</span><span class="p">])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">with</span> <span class="n">mp</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">pool</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span> <span class="k">as</span> <span class="n">par</span><span class="p">:</span>
+<span class="gp">... </span>    <span class="n">par</span><span class="o">.</span><span class="n">eigh</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>which will request 2 processors (regardless of core-count).
+As a last resort you can pass your own <code class="docutils literal notranslate"><span class="pre">Pool</span></code> of workers that
+will be used for the parallel processing.</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">multiprocessing</span> <span class="kn">import</span> <span class="n">Pool</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">pool</span> <span class="o">=</span> <span class="n">Pool</span><span class="p">(</span><span class="mi">4</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">H</span> <span class="o">=</span> <span class="n">Hamiltonian</span><span class="p">(</span><span class="o">...</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">mp</span> <span class="o">=</span> <span class="n">MonkhorstPack</span><span class="p">(</span><span class="n">H</span><span class="p">,</span> <span class="p">[</span><span class="mi">10</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">10</span><span class="p">])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">with</span> <span class="n">mp</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">pool</span><span class="o">=</span><span class="n">pool</span><span class="p">)</span> <span class="k">as</span> <span class="n">par</span><span class="p">:</span>
+<span class="gp">... </span>    <span class="n">par</span><span class="o">.</span><span class="n">eigh</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>The <code class="docutils literal notranslate"><span class="pre">Pool</span></code> should implement some standard methods that are
+existing in the <code class="docutils literal notranslate"><span class="pre">pathos</span></code> enviroment such as <code class="docutils literal notranslate"><span class="pre">Pool.restart</span></code> and <code class="docutils literal notranslate"><span class="pre">Pool.terminate</span></code>
+and <code class="docutils literal notranslate"><span class="pre">imap</span></code> and <code class="docutils literal notranslate"><span class="pre">uimap</span></code> methods. See the <code class="docutils literal notranslate"><span class="pre">pathos</span></code> documentation for detalis.</p>
 <table class="longtable docutils align-default">
 <colgroup>
 <col style="width: 10%" />
@@ -290,6 +333,7 @@ to use <a class="reference internal" href="sisl.oplist.html#sisl.oplist" title="
 </tr>
 </tbody>
 </table>
+</div>
 </div>
 
 
