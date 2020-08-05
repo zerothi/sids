@@ -94,6 +94,29 @@ the `git repository <sisl-git_>`_ for the latest developments
    python3 setup.py install --prefix=<prefix>
 
 
+Windows
+~~~~~~~
+
+To install `sisl` on Windows one will require a specification of
+the compilers used. Typically one may do
+
+.. code-block:: bash
+
+   python3 setup.py install --prefix=<prefix> --fcompiler=gfortran --compiler=mingw32
+
+but sometimes ``setuptools`` does not intercept the flags in the build process.
+To remedy this please ensure ``%HOME%\pydistutils.cfg`` contains the build options:
+
+.. code-block:: bash
+
+   [build]
+   compiler = mingw32
+   fcompiler = gfortran
+
+Adapt to compilers. For an explanation, see `here <https://docs.python.org/3/install/index.html#location-and-names-of-config-files>`_
+or the `user issue <https://github.com/zerothi/sisl/issues/244>`_ which spurred this content.
+
+
 Testing your installation
 -------------------------
 
@@ -106,6 +129,17 @@ Testing the installation may be done by:
 .. code-block:: bash
 
    pytest --pyargs sisl
+
+The above will run the default test-suite which covers most of the `sisl` tool-box.
+Additional tests may be runned by cloning the `sisl-files <sisl-test-files_>`_
+and setting the environment variable `SISL_FILES_TESTS` as the path to the repository.
+
+A basic procedure would be:
+
+.. code-block:: bash
+
+   git clone https://github.com/zerothi/sisl-files.git
+   SISL_FILES_TESTS=$(pwd)/sisl-files pytest --pyargs sisl
 
 
 Development version
@@ -129,3 +163,6 @@ the Intel compilers you should do:
    pip3 install --global-option="build" --global-option="--compiler=intelem" --global-option="--fcompiler=intelem" .
 
 which will pass the correct options to the build system.
+
+
+.. _sisl-test-files: http://github.com/zerothi/sisl-files

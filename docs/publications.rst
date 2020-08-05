@@ -9,6 +9,10 @@ publications below.
 Please help maintaining the list complete via a `pull request <pr_>`_ or
 by writing an email to `nickpapior@gmail.com <mailto:nickpapior@gmail.com>`_.
 
+#. J. Tong, F. Luo, L. Ruan, G. Qin, L. Zhou, F. Tian, X. Zhang,
+   *High and reversible spin polarization in a collinear antiferromagnet*,
+   Applied Physics Review, **7**, `031405 (2020) <https://aip.scitation.org/doi/10.1063/5.0004564>`_
+
 #. A. Garcia, *et. al.*,
    *Siesta: Recent developments and applications*,
    J. Chem. Phys. **152**, `204108 (2020) <https://doi.org/10.1063/5.0005077>`_
@@ -18,11 +22,11 @@ by writing an email to `nickpapior@gmail.com <mailto:nickpapior@gmail.com>`_.
    Physical Review B **100**, `195417 (2019) <https://doi.org/10.1103/PhysRevB.100.195417>`_
 
 #. S. Sanz, P. Brandimarte, G. Giedke, D. Sanchez-Portal, T. Frederiksen,
-   *Crossed graphene nanoribbons as beam splitters and mirrorsfor electron quantum optics*,
-   arXiv `2005.11391 <https://arxiv.org/abs/2005.11391>`_
+   *Crossed graphene nanoribbons as beam splitters and mirrors for electron quantum optics*,
+   Physical Review B **102**, `035436 (2020) <https://journals.aps.org/prb/abstract/10.1103/PhysRevB.102.035436>`_
 
 #. J. Li, S. Sanz, J. Castro-Esteban, M. Vilas-Varela, N. Friedrich, T. Frederiksen, D. Pena, J.I. Pascual,
-   *Uncovering the Triplet Ground State of Triangular Graphene Nanoflakes Engineeredwith Atomic Precision on a Metal Surface*,
+   *Uncovering the Triplet Ground State of Triangular Graphene Nanoflakes Engineered with Atomic Precision on a Metal Surface*,
    Physical Review Letters **124**, `177201 (2020) <https://doi.org/10.1103/PhysRevLett.124.177201>`_
 
 #. T. Schmitt, S. Bourelle, N. Tye, G. Soavi, A.D. Bond, S. Feldmann, T. Boubacar, C. Katan, J. Even, S.E. Dutton, F. Deschler,
@@ -31,7 +35,7 @@ by writing an email to `nickpapior@gmail.com <mailto:nickpapior@gmail.com>`_.
 
 #. J. Brand, S. Leitherer, N. Papior, N. Neel, Y. Lei, M. Brandbyge and J. Kroger,
    *Nonequilibrium Bond Forces in Single-Molecule Junctions*,
-   Nano Letters `(2019) <https://doi.org/10.1021/acs.nanolett.9b02845>`_
+   Nano Letters **19** `(2019) <https://doi.org/10.1021/acs.nanolett.9b02845>`_
 
 #. F. Schindler, M. Brzezinska, W.A. Benalcazar, M. Iraola, A. Bouhon, S.S. Tsirkin, M.G. Vergniory, T. Neupert,
    *Fractional corner charges in spin-orbit coupled crystals*,
