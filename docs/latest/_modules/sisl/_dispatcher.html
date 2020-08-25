@@ -222,21 +222,22 @@
             <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="se">{{</span><span class="si">{</span><span class="n">obj</span><span class="si">}</span><span class="se">}}</span><span class="s2">&quot;</span>
         <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="se">{{</span><span class="si">{</span><span class="n">obj</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">attrs</span><span class="si">}</span><span class="se">\n}}</span><span class="s2">&quot;</span>
 
-    <span class="c1">####</span>
-    <span class="c1"># Only the following methods are necessary for the dispatch method to work</span>
-    <span class="c1">####</span>
-
     <span class="nd">@abstractmethod</span>
     <span class="k">def</span> <span class="nf">dispatch</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">method</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Create dispatched method with correctly wrapped documentation</span>
 
 <span class="sd">        This should return a function that mimics method but wraps it</span>
 <span class="sd">        in some way.</span>
+
+<span class="sd">        A basic interception would be</span>
+
+<span class="sd">        .. code:: python</span>
+<span class="sd">            @wraps(method)</span>
+<span class="sd">            def func(*args, **kwargs):</span>
+<span class="sd">                return method(*args, **kwargs)</span>
+
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="nd">@wraps</span><span class="p">(</span><span class="n">method</span><span class="p">)</span>
-        <span class="k">def</span> <span class="nf">func</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-            <span class="k">return</span> <span class="n">method</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">func</span>
+        <span class="k">pass</span>
 
     <span class="k">def</span> <span class="fm">__getattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">):</span>
         <span class="n">method</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_obj</span><span class="p">,</span> <span class="n">key</span><span class="p">)</span>
@@ -425,6 +426,43 @@
                                 <span class="n">cls_attr_name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_attr_name</span><span class="p">,</span>
                                 <span class="n">obj_getattr</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_obj_getattr</span><span class="p">,</span>
                                 <span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">_attrs</span><span class="p">)</span>
+
+
+<span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">For use when doing cached dispatechers</span>
+<span class="sd">class CachedClassDispatcher(ClassDispatcher):</span>
+<span class="sd">    __slots__ = (&quot;_obj_getattr&quot;, &quot;_attr_name&quot;)</span>
+
+<span class="sd">    def __init__(self, name, dispatchs=None, default=None, obj_getattr=None, **attrs):</span>
+<span class="sd">        # obj_getattr is necessary for the ObjectDispatcher to create the correct</span>
+<span class="sd">        # MethodDispatcher</span>
+<span class="sd">        super().__init__(dispatchs, default, **attrs)</span>
+<span class="sd">        if obj_getattr is None:</span>
+<span class="sd">            def obj_getattr(obj, key):</span>
+<span class="sd">                return getattr(obj, key)</span>
+<span class="sd">        self._obj_getattr = obj_getattr</span>
+<span class="sd">        # the name of the ClassDispatcher attribute in the class</span>
+<span class="sd">        self._attr_name = name</span>
+
+<span class="sd">    def __get__(self, instance, owner):</span>
+<span class="sd">        &quot;&quot;&quot; Class dispatcher retrieval</span>
+
+<span class="sd">        When directly retrieved from the class we return it-self to</span>
+<span class="sd">        allow interaction with the dispatcher.</span>
+
+<span class="sd">        When retrieved from an object it returns an `ObjectDispatcher`</span>
+<span class="sd">        which contains the current dispatchs allowed to be dispatched through.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        if instance is None:</span>
+<span class="sd">            return self</span>
+<span class="sd">        dispatcher = ObjectDispatcher(instance, self._dispatchs,</span>
+<span class="sd">                                default=self._default,</span>
+<span class="sd">                                cls_attr_name=self._attr_name,</span>
+<span class="sd">                                obj_getattr=self._obj_getattr,</span>
+<span class="sd">                                **self._attrs)</span>
+<span class="sd">        object.__setattr__(instance, self._attr_name, dispatcher)</span>
+<span class="sd">        return dispatcher</span>
+<span class="sd">&#39;&#39;&#39;</span>
 </pre></div>
 
            </div>

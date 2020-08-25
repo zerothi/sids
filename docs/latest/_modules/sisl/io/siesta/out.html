@@ -596,27 +596,30 @@
 <div class="viewcode-block" id="outSileSiesta.read_moment"><a class="viewcode-back" href="../../../../api-generated/sisl.io.siesta.outSileSiesta.html#sisl.io.siesta.outSileSiesta.read_moment">[docs]</a>    <span class="nd">@sile_fh_open</span><span class="p">()</span>
     <span class="k">def</span> <span class="nf">read_moment</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">orbitals</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">quantity</span><span class="o">=</span><span class="s1">&#39;S&#39;</span><span class="p">,</span> <span class="n">last</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="nb">all</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Reads the moments from the Siesta output file</span>
+
 <span class="sd">        These will only be present in case of spin-orbit coupling.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
-<span class="sd">        orbitals: bool, False</span>
+<span class="sd">        orbitals: bool, optional</span>
 <span class="sd">           return a table with orbitally resolved</span>
 <span class="sd">           moments.</span>
-<span class="sd">        quantity: str, &#39;S&#39;</span>
+<span class="sd">        quantity: {&#39;S&#39;, &#39;L&#39;}, optional</span>
 <span class="sd">           return the spin-moments or the L moments</span>
-<span class="sd">        last: bool, True</span>
+<span class="sd">        last: bool, optional</span>
 <span class="sd">           only read the last force</span>
-<span class="sd">        all: bool, False</span>
+<span class="sd">        all: bool, optional</span>
 <span class="sd">           return a list of all forces (like an MD)</span>
 <span class="sd">           If `True` `last` is ignored</span>
 <span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="c1"># Read until outcoor is found</span>
         <span class="n">itt</span> <span class="o">=</span> <span class="nb">iter</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
-        <span class="k">while</span> <span class="ow">not</span> <span class="s1">&#39;moments: Atomic&#39;</span> <span class="ow">in</span> <span class="nb">next</span><span class="p">(</span><span class="n">itt</span><span class="p">):</span>
-            <span class="k">if</span> <span class="nb">next</span><span class="p">(</span><span class="n">itt</span><span class="p">)</span> <span class="o">==</span> <span class="s1">&#39;&#39;</span><span class="p">:</span>
-                <span class="k">return</span> <span class="kc">None</span>
+        <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">itt</span><span class="p">:</span>
+            <span class="k">if</span> <span class="s1">&#39;moments: Atomic&#39;</span> <span class="ow">in</span> <span class="n">line</span><span class="p">:</span>
+                <span class="k">break</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="s1">&#39;moments: Atomic&#39;</span> <span class="ow">in</span> <span class="n">line</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span>
 
         <span class="c1"># The moments are printed in SPECIES list</span>
         <span class="nb">next</span><span class="p">(</span><span class="n">itt</span><span class="p">)</span> <span class="c1"># empty</span>
@@ -672,6 +675,43 @@
             <span class="k">return</span> <span class="n">_a</span><span class="o">.</span><span class="n">arrayd</span><span class="p">(</span><span class="n">moments</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">moments</span></div>
 
+<div class="viewcode-block" id="outSileSiesta.read_energy"><a class="viewcode-back" href="../../../../api-generated/sisl.io.siesta.outSileSiesta.html#sisl.io.siesta.outSileSiesta.read_energy">[docs]</a>    <span class="nd">@sile_fh_open</span><span class="p">()</span>
+    <span class="k">def</span> <span class="nf">read_energy</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Reads the final energy distribution &quot;&quot;&quot;</span>
+        <span class="n">itt</span> <span class="o">=</span> <span class="nb">iter</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">itt</span><span class="p">:</span>
+            <span class="k">if</span> <span class="s1">&#39;siesta: Final energy&#39;</span> <span class="ow">in</span> <span class="n">line</span><span class="p">:</span>
+                <span class="k">break</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="s1">&#39;siesta: Final energy&#39;</span> <span class="ow">in</span> <span class="n">line</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span>
+
+        <span class="c1"># Read data</span>
+        <span class="n">line</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="n">itt</span><span class="p">)</span>
+        <span class="n">name_conv</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;Band Struct.&quot;</span><span class="p">:</span> <span class="s2">&quot;Ebs&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Kinetic&quot;</span><span class="p">:</span> <span class="s2">&quot;Ekin&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Hartree&quot;</span><span class="p">:</span> <span class="s2">&quot;Ehartree&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Eldau&quot;</span><span class="p">:</span> <span class="s2">&quot;Eldau&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Eso&quot;</span><span class="p">:</span> <span class="s2">&quot;Eso&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Ext. field&quot;</span><span class="p">:</span> <span class="s2">&quot;EextE&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Exch.-corr.&quot;</span><span class="p">:</span> <span class="s2">&quot;Exc&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Ion-electron&quot;</span><span class="p">:</span> <span class="s2">&quot;Eion_elec&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Ion-ion&quot;</span><span class="p">:</span> <span class="s2">&quot;Eion_ion&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Bulk bias&quot;</span><span class="p">:</span> <span class="s2">&quot;EbV&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Ekinion&quot;</span><span class="p">:</span> <span class="s2">&quot;Ekin_ion&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Total&quot;</span><span class="p">:</span> <span class="s2">&quot;Etot&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Fermi&quot;</span><span class="p">:</span> <span class="s2">&quot;Ef&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Enegf&quot;</span><span class="p">:</span> <span class="s2">&quot;Enegf&quot;</span><span class="p">,</span>
+        <span class="p">}</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">while</span> <span class="nb">len</span><span class="p">(</span><span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">())</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">key</span><span class="p">,</span> <span class="n">val</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;=&quot;</span><span class="p">)</span>
+            <span class="n">key</span> <span class="o">=</span> <span class="n">key</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;:&quot;</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+            <span class="n">out</span><span class="p">[</span><span class="n">name_conv</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">key</span><span class="p">)]</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">val</span><span class="p">)</span>
+            <span class="n">line</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="n">itt</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">out</span></div>
+
 <div class="viewcode-block" id="outSileSiesta.read_data"><a class="viewcode-back" href="../../../../api-generated/sisl.io.siesta.outSileSiesta.html#sisl.io.siesta.outSileSiesta.read_data">[docs]</a>    <span class="k">def</span> <span class="nf">read_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Read specific content in the Siesta out file</span>
 
@@ -695,12 +735,14 @@
 <span class="sd">           read stress, args are passed to `read_stress`</span>
 <span class="sd">        moment: bool, optional</span>
 <span class="sd">           read moment, args are passed to `read_moment` (only for spin-orbit calculations)</span>
+<span class="sd">        energy: bool, optional</span>
+<span class="sd">           read final energies, args are passed to `read_energy`</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">run</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="c1"># This loops ensures that we preserve the order of arguments</span>
         <span class="c1"># From Py3.6 and onwards the **kwargs is an OrderedDictionary</span>
         <span class="k">for</span> <span class="n">kw</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
-            <span class="k">if</span> <span class="n">kw</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;geometry&#39;</span><span class="p">,</span> <span class="s1">&#39;force&#39;</span><span class="p">,</span> <span class="s1">&#39;moment&#39;</span><span class="p">,</span> <span class="s1">&#39;stress&#39;</span><span class="p">]:</span>
+            <span class="k">if</span> <span class="n">kw</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;geometry&#39;</span><span class="p">,</span> <span class="s1">&#39;force&#39;</span><span class="p">,</span> <span class="s1">&#39;moment&#39;</span><span class="p">,</span> <span class="s1">&#39;stress&#39;</span><span class="p">,</span> <span class="s1">&#39;energy&#39;</span><span class="p">]:</span>
                 <span class="k">if</span> <span class="n">kwargs</span><span class="p">[</span><span class="n">kw</span><span class="p">]:</span>
                     <span class="n">run</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">kw</span><span class="p">)</span>
 
@@ -755,12 +797,27 @@
             <span class="k">elif</span> <span class="n">line</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;SCF cycle continued&#39;</span><span class="p">):</span>
                 <span class="n">d</span><span class="p">[</span><span class="s1">&#39;_final_iscf&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
 
+        <span class="k">def</span> <span class="nf">common_parse</span><span class="p">(</span><span class="n">line</span><span class="p">,</span> <span class="n">d</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">line</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;ts-Vha:&#39;</span><span class="p">):</span>
+                <span class="n">d</span><span class="p">[</span><span class="s1">&#39;ts-Vha&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">()[</span><span class="mi">1</span><span class="p">])</span>
+            <span class="k">elif</span> <span class="n">line</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;bulk-bias: |v&#39;</span><span class="p">):</span>
+                <span class="n">d</span><span class="p">[</span><span class="s1">&#39;bb-v&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="nb">float</span><span class="p">,</span> <span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">()[</span><span class="o">-</span><span class="mi">3</span><span class="p">:]))</span>
+                <span class="k">if</span> <span class="s1">&#39;bb-vx&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">props</span><span class="p">:</span>
+                    <span class="n">props</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="s1">&#39;BB-vx&#39;</span><span class="p">,</span> <span class="s1">&#39;BB-vy&#39;</span><span class="p">,</span> <span class="s1">&#39;BB-vz&#39;</span><span class="p">])</span>
+            <span class="k">elif</span> <span class="n">line</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;bulk-bias: {q&#39;</span><span class="p">):</span>
+                <span class="n">d</span><span class="p">[</span><span class="s1">&#39;bb-q&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="nb">float</span><span class="p">,</span> <span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">()[</span><span class="o">-</span><span class="mi">3</span><span class="p">:]))</span>
+                <span class="k">if</span> <span class="s1">&#39;bb-q+&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">props</span><span class="p">:</span>
+                    <span class="n">props</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="s1">&#39;BB-q+&#39;</span><span class="p">,</span> <span class="s1">&#39;BB-q-&#39;</span><span class="p">,</span> <span class="s1">&#39;BB-q0&#39;</span><span class="p">])</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">return</span> <span class="kc">False</span>
+            <span class="k">return</span> <span class="kc">True</span>
+
         <span class="k">if</span> <span class="n">key</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;scf&#39;</span><span class="p">:</span>
             <span class="k">def</span> <span class="nf">parse_next</span><span class="p">(</span><span class="n">line</span><span class="p">,</span> <span class="n">d</span><span class="p">):</span>
                 <span class="n">line</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;*&#39;</span><span class="p">,</span> <span class="s1">&#39;0&#39;</span><span class="p">)</span>
                 <span class="n">reset_d</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="n">line</span><span class="p">)</span>
-                <span class="k">if</span> <span class="n">line</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;ts-Vha:&#39;</span><span class="p">):</span>
-                    <span class="n">d</span><span class="p">[</span><span class="s1">&#39;ts-Vha&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">()[</span><span class="mi">1</span><span class="p">])</span>
+                <span class="k">if</span> <span class="n">common_parse</span><span class="p">(</span><span class="n">line</span><span class="p">,</span> <span class="n">d</span><span class="p">):</span>
+                    <span class="k">pass</span>
                 <span class="k">elif</span> <span class="n">line</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;scf:&#39;</span><span class="p">):</span>
                     <span class="n">d</span><span class="p">[</span><span class="s1">&#39;_found_iscf&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
                     <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">line</span><span class="p">)</span> <span class="o">==</span> <span class="mi">97</span><span class="p">:</span>
@@ -784,8 +841,8 @@
             <span class="k">def</span> <span class="nf">parse_next</span><span class="p">(</span><span class="n">line</span><span class="p">,</span> <span class="n">d</span><span class="p">):</span>
                 <span class="n">line</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;*&#39;</span><span class="p">,</span> <span class="s1">&#39;0&#39;</span><span class="p">)</span>
                 <span class="n">reset_d</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="n">line</span><span class="p">)</span>
-                <span class="k">if</span> <span class="n">line</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;ts-Vha:&#39;</span><span class="p">):</span>
-                    <span class="n">d</span><span class="p">[</span><span class="s1">&#39;ts-Vha&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">()[</span><span class="mi">1</span><span class="p">])</span>
+                <span class="k">if</span> <span class="n">common_parse</span><span class="p">(</span><span class="n">line</span><span class="p">,</span> <span class="n">d</span><span class="p">):</span>
+                    <span class="k">pass</span>
                 <span class="k">elif</span> <span class="n">line</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;ts-q:&#39;</span><span class="p">):</span>
                     <span class="n">data</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">()[</span><span class="mi">1</span><span class="p">:]</span>
                     <span class="k">try</span><span class="p">:</span>
@@ -793,7 +850,7 @@
                     <span class="k">except</span><span class="p">:</span>
                         <span class="c1"># We are probably reading a device list</span>
                         <span class="c1"># ensure that props are appended</span>
-                        <span class="k">if</span> <span class="n">props</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">!=</span> <span class="n">data</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]:</span>
+                        <span class="k">if</span> <span class="n">data</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">props</span><span class="p">:</span>
                             <span class="n">props</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
                         <span class="k">pass</span>
                 <span class="k">elif</span> <span class="n">line</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;ts-scf:&#39;</span><span class="p">):</span>
