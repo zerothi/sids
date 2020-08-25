@@ -10,6 +10,9 @@ __all__ += ["AndCategory", "OrCategory", "XOrCategory"]
 __all__ += ["InstanceCache"]
 
 
+_list_types = (tuple, list, np.ndarray)
+
+
 class InstanceCache:
     """ Wraps an instance to cache *all* results based on `functools.lru_cache`
 
@@ -62,8 +65,38 @@ class InstanceCache:
         return attr
 
 
+class CategoryMeta(ABCMeta):
+    """
+    Metaclass that defines how category classes should behave.
+    """
+
+    def __call__(cls, *args, **kwargs):
+        """
+        If a category class is called, we will attempt to instantiate it.
+
+        However, it may be that this is a parent class (e.g. `AtomCategory`)
+        that does not make sense to instantiate. Since this classes are abstract,
+        they will raise an error that we will use to build the categories that the user
+        requested.
+
+        Examples
+        -----------
+
+        >>> AtomZ(6) # returns an AtomZ category with the Z parameter set to 6
+        >>> AtomCategory(Z=6) # returns exactly the same since it uses `AtomCategory.kw`
+        """
+        try:
+            return super().__call__(*args, **kwargs)
+        except TypeError as e:
+            if len(args) == 0:
+                return cls.kw(**kwargs)
+            # If args were provided, the user probably didn't want to use the category builder,
+            # so we are going to let the exception be raised
+            raise e
+
+
 @set_module("sisl.category")
-class Category(metaclass=ABCMeta):
+class Category(metaclass=CategoryMeta):
     r""" A category """
     __slots__ = ("_name", "_wrapper")
 
@@ -81,6 +114,34 @@ class Category(metaclass=ABCMeta):
     def set_name(self, name):
         r""" Override the name of the categorization """
         self._name = name
+
+    @classmethod
+    @abstractmethod
+    def is_class(cls, name, case=True):
+        r""" Query whether `name` matches the class name by removing a prefix `kw`
+
+        This is important to ensure that users match the full class name
+        by omitting the prefix returned from this method.
+
+        This is an abstract method to ensure sub-classes of `Category`
+        implements it.
+
+        For instance:
+
+        .. code::
+
+            class MyCategory(Category):
+
+                @classmethod
+                def is_class(cls, name):
+                     # strip "My" and do comparison
+                     return cl.__name__.lower()[2:] == name.lower()
+
+        would enable one to compare against the *base* category scheme.
+
+        This has the option to search case-sensitivity or not.
+        """
+        pass
 
     @classmethod
     def kw(cls, **kwargs):
@@ -103,7 +164,7 @@ class Category(metaclass=ABCMeta):
                     subcls.add(child)
                     work.append(child)
 
-        del work, parent, child
+        del work
 
         # create dictionary look-up
         subcls = {cl.__name__.lower(): cl for cl in subcls}
@@ -117,17 +178,31 @@ class Category(metaclass=ABCMeta):
         cat = None
         for key, args in kwargs.items():
             lkey = key.lower()
-            found = ''
+            found = None
+            # First search case-sensitive
             for name, cl in subcls.items():
-                if name.endswith(lkey):
+                if cl.is_class(key):
                     if found:
                         raise ValueError(f"{cls.__name__}.kw got a non-unique argument for category name:\n"
-                                         f"    Searching for {name} and found matches {found} and {name}.")
-                    found = name
-                    if cat is None:
-                        cat = get_cat(cl, args)
-                    else:
-                        cat = cat & get_cat(cl, args)
+                                         f"    Searching for {key} and found matches {found.__name__} and {cl.__name__}.")
+                    found = cl
+
+            if found is None:
+                for name, cl in subcls.items():
+                    if cl.is_class(key, case=False):
+                        if found:
+                            raise ValueError(f"{cls.__name__}.kw got a non-unique argument for category name:\n"
+                                             f"    Searching for {key} and found matches {found.__name__.lower()} and {cl.__name__.lower()}.")
+                        found = cl
+
+            if found is None:
+                raise ValueError(f"{cls.__name__}.kw got an argument for category name:\n"
+                                 f"    Searching for {key} but found no matches.")
+
+            if cat is None:
+                cat = get_cat(found, args)
+            else:
+                cat = cat & get_cat(found, args)
 
         return cat
 
@@ -175,7 +250,7 @@ class Category(metaclass=ABCMeta):
 
     def __ne__(self, other):
         eq = self == other
-        if isinstance(eq, list):
+        if isinstance(eq, _list_types):
             return [not e for e in eq]
         return not eq
 
@@ -196,7 +271,22 @@ class Category(metaclass=ABCMeta):
 
 
 @set_module("sisl.category")
-class NullCategory(Category):
+class GenericCategory(Category):
+    """Used to indicate that the category does not act on specific objects
+
+    It serves to identify categories such as `NullCategory`, `NotCategory`
+    and `CompositeCategory` and distinguish them from categories that have
+    a specific object in which they act.
+    """
+    @classmethod
+    def is_class(cls, name):
+        # never allow one to match a generic class
+        # I.e. you can't instantiate a Null/Not/And/Or/XOr category by name
+        return False
+
+
+@set_module("sisl.category")
+class NullCategory(GenericCategory):
     r""" Special Null class which always represents a classification not being *anything* """
     __slots__ = tuple()
 
@@ -224,7 +314,7 @@ class NullCategory(Category):
 
 
 @set_module("sisl.category")
-class NotCategory(Category):
+class NotCategory(GenericCategory):
     """ A class returning the *opposite* of this class (NullCategory) if it is categorized as such """
     __slots__ = ("_cat",)
 
@@ -240,12 +330,13 @@ class NotCategory(Category):
         r""" Base method for queriyng whether an object is a certain category """
         cat = self._cat.categorize(*args, **kwargs)
 
+        _null = NullCategory()
         def check(cat):
             if isinstance(cat, NullCategory):
                 return self
-            return NullCategory()
+            return _null
 
-        if isinstance(cat, list):
+        if isinstance(cat, _list_types):
             return list(map(check, cat))
         return check(cat)
 
@@ -264,7 +355,7 @@ class NotCategory(Category):
 
 
 @set_module("sisl.category")
-class CompositeCategory(Category):
+class CompositeCategory(GenericCategory):
     """ A composite class consisting of two categories, an abstract class to always be inherited
 
     This should take 2 categories as arguments
@@ -337,7 +428,7 @@ class OrCategory(CompositeCategory):
                 return b
             return a
 
-        if isinstance(catA, list):
+        if isinstance(catA, _list_types):
             return list(map(cmp, catA, catB))
         return cmp(catA, catB)
 
@@ -371,7 +462,7 @@ class AndCategory(CompositeCategory):
                 return b
             return self
 
-        if isinstance(catA, list):
+        if isinstance(catA, _list_types):
             return list(map(cmp, catA, catB))
         return cmp(catA, catB)
 
@@ -407,7 +498,7 @@ class XOrCategory(CompositeCategory):
             # is exclusive, so we return the NullCategory
             return NullCategory()
 
-        if isinstance(catA, list):
+        if isinstance(catA, _list_types):
             return list(map(cmp, catA, catB))
         return cmp(catA, catB)
 

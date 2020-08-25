@@ -13,7 +13,6 @@ __all__ = ["AtomNeighbours"]
 class AtomNeighbours(AtomCategory):
     r""" Classify atoms based on number of neighbours
 
-
     Parameters
     ----------
     min : int, optional
@@ -43,7 +42,7 @@ class AtomNeighbours(AtomCategory):
     def __init__(self, *args, **kwargs):
         if len(args) > 0:
             if isinstance(args[-1], AtomCategory):
-                kwargs["neigh_cat"] = args.pop()
+                *args, kwargs["neigh_cat"] = args
 
         self._min = 0
         self._max = 2 ** 31
@@ -89,7 +88,7 @@ class AtomNeighbours(AtomCategory):
 
     @_sanitize_loop
     def categorize(self, geometry, atoms=None):
-        """ Check that number of neighbours are matching """
+        """ Check if geometry and atoms matches the neighbour criteria """
         idx, rij = geometry.close(atoms, R=self.R(geometry.atoms[atoms]), ret_rij=True)
         idx, rij = idx[1], rij[1]
         if len(idx) < self._min:

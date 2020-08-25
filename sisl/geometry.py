@@ -27,7 +27,7 @@ from .supercell import SuperCell, SuperCellChild
 from .atom import Atom, Atoms
 from .shape import Shape, Sphere, Cube
 from ._namedindex import NamedIndex
-from ._category import Category
+from ._category import Category, GenericCategory
 
 
 __all__ = ['Geometry', 'sgeom']
@@ -38,6 +38,13 @@ __all__ = ['Geometry', 'sgeom']
 @set_module("sisl.geom")
 class AtomCategory(Category):
     __slots__ = tuple()
+
+    @classmethod
+    def is_class(cls, name, case=True):
+        # Strip off `Atom`
+        if case:
+            return cls.__name__[4:] == name
+        return cls.__name__[4:].lower() == name.lower()
 
 
 @set_module("sisl")
@@ -307,6 +314,7 @@ class Geometry(SuperCellChild):
         return (self.atoms.specie == self.atoms.index(atoms)).nonzero()[0]
 
     @_sanitize_atoms.register(AtomCategory)
+    @_sanitize_atoms.register(GenericCategory)
     def _(self, atoms):
         # First do categorization
         cat = atoms.categorize(self)

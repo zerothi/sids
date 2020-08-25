@@ -1423,6 +1423,8 @@ def test_geometry_sort_fail_keyword():
         sisl_geom.bilayer().sort(not_found_keyword=True)
 
 
+@pytest.mark.category
+@pytest.mark.geom_category
 def test_geometry_sanitize_atom():
     bi = sisl_geom.bilayer(bottom_atoms=Atom[6], top_atoms=(Atom[5], Atom[7])).tile(2, 0).repeat(2, 1)
     C_idx = (bi.atoms.Z == 6).nonzero()[0]
@@ -1433,6 +1435,12 @@ def test_geometry_sanitize_atom():
     assert np.allclose(only_C, check_C)
     # with dict redirect
     only_C = bi.axyz({'Z': 6})
+    assert np.allclose(only_C, check_C)
+    # Using a dict that has multiple keys. This basically checks
+    # that it accepts generic categories such as the AndCategory
+    bi2 = bi.copy()
+    bi2.atoms["C"] = Atom("C", R=1.9)
+    only_C = bi2.axyz({'Z': 6, "neighbours": 3})
     assert np.allclose(only_C, check_C)
 
     tup_01 = (0, 2)

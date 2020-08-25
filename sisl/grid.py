@@ -267,8 +267,8 @@ class Grid(SuperCellChild):
         """
 
         # Normalize the radius input to a list of radius
-        if isinstance(r, (int, float)):
-            r = [r]*3
+        if isinstance(r, Real):
+            r = [r, r, r]
 
         # Calculate the size of the kernel in pixels (in case the
         # gaussian filter is used, this is the standard deviation)
@@ -1520,6 +1520,16 @@ class Grid(SuperCellChild):
         p.add_argument(*opts('--remove'), nargs=2, metavar=('COORD', 'DIR'),
                        action=RemoveDirectionGrid,
                        help='Reduce the grid by removing a subset of the grid (along DIR).')
+
+        class Tile(argparse.Action):
+
+            def __call__(self, parser, ns, values, option_string=None):
+                r = int(values[0])
+                d = direction(values[1])
+                ns._grid = ns._grid.tile(r, d)
+        p.add_argument(*opts('--tile'), nargs=2, metavar=('TIMES', 'DIR'),
+                       action=Tile,
+                       help='Tiles the grid in the specified direction.')
 
         # Scale the grid with this value
         class ScaleGrid(argparse.Action):
