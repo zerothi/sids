@@ -24,7 +24,6 @@ One may also plot real-space wavefunctions.
    conductivity
    wavefunction
    spin_moment
-   spin_orbital_moment
    spin_squared
 
 
@@ -59,7 +58,7 @@ from numpy import floor, ceil
 from numpy import conj, dot, ogrid, einsum
 from numpy import cos, sin, pi
 from numpy import int32, complex128
-from numpy import add, angle, sort
+from numpy import add, angle, argsort, sort
 
 from sisl._internal import set_module
 from sisl import units, constant
@@ -70,7 +69,7 @@ from sisl.oplist import oplist
 from sisl._math_small import xyz_to_spherical_cos_phi
 import sisl._array as _a
 from sisl.linalg import svd_destroy, eigvals_destroy
-from sisl.linalg import eigh_destroy, det_destroy
+from sisl.linalg import eigh, eigh_destroy, det_destroy
 from sisl.messages import info, warn, SislError, tqdm_eta
 from sisl._help import dtype_complex_to_real, dtype_real_to_complex
 from .distribution import get_distribution
@@ -81,13 +80,22 @@ from .state import Coefficient, State, StateC
 
 __all__ = ['DOS', 'PDOS']
 __all__ += ['velocity', 'velocity_matrix']
-__all__ += ['spin_moment', 'spin_orbital_moment', 'spin_squared']
+__all__ += ['spin_moment', 'spin_squared']
 __all__ += ['inv_eff_mass_tensor']
 __all__ += ['berry_phase', 'berry_curvature']
 __all__ += ['conductivity']
 __all__ += ['wavefunction']
 __all__ += ['CoefficientElectron', 'StateElectron', 'StateCElectron']
 __all__ += ['EigenvalueElectron', 'EigenvectorElectron', 'EigenstateElectron']
+
+
+def _decouple_eigh(M):
+    """ Return eigenvectors and sort according to the first absolute entry
+
+    This should make returned values consistent where small numerical noises
+    may swap two degenerate states.
+    """
+    return eigh_destroy(M)[1].T
 
 
 @set_module("sisl.physics.electron")
@@ -115,10 +123,9 @@ def DOS(E, eig, distribution='gaussian'):
 
     See Also
     --------
-    sisl.physics.distribution : a selected set of implemented distribution functions
+    ~sisl.physics.distribution : a selected set of implemented distribution functions
     PDOS : projected DOS (same as this, but projected onto each orbital)
-    spin_moment : spin moment for states
-    spin_orbital_moment : orbital resolved spin-moment
+    spin_moment : spin moment
 
     Returns
     -------
@@ -194,10 +201,9 @@ def PDOS(E, eig, state, S=None, distribution='gaussian', spin=None):
 
     See Also
     --------
-    sisl.physics.distribution : a selected set of implemented distribution functions
+    ~sisl.physics.distribution : a selected set of implemented distribution functions
     DOS : total DOS (same as summing over orbitals)
-    spin_moment : spin moment for states
-    spin_orbital_moment : orbital resolved spin-moment
+    spin_moment : spin moment
 
     Returns
     -------
@@ -237,22 +243,26 @@ def PDOS(E, eig, state, S=None, distribution='gaussian', spin=None):
         PDOS = np.empty([4, state.shape[1] // 2, len(E)], dtype=dtype_complex_to_real(state.dtype))
 
         d = distribution(E - eig[0]).reshape(1, -1)
+        cs = conj(state[0]).reshape(-1, 2)
         v = S.dot(state[0].reshape(-1, 2))
-        D = (conj(state[0]) * v.ravel()).real.reshape(-1, 2) # diagonal PDOS
-        PDOS[0, :, :] = D.sum(1).reshape(-1, 1) * d # total DOS
-        PDOS[3, :, :] = (D[:, 0] - D[:, 1]).reshape(-1, 1) * d # z-dos
-        D = (conj(state[0, 1::2]) * 2 * v[:, 0]).reshape(-1, 1) # psi_down * psi_up * 2
-        PDOS[1, :, :] = D.real * d # x-dos
-        PDOS[2, :, :] = D.imag * d # y-dos
+        D1 = (cs * v).real # uu,dd PDOS
+        PDOS[0, :, :] = D1.sum(1).reshape(-1, 1) * d # total DOS
+        PDOS[3, :, :] = (D1[:, 0] - D1[:, 1]).reshape(-1, 1) * d # z-dos
+        D1 = (cs[:, 1] * v[:, 0]).reshape(-1, 1)
+        D2 = (cs[:, 0] * v[:, 1]).reshape(-1, 1)
+        PDOS[1, :, :] = (D1.real + D2.real) * d # x-dos
+        PDOS[2, :, :] = (D1.imag - D2.imag) * d # y-dos
         for i in range(1, len(eig)):
             d = distribution(E - eig[i]).reshape(1, -1)
+            cs = conj(state[i]).reshape(-1, 2)
             v = S.dot(state[i].reshape(-1, 2))
-            D = (conj(state[i]) * v.ravel()).real.reshape(-1, 2)
-            PDOS[0, :, :] += D.sum(1).reshape(-1, 1) * d
-            PDOS[3, :, :] += (D[:, 0] - D[:, 1]).reshape(-1, 1) * d
-            D = (conj(state[i, 1::2]) * 2 * v[:, 0]).reshape(-1, 1)
-            PDOS[1, :, :] += D.real * d
-            PDOS[2, :, :] += D.imag * d
+            D1 = (cs * v).real
+            PDOS[0, :, :] += D1.sum(1).reshape(-1, 1) * d
+            PDOS[3, :, :] += (D1[:, 0] - D1[:, 1]).reshape(-1, 1) * d
+            D1 = (cs[:, 1] * v[:, 0]).reshape(-1, 1)
+            D2 = (cs[:, 0] * v[:, 1]).reshape(-1, 1)
+            PDOS[1, :, :] += (D1.real + D2.real) * d
+            PDOS[2, :, :] += (D1.imag - D2.imag) * d
 
     else:
         PDOS = (conj(state[0]) * S.dot(state[0])).real.reshape(-1, 1) \
@@ -265,8 +275,8 @@ def PDOS(E, eig, state, S=None, distribution='gaussian', spin=None):
 
 
 @set_module("sisl.physics.electron")
-def spin_moment(state, S=None):
-    r""" Calculate the spin magnetic moment (also known as spin texture)
+def spin_moment(state, S=None, project=False):
+    r""" Spin magnetic moment (spin texture) and optionally orbitally resolved moments
 
     This calculation only makes sense for non-colinear calculations.
 
@@ -286,6 +296,8 @@ def spin_moment(state, S=None):
        \\
        \mathbf{S}_i^z &= \langle \psi_i | \boldsymbol\sigma_z \mathbf S | \psi_i \rangle
 
+    If `project` is true, the above will be the orbitally resolved quantities.
+
     Parameters
     ----------
     state : array_like
@@ -294,6 +306,8 @@ def spin_moment(state, S=None):
        overlap matrix used in the :math:`\langle\psi|\mathbf S|\psi\rangle` calculation. If `None` the identity
        matrix is assumed. The overlap matrix should correspond to the system and :math:`k` point the eigenvectors
        has been evaluated at.
+    project: bool, optional
+       whether the spin-moments will be orbitally resolved or not
 
     Notes
     -----
@@ -304,15 +318,14 @@ def spin_moment(state, S=None):
     --------
     DOS : total DOS
     PDOS : projected DOS
-    spin_orbital_moment : orbital resolved spin-moment
 
     Returns
     -------
     numpy.ndarray
-        spin moments per state with final dimension ``(state.shape[0], 3)``.
+        spin moments per state with final dimension ``(state.shape[0], 3)``, or ``(state.shape[0], state.shape[1]//2, 3)`` if project is true
     """
     if state.ndim == 1:
-        return spin_moment(state.reshape(1, -1), S).ravel()
+        return spin_moment(state.reshape(1, -1), S, project)[0]
 
     if S is None:
         class S:
@@ -325,96 +338,35 @@ def spin_moment(state, S=None):
     if S.shape[1] == state.shape[1]:
         S = S[::2, ::2]
 
-    # Initialize
-    s = np.empty([state.shape[0], 3], dtype=dtype_complex_to_real(state.dtype))
+    if project:
+        s = np.empty([state.shape[0], state.shape[1] // 2, 3], dtype=dtype_complex_to_real(state.dtype))
 
-    # TODO consider doing this all in a few lines
-    # TODO Since there are no energy dependencies here we can actually do all
-    # TODO dot products in one go and then use b-casting rules. Should be much faster
-    # TODO but also way more memory demanding!
-    for i in range(len(state)):
-        Sstate = S.dot(state[i].reshape(-1, 2))
-        D = (conj(state[i]) * Sstate.ravel()).real.reshape(-1, 2).sum(0)
-        s[i, 2] = D[0] - D[1]
-        D = 2 * conj(state[i, 1::2]).dot(Sstate[:, 0])
-        s[i, 0] = D.real
-        s[i, 1] = D.imag
+        for i in range(len(state)):
+            cs = conj(state[i]).reshape(-1, 2)
+            Sstate = S.dot(state[i].reshape(-1, 2))
+            D1 = (cs * Sstate).real
+            s[i, :, 2] = D1[:, 0] - D1[:, 1]
+            D1 = cs[:, 1] * Sstate[:, 0]
+            D2 = cs[:, 0] * Sstate[:, 1]
+            s[i, :, 0] = D1.real + D2.real
+            s[i, :, 1] = D1.imag - D2.imag
 
-    return s
+    else:
+        s = np.empty([state.shape[0], 3], dtype=dtype_complex_to_real(state.dtype))
 
-
-@set_module("sisl.physics.electron")
-def spin_orbital_moment(state, S=None):
-    r""" Calculate the spin magnetic moment per orbital site (equivalent to spin-moment per orbital)
-
-    This calculation only makes sense for non-colinear calculations.
-
-    The returned quantities are given in this order:
-
-    - Spin magnetic moment along :math:`x` direction
-    - Spin magnetic moment along :math:`y` direction
-    - Spin magnetic moment along :math:`z` direction
-
-    These are calculated using the Pauli matrices :math:`\boldsymbol\sigma_x`, :math:`\boldsymbol\sigma_y` and :math:`\boldsymbol\sigma_z`:
-
-    .. math::
-
-       \mathbf{S}_{i,o}^x &= \psi_{i,o}^* | \boldsymbol\sigma_x \mathbf S | \psi_i \rangle
-       \\
-       \mathbf{S}_{i,o}^y &= \psi_{i,o}^* | \boldsymbol\sigma_y \mathbf S | \psi_i \rangle
-       \\
-       \mathbf{S}_{i,o}^z &= \psi_{i,o}^* | \boldsymbol\sigma_z \mathbf S | \psi_i \rangle
-
-    Note that this is equivalent to `PDOS` *without* the distribution function and energy grid.
-
-    Parameters
-    ----------
-    state : array_like
-       vectors describing the electronic states, 2nd dimension contains the states
-    S : array_like, optional
-       overlap matrix used in the :math:`\mathbf S|\psi\rangle` calculation. If `None` the identity
-       matrix is assumed. The overlap matrix should correspond to the system and :math:`k` point the eigenvectors
-       has been evaluated at.
-
-    Notes
-    -----
-    This routine cannot check whether the input eigenvectors originate from a non-colinear calculation.
-    If a non-polarized eigenvector is passed to this routine, the output will have no physical meaning.
-
-    See Also
-    --------
-    DOS : total DOS
-    PDOS : projected DOS
-    spin_moment : spin moment for states (equivalent to the ``spin_orbital_moment.sum(1)``)
-
-    Returns
-    -------
-    numpy.ndarray
-        spin moments per state with final dimension ``(state.shape[0], state.shape[1] // 2, 3)``.
-    """
-    if state.ndim == 1:
-        return spin_orbital_moment(state.reshape(1, -1), S)[0]
-
-    if S is None:
-        class S:
-            __slots__ = []
-            shape = (state.shape[1] // 2, state.shape[1] // 2)
-            @staticmethod
-            def dot(v):
-                return v
-
-    if S.shape[1] == state.shape[1]:
-        S = S[::2, ::2]
-
-    s = np.empty([state.shape[0], state.shape[1] // 2, 3], dtype=dtype_complex_to_real(state.dtype))
-
-    for i in range(len(state)):
-        Sstate = S.dot(state[i].reshape(-1, 2))
-        D = (conj(state[i]) * Sstate.ravel()).real.reshape(-1, 2)
-        s[i, :, 2] = D[:, 0] - D[:, 1]
-        D = 2 * conj(state[i, 1::2]) * Sstate[:, 0]
-        s[i, :, 0] = D.real
-        s[i, :, 1] = D.imag
+        # TODO consider doing this all in a few lines
+        # TODO Since there are no energy dependencies here we can actually do all
+        # TODO dot products in one go and then use b-casting rules. Should be much faster
+        # TODO but also way more memory demanding!
+        for i in range(len(state)):
+            cs = conj(state[i]).reshape(-1, 2)
+            Sstate = S.dot(state[i].reshape(-1, 2))
+            D1 = (cs * Sstate).real.sum(0)
+            s[i, 2] = D1[0] - D1[1]
+            D1 = cs[:, 1].dot(Sstate[:, 0])
+            D2 = cs[:, 0].dot(Sstate[:, 1])
+            s[i, 0] = D1.real + D2.real
+            s[i, 1] = D1.imag - D2.imag
 
     return s
 
@@ -506,7 +458,7 @@ def spin_squared(state_alpha, state_beta, S=None):
 
 
 @set_module("sisl.physics.electron")
-def velocity(state, dHk, energy=None, dSk=None, degenerate=None):
+def velocity(state, dHk, energy=None, dSk=None, degenerate=None, project=False):
     r""" Calculate the velocity of a set of states
 
     These are calculated using the analytic expression (:math:`\alpha` corresponding to the Cartesian directions):
@@ -520,6 +472,10 @@ def velocity(state, dHk, energy=None, dSk=None, degenerate=None):
     :math:`\mathbf H(\mathbf k) - \epsilon_i\mathbf S(\mathbf k)`.
 
     The velocities calculated are without the Berry curvature contributions.
+
+    In case the user requests to project the velocities (`project` is True) the equation follows that
+    of `PDOS` with the same changes.
+    In case of non-colinear spin the velocities will be returned also for each spin-direction.
 
     Parameters
     ----------
@@ -539,18 +495,22 @@ def velocity(state, dHk, energy=None, dSk=None, degenerate=None):
     degenerate : list of array_like, optional
        a list containing the indices of degenerate states. In that case a prior diagonalization
        is required to decouple them. This is done 3 times along each of the Cartesian directions.
+    project : bool, optional
+       whether the velocities will be returned projected per orbital
 
     Returns
     -------
     numpy.ndarray
-        velocities per state with final dimension ``(state.shape[0], 3)``, the velocity unit is Ang/ps. Units *may* change in future releases.
+        if `project` is false, velocities per state with final dimension ``(state.shape[0], 3)``, the velocity unit is Ang/ps. Units *may* change in future releases.
+    numpy.ndarray
+        if `project` is true, velocities per state with final dimension ``(state.shape[0], state.shape[1], 3)``, the velocity unit is Ang/ps. Units *may* change in future releases.
     """
     if state.ndim == 1:
-        return velocity(state.reshape(1, -1), dHk, energy, dSk, degenerate).ravel()
+        return velocity(state.reshape(1, -1), dHk, energy, dSk, degenerate, project)[0]
 
     if dSk is None:
-        return _velocity_ortho(state, dHk, degenerate)
-    return _velocity_non_ortho(state, dHk, energy, dSk, degenerate)
+        return _velocity_ortho(state, dHk, degenerate, project)
+    return _velocity_non_ortho(state, dHk, energy, dSk, degenerate, project)
 
 
 # dHk is in [Ang eV]
@@ -558,11 +518,8 @@ def velocity(state, dHk, energy=None, dSk=None, degenerate=None):
 _velocity_const = 1 / constant.hbar('eV ps')
 
 
-def _velocity_non_ortho(state, dHk, energy, dSk, degenerate):
+def _velocity_non_ortho(state, dHk, energy, dSk, degenerate, project):
     r""" For states in a non-orthogonal basis """
-    # Along all directions
-    v = np.empty([state.shape[0], 3], dtype=dtype_complex_to_real(state.dtype))
-
     # Decouple the degenerate states
     if not degenerate is None:
         for deg in degenerate:
@@ -574,30 +531,36 @@ def _velocity_non_ortho(state, dHk, energy, dSk, degenerate):
             # then re-construct the seperated degenerate states
             # Since we do this for all directions we should decouple them all
             vv = conj(state[deg, :]).dot((dHk[0] - e * dSk[0]).dot(state[deg, :].T))
-            S = eigh_destroy(vv)[1].T.dot(state[deg, :])
+            S = _decouple_eigh(vv).dot(state[deg, :])
             vv = conj(S).dot((dHk[1] - e * dSk[1]).dot(S.T))
-            S = eigh_destroy(vv)[1].T.dot(S)
+            S = _decouple_eigh(vv).dot(S)
             vv = conj(S).dot((dHk[2] - e * dSk[2]).dot(S.T))
-            state[deg, :] = eigh_destroy(vv)[1].T.dot(S)
+            state[deg, :] = _decouple_eigh(vv).dot(S)
 
-    # Since they depend on the state energies and dSk we have to loop them individually.
-    for s, e in enumerate(energy):
+    if project:
+        v = np.empty([state.shape[0], state.shape[1], 3], dtype=dtype_complex_to_real(state.dtype))
+        # Since they depend on the state energies and dSk we have to loop them individually.
+        for s, e in enumerate(energy):
+            cs = conj(state[s])
+            # Since dHk *may* be a csr_matrix or sparse, we have to do it like
+            # this. A sparse matrix cannot be re-shaped with an extra dimension.
+            v[s, :, 0] = (cs * (dHk[0] - e * dSk[0]).dot(state[s])).real
+            v[s, :, 1] = (cs * (dHk[1] - e * dSk[1]).dot(state[s])).real
+            v[s, :, 2] = (cs * (dHk[2] - e * dSk[2]).dot(state[s])).real
 
-        # Since dHk *may* be a csr_matrix or sparse, we have to do it like
-        # this. A sparse matrix cannot be re-shaped with an extra dimension.
-        v[s, 0] = conj(state[s]).dot((dHk[0] - e * dSk[0]).dot(state[s])).real
-        v[s, 1] = conj(state[s]).dot((dHk[1] - e * dSk[1]).dot(state[s])).real
-        v[s, 2] = conj(state[s]).dot((dHk[2] - e * dSk[2]).dot(state[s])).real
+    else:
+        v = np.empty([state.shape[0], 3], dtype=dtype_complex_to_real(state.dtype))
+        for s, e in enumerate(energy):
+            cs = conj(state[s])
+            v[s, 0] = cs.dot((dHk[0] - e * dSk[0]).dot(state[s])).real
+            v[s, 1] = cs.dot((dHk[1] - e * dSk[1]).dot(state[s])).real
+            v[s, 2] = cs.dot((dHk[2] - e * dSk[2]).dot(state[s])).real
 
     return v * _velocity_const
 
 
-def _velocity_ortho(state, dHk, degenerate):
+def _velocity_ortho(state, dHk, degenerate, project):
     r""" For states in an orthogonal basis """
-
-    # Along all directions
-    v = np.empty([state.shape[0], 3], dtype=dtype_complex_to_real(state.dtype))
-
     # Decouple the degenerate states
     if not degenerate is None:
         for deg in degenerate:
@@ -605,15 +568,26 @@ def _velocity_ortho(state, dHk, degenerate):
             # then re-construct the seperated degenerate states
             # Since we do this for all directions we should decouple them all
             vv = conj(state[deg, :]).dot(dHk[0].dot(state[deg, :].T))
-            S = eigh_destroy(vv)[1].T.dot(state[deg, :])
+            S = _decouple_eigh(vv).dot(state[deg, :])
             vv = conj(S).dot((dHk[1]).dot(S.T))
-            S = eigh_destroy(vv)[1].T.dot(S)
+            S = _decouple_eigh(vv).dot(S)
             vv = conj(S).dot((dHk[2]).dot(S.T))
-            state[deg, :] = eigh_destroy(vv)[1].T.dot(S)
+            state[deg, :] = _decouple_eigh(vv).dot(S)
 
-    v[:, 0] = einsum('ij,ji->i', conj(state), dHk[0].dot(state.T)).real
-    v[:, 1] = einsum('ij,ji->i', conj(state), dHk[1].dot(state.T)).real
-    v[:, 2] = einsum('ij,ji->i', conj(state), dHk[2].dot(state.T)).real
+    cs = conj(state)
+    if project:
+        v = np.empty([state.shape[0], state.shape[1], 3], dtype=dtype_complex_to_real(state.dtype))
+
+        v[:, :, 0] = (cs * dHk[0].dot(state.T).T).real
+        v[:, :, 1] = (cs * dHk[1].dot(state.T).T).real
+        v[:, :, 2] = (cs * dHk[2].dot(state.T).T).real
+
+    else:
+        v = np.empty([state.shape[0], 3], dtype=dtype_complex_to_real(state.dtype))
+
+        v[:, 0] = einsum('ij,ji->i', cs, dHk[0].dot(state.T)).real
+        v[:, 1] = einsum('ij,ji->i', cs, dHk[1].dot(state.T)).real
+        v[:, 2] = einsum('ij,ji->i', cs, dHk[2].dot(state.T)).real
 
     return v * _velocity_const
 
@@ -666,7 +640,7 @@ def velocity_matrix(state, dHk, energy=None, dSk=None, degenerate=None):
         velocity matrixstate with final dimension ``(state.shape[0], state.shape[0], 3)``, the velocity unit is Ang/ps. Units *may* change in future releases.
     """
     if state.ndim == 1:
-        return velocity_matrix(state.reshape(1, -1), dHk, energy, dSk, degenerate).ravel()
+        return velocity_matrix(state.reshape(1, -1), dHk, energy, dSk, degenerate)
 
     dtype = find_common_type([state.dtype, dHk[0].dtype, dtype_real_to_complex(state.dtype)], [])
     if dSk is None:
@@ -692,20 +666,21 @@ def _velocity_matrix_non_ortho(state, dHk, energy, dSk, degenerate, dtype):
             # then re-construct the seperated degenerate states
             # Since we do this for all directions we should decouple them all
             vv = conj(state[deg, :]).dot((dHk[0] - e * dSk[0]).dot(state[deg, :].T))
-            S = eigh_destroy(vv)[1].T.dot(state[deg, :])
+            S = _decouple_eigh(vv).dot(state[deg, :])
             vv = conj(S).dot((dHk[1] - e * dSk[1]).dot(S.T))
-            S = eigh_destroy(vv)[1].T.dot(S)
+            S = _decouple_eigh(vv).dot(S)
             vv = conj(S).dot((dHk[2] - e * dSk[2]).dot(S.T))
-            state[deg, :] = eigh_destroy(vv)[1].T.dot(S)
+            state[deg, :] = _decouple_eigh(vv).dot(S)
 
     # Since they depend on the state energies and dSk we have to loop them individually.
+    cs = conj(state)
     for s, e in enumerate(energy):
 
         # Since dHk *may* be a csr_matrix or sparse, we have to do it like
         # this. A sparse matrix cannot be re-shaped with an extra dimension.
-        v[s, :, 0] = conj(state).dot((dHk[0] - e * dSk[0]).dot(state[s]))
-        v[s, :, 1] = conj(state).dot((dHk[1] - e * dSk[1]).dot(state[s]))
-        v[s, :, 2] = conj(state).dot((dHk[2] - e * dSk[2]).dot(state[s]))
+        v[s, :, 0] = cs.dot((dHk[0] - e * dSk[0]).dot(state[s]))
+        v[s, :, 1] = cs.dot((dHk[1] - e * dSk[1]).dot(state[s]))
+        v[s, :, 2] = cs.dot((dHk[2] - e * dSk[2]).dot(state[s]))
 
     return v * _velocity_const
 
@@ -724,16 +699,17 @@ def _velocity_matrix_ortho(state, dHk, degenerate, dtype):
             # then re-construct the seperated degenerate states
             # Since we do this for all directions we should decouple them all
             vv = conj(state[deg, :]).dot(dHk[0].dot(state[deg, :].T))
-            S = eigh_destroy(vv)[1].T.dot(state[deg, :])
+            S = _decouple_eigh(vv).dot(state[deg, :])
             vv = conj(S).dot((dHk[1]).dot(S.T))
-            S = eigh_destroy(vv)[1].T.dot(S)
+            S = _decouple_eigh(vv).dot(S)
             vv = conj(S).dot((dHk[2]).dot(S.T))
-            state[deg, :] = eigh_destroy(vv)[1].T.dot(S)
+            state[deg, :] = _decouple_eigh(vv).dot(S)
 
+    cs = conj(state)
     for s in range(n):
-        v[s, :, 0] = conj(state).dot(dHk[0].dot(state[s, :]))
-        v[s, :, 1] = conj(state).dot(dHk[1].dot(state[s, :]))
-        v[s, :, 2] = conj(state).dot(dHk[2].dot(state[s, :]))
+        v[s, :, 0] = cs.dot(dHk[0].dot(state[s, :]))
+        v[s, :, 1] = cs.dot(dHk[1].dot(state[s, :]))
+        v[s, :, 2] = cs.dot(dHk[2].dot(state[s, :]))
 
     return v * _velocity_const
 
@@ -793,7 +769,7 @@ def berry_curvature(state, energy, dHk, dSk=None, degenerate=None, complex=False
         Berry flux with final dimension ``(state.shape[0], 3, 3)`` (complex if `complex` is True).
     """
     if state.ndim == 1:
-        return berry_curvature(state.reshape(1, -1), energy, dHk, dSk, degenerate, complex).ravel()
+        return berry_curvature(state.reshape(1, -1), energy, dHk, dSk, degenerate, complex)[0]
 
     if degenerate is None:
         # Fix following routine
@@ -959,7 +935,7 @@ def inv_eff_mass_tensor(state, ddHk, energy=None, ddSk=None, degenerate=None, as
         inverse effective mass tensor of each state in units of inverse electron mass
     """
     if state.ndim == 1:
-        return inv_eff_mass_tensor(state.reshape(1, -1), ddHk, energy, ddSk, degenerate, as_matrix).ravel()
+        return inv_eff_mass_tensor(state.reshape(1, -1), ddHk, energy, ddSk, degenerate, as_matrix)[0]
 
     if ddSk is None:
         return _inv_eff_mass_tensor_ortho(state, ddHk, degenerate, as_matrix)
@@ -988,11 +964,11 @@ def _inv_eff_mass_tensor_non_ortho(state, ddHk, energy, ddSk, degenerate, as_mat
             # then re-construct the seperated degenerate states
             # We only do this along the double derivative directions
             vv = conj(state[deg, :]).dot((ddHk[0] - e * ddSk[0]).dot(state[deg, :].T))
-            S = eigh_destroy(vv)[1].T.dot(state[deg, :])
+            S = _decouple_eigh(vv).dot(state[deg, :])
             vv = conj(S).dot((ddHk[1] - e * ddSk[1]).dot(S.T))
-            S = eigh_destroy(vv)[1].T.dot(S)
+            S = _decouple_eigh(vv).dot(S)
             vv = conj(S).dot((ddHk[2] - e * ddSk[2]).dot(S.T))
-            state[deg, :] = eigh_destroy(vv)[1].T.dot(S)
+            state[deg, :] = _decouple_eigh(vv).dot(S)
 
     # Since they depend on the state energies and ddSk we have to loop them individually.
     for s, e in enumerate(energy):
@@ -1032,11 +1008,11 @@ def _inv_eff_mass_tensor_ortho(state, ddHk, degenerate, as_matrix):
             # then re-construct the seperated degenerate states
             # We only do this along the double derivative directions
             vv = conj(state[deg, :]).dot(ddHk[0].dot(state[deg, :].T))
-            S = eigh_destroy(vv)[1].T.dot(state[deg, :])
+            S = _decouple_eigh(vv).dot(state[deg, :])
             vv = conj(S).dot(ddHk[1].dot(S.T))
-            S = eigh_destroy(vv)[1].T.dot(S)
+            S = _decouple_eigh(vv).dot(S)
             vv = conj(S).dot(ddHk[2].dot(S.T))
-            state[deg, :] = eigh_destroy(vv)[1].T.dot(S)
+            state[deg, :] = _decouple_eigh(vv).dot(S)
 
     for i in range(6):
         M[:, i] = einsum('ij,ji->i', conj(state), ddHk[i].dot(state.T)).real
@@ -1689,33 +1665,24 @@ class _electron_State:
                 return einsum('ij,ji->i', conj(self.state), S.dot(right.state.T))
             return dot(conj(self.state), S.dot(right.state.T))
 
-    def spin_moment(self):
+    def spin_moment(self, project=False):
         r""" Calculate spin moment from the states
 
         This routine calls `~sisl.physics.electron.spin_moment` with appropriate arguments
         and returns the spin moment for the states.
 
         See `~sisl.physics.electron.spin_moment` for details.
+
+        Parameters
+        ----------
+        project : bool, optional
+           whether the moments are orbitally resolved or not
         """
         try:
             spin = self.parent.spin
         except:
             spin = None
-        return spin_moment(self.state, self.Sk(spin=spin))
-
-    def spin_orbital_moment(self):
-        r""" Calculate spin moment per orbital from the states
-
-        This routine calls `~sisl.physics.electron.spin_orbital_moment` with appropriate arguments
-        and returns the spin moment for each orbital on the states.
-
-        See `~sisl.physics.electron.spin_orbital_moment` for details.
-        """
-        try:
-            spin = self.parent.spin
-        except:
-            spin = None
-        return spin_orbital_moment(self.state, self.Sk(spin=spin))
+        return spin_moment(self.state, self.Sk(spin=spin), project=project)
 
     def expectation(self, A, diag=True):
         r""" Calculate the expectation value of matrix `A`
@@ -1847,7 +1814,7 @@ class StateCElectron(_electron_State, StateC):
     r""" A state describing a physical quantity related to electrons, with associated coefficients of the state """
     __slots__ = []
 
-    def velocity(self, eps=1e-4):
+    def velocity(self, eps=1e-4, project=False):
         r""" Calculate velocity for the states
 
         This routine calls `~sisl.physics.electron.velocity` with appropriate arguments
@@ -1863,6 +1830,12 @@ class StateCElectron(_electron_State, StateC):
         ----------
         eps : float, optional
            precision used to find degenerate states.
+        project : bool, optional
+           whether to return projected velocities (per orbital), see `velocity` for details
+
+        See Also
+        --------
+        PDOS : for an explanation of the projections in case of `project` being True
         """
         try:
             opt = {'k': self.info.get('k', (0, 0, 0)), "dtype": self.dtype}
@@ -1881,7 +1854,7 @@ class StateCElectron(_electron_State, StateC):
             deg = self.degenerate(eps)
         except:
             raise SislError(f"{self.__class__.__name__}.velocity requires the parent to have a spin associated.")
-        return velocity(self.state, self.parent.dHk(**opt), self.c, dSk, degenerate=deg)
+        return velocity(self.state, self.parent.dHk(**opt), self.c, dSk, degenerate=deg, project=project)
 
     def velocity_matrix(self, eps=1e-4):
         r""" Calculate velocity matrix for the states
