@@ -92,6 +92,7 @@ directives = {"linetrace": False, "language_level": 3}
 if linetrace:
     # https://pypkg.com/pypi/pytest-cython/f/tests/example-project/setup.py
     directives["linetrace"] = True
+    directives["emit_code_comments"] = True
     macros.extend([("CYTHON_TRACE", "1"), ("CYTHON_TRACE_NOGIL", "1")])
 
 
@@ -431,6 +432,7 @@ def readme():
 
 metadata = dict(
     name=DISTNAME,
+    author=AUTHOR,
     maintainer=AUTHOR,
     description="Python interface for tight-binding model creation and analysis of DFT output. Input mechanism for large scale transport calculations using NEGF TBtrans (TranSiesta)",
     long_description=readme(),
@@ -458,7 +460,7 @@ metadata = dict(
          "sdata = sisl.utils._sisl_cmd:sisl_cmd",
          "sisl = sisl.utils._sisl_cmd:sisl_cmd",
          # Add toolbox CLI
-         "ts_poisson = sisl_toolbox.transiesta.poisson.poisson_explicit:poisson_explicit_cli",
+         "stoolbox = sisl_toolbox.cli:stoolbox_cli",
         ],
     },
     classifiers=CLASSIFIERS,

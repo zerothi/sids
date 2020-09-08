@@ -42,14 +42,15 @@ Known problems:
   secondly it may converge too fast so the solution is not really good.
 """
 import sys
+from pathlib import Path
 import warnings
 import argparse as argp
 import numpy as np
 import sisl as si
 import pyamg
 
-# Retrieve the script-name
-_script = sys.argv[0]
+# Base-script name
+_script = Path(sys.argv[0]).name
 
 
 def pyamg_solve(A, b, tolerance=1e-12, accel=None):
@@ -230,10 +231,16 @@ def solve_poisson(geometry, shape, radius=2.0,
     return grid
 
 
-def poisson_explicit_cli():
+def poisson_explicit_cli(subp=None):
+    is_sub = not subp is None
 
-    # Create the argument parser
-    p = argp.ArgumentParser("Creation of custom Poisson solutions for TranSiesta calculations with arbitrary number of electrodes.")
+    title = "Custom Poisson solutions for TranSiesta calculations for arbitrary number of electrodes."
+    if is_sub:
+        global _script
+        _script = f"{_script} ts-poisson"
+        p = subp.add_parser("ts-poisson", description=title, help=title)
+    else:
+        p = argp.ArgumentParser(title)
 
     n = {"a": "first", "b": "second", "c": "third"}
     for d in "abc":
@@ -246,8 +253,8 @@ def poisson_explicit_cli():
                    help=("Radius of atoms when figuring out the electrode sizes, this corresponds to the extend of each electrode where boundary"
                          "conditions are fixed [3. Ang]."))
 
-    p.add_argument("--dtype", "-d", choices=["d", "f"], default="d",
-                   help="Precision of data (d==double, f==single)")
+    p.add_argument("--dtype", "-d", choices=["d", "f64", "f", "f32"], default="d",
+                   help="Precision of data (d/f64==double, f/f32==single)")
 
     p.add_argument("--elec-V", "-e-V", nargs=2, action="append", metavar=("NAME", "V"), default=[],
                    help="Specify the potential on the electrode")
@@ -281,9 +288,13 @@ Try one of: cg, gmres, fgmres, cr, cgnr, cgne, bicgstab, steepest_descent, minim
     p.add_argument("--out", "-o", action="append", default=None,
                    help="Output file to store the resulting Poisson solution. It *has* to have TSV.nc file ending to make the file conforming with TranSiesta.")
 
-    # Parse args
-    args = p.parse_args()
+    if is_sub:
+        p.set_defaults(runner=poisson_explicit_run)
+    else:
+        poisson_explicit_run(p.parse_args())
 
+
+def poisson_explicit_run(args):
     if args.out is None:
         print(f">\n>\n>{_script}: No out-files has been specified, work will be carried out but not saved!\n>\n>\n")
 
@@ -294,14 +305,14 @@ Try one of: cg, gmres, fgmres, cr, cgnr, cgne, bicgstab, steepest_descent, minim
     elecs_V = {}
     if len(args.elec_V) == 0:
         print(geometry.names)
-        raise ValueError("{}: Please specify the electrode potentials using --elec-V")
+        raise ValueError(f"{_script}: Please specify the electrode potentials using --elec-V")
 
     for name, V in args.elec_V:
         elecs_V[name] = float(V)
 
-    if args.dtype == "f":
+    if args.dtype.lower() in ("f", "f32"):
         dtype = np.float32
-    elif args.dtype == "d":
+    elif args.dtype.lower() in ("d", "f64"):
         dtype = np.float64
 
     # Now we can solve Poisson
