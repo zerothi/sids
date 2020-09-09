@@ -102,7 +102,6 @@
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../../../../installation.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../../tutorials.html">Tutorials</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../../examples.html">Examples</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../../scripts/scripts.html">Scripts (command line interface)</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../../visualization/visualization.html">Visualization</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../../rst/files.html">File formats</a></li>
@@ -757,39 +756,28 @@ Hamiltonian{non-zero: 281, orthogonal: True,
 <p>Note that the integer <code class="docutils literal notranslate"><span class="pre">400</span></code> determines the total number of <span class="math notranslate nohighlight">\(k\)</span>-points on the full band. One <em>can</em> define an explicit number between the different points, however we highly encourage only specifying <em>one</em> integer as the divisions will be determined based on the length in the reciprocal space between the points and thus the physical distance in the Brillouin zone will be correct.</p>
 <p>A word of note on the <code class="docutils literal notranslate"><span class="pre">BrillouinZone</span></code> objects.</p>
 <p>The <code class="docutils literal notranslate"><span class="pre">BrillouinZone</span></code> objects are <em>extremely</em> handy because they allow to directly call <em>any</em> routine inherent to the passed object. If calling routine <code class="docutils literal notranslate"><span class="pre">band.a()</span></code> it is equivalent to:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">[</span><span class="n">band</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">a</span><span class="p">(</span><span class="n">k</span><span class="o">=</span><span class="n">k</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">band</span><span class="p">]</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">band</span><span class="p">:</span> <span class="k">yield</span> <span class="n">band</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">a</span><span class="p">(</span><span class="n">k</span><span class="o">=</span><span class="n">k</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>Note that <code class="docutils literal notranslate"><span class="pre">BrillouinZone</span></code> defaults to use <code class="docutils literal notranslate"><span class="pre">BrillouinZone.asarray()</span></code>.</p>
-<p>However, for large systems this may result in memory problems in which case it may be necessary to return an iterator. To circumvent this we can tell the Brillouin zone object to (always) return an iterator instead:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">band</span><span class="o">.</span><span class="n">asyield</span><span class="p">()</span>
-<span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">band</span><span class="p">:</span>
-    <span class="k">yield</span> <span class="n">band</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">a</span><span class="p">(</span><span class="n">k</span><span class="o">=</span><span class="n">k</span><span class="p">)</span>
+<p>Note that <code class="docutils literal notranslate"><span class="pre">BrillouinZone</span></code> defaults to use <code class="docutils literal notranslate"><span class="pre">BrillouinZone.apply.iter</span></code>.</p>
+<p>However, for large systems this may result in memory problems in which case it may be necessary to return an iterator. To circumvent this we can tell the Brillouin zone object to (always) return a list instead:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">b_list</span> <span class="o">=</span> <span class="n">band</span><span class="o">.</span><span class="n">apply</span><span class="o">.</span><span class="n">list</span>
+<span class="n">as_list</span> <span class="o">=</span> <span class="n">b_list</span><span class="o">.</span><span class="n">a</span><span class="p">()</span>
 </pre></div>
 </div>
-<p>The last option is to return <span class="math notranslate nohighlight">\(k\)</span>-point averaged quantities which is roughly equivalent to (internally it is done with minimal memory usage):</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">band</span><span class="o">.</span><span class="n">asaverage</span><span class="p">()</span>
-<span class="nb">sum</span><span class="p">([</span><span class="n">band</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">a</span><span class="p">(</span><span class="n">k</span><span class="o">=</span><span class="n">k</span><span class="p">)</span> <span class="o">*</span> <span class="n">band</span><span class="o">.</span><span class="n">weight</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">band</span><span class="p">)])</span>
+<p>Another option is to return <span class="math notranslate nohighlight">\(k\)</span>-point averaged quantities which is roughly equivalent to (internally it is done with minimal memory usage):</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">band</span><span class="o">.</span><span class="n">apply</span><span class="o">.</span><span class="n">average</span><span class="o">.</span><span class="n">a</span><span class="p">()</span> <span class="o">==</span> <span class="nb">sum</span><span class="p">([</span><span class="n">band</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">a</span><span class="p">(</span><span class="n">k</span><span class="o">=</span><span class="n">k</span><span class="p">)</span> <span class="o">*</span> <span class="n">band</span><span class="o">.</span><span class="n">weight</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">band</span><span class="p">)])</span>
 </pre></div>
 </div>
-<p>Now we can calculate the band structure. A band-structure requires <em>all</em> eigenvalues and thus we ask the <code class="docutils literal notranslate"><span class="pre">BrillouinZone</span></code> object to return all values using <code class="docutils literal notranslate"><span class="pre">asarray()</span></code>.</p>
-<div class="nbinput docutils container">
+<p>Now we can calculate the band structure. A band-structure requires <em>all</em> eigenvalues and thus we ask the <code class="docutils literal notranslate"><span class="pre">BrillouinZone</span></code> object to return all values using <code class="docutils literal notranslate"><span class="pre">apply.array</span></code>.</p>
+<div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[13]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
-<span></span><span class="n">bs</span> <span class="o">=</span> <span class="n">band</span><span class="o">.</span><span class="n">asarray</span><span class="p">()</span><span class="o">.</span><span class="n">eigh</span><span class="p">()</span>
+<span></span><span class="n">bs</span> <span class="o">=</span> <span class="n">band</span><span class="o">.</span><span class="n">apply</span><span class="o">.</span><span class="n">array</span><span class="o">.</span><span class="n">eigh</span><span class="p">()</span>
 </pre></div>
 </div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area stderr docutils container">
-<div class="highlight"><pre>
-dep:0: SislDeprecation: BrillouinZone.asarray is deprecated (&gt;0.9.9), use BrillouinZone.apply.average
-dep:0: SislDeprecation: BandStructure.asarray.eigh(...) is deprecated (&gt;0.9.9), please use BandStructure.apply.array.eigh
-</pre></div></div>
 </div>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[14]:
@@ -817,23 +805,15 @@ dep:0: SislDeprecation: BandStructure.asarray.eigh(...) is deprecated (&gt;0.9.9
 <div class="section" id="Calculating-k-averaged-quantities">
 <h3>Calculating <span class="math notranslate nohighlight">\(k\)</span>-averaged quantities<a class="headerlink" href="#Calculating-k-averaged-quantities" title="Permalink to this headline">¶</a></h3>
 <p>Now we are in a position to calculate a subset of quantities from the Hamiltonian. Before proceeding we will note that the Hamiltonian also implements the <code class="docutils literal notranslate"><span class="pre">DOS</span></code> and <code class="docutils literal notranslate"><span class="pre">PDOS</span></code> methods (equivalent to <code class="docutils literal notranslate"><span class="pre">Hamiltonian.eigenvalue().DOS()</span></code>), hence to calculate these as <span class="math notranslate nohighlight">\(k\)</span>-averaged quantities we can create a Brillouin zone object with proper weights, say a Monkhorst-Pack grid, and calculate the averaged quantities.</p>
-<div class="nbinput docutils container">
+<div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[15]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
 <span></span><span class="n">bz</span> <span class="o">=</span> <span class="n">MonkhorstPack</span><span class="p">(</span><span class="n">H</span><span class="p">,</span> <span class="p">[</span><span class="mi">35</span><span class="p">,</span> <span class="mi">35</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span>
-<span class="n">bz</span><span class="o">.</span><span class="n">asaverage</span><span class="p">();</span> <span class="c1"># specify the Brillouin zone to perform an average of subsequent method calls</span>
+<span class="n">bz_average</span> <span class="o">=</span> <span class="n">bz</span><span class="o">.</span><span class="n">apply</span><span class="o">.</span><span class="n">average</span><span class="p">;</span> <span class="c1"># specify the Brillouin zone to perform an average of subsequent method calls</span>
 </pre></div>
 </div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area stderr docutils container">
-<div class="highlight"><pre>
-dep:0: SislDeprecation: BrillouinZone.asaverage is deprecated (&gt;0.9.9), use BrillouinZone.apply.average
-</pre></div></div>
 </div>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[16]:
@@ -841,46 +821,30 @@ dep:0: SislDeprecation: BrillouinZone.asaverage is deprecated (&gt;0.9.9), use B
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
 <span></span><span class="n">E</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="o">-</span><span class="mi">4</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">1000</span><span class="p">)</span>
-<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">E</span><span class="p">,</span> <span class="n">bz</span><span class="o">.</span><span class="n">DOS</span><span class="p">(</span><span class="n">E</span><span class="p">));</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">E</span><span class="p">,</span> <span class="n">bz_average</span><span class="o">.</span><span class="n">DOS</span><span class="p">(</span><span class="n">E</span><span class="p">));</span>
 <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;$E - E_F$ [eV]&#39;</span><span class="p">);</span>
 <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;DOS [1/eV]&#39;</span><span class="p">);</span>
 </pre></div>
 </div>
 </div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area stderr docutils container">
-<div class="highlight"><pre>
-dep:0: SislDeprecation: MonkhorstPack.asaverage.DOS(...) is deprecated (&gt;0.9.9), please use MonkhorstPack.apply.average.DOS
-</pre></div></div>
-</div>
 <div class="nboutput nblast docutils container">
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="../../../../_images/latest_latest_latest_tutorials_tutorial_es_1_29_1.png" src="../../../../_images/latest_latest_latest_tutorials_tutorial_es_1_29_1.png" />
+<img alt="../../../../_images/latest_latest_latest_tutorials_tutorial_es_1_29_0.png" src="../../../../_images/latest_latest_latest_tutorials_tutorial_es_1_29_0.png" />
 </div>
 </div>
 <p>We can also plot the projected DOS integrated around the Fermi level on the atoms</p>
-<div class="nbinput docutils container">
+<div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[17]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
 <span></span><span class="n">E</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1000</span><span class="p">)</span>
 <span class="n">dE</span> <span class="o">=</span> <span class="n">E</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">E</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-<span class="n">PDOS</span> <span class="o">=</span> <span class="n">bz</span><span class="o">.</span><span class="n">PDOS</span><span class="p">(</span><span class="n">E</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">dE</span>
+<span class="n">PDOS</span> <span class="o">=</span> <span class="n">bz_average</span><span class="o">.</span><span class="n">PDOS</span><span class="p">(</span><span class="n">E</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">dE</span>
 </pre></div>
 </div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area stderr docutils container">
-<div class="highlight"><pre>
-dep:0: SislDeprecation: MonkhorstPack.asaverage.PDOS(...) is deprecated (&gt;0.9.9), please use MonkhorstPack.apply.average.PDOS
-</pre></div></div>
 </div>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[18]:
@@ -971,12 +935,12 @@ of the orbital).</p>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
 <span></span><span class="n">C</span> <span class="o">=</span> <span class="n">Atom</span><span class="p">(</span><span class="mi">6</span><span class="p">,</span> <span class="n">orb</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="n">system</span><span class="p">)</span>
-<span class="n">system</span><span class="o">.</span><span class="n">atom</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">system</span><span class="o">.</span><span class="n">atom</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">C</span><span class="p">)</span>
+<span class="n">system</span><span class="o">.</span><span class="n">atoms</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">system</span><span class="o">.</span><span class="n">atoms</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">C</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="n">system</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
-<div class="nboutput docutils container">
+<div class="nboutput nblast docutils container">
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
@@ -1007,14 +971,6 @@ Geometry{na: 71, no: 71,
   C=[0.000, 0.000, 14.200],
  }
 }
-</pre></div></div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area stderr docutils container">
-<div class="highlight"><pre>
-dep:0: SislDeprecation: Geometry.atom is deprecated, use Geometry.atoms instead
 </pre></div></div>
 </div>
 <p>Note the difference between the two <code class="docutils literal notranslate"><span class="pre">print(system)</span></code> statements, before the replacement, an intrinsic <code class="docutils literal notranslate"><span class="pre">Orbital</span></code> object describes the orbital, in effect no knowledge other than the radius. After replacement, the spherical orbital with azimuthal angular moment <span class="math notranslate nohighlight">\(l=1\)</span> is replaced. Now we can plot the real-space grid for an eigenstate.</p>
