@@ -13,6 +13,7 @@
 
 import sys
 import os
+import subprocess
 import pathlib
 import shlex
 from datetime import date
@@ -37,6 +38,13 @@ sys.path.insert(0, str(_root))
 # Print standard information about executable and path...
 print("python exec:", sys.executable)
 print("sys.path:", sys.path)
+
+if "conda" in sys.executable:
+    print("conda environment:")
+    subprocess.run(["conda", "list"])
+else:
+    print("pip environment:")
+    subprocess.run(["pip", "list"])
 
 try:
     import sisl
