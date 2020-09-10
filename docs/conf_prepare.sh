@@ -1,5 +1,9 @@
 #!/bin/bash
 
+set -ex
+
+echo "From conf_prepare.sh $(pwd)"
+
 # Ensure the version file exists
 pushd ..
 ls -l
