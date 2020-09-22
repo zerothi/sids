@@ -102,7 +102,7 @@
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../tutorials.html">Tutorials</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../scripts/scripts.html">Scripts (command line interface)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../scripts/scripts.html">Command line scripts</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../visualization/visualization.html">Visualization</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../rst/files.html">File formats</a></li>
 </ul>
@@ -186,7 +186,7 @@
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="kn">from</span> <span class="nn">numpy</span> <span class="kn">import</span> <span class="n">int32</span>
 <span class="kn">from</span> <span class="nn">numpy</span> <span class="kn">import</span> <span class="n">floor</span><span class="p">,</span> <span class="n">dot</span><span class="p">,</span> <span class="n">add</span><span class="p">,</span> <span class="n">cos</span><span class="p">,</span> <span class="n">sin</span>
-<span class="kn">from</span> <span class="nn">numpy</span> <span class="kn">import</span> <span class="n">ogrid</span><span class="p">,</span> <span class="n">take</span>
+<span class="kn">from</span> <span class="nn">numpy</span> <span class="kn">import</span> <span class="n">ogrid</span><span class="p">,</span> <span class="n">take</span><span class="p">,</span> <span class="n">asarray</span>
 <span class="kn">from</span> <span class="nn">scipy.sparse</span> <span class="kn">import</span> <span class="n">diags</span> <span class="k">as</span> <span class="n">sp_diags</span>
 <span class="kn">from</span> <span class="nn">scipy.sparse</span> <span class="kn">import</span> <span class="n">SparseEfficiencyWarning</span>
 <span class="kn">from</span> <span class="nn">scipy.ndimage</span> <span class="kn">import</span> <span class="n">zoom</span> <span class="k">as</span> <span class="n">ndimage_zoom</span>
@@ -408,19 +408,11 @@
         <span class="c1"># Run the marching cubes algorithm to calculate the vertices and faces</span>
         <span class="c1"># of the requested isosurface.</span>
         <span class="n">verts</span><span class="p">,</span> <span class="o">*</span><span class="n">returns</span> <span class="o">=</span> <span class="n">skimage</span><span class="o">.</span><span class="n">measure</span><span class="o">.</span><span class="n">marching_cubes</span><span class="p">(</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">grid</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="n">level</span><span class="p">,</span> <span class="n">spacing</span><span class="o">=</span><span class="n">fnorm</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dcell</span><span class="p">),</span> <span class="n">step_size</span><span class="o">=</span><span class="n">step_size</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">grid</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="n">level</span><span class="p">,</span> <span class="n">step_size</span><span class="o">=</span><span class="n">step_size</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span>
         <span class="p">)</span>
 
-        <span class="c1"># Define the transformation matrix to get the real vertices</span>
-        <span class="c1"># This is because skimage calculates the vertices as if it was an orthogonal cell</span>
-        <span class="n">T</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cell</span> <span class="o">/</span> <span class="n">fnorm</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cell</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
-
-        <span class="c1"># Check that the transformation matrix is definite positive</span>
-        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">det</span><span class="p">(</span><span class="n">T</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="n">T</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="n">T</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">]</span>  <span class="c1"># change the orientation of the third vector</span>
-
-        <span class="c1"># Apply the transformation and get the real coordinates of the vertices</span>
-        <span class="n">verts</span> <span class="o">=</span> <span class="n">T</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">verts</span><span class="o">.</span><span class="n">T</span><span class="p">)</span><span class="o">.</span><span class="n">T</span>
+        <span class="c1"># The verts cordinates are in fractional coordinates of unit-length.</span>
+        <span class="n">verts</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">index2xyz</span><span class="p">(</span><span class="n">verts</span><span class="p">)</span>
 
         <span class="k">return</span> <span class="p">(</span><span class="n">verts</span><span class="p">,</span> <span class="o">*</span><span class="n">returns</span><span class="p">)</span></div>
 
@@ -849,7 +841,7 @@
 <span class="sd">        numpy.ndarray</span>
 <span class="sd">           coordinates of the indices with respect to this grid spacing</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="n">dot</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">index</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">dcell</span><span class="p">)</span></div>
+        <span class="k">return</span> <span class="n">asarray</span><span class="p">(</span><span class="n">index</span><span class="p">)</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dcell</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="Grid.index_fold"><a class="viewcode-back" href="../../api-generated/sisl.Grid.html#sisl.Grid.index_fold">[docs]</a>    <span class="k">def</span> <span class="nf">index_fold</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">index</span><span class="p">,</span> <span class="n">unique</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Converts indices from *any* placement to only exist in the &quot;primary&quot; grid</span>
@@ -1823,13 +1815,14 @@
 <span class="sd">       whether the function should return the grid</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="kn">import</span> <span class="nn">sys</span>
-    <span class="kn">import</span> <span class="nn">os.path</span> <span class="k">as</span> <span class="nn">osp</span>
     <span class="kn">import</span> <span class="nn">argparse</span>
+    <span class="kn">from</span> <span class="nn">pathlib</span> <span class="kn">import</span> <span class="n">Path</span>
 
     <span class="kn">from</span> <span class="nn">sisl.io</span> <span class="kn">import</span> <span class="n">get_sile</span><span class="p">,</span> <span class="n">BaseSile</span>
 
     <span class="c1"># The file *MUST* be the first argument</span>
     <span class="c1"># (except --help|-h)</span>
+    <span class="n">exe</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">.</span><span class="n">name</span>
 
     <span class="c1"># We cannot create a separate ArgumentParser to retrieve a positional arguments</span>
     <span class="c1"># as that will grab the first argument for an option!</span>
@@ -1839,14 +1832,14 @@
 <span class="s2">This manipulation utility is highly advanced and one should note that the ORDER of</span>
 <span class="s2">options is determining the final structure. For instance:</span>
 
-<span class="s2">   $&gt; </span><span class="si">{0}</span><span class="s2"> Reference.grid.nc --diff Other.grid.nc --sub 0.:0.2f z</span>
+<span class="s2">   </span><span class="si">{exe}</span><span class="s2"> Reference.grid.nc --diff Other.grid.nc --sub 0.:0.2f z</span>
 
 <span class="s2">is NOT equivalent to:</span>
 
-<span class="s2">   $&gt; </span><span class="si">{0}</span><span class="s2"> Reference.grid.nc --sub 0.:0.2f z --diff Other.grid.nc</span>
+<span class="s2">   </span><span class="si">{exe}</span><span class="s2"> Reference.grid.nc --sub 0.:0.2f z --diff Other.grid.nc</span>
 
 <span class="s2">This may be unexpected but enables one to do advanced manipulations.</span>
-<span class="s2">    &quot;&quot;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">osp</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+<span class="s2">    &quot;&quot;&quot;</span>
 
     <span class="k">if</span> <span class="n">argv</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">argv</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
@@ -1861,9 +1854,9 @@
     <span class="c1"># Ensure that the arguments have pre-pended spaces</span>
     <span class="n">argv</span> <span class="o">=</span> <span class="n">cmd</span><span class="o">.</span><span class="n">argv_negative_fix</span><span class="p">(</span><span class="n">argv</span><span class="p">)</span>
 
-    <span class="n">p</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">(</span><span class="s1">&#39;Manipulates real-space grids.&#39;</span><span class="p">,</span>
-                           <span class="n">formatter_class</span><span class="o">=</span><span class="n">argparse</span><span class="o">.</span><span class="n">RawDescriptionHelpFormatter</span><span class="p">,</span>
-                           <span class="n">description</span><span class="o">=</span><span class="n">description</span><span class="p">)</span>
+    <span class="n">p</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">(</span><span class="n">exe</span><span class="p">,</span>
+                                <span class="n">formatter_class</span><span class="o">=</span><span class="n">argparse</span><span class="o">.</span><span class="n">RawDescriptionHelpFormatter</span><span class="p">,</span>
+                                <span class="n">description</span><span class="o">=</span><span class="n">description</span><span class="p">)</span>
 
     <span class="c1"># Add default sisl version stuff</span>
     <span class="n">cmd</span><span class="o">.</span><span class="n">add_sisl_version_cite_arg</span><span class="p">(</span><span class="n">p</span><span class="p">)</span>
