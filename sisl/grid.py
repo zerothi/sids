@@ -5,7 +5,7 @@ from math import pi
 import numpy as np
 from numpy import int32
 from numpy import floor, dot, add, cos, sin
-from numpy import ogrid, take
+from numpy import ogrid, take, asarray
 from scipy.sparse import diags as sp_diags
 from scipy.sparse import SparseEfficiencyWarning
 from scipy.ndimage import zoom as ndimage_zoom
@@ -227,19 +227,11 @@ class Grid(SuperCellChild):
         # Run the marching cubes algorithm to calculate the vertices and faces
         # of the requested isosurface.
         verts, *returns = skimage.measure.marching_cubes(
-            self.grid, level=level, spacing=fnorm(self.dcell), step_size=step_size, **kwargs
+            self.grid, level=level, step_size=step_size, **kwargs
         )
 
-        # Define the transformation matrix to get the real vertices
-        # This is because skimage calculates the vertices as if it was an orthogonal cell
-        T = self.cell / fnorm(self.cell).reshape(3, 1)
-
-        # Check that the transformation matrix is definite positive
-        if np.linalg.det(T) < 0:
-            T[:, 2] = -T[:, 2]  # change the orientation of the third vector
-
-        # Apply the transformation and get the real coordinates of the vertices
-        verts = T.dot(verts.T).T
+        # The verts cordinates are in fractional coordinates of unit-length.
+        verts = self.index2xyz(verts)
 
         return (verts, *returns)
 
@@ -668,7 +660,7 @@ class Grid(SuperCellChild):
         numpy.ndarray
            coordinates of the indices with respect to this grid spacing
         """
-        return dot(np.asarray(index), self.dcell)
+        return asarray(index).dot(self.dcell)
 
     def index_fold(self, index, unique=True):
         """ Converts indices from *any* placement to only exist in the "primary" grid
@@ -1642,13 +1634,14 @@ def sgrid(grid=None, argv=None, ret_grid=False):
        whether the function should return the grid
     """
     import sys
-    import os.path as osp
     import argparse
+    from pathlib import Path
 
     from sisl.io import get_sile, BaseSile
 
     # The file *MUST* be the first argument
     # (except --help|-h)
+    exe = Path(sys.argv[0]).name
 
     # We cannot create a separate ArgumentParser to retrieve a positional arguments
     # as that will grab the first argument for an option!
@@ -1658,14 +1651,14 @@ def sgrid(grid=None, argv=None, ret_grid=False):
 This manipulation utility is highly advanced and one should note that the ORDER of
 options is determining the final structure. For instance:
 
-   $> {0} Reference.grid.nc --diff Other.grid.nc --sub 0.:0.2f z
+   {exe} Reference.grid.nc --diff Other.grid.nc --sub 0.:0.2f z
 
 is NOT equivalent to:
 
-   $> {0} Reference.grid.nc --sub 0.:0.2f z --diff Other.grid.nc
+   {exe} Reference.grid.nc --sub 0.:0.2f z --diff Other.grid.nc
 
 This may be unexpected but enables one to do advanced manipulations.
-    """.format(osp.basename(sys.argv[0]))
+    """
 
     if argv is not None:
         if len(argv) == 0:
@@ -1680,9 +1673,9 @@ This may be unexpected but enables one to do advanced manipulations.
     # Ensure that the arguments have pre-pended spaces
     argv = cmd.argv_negative_fix(argv)
 
-    p = argparse.ArgumentParser('Manipulates real-space grids.',
-                           formatter_class=argparse.RawDescriptionHelpFormatter,
-                           description=description)
+    p = argparse.ArgumentParser(exe,
+                                formatter_class=argparse.RawDescriptionHelpFormatter,
+                                description=description)
 
     # Add default sisl version stuff
     cmd.add_sisl_version_cite_arg(p)
