@@ -1,5 +1,6 @@
 import pytest
 
+from functools import partial
 import warnings
 import numpy as np
 from scipy.linalg import block_diag
@@ -220,6 +221,48 @@ class TestHamiltonian:
         assert np.allclose(csr, mat)
         assert np.allclose(csr, arr)
         assert np.allclose(csr, coo)
+
+    @pytest.mark.parametrize("orthogonal", [True, False])
+    @pytest.mark.parametrize("gauge", ["R", "r"])
+    @pytest.mark.parametrize("spin", ["unpolarized", "polarized", "non-collinear", "spin-orbit"])
+    @pytest.mark.parametrize("dtype", [np.complex64, np.complex128])
+    def test_format_sc(self, orthogonal, gauge, spin, dtype):
+        g = Geometry([[i, 0, 0] for i in range(10)], Atom(6, R=1.01), sc=SuperCell([10, 1, 5.], nsc=[3, 3, 1]))
+        H = Hamiltonian(g, dtype=np.float64, orthogonal=orthogonal, spin=Spin(spin))
+        nd = H._csr._D.shape[-1]
+        # this will correctly account for the double size for NC/SOC
+        no = len(H)
+        no_s = H.geometry.no_s
+        for ia in g:
+            idx = g.close(ia, R=(0.1, 1.01))[1]
+            H[ia, ia] = 1.
+            H[ia, idx] = np.random.rand(nd)
+        if dtype == np.complex64:
+            atol = 1e-6
+            rtol = 1e-12
+        else:
+            atol = 1e-9
+            rtol = 1e-15
+        allclose = partial(np.allclose, atol=atol, rtol=rtol)
+
+        H = (H + H.transpose(hermitian=True)) / 2
+        n_s = H.geometry.sc.n_s
+
+        for k in [[0, 0, 0], [0.15, 0.1, 0.05]]:
+            for attr, kwargs in [("Hk", {"gauge": gauge}), ("Sk", {})]:
+                Mk = getattr(H, attr)
+                csr = Mk(k, format='csr', **kwargs, dtype=dtype)
+                sc_csr1 = Mk(k, format='sc:csr', **kwargs, dtype=dtype)
+                sc_csr2 = Mk(k, format='sc', **kwargs, dtype=dtype)
+                sc_mat = Mk(k, format='sc:array', **kwargs, dtype=dtype)
+                mat = sc_mat.reshape(no, n_s, no).sum(1)
+
+                assert sc_mat.shape == sc_csr1.shape
+                assert allclose(csr.toarray(), mat)
+                assert allclose(sc_csr1.toarray(), sc_csr2.toarray())
+                for isc in range(n_s):
+                    csr -= sc_csr1[:, isc * no: (isc + 1) * no]
+                assert allclose(csr.toarray(), 0.)
 
     def test_construct_raise_default(self, setup):
         # Test that construct fails with more than one
@@ -1169,36 +1212,25 @@ class TestHamiltonian:
         setup.HS.empty()
 
     @pytest.mark.slow
-    def test_tile1(self, setup):
+    @pytest.mark.parametrize("nx", [1, 4])
+    @pytest.mark.parametrize("ny", [1, 5])
+    @pytest.mark.parametrize("nz", [1, 6])
+    def test_tile_same(self, setup, nx, ny, nz):
         R, param = [0.1, 1.5], [1., 0.1]
 
         # Create reference
-        Hg = Hamiltonian(setup.g.tile(2, 0).tile(2, 1).tile(2, 2))
+        Hg = Hamiltonian(setup.g.tile(nx, 0).tile(ny, 1).tile(nz, 2))
         Hg.construct([R, param])
         Hg.finalize()
         H = Hamiltonian(setup.g)
         H.construct([R, param])
-        H = H.tile(2, 0).tile(2, 1).tile(2, 2)
+        H = H.tile(nx, 0).tile(ny, 1).tile(nz, 2)
         assert Hg.spsame(H)
         H.finalize()
         Hg.finalize()
         assert np.allclose(H._csr._D, Hg._csr._D)
-
-    @pytest.mark.slow
-    def test_tile2(self, setup):
-        R, param = [0.1, 1.5], [1., 0.1]
-
-        # Create reference
-        Hg = Hamiltonian(setup.g.tile(2, 0))
-        Hg.construct([R, param])
-        Hg.finalize()
-        H = Hamiltonian(setup.g)
-        H.construct([R, param])
-        H = H.tile(2, 0)
-        assert Hg.spsame(H)
-        H.finalize()
-        Hg.finalize()
-        assert np.allclose(H._csr._D, Hg._csr._D)
+        assert np.allclose(Hg.Hk([0.1, 0.2, 0.3], format='array'),
+                           H.Hk([0.1, 0.2, 0.3], format='array'))
 
     @pytest.mark.slow
     def test_tile3(self, setup):

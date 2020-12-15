@@ -97,6 +97,9 @@ class Hamiltonian(SparseOrbitalBZSpin):
            the returned format of the matrix, defaulting to the ``scipy.sparse.csr_matrix``,
            however if one always requires operations on dense matrices, one can always
            return in `numpy.ndarray` (`'array'`/`'dense'`/`'matrix'`).
+           Prefixing with 'sc:', or simply 'sc' returns the matrix in supercell format
+           with phases. This is useful for e.g. bond-current calculations where individual
+           hopping + phases are required.
         spin : int, optional
            if the Hamiltonian is a spin polarized one can extract the specific spin direction
            matrix by passing an integer (0 or 1). If the Hamiltonian is not `Spin.POLARIZED`
@@ -271,6 +274,9 @@ class Hamiltonian(SparseOrbitalBZSpin):
         sparse : bool, optional
             if ``True``, `eigsh` will be called, else `eigh` will be
             called (default).
+        format : str, optional
+            see `eigh` for details, this will be passed to the EigenstateElectron
+            instance to be used in subsequent calls, may speed up post-processing.
         **kwargs : dict, optional
             passed arguments to the `eigh` routine
 
@@ -283,6 +289,7 @@ class Hamiltonian(SparseOrbitalBZSpin):
         -------
         EigenvalueElectron
         """
+        format = kwargs.pop("format", None)
         if kwargs.pop('sparse', False):
             e = self.eigsh(k, gauge=gauge, eigvals_only=True, **kwargs)
         else:
@@ -291,6 +298,8 @@ class Hamiltonian(SparseOrbitalBZSpin):
         for name in ["spin"]:
             if name in kwargs:
                 info[name] = kwargs[name]
+        if not format is None:
+            info["format"] = format
         return EigenvalueElectron(e, self, **info)
 
     def eigenstate(self, k=(0, 0, 0), gauge='R', **kwargs):
@@ -305,6 +314,9 @@ class Hamiltonian(SparseOrbitalBZSpin):
         sparse : bool, optional
             if ``True``, `eigsh` will be called, else `eigh` will be
             called (default).
+        format : str, optional
+            see `eigh` for details, this will be passed to the EigenstateElectron
+            instance to be used in subsequent calls, may speed up post-processing.
         **kwargs : dict, optional
             passed arguments to the `eigh`/`eighs` routine
 
@@ -317,6 +329,7 @@ class Hamiltonian(SparseOrbitalBZSpin):
         -------
         EigenstateElectron
         """
+        format = kwargs.pop("format", None)
         if kwargs.pop('sparse', False):
             e, v = self.eigsh(k, gauge=gauge, eigvals_only=False, **kwargs)
         else:
@@ -325,6 +338,8 @@ class Hamiltonian(SparseOrbitalBZSpin):
         for name in ["spin"]:
             if name in kwargs:
                 info[name] = kwargs[name]
+        if not format is None:
+            info["format"] = format
         # Since eigh returns the eigenvectors [:, i] we have to transpose
         return EigenstateElectron(v.T, e, self, **info)
 

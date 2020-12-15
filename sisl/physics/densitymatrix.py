@@ -15,7 +15,7 @@ from sisl._math_small import xyz_to_spherical_cos_phi
 from sisl.messages import warn, tqdm_eta
 from sisl.utils.ranges import array_arange
 from .spin import Spin
-from sisl.sparse import SparseCSR
+from sisl.sparse import SparseCSR, _ncol_to_indptr
 from sisl.sparse_geometry import SparseOrbital
 from .sparse import SparseOrbitalBZSpin
 
@@ -486,7 +486,7 @@ class _densitymatrix(SparseOrbitalBZSpin):
             DM = csr._D[idx, 0]
 
         # Create the DM csr matrix.
-        csrDM = csr_matrix((DM, csr.col[idx], np.insert(np.cumsum(csr.ncol), 0, 0)),
+        csrDM = csr_matrix((DM, csr.col[idx], _ncol_to_indptr(csr.ncol)),
                            shape=(self.shape[:2]), dtype=DM.dtype)
 
         # Clean-up
@@ -612,7 +612,7 @@ class _densitymatrix(SparseOrbitalBZSpin):
         # Get pointers and delete the atomic sparse pattern
         # The below complexity is because we are not finalizing spA
         csr = spA._csr
-        a_ptr = np.insert(_a.cumsumi(csr.ncol), 0, 0)
+        a_ptr = _ncol_to_indptr(csr.ncol)
         a_col = csr.col[array_arange(csr.ptr, n=csr.ncol)]
         del spA, csr
 
@@ -872,7 +872,7 @@ class DensityMatrix(_densitymatrix):
             oidx = self.geometry.a2o(idx)
             # loop orbitals
             for io, orb in enumerate(atom):
-                orb_lmZ[oidx + io, :] = orb.l, orb.m, orb.Z
+                orb_lmZ[oidx + io, :] = orb.l, orb.m, orb.zeta
 
         # Now we need to calculate the stuff
         DM = self.copy()
@@ -1088,6 +1088,8 @@ class DensityMatrix(_densitymatrix):
            the returned format of the matrix, defaulting to the ``scipy.sparse.csr_matrix``,
            however if one always requires operations on dense matrices, one can always
            return in `numpy.ndarray` (`'array'`/`'dense'`/`'matrix'`).
+           Prefixing with 'sc:', or simply 'sc' returns the matrix in supercell format
+           with phases.
         spin : int, optional
            if the density matrix is a spin polarized one can extract the specific spin direction
            matrix by passing an integer (0 or 1). If the density matrix is not `Spin.POLARIZED`

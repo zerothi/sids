@@ -3481,8 +3481,9 @@ class Geometry(SuperCellChild):
              ``False``, return only the first orbital corresponding to the atom,
              ``True``, returns list of the full atom
         """
-        atoms = self._sanitize_atoms(atoms)
-        off = np.divmod(atoms, self.na, out=(None, atoms))[0] * self.no
+        # we must not alter `atoms` as it may come from outside
+        off, atoms = np.divmod(self._sanitize_atoms(atoms), self.na)
+        off *= self.no
         if not all:
             return self.firsto[atoms] + off
         ob = self.firsto[atoms] + off

@@ -17,6 +17,7 @@ import multiprocessing
 import os
 import os.path as osp
 import argparse
+from functools import reduce
 
 # pkg_resources are part of setuptools
 import pkg_resources
@@ -35,6 +36,31 @@ min_version ={
     "numpy": "1.13",
     "pyparsing": "1.5.7",
     "xarray": "0.10.0",
+}
+
+viz = {
+    "plotly": [
+        'tqdm', # for niceness
+        'dill >= 0.3.2', # for pathos and for saving plots (a lower version raises https://github.com/pfebrer96/sisl/issues/11)
+        'pathos', # for multiprocessing,
+        'plotly',
+        'pandas',
+        "xarray >= " + min_version["xarray"],
+        'simplejson',  # Because built-in json parses nan and JS does not understand it
+        'flask',
+        'flask-restx',
+        'flask-socketio',
+        'flask-cors',
+        'flask-login',
+        'flask-session',
+        #'eventlet' # To improve socket performance for flask-socketio
+        'scikit-image'
+    ],
+    "blender": [
+    ], # for when blender enters
+    "ase": [
+        "ase" # for Jonas's implementation
+    ],
 }
 
 # Macros for use when compiling stuff
@@ -163,79 +189,81 @@ class EnsureSource_sdist(sdist):
         if "cython" in cmdclass:
             self.run_command("cython")
         else:
-            pyx_files = [(_pyxfiles, "c"), (self._cpp_pyxfiles, "cpp")]
-
-            for pyxfiles, extension in [(_pyxfiles, "c")]:
-                for pyxfile in pyxfiles:
-                    sourcefile = pyxfile[:-3] + extension
-                    msg = (f"{extension}-source file '{sourcefile}' not found.\n"
-                           "Run 'setup.py cython' before sdist."
-                    )
-                    assert os.path.isfile(sourcefile), msg
+            for ext, ext_d in ext_cython.items():
+                pyx = ext_d.get("pyxfile", f"{ext}.pyx")
+                source = f"{pyx[:-4]}.c"
+                msg = (f".c-source file '{source}' not found.\n"
+                       "Run 'setup.py cython' to convert {pyx} to {source} before sdist."
+                )
+                assert os.path.isfile(source), msg
         super().run()
 
 cmdclass["sdist"] = EnsureSource_sdist
 
 
-_pyxfiles = [
-    "sisl/_indices.pyx",
-    "sisl/_math_small.pyx",
-    "sisl/physics/_bloch.pyx",
-    "sisl/physics/_matrix_ddk.pyx",
-    "sisl/physics/_matrix_dk.pyx",
-    "sisl/physics/_matrix_k.pyx",
-    "sisl/physics/_matrix_phase3.pyx",
-    "sisl/physics/_matrix_phase3_nc.pyx",
-    "sisl/physics/_matrix_phase3_so.pyx",
-    "sisl/physics/_matrix_phase_nc_diag.pyx",
-    "sisl/physics/_matrix_phase_nc.pyx",
-    "sisl/physics/_matrix_phase.pyx",
-    "sisl/physics/_matrix_phase_so.pyx",
-    "sisl/physics/_phase.pyx",
-    "sisl/_sparse.pyx",
-    "sisl/_supercell.pyx",
-]
+# Cython extensions can't be merged as a single module
+# It requires a single source file.
+# In this scheme all modules are named the same as their pyx files.
+# If the module name should change, simply manually put the pyxfile.
+ext_cython = {
+    "sisl._indices": {},
+    "sisl._math_small": {},
+    "sisl._sparse": {
+        "depends": [_ospath("sisl/_indices.pxd")]
+    },
+    "sisl._supercell": {},
+    "sisl.physics._bloch": {},
+    "sisl.physics._phase": {},
+    "sisl.physics._matrix_utils": {},
+    "sisl.physics._matrix_k": {},
+    "sisl.physics._matrix_dk": {},
+    "sisl.physics._matrix_ddk": {},
+    "sisl.physics._matrix_phase3": {},
+    "sisl.physics._matrix_phase3_nc": {},
+    "sisl.physics._matrix_phase3_so": {},
+    "sisl.physics._matrix_phase": {},
+    "sisl.physics._matrix_phase_nc_diag": {},
+    "sisl.physics._matrix_phase_nc": {},
+    "sisl.physics._matrix_phase_so": {},
+    "sisl.physics._matrix_sc_phase": {
+        "depends": [_ospath("sisl/_sparse.pxd")]
+    },
+    "sisl.physics._matrix_sc_phase_nc_diag": {
+        "depends": [_ospath("sisl/_sparse.pxd"),
+                    _ospath("sisl/physics/_matrix_utils.pxd")
+        ]
+    },
+    "sisl.physics._matrix_sc_phase_nc": {
+        "depends": [_ospath("sisl/_sparse.pxd"),
+                    _ospath("sisl/physics/_matrix_utils.pxd")
+        ]
+    },
+    "sisl.physics._matrix_sc_phase_so": {
+        "depends": [_ospath("sisl/_sparse.pxd"),
+                    _ospath("sisl/physics/_matrix_utils.pxd")
+        ]
+    },
+}
 
-# Prepopulate the ext_cython to create extensions
-# Later, when we complicate things more, we
-# may need the dictionary to add include statements etc.
-# I.e. ext_cython[...] = {pyxfile: ...,
-#                       include: ...,
-#                       depends: ...,
-#                       sources: ...}
 # All our extensions depend on numpy/core/include
 numpy_incl = pkg_resources.resource_filename("numpy", _ospath("core/include"))
-
-ext_cython = {}
-for pyx in _pyxfiles:
-    # remove ".pyx"
-    pyx_src = pyx[:-4]
-    pyx_mod = pyx_src.replace("/", ".")
-    ext_cython[pyx_mod] = {
-        "pyxfile": _ospath(pyx_src),
-        "include": [numpy_incl]
-    }
-    #ext_cython[pyx_mod] = {"pyxfile": _ospath(pyx_src)}
-
-ext_cython["sisl._sparse"]["depends"] = [_ospath("sisl/_indices.pxd")]
-
 
 # List of extensions for setup(...)
 extensions = []
 for name, data in ext_cython.items():
-    sources = [data["pyxfile"] + suffix] + data.get("sources", [])
-
-    ext = Extension(name,
-        sources=sources,
-        depends=data.get("depends", []),
-        include_dirs=data.get("include", None),
-        language=data.get("language", "c"),
-        define_macros=macros + data.get("macros", []),
-        extra_compile_args=extra_compile_args,
-        extra_link_args=extra_link_args,
+    # Create pyx-file name
+    # Default to module name + .pyx
+    pyxfile = data.get("pyxfile", f"{name}.pyx").replace(".", os.path.sep)
+    extensions.append(
+        Extension(name,
+                  sources=[f"{pyxfile[:-4]}{suffix}"] + data.get("sources", []),
+                  depends=data.get("depends", []),
+                  include_dirs=[numpy_incl] + data.get("include", []),
+                  language=data.get("language", "c"),
+                  define_macros=macros + data.get("macros", []),
+                  extra_compile_args=extra_compile_args,
+                  extra_link_args=extra_link_args)
     )
-
-    extensions.append(ext)
 
 
 # Specific Fortran extensions
@@ -420,6 +448,11 @@ setuptools_kwargs = {
             "xarray >= " + min_version["xarray"],
             "tqdm",
         ],
+        "viz": reduce(lambda a, b: a + b, viz.values()),
+        "visualization": reduce(lambda a, b: a + b, viz.values()),
+        "viz-plotly": viz["plotly"],
+        "viz-blender": viz["blender"],
+        "viz-ase": viz["ase"],
     },
     "zip_safe": False,
 }
@@ -442,6 +475,9 @@ metadata = dict(
     license=LICENSE,
     # Ensure the packages are being found in the correct locations
     package_dir={"sisl_toolbox": "toolbox"},
+    package_data={
+        "sisl.viz.plotly.gui": ["build/*"],
+    },
     packages=
     # We need to add sisl.* since that recursively adds modules
     find_packages(include=["sisl", "sisl.*"])
@@ -461,7 +497,10 @@ metadata = dict(
          "sisl = sisl.utils._sisl_cmd:sisl_cmd",
          # Add toolbox CLI
          "stoolbox = sisl_toolbox.cli:stoolbox_cli",
-        ],
+         "ts_poisson = sisl_toolbox.transiesta.poisson.poisson_explicit:poisson_explicit_cli",
+         ]
+        #"splotly = sisl.viz.plotly.splot:splot",
+        # "sgui = sisl.viz.plotly.gui.sgui:sgui"]
     },
     classifiers=CLASSIFIERS,
     platforms="any",

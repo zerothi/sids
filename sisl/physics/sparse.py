@@ -156,7 +156,7 @@ class SparseOrbitalBZ(SparseOrbital):
             P.append(S)
 
         p = cls(geometry, dim, P[0].dtype, 1, orthogonal=S is None, **kwargs)
-        p._csr = p._csr.fromsp(*P, **kwargs)
+        p._csr = p._csr.fromsp(*P, dtype=kwargs.get("dtype"))
 
         if p._size != P[0].shape[0]:
             raise ValueError(f"{cls.__name__}.fromsp cannot create a new class, the geometry "
@@ -279,6 +279,9 @@ class SparseOrbitalBZ(SparseOrbital):
            the returned format of the matrix, defaulting to the ``scipy.sparse.csr_matrix``,
            however if one always requires operations on dense matrices, one can always
            return in `numpy.ndarray` (`'array'`/`'dense'`/`'matrix'`).
+           Prefixing with 'sc:', or simply 'sc' returns the matrix in supercell format
+           with phases. This is useful for e.g. bond-current calculations where individual
+           hopping + phases are required.
 
         See Also
         --------
@@ -296,14 +299,23 @@ class SparseOrbitalBZ(SparseOrbital):
         r""" For an orthogonal case we always return the identity matrix """
         if dtype is None:
             dtype = np.float64
-        no = len(self)
+        nr = len(self)
+        nc = nr
+        if 'sc:' in format:
+            format = format[3:]
+            nc = self.n_s * nr
+        elif 'sc' == format:
+            format = 'csr'
+            nc = self.n_s * nr
         # In the "rare" but could be found situation where
         # the matrix only describes neighbouring couplings it is vital
         # to not return anything
         # TODO
         if format in ['array', 'matrix', 'dense']:
-            return np.diag(np.ones(no, dtype=dtype))
-        S = csr_matrix((no, no), dtype=dtype)
+            S = np.zeros([nr, nc], dtype=dtype)
+            np.fill_diagonal(S, 1.)
+            return S
+        S = csr_matrix((nr, nc), dtype=dtype)
         S.setdiag(1.)
         return S.asformat(format)
 
@@ -531,10 +543,10 @@ class SparseOrbitalBZ(SparseOrbital):
         dtype = kwargs.pop('dtype', None)
 
         P = self.Pk(k=k, dtype=dtype, gauge=gauge)
-        if not self.orthogonal:
-            raise ValueError("The sparsity pattern is non-orthogonal, you cannot use the Arnoldi procedure with scipy")
-
-        return lin.eigsh(P, k=n, return_eigenvectors=not eigvals_only, **kwargs)
+        if self.orthogonal:
+            return lin.eigsh(P, k=n, return_eigenvectors=not eigvals_only, **kwargs)
+        S = self.Sk(k=k, dtype=dtype, gauge=gauge)
+        return lin.eigsh(P, M=S, k=n, return_eigenvectors=not eigvals_only, **kwargs)
 
     def __getstate__(self):
         return {
