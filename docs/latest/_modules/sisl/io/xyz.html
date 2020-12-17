@@ -14,6 +14,7 @@
   <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
   <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
   <link rel="stylesheet" href="../../../_static/graphviz.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/gallery.css" type="text/css" />
 
   
   
@@ -103,12 +104,15 @@
 <li class="toctree-l1"><a class="reference internal" href="../../../installation.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../tutorials.html">Tutorials</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../scripts/scripts.html">Command line scripts</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../visualization/visualization.html">Visualization</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../rst/files.html">File formats</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Toolboxes</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../../../toolbox/toolbox.html">Toolboxes</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Visualization</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../visualization/ase/index.html">ASE</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Reference documentation</span></p>
 <ul>
@@ -225,7 +229,7 @@
     <span class="sd">&quot;&quot;&quot; XYZ file object &quot;&quot;&quot;</span>
 
 <div class="viewcode-block" id="xyzSile.write_geometry"><a class="viewcode-back" href="../../../api-generated/sisl.io.xyz.xyzSile.html#sisl.io.xyz.xyzSile.write_geometry">[docs]</a>    <span class="nd">@sile_fh_open</span><span class="p">()</span>
-    <span class="k">def</span> <span class="nf">write_geometry</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">geom</span><span class="p">,</span> <span class="n">fmt</span><span class="o">=</span><span class="s1">&#39;.8f&#39;</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">write_geometry</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">geom</span><span class="p">,</span> <span class="n">fmt</span><span class="o">=</span><span class="s1">&#39;.8f&#39;</span><span class="p">,</span> <span class="n">comment</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Writes the geometry to the contained file</span>
 
 <span class="sd">        Parameters</span>
@@ -234,6 +238,9 @@
 <span class="sd">           the geometry to be written</span>
 <span class="sd">        fmt : str, optional</span>
 <span class="sd">           used format for the precision of the data</span>
+<span class="sd">        comment : str, optional</span>
+<span class="sd">           if None, a sisl made comment that can be used for parsing the unit-cell is used</span>
+<span class="sd">           else this comment will be written at the 2nd line.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># Check that we can write to the file</span>
         <span class="n">sile_raise_write</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
@@ -244,15 +251,16 @@
         <span class="c1"># Write out the cell information in the comment field</span>
         <span class="c1"># This contains the cell vectors in a single vector (3 + 3 + 3)</span>
         <span class="c1"># quantities, plus the number of supercells (3 ints)</span>
-        <span class="n">fmt_str</span> <span class="o">=</span> <span class="s1">&#39;sisl-version=1 cell= &#39;</span> <span class="o">+</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="se">{{</span><span class="s1">:</span><span class="si">{</span><span class="n">fmt</span><span class="si">}</span><span class="se">}}</span><span class="s1"> &#39;</span> <span class="o">*</span> <span class="mi">9</span> <span class="o">+</span> <span class="s1">&#39; nsc= </span><span class="si">{}</span><span class="s1"> </span><span class="si">{}</span><span class="s1"> </span><span class="si">{}</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="o">*</span><span class="n">geom</span><span class="o">.</span><span class="n">nsc</span><span class="p">[:])</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_write</span><span class="p">(</span><span class="n">fmt_str</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="o">*</span><span class="n">geom</span><span class="o">.</span><span class="n">cell</span><span class="o">.</span><span class="n">flatten</span><span class="p">()))</span>
+        <span class="k">if</span> <span class="n">comment</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">fmt_str</span> <span class="o">=</span> <span class="s1">&#39;sisl-version=1 cell= &#39;</span> <span class="o">+</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="se">{{</span><span class="s1">:</span><span class="si">{</span><span class="n">fmt</span><span class="si">}</span><span class="se">}}</span><span class="s1"> &#39;</span> <span class="o">*</span> <span class="mi">9</span> <span class="o">+</span> <span class="s1">&#39; nsc= </span><span class="si">{}</span><span class="s1"> </span><span class="si">{}</span><span class="s1"> </span><span class="si">{}</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="o">*</span><span class="n">geom</span><span class="o">.</span><span class="n">nsc</span><span class="p">[:])</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_write</span><span class="p">(</span><span class="n">fmt_str</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="o">*</span><span class="n">geom</span><span class="o">.</span><span class="n">cell</span><span class="o">.</span><span class="n">flatten</span><span class="p">()))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_write</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">comment</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
 
         <span class="n">fmt_str</span> <span class="o">=</span> <span class="s1">&#39;{{0:2s}}  {{1:</span><span class="si">{0}</span><span class="s1">}}  {{2:</span><span class="si">{0}</span><span class="s1">}}  {{3:</span><span class="si">{0}</span><span class="s1">}}</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">fmt</span><span class="p">)</span>
         <span class="k">for</span> <span class="n">ia</span><span class="p">,</span> <span class="n">a</span><span class="p">,</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">geom</span><span class="o">.</span><span class="n">iter_species</span><span class="p">():</span>
             <span class="n">s</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;fa&#39;</span><span class="p">:</span> <span class="s1">&#39;Ds&#39;</span><span class="p">}</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">a</span><span class="o">.</span><span class="n">symbol</span><span class="p">,</span> <span class="n">a</span><span class="o">.</span><span class="n">symbol</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_write</span><span class="p">(</span><span class="n">fmt_str</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="o">*</span><span class="n">geom</span><span class="o">.</span><span class="n">xyz</span><span class="p">[</span><span class="n">ia</span><span class="p">,</span> <span class="p">:]))</span>
-        <span class="c1"># Add a single new line</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_write</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span></div>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_write</span><span class="p">(</span><span class="n">fmt_str</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="o">*</span><span class="n">geom</span><span class="o">.</span><span class="n">xyz</span><span class="p">[</span><span class="n">ia</span><span class="p">,</span> <span class="p">:]))</span></div>
 
     <span class="k">def</span> <span class="nf">_r_geometry_sisl</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">na</span><span class="p">,</span> <span class="n">header</span><span class="p">,</span> <span class="n">sp</span><span class="p">,</span> <span class="n">xyz</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Read the geometry as though it was created with sisl &quot;&quot;&quot;</span>

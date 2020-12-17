@@ -14,6 +14,7 @@
   <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
   <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
   <link rel="stylesheet" href="../_static/graphviz.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/gallery.css" type="text/css" />
 
   
   
@@ -103,12 +104,15 @@
 <li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../tutorials.html">Tutorials</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../scripts/scripts.html">Command line scripts</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../visualization/visualization.html">Visualization</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../rst/files.html">File formats</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Toolboxes</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../toolbox/toolbox.html">Toolboxes</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Visualization</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../visualization/ase/index.html">ASE</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Reference documentation</span></p>
 <ul>
@@ -232,6 +236,8 @@
 <span class="n">__author__</span> <span class="o">=</span> <span class="s2">&quot;Nick Papior&quot;</span>
 <span class="n">__copyright__</span> <span class="o">=</span> <span class="s2">&quot;LGPL-3.0&quot;</span>
 
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">_environ</span>
+
 <span class="c1"># Import bibtex, version string and the major, minor, micro as well</span>
 <span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">info</span>
 <span class="kn">from</span> <span class="nn">.info</span> <span class="kn">import</span> <span class="n">bibtex</span> <span class="k">as</span> <span class="n">__bibtex__</span>
@@ -306,14 +312,25 @@
 <span class="c1"># that sisl is made of.</span>
 <span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">io</span>
 <span class="kn">from</span> <span class="nn">.io.sile</span> <span class="kn">import</span> <span class="p">(</span><span class="n">add_sile</span><span class="p">,</span> <span class="n">get_sile_class</span><span class="p">,</span> <span class="n">get_sile</span><span class="p">,</span>
-                      <span class="n">get_siles</span><span class="p">,</span> <span class="n">SileError</span><span class="p">,</span>
+                      <span class="n">get_siles</span><span class="p">,</span> <span class="n">get_sile_rules</span><span class="p">,</span> <span class="n">SileError</span><span class="p">,</span>
                       <span class="n">BaseSile</span><span class="p">,</span> <span class="n">Sile</span><span class="p">,</span> <span class="n">SileCDF</span><span class="p">,</span> <span class="n">SileBin</span><span class="p">)</span>
+
+<span class="c1"># Allow geometry to register siles</span>
+<span class="c1"># Ensure BaseSile works as a str</span>
+<span class="c1"># We have to do it after loading BaseSile and Geometry</span>
+<span class="c1"># Since __getitem__ always instantiate the class, we have to use the</span>
+<span class="c1"># contained lookup table.</span>
+<span class="n">Geometry</span><span class="o">.</span><span class="n">new</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="n">BaseSile</span><span class="p">,</span> <span class="n">Geometry</span><span class="o">.</span><span class="n">new</span><span class="o">.</span><span class="n">_dispatchs</span><span class="p">[</span><span class="nb">type</span><span class="p">(</span><span class="s2">&quot;str&quot;</span><span class="p">)]</span><span class="o">.</span><span class="vm">__class__</span><span class="p">)</span>
 
 <span class="c1"># Import the default geom structure</span>
 <span class="c1"># This enables:</span>
 <span class="c1"># import sisl</span>
 <span class="c1"># sisl.geom.graphene</span>
 <span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">geom</span>
+
+<span class="k">if</span> <span class="n">_environ</span><span class="o">.</span><span class="n">get_environ_variable</span><span class="p">(</span><span class="s2">&quot;SISL_VIZ_AUTOLOAD&quot;</span><span class="p">):</span>
+    <span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">viz</span>
+
 
 <span class="c1"># Make these things publicly available</span>
 <span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="n">s</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="nb">dir</span><span class="p">()</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">s</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;_&#39;</span><span class="p">)]</span>

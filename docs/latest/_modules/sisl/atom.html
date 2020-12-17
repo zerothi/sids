@@ -14,6 +14,7 @@
   <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
   <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
   <link rel="stylesheet" href="../../_static/graphviz.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/gallery.css" type="text/css" />
 
   
   
@@ -103,12 +104,15 @@
 <li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../tutorials.html">Tutorials</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../scripts/scripts.html">Command line scripts</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../visualization/visualization.html">Visualization</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../rst/files.html">File formats</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Toolboxes</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../../toolbox/toolbox.html">Toolboxes</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Visualization</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../visualization/ase/index.html">ASE</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Reference documentation</span></p>
 <ul>
@@ -1171,57 +1175,63 @@
 
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">Z</span><span class="p">,</span> <span class="n">orbitals</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">mass</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">tag</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">Z</span><span class="p">,</span> <span class="n">Atom</span><span class="p">):</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">Z</span> <span class="o">=</span> <span class="n">Z</span><span class="o">.</span><span class="n">Z</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_Z</span> <span class="o">=</span> <span class="n">Z</span><span class="o">.</span><span class="n">Z</span>
         <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">Z</span><span class="p">,</span> <span class="n">Integral</span><span class="p">):</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">Z</span> <span class="o">=</span> <span class="n">Z</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_Z</span> <span class="o">=</span> <span class="n">Z</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">Z</span> <span class="o">=</span> <span class="n">_ptbl</span><span class="o">.</span><span class="n">Z_int</span><span class="p">(</span><span class="n">Z</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_Z</span> <span class="o">=</span> <span class="n">_ptbl</span><span class="o">.</span><span class="n">Z_int</span><span class="p">(</span><span class="n">Z</span><span class="p">)</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">orbitals</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_orbitals</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">orbitals</span><span class="p">,</span> <span class="p">(</span><span class="nb">tuple</span><span class="p">,</span> <span class="nb">list</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)):</span>
             <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">orbitals</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">Orbital</span><span class="p">):</span>
                 <span class="c1"># all is good</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">orbitals</span> <span class="o">=</span> <span class="n">orbitals</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_orbitals</span> <span class="o">=</span> <span class="n">orbitals</span>
             <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">orbitals</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">Real</span><span class="p">):</span>
                 <span class="c1"># radius has been given</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">orbitals</span> <span class="o">=</span> <span class="p">[</span><span class="n">Orbital</span><span class="p">(</span><span class="n">R</span><span class="p">)</span> <span class="k">for</span> <span class="n">R</span> <span class="ow">in</span> <span class="n">orbitals</span><span class="p">]</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_orbitals</span> <span class="o">=</span> <span class="p">[</span><span class="n">Orbital</span><span class="p">(</span><span class="n">R</span><span class="p">)</span> <span class="k">for</span> <span class="n">R</span> <span class="ow">in</span> <span class="n">orbitals</span><span class="p">]</span>
         <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">orbitals</span><span class="p">,</span> <span class="n">Orbital</span><span class="p">):</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">orbitals</span> <span class="o">=</span> <span class="p">[</span><span class="n">orbitals</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_orbitals</span> <span class="o">=</span> <span class="p">[</span><span class="n">orbitals</span><span class="p">]</span>
         <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">orbitals</span><span class="p">,</span> <span class="n">Real</span><span class="p">):</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">orbitals</span> <span class="o">=</span> <span class="p">[</span><span class="n">Orbital</span><span class="p">(</span><span class="n">orbitals</span><span class="p">)]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_orbitals</span> <span class="o">=</span> <span class="p">[</span><span class="n">Orbital</span><span class="p">(</span><span class="n">orbitals</span><span class="p">)]</span>
 
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">orbitals</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_orbitals</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">if</span> <span class="s1">&#39;R&#39;</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="p">:</span>
                 <span class="c1"># backwards compatibility (possibly remove this in the future)</span>
                 <span class="n">R</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">asarrayd</span><span class="p">(</span><span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;R&#39;</span><span class="p">])</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">orbitals</span> <span class="o">=</span> <span class="p">[</span><span class="n">Orbital</span><span class="p">(</span><span class="n">r</span><span class="p">)</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">R</span><span class="p">]</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_orbitals</span> <span class="o">=</span> <span class="p">[</span><span class="n">Orbital</span><span class="p">(</span><span class="n">r</span><span class="p">)</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">R</span><span class="p">]</span>
             <span class="k">else</span><span class="p">:</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">orbitals</span> <span class="o">=</span> <span class="p">[</span><span class="n">Orbital</span><span class="p">(</span><span class="o">-</span><span class="mf">1.</span><span class="p">)]</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_orbitals</span> <span class="o">=</span> <span class="p">[</span><span class="n">Orbital</span><span class="p">(</span><span class="o">-</span><span class="mf">1.</span><span class="p">)]</span>
 
         <span class="k">if</span> <span class="n">mass</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">mass</span> <span class="o">=</span> <span class="n">_ptbl</span><span class="o">.</span><span class="n">atomic_mass</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Z</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_mass</span> <span class="o">=</span> <span class="n">_ptbl</span><span class="o">.</span><span class="n">atomic_mass</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Z</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">mass</span> <span class="o">=</span> <span class="n">mass</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_mass</span> <span class="o">=</span> <span class="n">mass</span>
 
         <span class="k">if</span> <span class="n">tag</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">tag</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">symbol</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_tag</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">symbol</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">tag</span> <span class="o">=</span> <span class="n">tag</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_tag</span> <span class="o">=</span> <span class="n">tag</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">Z</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_Z</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">orbitals</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_orbitals</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">mass</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mass</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">tag</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tag</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">no</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Number of orbitals on this atom &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">orbitals</span><span class="p">)</span>
-
-    <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">R</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot; Orbital radius &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="n">_a</span><span class="o">.</span><span class="n">arrayd</span><span class="p">([</span><span class="n">o</span><span class="o">.</span><span class="n">R</span> <span class="k">for</span> <span class="n">o</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">orbitals</span><span class="p">])</span>
-
-    <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">q0</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot; Orbital initial charges &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="n">_a</span><span class="o">.</span><span class="n">arrayd</span><span class="p">([</span><span class="n">o</span><span class="o">.</span><span class="n">q0</span> <span class="k">for</span> <span class="n">o</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">orbitals</span><span class="p">])</span>
 
 <div class="viewcode-block" id="Atom.index"><a class="viewcode-back" href="../../api-generated/sisl.Atom.html#sisl.Atom.index">[docs]</a>    <span class="k">def</span> <span class="nf">index</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">orbital</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Return the index of the orbital in the atom object &quot;&quot;&quot;</span>
@@ -1328,7 +1338,7 @@
 <span class="sd">           the scale factor for the atomic radii</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">new</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
-        <span class="n">new</span><span class="o">.</span><span class="n">orbitals</span> <span class="o">=</span> <span class="p">[</span><span class="n">o</span><span class="o">.</span><span class="n">scale</span><span class="p">(</span><span class="n">scale</span><span class="p">)</span> <span class="k">for</span> <span class="n">o</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">orbitals</span><span class="p">]</span>
+        <span class="n">new</span><span class="o">.</span><span class="n">_orbitals</span> <span class="o">=</span> <span class="p">[</span><span class="n">o</span><span class="o">.</span><span class="n">scale</span><span class="p">(</span><span class="n">scale</span><span class="p">)</span> <span class="k">for</span> <span class="n">o</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">orbitals</span><span class="p">]</span>
         <span class="k">return</span> <span class="n">new</span></div>
 
     <span class="k">def</span> <span class="fm">__iter__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -1377,6 +1387,62 @@
     <span class="k">def</span> <span class="fm">__len__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Return number of orbitals in this atom &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">no</span>
+
+    <span class="k">def</span> <span class="fm">__getattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">attr</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Pass attribute calls to the orbital classes and return lists/array</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        attr : str</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c1"># First we create a list of values that the orbitals have</span>
+        <span class="c1"># Some may have it, others may not</span>
+        <span class="n">vals</span> <span class="o">=</span> <span class="p">[</span><span class="kc">None</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">orbitals</span><span class="p">)</span>
+        <span class="n">found</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="n">is_Integral</span> <span class="o">=</span> <span class="n">is_Real</span> <span class="o">=</span> <span class="n">is_callable</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">for</span> <span class="n">io</span><span class="p">,</span> <span class="n">orb</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">orbitals</span><span class="p">):</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">vals</span><span class="p">[</span><span class="n">io</span><span class="p">]</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">orb</span><span class="p">,</span> <span class="n">attr</span><span class="p">)</span>
+                <span class="n">found</span> <span class="o">=</span> <span class="kc">True</span>
+                <span class="n">is_callable</span> <span class="o">&amp;=</span> <span class="n">callable</span><span class="p">(</span><span class="n">vals</span><span class="p">[</span><span class="n">io</span><span class="p">])</span>
+                <span class="n">is_Integral</span> <span class="o">&amp;=</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">vals</span><span class="p">[</span><span class="n">io</span><span class="p">],</span> <span class="n">Integral</span><span class="p">)</span>
+                <span class="n">is_Real</span> <span class="o">&amp;=</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">vals</span><span class="p">[</span><span class="n">io</span><span class="p">],</span> <span class="n">Real</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
+                <span class="k">pass</span>
+
+        <span class="k">if</span> <span class="n">found</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="c1"># we never got any values, reraise the AttributeError</span>
+            <span class="k">raise</span> <span class="ne">AttributeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">.orbitals&#39; objects has no attribute &#39;</span><span class="si">{</span><span class="n">attr</span><span class="si">}</span><span class="s2">&#39;&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Now parse the data, currently we&#39;ll only allow Integral, Real, Complex</span>
+        <span class="k">if</span> <span class="n">is_Integral</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">io</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">vals</span><span class="p">)):</span>
+                <span class="k">if</span> <span class="n">vals</span><span class="p">[</span><span class="n">io</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="n">vals</span><span class="p">[</span><span class="n">io</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="k">return</span> <span class="n">_a</span><span class="o">.</span><span class="n">arrayi</span><span class="p">(</span><span class="n">vals</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">is_Real</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">io</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">vals</span><span class="p">)):</span>
+                <span class="k">if</span> <span class="n">vals</span><span class="p">[</span><span class="n">io</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="n">vals</span><span class="p">[</span><span class="n">io</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.</span>
+            <span class="k">return</span> <span class="n">_a</span><span class="o">.</span><span class="n">arrayd</span><span class="p">(</span><span class="n">vals</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">is_callable</span><span class="p">:</span>
+            <span class="k">def</span> <span class="nf">_ret_none</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+                <span class="k">return</span> <span class="kc">None</span>
+            <span class="k">for</span> <span class="n">io</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">vals</span><span class="p">)):</span>
+                <span class="k">if</span> <span class="n">vals</span><span class="p">[</span><span class="n">io</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="n">vals</span><span class="p">[</span><span class="n">io</span><span class="p">]</span> <span class="o">=</span> <span class="n">_ret_none</span>
+
+            <span class="c1"># Now subclass the content and return values per method</span>
+            <span class="k">class</span> <span class="nc">ArrayCall</span><span class="p">:</span>
+                <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">methods</span><span class="p">):</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">methods</span> <span class="o">=</span> <span class="n">methods</span>
+                <span class="k">def</span> <span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+                    <span class="k">return</span> <span class="p">[</span><span class="n">m</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">methods</span><span class="p">]</span>
+            <span class="k">return</span> <span class="n">ArrayCall</span><span class="p">(</span><span class="n">vals</span><span class="p">)</span>
+
+        <span class="c1"># We don&#39;t know how to handle this, simply return...</span>
+        <span class="k">return</span> <span class="n">vals</span>
 
 <div class="viewcode-block" id="Atom.toSphere"><a class="viewcode-back" href="../../api-generated/sisl.Atom.html#sisl.Atom.toSphere">[docs]</a>    <span class="k">def</span> <span class="nf">toSphere</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">center</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Return a sphere with the maximum orbital radius equal</span>

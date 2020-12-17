@@ -14,6 +14,7 @@
   <link rel="stylesheet" href="../../../../_static/css/theme.css" type="text/css" />
   <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
   <link rel="stylesheet" href="../../../../_static/graphviz.css" type="text/css" />
+  <link rel="stylesheet" href="../../../../_static/gallery.css" type="text/css" />
 
   
   
@@ -103,12 +104,15 @@
 <li class="toctree-l1"><a class="reference internal" href="../../../../installation.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../../tutorials.html">Tutorials</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../../scripts/scripts.html">Command line scripts</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../../visualization/visualization.html">Visualization</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../../rst/files.html">File formats</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Toolboxes</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../../../../toolbox/toolbox.html">Toolboxes</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Visualization</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../visualization/ase/index.html">ASE</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Reference documentation</span></p>
 <ul>
@@ -200,14 +204,22 @@
     <span class="sd">&quot;&quot;&quot; Kohn-Sham eigenvalues &quot;&quot;&quot;</span>
 
 <div class="viewcode-block" id="eigenvalSileVASP.read_data"><a class="viewcode-back" href="../../../../api-generated/sisl.io.vasp.eigenvalSileVASP.html#sisl.io.vasp.eigenvalSileVASP.read_data">[docs]</a>    <span class="nd">@sile_fh_open</span><span class="p">()</span>
-    <span class="k">def</span> <span class="nf">read_data</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">read_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
         <span class="sa">r</span><span class="sd">&quot;&quot;&quot; Read eigenvalues, as calculated and written by VASP</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        k : bool, optional</span>
+<span class="sd">           also return k points and weights</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
 <span class="sd">        numpy.ndarray : all eigenvalues, shape ``(ns, nk, nb)``</span>
 <span class="sd">                        where ``ns`` number of spin-components, ``nk`` number of k-points and</span>
 <span class="sd">                        ``nb`` number of bands</span>
+<span class="sd">        numpy.ndarray : k-points (if `k` is true), shape ``(nk, 3)``</span>
+<span class="sd">        numpy.ndarray : weights for k-points (if `k` is true), shape ``(nk)``</span>
+
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># read first line</span>
         <span class="n">line</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">readline</span><span class="p">()</span>  <span class="c1"># NIONS, NIONS, NBLOCK * KBLOCK, NSPIN</span>
@@ -219,15 +231,21 @@
         <span class="n">line</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">readline</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">()))</span>  <span class="c1"># electrons, k-points, bands</span>
         <span class="n">nk</span> <span class="o">=</span> <span class="n">line</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
         <span class="n">nb</span> <span class="o">=</span> <span class="n">line</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
-        <span class="n">eigs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">([</span><span class="n">ns</span><span class="p">,</span> <span class="n">nk</span><span class="p">,</span> <span class="n">nb</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+        <span class="n">eigs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">([</span><span class="n">ns</span><span class="p">,</span> <span class="n">nk</span><span class="p">,</span> <span class="n">nb</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+        <span class="n">kk</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">([</span><span class="n">nk</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+        <span class="n">w</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">([</span><span class="n">nk</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
         <span class="k">for</span> <span class="n">ik</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nk</span><span class="p">):</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">readline</span><span class="p">()</span>  <span class="c1"># empty line</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">readline</span><span class="p">()</span>  <span class="c1"># ... k-point, weight</span>
+            <span class="n">line</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">readline</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">()</span> <span class="c1"># k-point, weight</span>
+            <span class="n">kk</span><span class="p">[</span><span class="n">ik</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="nb">float</span><span class="p">,</span> <span class="n">line</span><span class="p">[:</span><span class="mi">3</span><span class="p">]))</span>
+            <span class="n">w</span><span class="p">[</span><span class="n">ik</span><span class="p">]</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">line</span><span class="p">[</span><span class="mi">3</span><span class="p">])</span>
             <span class="k">for</span> <span class="n">ib</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nb</span><span class="p">):</span>
                 <span class="c1"># band, eig_UP, eig_DOWN, pop_UP, pop_DOWN</span>
                 <span class="c1"># We currently neglect the populations</span>
                 <span class="n">E</span> <span class="o">=</span> <span class="nb">map</span><span class="p">(</span><span class="nb">float</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">readline</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">()[</span><span class="mi">1</span><span class="p">:</span><span class="n">ns</span><span class="o">+</span><span class="mi">1</span><span class="p">])</span>
                 <span class="n">eigs</span><span class="p">[:,</span> <span class="n">ik</span><span class="p">,</span> <span class="n">ib</span><span class="p">]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">E</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">k</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">eigs</span><span class="p">,</span> <span class="n">kk</span><span class="p">,</span> <span class="n">w</span>
         <span class="k">return</span> <span class="n">eigs</span></div>
 
 

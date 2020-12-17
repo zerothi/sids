@@ -14,6 +14,7 @@
   <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
   <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
   <link rel="stylesheet" href="../../../_static/graphviz.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/gallery.css" type="text/css" />
 
   
   
@@ -103,12 +104,15 @@
 <li class="toctree-l1"><a class="reference internal" href="../../../installation.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../tutorials.html">Tutorials</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../scripts/scripts.html">Command line scripts</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../visualization/visualization.html">Visualization</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../rst/files.html">File formats</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Toolboxes</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../../../toolbox/toolbox.html">Toolboxes</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Visualization</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../visualization/ase/index.html">ASE</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Reference documentation</span></p>
 <ul>
@@ -339,7 +343,7 @@
             <span class="n">P</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">S</span><span class="p">)</span>
 
         <span class="n">p</span> <span class="o">=</span> <span class="bp">cls</span><span class="p">(</span><span class="n">geometry</span><span class="p">,</span> <span class="n">dim</span><span class="p">,</span> <span class="n">P</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">orthogonal</span><span class="o">=</span><span class="n">S</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
-        <span class="n">p</span><span class="o">.</span><span class="n">_csr</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">fromsp</span><span class="p">(</span><span class="o">*</span><span class="n">P</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="n">p</span><span class="o">.</span><span class="n">_csr</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">fromsp</span><span class="p">(</span><span class="o">*</span><span class="n">P</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;dtype&quot;</span><span class="p">))</span>
 
         <span class="k">if</span> <span class="n">p</span><span class="o">.</span><span class="n">_size</span> <span class="o">!=</span> <span class="n">P</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">cls</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">.fromsp cannot create a new class, the geometry &quot;</span>
@@ -462,6 +466,9 @@
 <span class="sd">           the returned format of the matrix, defaulting to the ``scipy.sparse.csr_matrix``,</span>
 <span class="sd">           however if one always requires operations on dense matrices, one can always</span>
 <span class="sd">           return in `numpy.ndarray` (`&#39;array&#39;`/`&#39;dense&#39;`/`&#39;matrix&#39;`).</span>
+<span class="sd">           Prefixing with &#39;sc:&#39;, or simply &#39;sc&#39; returns the matrix in supercell format</span>
+<span class="sd">           with phases. This is useful for e.g. bond-current calculations where individual</span>
+<span class="sd">           hopping + phases are required.</span>
 
 <span class="sd">        See Also</span>
 <span class="sd">        --------</span>
@@ -479,14 +486,23 @@
         <span class="sa">r</span><span class="sd">&quot;&quot;&quot; For an orthogonal case we always return the identity matrix &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">dtype</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">dtype</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span>
-        <span class="n">no</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="n">nr</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="n">nc</span> <span class="o">=</span> <span class="n">nr</span>
+        <span class="k">if</span> <span class="s1">&#39;sc:&#39;</span> <span class="ow">in</span> <span class="nb">format</span><span class="p">:</span>
+            <span class="nb">format</span> <span class="o">=</span> <span class="nb">format</span><span class="p">[</span><span class="mi">3</span><span class="p">:]</span>
+            <span class="n">nc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_s</span> <span class="o">*</span> <span class="n">nr</span>
+        <span class="k">elif</span> <span class="s1">&#39;sc&#39;</span> <span class="o">==</span> <span class="nb">format</span><span class="p">:</span>
+            <span class="nb">format</span> <span class="o">=</span> <span class="s1">&#39;csr&#39;</span>
+            <span class="n">nc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_s</span> <span class="o">*</span> <span class="n">nr</span>
         <span class="c1"># In the &quot;rare&quot; but could be found situation where</span>
         <span class="c1"># the matrix only describes neighbouring couplings it is vital</span>
         <span class="c1"># to not return anything</span>
         <span class="c1"># TODO</span>
         <span class="k">if</span> <span class="nb">format</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;array&#39;</span><span class="p">,</span> <span class="s1">&#39;matrix&#39;</span><span class="p">,</span> <span class="s1">&#39;dense&#39;</span><span class="p">]:</span>
-            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">no</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">))</span>
-        <span class="n">S</span> <span class="o">=</span> <span class="n">csr_matrix</span><span class="p">((</span><span class="n">no</span><span class="p">,</span> <span class="n">no</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span>
+            <span class="n">S</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">([</span><span class="n">nr</span><span class="p">,</span> <span class="n">nc</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">fill_diagonal</span><span class="p">(</span><span class="n">S</span><span class="p">,</span> <span class="mf">1.</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">S</span>
+        <span class="n">S</span> <span class="o">=</span> <span class="n">csr_matrix</span><span class="p">((</span><span class="n">nr</span><span class="p">,</span> <span class="n">nc</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span>
         <span class="n">S</span><span class="o">.</span><span class="n">setdiag</span><span class="p">(</span><span class="mf">1.</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">S</span><span class="o">.</span><span class="n">asformat</span><span class="p">(</span><span class="nb">format</span><span class="p">)</span>
 
@@ -714,10 +730,10 @@
         <span class="n">dtype</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;dtype&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
 
         <span class="n">P</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Pk</span><span class="p">(</span><span class="n">k</span><span class="o">=</span><span class="n">k</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">,</span> <span class="n">gauge</span><span class="o">=</span><span class="n">gauge</span><span class="p">)</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">orthogonal</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;The sparsity pattern is non-orthogonal, you cannot use the Arnoldi procedure with scipy&quot;</span><span class="p">)</span>
-
-        <span class="k">return</span> <span class="n">lin</span><span class="o">.</span><span class="n">eigsh</span><span class="p">(</span><span class="n">P</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="n">n</span><span class="p">,</span> <span class="n">return_eigenvectors</span><span class="o">=</span><span class="ow">not</span> <span class="n">eigvals_only</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">orthogonal</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">lin</span><span class="o">.</span><span class="n">eigsh</span><span class="p">(</span><span class="n">P</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="n">n</span><span class="p">,</span> <span class="n">return_eigenvectors</span><span class="o">=</span><span class="ow">not</span> <span class="n">eigvals_only</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="n">S</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Sk</span><span class="p">(</span><span class="n">k</span><span class="o">=</span><span class="n">k</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">,</span> <span class="n">gauge</span><span class="o">=</span><span class="n">gauge</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">lin</span><span class="o">.</span><span class="n">eigsh</span><span class="p">(</span><span class="n">P</span><span class="p">,</span> <span class="n">M</span><span class="o">=</span><span class="n">S</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="n">n</span><span class="p">,</span> <span class="n">return_eigenvectors</span><span class="o">=</span><span class="ow">not</span> <span class="n">eigvals_only</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
 
     <span class="k">def</span> <span class="nf">__getstate__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">return</span> <span class="p">{</span>

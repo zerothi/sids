@@ -14,6 +14,7 @@
   <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
   <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
   <link rel="stylesheet" href="../../../_static/graphviz.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/gallery.css" type="text/css" />
 
   
   
@@ -103,12 +104,15 @@
 <li class="toctree-l1"><a class="reference internal" href="../../../installation.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../tutorials.html">Tutorials</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../scripts/scripts.html">Command line scripts</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../visualization/visualization.html">Visualization</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../rst/files.html">File formats</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Toolboxes</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../../../toolbox/toolbox.html">Toolboxes</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Visualization</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../visualization/ase/index.html">ASE</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Reference documentation</span></p>
 <ul>
@@ -280,6 +284,9 @@
 <span class="sd">           the returned format of the matrix, defaulting to the ``scipy.sparse.csr_matrix``,</span>
 <span class="sd">           however if one always requires operations on dense matrices, one can always</span>
 <span class="sd">           return in `numpy.ndarray` (`&#39;array&#39;`/`&#39;dense&#39;`/`&#39;matrix&#39;`).</span>
+<span class="sd">           Prefixing with &#39;sc:&#39;, or simply &#39;sc&#39; returns the matrix in supercell format</span>
+<span class="sd">           with phases. This is useful for e.g. bond-current calculations where individual</span>
+<span class="sd">           hopping + phases are required.</span>
 <span class="sd">        spin : int, optional</span>
 <span class="sd">           if the Hamiltonian is a spin polarized one can extract the specific spin direction</span>
 <span class="sd">           matrix by passing an integer (0 or 1). If the Hamiltonian is not `Spin.POLARIZED`</span>
@@ -454,6 +461,9 @@
 <span class="sd">        sparse : bool, optional</span>
 <span class="sd">            if ``True``, `eigsh` will be called, else `eigh` will be</span>
 <span class="sd">            called (default).</span>
+<span class="sd">        format : str, optional</span>
+<span class="sd">            see `eigh` for details, this will be passed to the EigenstateElectron</span>
+<span class="sd">            instance to be used in subsequent calls, may speed up post-processing.</span>
 <span class="sd">        **kwargs : dict, optional</span>
 <span class="sd">            passed arguments to the `eigh` routine</span>
 
@@ -466,6 +476,7 @@
 <span class="sd">        -------</span>
 <span class="sd">        EigenvalueElectron</span>
 <span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">format</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;format&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;sparse&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">):</span>
             <span class="n">e</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">eigsh</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">gauge</span><span class="o">=</span><span class="n">gauge</span><span class="p">,</span> <span class="n">eigvals_only</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
@@ -474,6 +485,8 @@
         <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;spin&quot;</span><span class="p">]:</span>
             <span class="k">if</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="p">:</span>
                 <span class="n">info</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">kwargs</span><span class="p">[</span><span class="n">name</span><span class="p">]</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">format</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">info</span><span class="p">[</span><span class="s2">&quot;format&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">format</span>
         <span class="k">return</span> <span class="n">EigenvalueElectron</span><span class="p">(</span><span class="n">e</span><span class="p">,</span> <span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">info</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="Hamiltonian.eigenstate"><a class="viewcode-back" href="../../../api-generated/sisl.physics.Hamiltonian.html#sisl.physics.Hamiltonian.eigenstate">[docs]</a>    <span class="k">def</span> <span class="nf">eigenstate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="n">gauge</span><span class="o">=</span><span class="s1">&#39;R&#39;</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
@@ -488,6 +501,9 @@
 <span class="sd">        sparse : bool, optional</span>
 <span class="sd">            if ``True``, `eigsh` will be called, else `eigh` will be</span>
 <span class="sd">            called (default).</span>
+<span class="sd">        format : str, optional</span>
+<span class="sd">            see `eigh` for details, this will be passed to the EigenstateElectron</span>
+<span class="sd">            instance to be used in subsequent calls, may speed up post-processing.</span>
 <span class="sd">        **kwargs : dict, optional</span>
 <span class="sd">            passed arguments to the `eigh`/`eighs` routine</span>
 
@@ -500,6 +516,7 @@
 <span class="sd">        -------</span>
 <span class="sd">        EigenstateElectron</span>
 <span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">format</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;format&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;sparse&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">):</span>
             <span class="n">e</span><span class="p">,</span> <span class="n">v</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">eigsh</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">gauge</span><span class="o">=</span><span class="n">gauge</span><span class="p">,</span> <span class="n">eigvals_only</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
@@ -508,6 +525,8 @@
         <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;spin&quot;</span><span class="p">]:</span>
             <span class="k">if</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="p">:</span>
                 <span class="n">info</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">kwargs</span><span class="p">[</span><span class="n">name</span><span class="p">]</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">format</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">info</span><span class="p">[</span><span class="s2">&quot;format&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">format</span>
         <span class="c1"># Since eigh returns the eigenvectors [:, i] we have to transpose</span>
         <span class="k">return</span> <span class="n">EigenstateElectron</span><span class="p">(</span><span class="n">v</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">e</span><span class="p">,</span> <span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">info</span><span class="p">)</span></div>
 

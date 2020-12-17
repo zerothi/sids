@@ -14,6 +14,7 @@
   <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
   <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
   <link rel="stylesheet" href="../../../_static/graphviz.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/gallery.css" type="text/css" />
 
   
   
@@ -103,12 +104,15 @@
 <li class="toctree-l1"><a class="reference internal" href="../../../installation.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../tutorials.html">Tutorials</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../scripts/scripts.html">Command line scripts</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../visualization/visualization.html">Visualization</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../rst/files.html">File formats</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Toolboxes</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../../../toolbox/toolbox.html">Toolboxes</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Visualization</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../visualization/ase/index.html">ASE</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Reference documentation</span></p>
 <ul>
@@ -199,7 +203,8 @@
     <span class="s1">&#39;add_sile&#39;</span><span class="p">,</span>
     <span class="s1">&#39;get_sile_class&#39;</span><span class="p">,</span>
     <span class="s1">&#39;get_sile&#39;</span><span class="p">,</span>
-    <span class="s1">&#39;get_siles&#39;</span><span class="p">]</span>
+    <span class="s1">&#39;get_siles&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;get_sile_rules&#39;</span><span class="p">]</span>
 
 <span class="n">__all__</span> <span class="o">+=</span> <span class="p">[</span>
     <span class="s1">&#39;BaseSile&#39;</span><span class="p">,</span>
@@ -502,6 +507,36 @@
 
 
 <span class="nd">@set_module</span><span class="p">(</span><span class="s2">&quot;sisl.io&quot;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">get_sile_rules</span><span class="p">(</span><span class="n">attrs</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="bp">cls</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Retrieve all sile rules of siles with specific attributes or methods</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    attrs : list of attribute names</span>
+<span class="sd">       limits the returned objects to those that have</span>
+<span class="sd">       the given attributes ``hasattr(sile, attrs)``, default ``[None]``</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">global</span> <span class="n">__sile_rules</span>
+
+    <span class="k">if</span> <span class="n">attrs</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="bp">cls</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="n">__sile_rules</span><span class="p">)</span>
+
+    <span class="n">sile_rules</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">rule</span> <span class="ow">in</span> <span class="n">__sile_rules</span><span class="p">:</span>
+        <span class="n">sile</span> <span class="o">=</span> <span class="n">rule</span><span class="o">.</span><span class="n">cls</span>
+        <span class="k">if</span> <span class="n">sile</span> <span class="ow">is</span> <span class="bp">cls</span><span class="p">:</span>
+            <span class="n">sile_rules</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">rule</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">attrs</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">attr</span> <span class="ow">in</span> <span class="n">attrs</span><span class="p">:</span>
+                <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">sile</span><span class="p">,</span> <span class="n">attr</span><span class="p">):</span>
+                    <span class="n">sile_rules</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">rule</span><span class="p">)</span>
+                    <span class="k">break</span>
+
+    <span class="k">return</span> <span class="n">sile_rules</span>
+
+
+<span class="nd">@set_module</span><span class="p">(</span><span class="s2">&quot;sisl.io&quot;</span><span class="p">)</span>
 <span class="k">class</span> <span class="nc">BaseSile</span><span class="p">:</span>
     <span class="sd">&quot;&quot;&quot; Base class for all sisl files &quot;&quot;&quot;</span>
 
@@ -515,11 +550,11 @@
         <span class="sd">&quot;&quot;&quot; File of the current `Sile` &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="n">basename</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_file</span><span class="p">)</span>
 
-<div class="viewcode-block" id="BaseSile.dir_file"><a class="viewcode-back" href="../../../api-generated/sisl.io.BaseSile.html#sisl.io.BaseSile.dir_file">[docs]</a>    <span class="k">def</span> <span class="nf">dir_file</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filename</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<div class="viewcode-block" id="BaseSile.dir_file"><a class="viewcode-back" href="../../../api-generated/sisl.io.BaseSile.html#sisl.io.BaseSile.dir_file">[docs]</a>    <span class="k">def</span> <span class="nf">dir_file</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filename</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">filename_base</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; File of the current `Sile` &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">filename</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">filename</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_file</span><span class="p">)</span><span class="o">.</span><span class="n">name</span>
-        <span class="k">return</span> <span class="n">Path</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_directory</span><span class="p">)</span> <span class="o">/</span> <span class="n">filename</span></div>
+        <span class="k">return</span> <span class="n">Path</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_directory</span><span class="p">)</span> <span class="o">/</span> <span class="n">filename_base</span> <span class="o">/</span> <span class="n">filename</span></div>
 
 <div class="viewcode-block" id="BaseSile.exist"><a class="viewcode-back" href="../../../api-generated/sisl.io.BaseSile.html#sisl.io.BaseSile.exist">[docs]</a>    <span class="k">def</span> <span class="nf">exist</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Query whether the file exists &quot;&quot;&quot;</span>

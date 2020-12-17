@@ -14,6 +14,7 @@
   <link rel="stylesheet" href="../../../../_static/css/theme.css" type="text/css" />
   <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
   <link rel="stylesheet" href="../../../../_static/graphviz.css" type="text/css" />
+  <link rel="stylesheet" href="../../../../_static/gallery.css" type="text/css" />
 
   
   
@@ -103,12 +104,15 @@
 <li class="toctree-l1"><a class="reference internal" href="../../../../installation.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../../tutorials.html">Tutorials</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../../scripts/scripts.html">Command line scripts</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../../visualization/visualization.html">Visualization</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../../rst/files.html">File formats</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Toolboxes</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../../../../toolbox/toolbox.html">Toolboxes</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Visualization</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../visualization/ase/index.html">ASE</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Reference documentation</span></p>
 <ul>
@@ -207,6 +211,7 @@
 
 <span class="kn">from</span> <span class="nn">sisl</span> <span class="kn">import</span> <span class="n">Geometry</span><span class="p">,</span> <span class="n">Atoms</span>
 <span class="kn">from</span> <span class="nn">sisl</span> <span class="kn">import</span> <span class="n">units</span><span class="p">,</span> <span class="n">constant</span>
+<span class="kn">from</span> <span class="nn">sisl.sparse</span> <span class="kn">import</span> <span class="n">_ncol_to_indptr</span>
 <span class="kn">from</span> <span class="nn">sisl.messages</span> <span class="kn">import</span> <span class="n">warn</span><span class="p">,</span> <span class="n">info</span><span class="p">,</span> <span class="n">SislError</span>
 <span class="kn">from</span> <span class="nn">sisl._help</span> <span class="kn">import</span> <span class="n">wrap_filterwarnings</span>
 <span class="kn">from</span> <span class="nn">sisl.unit.siesta</span> <span class="kn">import</span> <span class="n">unit_convert</span>
@@ -1165,7 +1170,7 @@
         <span class="n">geom</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">geometry</span>
 
         <span class="c1"># These are the row-pointers...</span>
-        <span class="n">rptr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="n">_a</span><span class="o">.</span><span class="n">cumsumi</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_value</span><span class="p">(</span><span class="s1">&#39;n_col&#39;</span><span class="p">)),</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">rptr</span> <span class="o">=</span> <span class="n">_ncol_to_indptr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_value</span><span class="p">(</span><span class="s1">&#39;n_col&#39;</span><span class="p">))</span>
 
         <span class="c1"># Get column indices</span>
         <span class="n">col</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_value</span><span class="p">(</span><span class="s1">&#39;list_col&#39;</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span>
@@ -1228,7 +1233,7 @@
             <span class="k">def</span> <span class="nf">func</span><span class="p">(</span><span class="n">ptr1</span><span class="p">,</span> <span class="n">ptr2</span><span class="p">):</span>
                 <span class="k">return</span> <span class="n">cnz</span><span class="p">(</span><span class="n">all_col</span><span class="p">[</span><span class="n">ptr1</span><span class="p">:</span><span class="n">ptr2</span><span class="p">])</span>
             <span class="n">tmp</span> <span class="o">=</span> <span class="n">_a</span><span class="o">.</span><span class="n">fromiteri</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="n">func</span><span class="p">,</span> <span class="n">rptr</span><span class="p">[:</span><span class="n">geom</span><span class="o">.</span><span class="n">no</span><span class="p">],</span> <span class="n">rptr</span><span class="p">[</span><span class="mi">1</span><span class="p">:]))</span>
-            <span class="n">rptr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="n">_a</span><span class="o">.</span><span class="n">cumsumi</span><span class="p">(</span><span class="n">tmp</span><span class="p">),</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+            <span class="n">rptr</span> <span class="o">=</span> <span class="n">_ncol_to_indptr</span><span class="p">(</span><span class="n">tmp</span><span class="p">)</span>
             <span class="k">del</span> <span class="n">tmp</span>
 
         <span class="k">if</span> <span class="n">all_col</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
@@ -1297,7 +1302,7 @@
             <span class="n">fo</span> <span class="o">=</span> <span class="n">geom</span><span class="o">.</span><span class="n">firsto</span>
             <span class="c1"># Automatically create the new index pointer</span>
             <span class="c1"># from first and last orbital</span>
-            <span class="n">indptr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="n">_a</span><span class="o">.</span><span class="n">cumsumi</span><span class="p">(</span><span class="n">iptr</span><span class="p">[</span><span class="n">fo</span><span class="p">[</span><span class="mi">1</span><span class="p">:]]</span> <span class="o">-</span> <span class="n">iptr</span><span class="p">[</span><span class="n">fo</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]]),</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+            <span class="n">indptr</span> <span class="o">=</span> <span class="n">_ncol_to_indptr</span><span class="p">(</span><span class="n">iptr</span><span class="p">[</span><span class="n">fo</span><span class="p">[</span><span class="mi">1</span><span class="p">:]]</span> <span class="o">-</span> <span class="n">iptr</span><span class="p">[</span><span class="n">fo</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]])</span>
 
             <span class="c1"># Now we have a new indptr, and the column indices have also</span>
             <span class="c1"># been processed.</span>

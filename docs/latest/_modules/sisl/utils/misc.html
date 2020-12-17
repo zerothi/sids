@@ -14,6 +14,7 @@
   <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
   <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
   <link rel="stylesheet" href="../../../_static/graphviz.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/gallery.css" type="text/css" />
 
   
   
@@ -103,12 +104,15 @@
 <li class="toctree-l1"><a class="reference internal" href="../../../installation.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../tutorials.html">Tutorials</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../scripts/scripts.html">Command line scripts</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../visualization/visualization.html">Visualization</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../rst/files.html">File formats</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Toolboxes</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../../../toolbox/toolbox.html">Toolboxes</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Visualization</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../visualization/ase/index.html">ASE</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Reference documentation</span></p>
 <ul>
@@ -186,11 +190,12 @@
 <span class="kn">import</span> <span class="nn">operator</span> <span class="k">as</span> <span class="nn">op</span>
 <span class="kn">from</span> <span class="nn">numbers</span> <span class="kn">import</span> <span class="n">Integral</span>
 <span class="kn">from</span> <span class="nn">math</span> <span class="kn">import</span> <span class="n">pi</span>
-<span class="kn">from</span> <span class="nn">importlib</span> <span class="kn">import</span> <span class="n">import_module</span>
+<span class="kn">import</span> <span class="nn">importlib</span>
+
 
 <span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;merge_instances&quot;</span><span class="p">,</span> <span class="s2">&quot;str_spec&quot;</span><span class="p">,</span> <span class="s2">&quot;direction&quot;</span><span class="p">,</span> <span class="s2">&quot;angle&quot;</span><span class="p">]</span>
 <span class="n">__all__</span> <span class="o">+=</span> <span class="p">[</span><span class="s2">&quot;iter_shape&quot;</span><span class="p">,</span> <span class="s2">&quot;math_eval&quot;</span><span class="p">,</span> <span class="s2">&quot;allow_kwargs&quot;</span><span class="p">]</span>
-<span class="n">__all__</span> <span class="o">+=</span> <span class="p">[</span><span class="s2">&quot;import_attr&quot;</span><span class="p">]</span>
+<span class="n">__all__</span> <span class="o">+=</span> <span class="p">[</span><span class="s2">&quot;import_attr&quot;</span><span class="p">,</span> <span class="s2">&quot;lazy_import&quot;</span><span class="p">]</span>
 
 
 <span class="c1"># supported operators</span>
@@ -515,8 +520,51 @@
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">module</span><span class="p">,</span> <span class="n">variable</span> <span class="o">=</span> <span class="n">attr_path</span><span class="o">.</span><span class="n">rsplit</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
 
-    <span class="n">module</span> <span class="o">=</span> <span class="n">import_module</span><span class="p">(</span><span class="n">module</span><span class="p">)</span>
+    <span class="n">module</span> <span class="o">=</span> <span class="n">importlib</span><span class="o">.</span><span class="n">import_module</span><span class="p">(</span><span class="n">module</span><span class="p">)</span>
     <span class="k">return</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">module</span><span class="p">,</span> <span class="n">variable</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">lazy_import</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">package</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Lazily import a module or submodule</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    name : str</span>
+<span class="sd">       module name to load, optionally a sub-package from `package`</span>
+<span class="sd">    package : str, optional</span>
+<span class="sd">       whether `name` is a sub-package</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; hello = lazy_import(&quot;hello&quot;)</span>
+<span class="sd">    &gt;&gt;&gt; hello.mod_func</span>
+
+<span class="sd">    This will only load the module upon method inspection in</span>
+<span class="sd">    the module.</span>
+
+<span class="sd">    &gt;&gt;&gt; hello = lazy_import(&quot;.hello&quot;, &quot;package&quot;)</span>
+<span class="sd">    &gt;&gt;&gt; hello.mod_func</span>
+
+<span class="sd">    The dot is required to indicate it being a name within package.</span>
+
+<span class="sd">    NOTE currently this is not working due to id&#39;s changing upon</span>
+<span class="sd">    actual loading. I have yet to figure out why...</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">util</span> <span class="o">=</span> <span class="n">importlib</span><span class="o">.</span><span class="n">util</span>
+
+    <span class="n">abs_name</span> <span class="o">=</span> <span class="n">util</span><span class="o">.</span><span class="n">resolve_name</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">package</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">abs_name</span> <span class="ow">in</span> <span class="n">sys</span><span class="o">.</span><span class="n">modules</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">sys</span><span class="o">.</span><span class="n">modules</span><span class="p">[</span><span class="n">abs_name</span><span class="p">]</span>
+
+    <span class="c1"># Create module specification</span>
+    <span class="c1"># Find specifications for module</span>
+    <span class="n">spec</span> <span class="o">=</span> <span class="n">util</span><span class="o">.</span><span class="n">find_spec</span><span class="p">(</span><span class="n">abs_name</span><span class="p">)</span>
+    <span class="n">module</span> <span class="o">=</span> <span class="n">util</span><span class="o">.</span><span class="n">module_from_spec</span><span class="p">(</span><span class="n">spec</span><span class="p">)</span>
+
+    <span class="c1"># Make module with proper locking and get it inserted into sys.modules.</span>
+    <span class="n">util</span><span class="o">.</span><span class="n">LazyLoader</span><span class="p">(</span><span class="n">spec</span><span class="o">.</span><span class="n">loader</span><span class="p">)</span><span class="o">.</span><span class="n">exec_module</span><span class="p">(</span><span class="n">module</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">module</span>
 </pre></div>
 
            </div>
