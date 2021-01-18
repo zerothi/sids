@@ -192,7 +192,7 @@
 <span class="kn">from</span> <span class="nn">numpy.lib.mixins</span> <span class="kn">import</span> <span class="n">NDArrayOperatorsMixin</span>
 <span class="kn">from</span> <span class="nn">numpy</span> <span class="kn">import</span> <span class="p">(</span>
     <span class="n">int32</span><span class="p">,</span>
-    <span class="n">take</span><span class="p">,</span> <span class="n">delete</span><span class="p">,</span> <span class="n">argsort</span><span class="p">,</span>
+    <span class="n">take</span><span class="p">,</span> <span class="n">delete</span><span class="p">,</span> <span class="n">argsort</span><span class="p">,</span> <span class="n">lexsort</span><span class="p">,</span>
     <span class="n">unique</span><span class="p">,</span> <span class="n">diff</span><span class="p">,</span> <span class="n">allclose</span><span class="p">,</span>
     <span class="n">tile</span><span class="p">,</span> <span class="n">repeat</span><span class="p">,</span> <span class="n">concatenate</span>
 <span class="p">)</span>
@@ -513,7 +513,7 @@
 
         <span class="bp">self</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">set_nsc</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">transpose</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">transpose</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sort</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Create the transposed sparse geometry by interchanging supercell indices</span>
 
 <span class="sd">        Sparse geometries are (typically) relying on symmetry in the supercell picture.</span>
@@ -524,10 +524,15 @@
 <span class="sd">        row, `r`, and column `c` in a given supercell `(i,j,k)` will be transposed</span>
 <span class="sd">        into row `c`, column `r` in the supercell `(-i,-j,-k)`.</span>
 
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        sort : bool, optional</span>
+<span class="sd">           the returned columns for the transposed structure will be sorted</span>
+<span class="sd">           if this is true, default</span>
+
 <span class="sd">        Notes</span>
 <span class="sd">        -----</span>
-<span class="sd">        For Hamiltonians with non-collinear or spin-orbit there is no transposing of the</span>
-<span class="sd">        sub-spin matrix box. This needs to be done *manually*.</span>
+<span class="sd">        The components for each sparse element are not changed in this method.</span>
 
 <span class="sd">        Examples</span>
 <span class="sd">        --------</span>
@@ -576,8 +581,7 @@
         <span class="c1"># figure out rows where ncol is &gt; 0</span>
         <span class="c1"># we skip the first column</span>
         <span class="n">row_nonzero</span> <span class="o">=</span> <span class="p">(</span><span class="n">ncol</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">nonzero</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
-        <span class="n">row</span> <span class="o">=</span> <span class="n">repeat</span><span class="p">(</span><span class="n">row_nonzero</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">False</span><span class="p">),</span>
-                     <span class="n">ncol</span><span class="p">[</span><span class="n">row_nonzero</span><span class="p">])</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="n">row</span> <span class="o">=</span> <span class="n">repeat</span><span class="p">(</span><span class="n">row_nonzero</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">False</span><span class="p">),</span> <span class="n">ncol</span><span class="p">[</span><span class="n">row_nonzero</span><span class="p">])</span>
 
         <span class="c1"># Now we have the DOK format</span>
         <span class="c1">#  row, col, _D</span>
@@ -598,10 +602,13 @@
         <span class="n">T</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">ncol</span><span class="p">[</span><span class="n">rows</span><span class="p">]</span> <span class="o">=</span> <span class="n">nrow</span>
         <span class="k">del</span> <span class="n">rows</span>
 
-        <span class="c1"># Now we have everything ready...</span>
-        <span class="c1"># Simply figure out how to sort the columns</span>
-        <span class="c1"># such that we have them unified.</span>
-        <span class="n">idx</span> <span class="o">=</span> <span class="n">argsort</span><span class="p">(</span><span class="n">col</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">sort</span><span class="p">:</span>
+            <span class="c1"># also sort individual rows for each column</span>
+            <span class="n">idx</span> <span class="o">=</span> <span class="n">lexsort</span><span class="p">((</span><span class="n">row</span><span class="p">,</span> <span class="n">col</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># sort columns to get transposed values.</span>
+            <span class="c1"># This will randomize the rows</span>
+            <span class="n">idx</span> <span class="o">=</span> <span class="n">argsort</span><span class="p">(</span><span class="n">col</span><span class="p">)</span>
 
         <span class="c1"># Our new data will then be</span>
         <span class="n">T</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">col</span> <span class="o">=</span> <span class="n">row</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span>
@@ -610,9 +617,9 @@
         <span class="k">del</span> <span class="n">D</span>
         <span class="n">T</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">ptr</span> <span class="o">=</span> <span class="n">_ncol_to_indptr</span><span class="p">(</span><span class="n">T</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">ncol</span><span class="p">)</span>
 
-        <span class="c1"># For-sure we haven&#39;t sorted the columns.</span>
-        <span class="c1"># We haven&#39;t changed the number of non-zeros</span>
-        <span class="n">T</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">_finalized</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="c1"># If `sort` we have everything sorted, otherwise it</span>
+        <span class="c1"># is not ensured</span>
+        <span class="n">T</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">_finalized</span> <span class="o">=</span> <span class="n">sort</span>
 
         <span class="k">return</span> <span class="n">T</span>
 
@@ -683,6 +690,8 @@
 <span class="sd">        --------</span>
 <span class="sd">        construct : routine to create the sparse matrix from a generic function (as returned from `create_construct`)</span>
 <span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">R</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">param</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">.create_construct got different lengths of `R` and `param`&quot;</span><span class="p">)</span>
 
         <span class="k">def</span> <span class="nf">func</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ia</span><span class="p">,</span> <span class="n">atoms</span><span class="p">,</span> <span class="n">atoms_xyz</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
             <span class="n">idx</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">close</span><span class="p">(</span><span class="n">ia</span><span class="p">,</span> <span class="n">R</span><span class="o">=</span><span class="n">R</span><span class="p">,</span> <span class="n">atoms</span><span class="o">=</span><span class="n">atoms</span><span class="p">,</span> <span class="n">atoms_xyz</span><span class="o">=</span><span class="n">atoms_xyz</span><span class="p">)</span>
@@ -2609,7 +2618,7 @@
   <div role="contentinfo">
     <p>
         
-        &copy; Copyright 2015-2020, Nick Papior
+        &copy; Copyright 2015-2021, Nick Papior
 
     </p>
   </div>

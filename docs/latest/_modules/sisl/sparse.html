@@ -192,13 +192,14 @@
 <span class="c1"># To speed up the _extend algorithm we limit lookups</span>
 <span class="kn">from</span> <span class="nn">numpy</span> <span class="kn">import</span> <span class="p">(</span>
     <span class="n">ndarray</span><span class="p">,</span> <span class="n">int32</span><span class="p">,</span>
-    <span class="n">empty</span><span class="p">,</span> <span class="n">zeros</span><span class="p">,</span> <span class="n">full</span><span class="p">,</span> <span class="n">arange</span><span class="p">,</span>
+    <span class="n">empty</span><span class="p">,</span> <span class="n">zeros</span><span class="p">,</span> <span class="n">full</span><span class="p">,</span> <span class="n">arange</span><span class="p">,</span> <span class="n">repeat</span><span class="p">,</span>
     <span class="n">asarray</span><span class="p">,</span> <span class="n">atleast_1d</span><span class="p">,</span>
     <span class="n">take</span><span class="p">,</span> <span class="n">delete</span><span class="p">,</span> <span class="n">insert</span><span class="p">,</span> <span class="n">split</span><span class="p">,</span> <span class="n">concatenate</span><span class="p">,</span>
     <span class="n">copyto</span><span class="p">,</span>
+    <span class="n">argsort</span><span class="p">,</span> <span class="n">lexsort</span><span class="p">,</span>
     <span class="n">intersect1d</span><span class="p">,</span> <span class="n">setdiff1d</span><span class="p">,</span> <span class="n">unique</span><span class="p">,</span> <span class="n">in1d</span><span class="p">,</span>
     <span class="n">diff</span><span class="p">,</span> <span class="n">count_nonzero</span><span class="p">,</span> <span class="n">allclose</span><span class="p">,</span>
-    <span class="n">isnan</span><span class="p">,</span> <span class="n">broadcast</span><span class="p">,</span> <span class="n">argsort</span><span class="p">,</span> <span class="n">isscalar</span><span class="p">,</span>
+    <span class="n">isnan</span><span class="p">,</span> <span class="n">isscalar</span><span class="p">,</span> <span class="n">broadcast</span><span class="p">,</span>
     <span class="nb">any</span> <span class="k">as</span> <span class="n">np_any</span><span class="p">,</span> <span class="nb">all</span> <span class="k">as</span> <span class="n">np_all</span>
 <span class="p">)</span>
 <span class="kn">from</span> <span class="nn">numpy.lib.mixins</span> <span class="kn">import</span> <span class="n">NDArrayOperatorsMixin</span>
@@ -622,19 +623,24 @@
         <span class="n">D</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_D</span>
 
         <span class="c1"># We truncate all the connections</span>
+        <span class="c1"># to get correct rows we need to remove those which have 0 elements</span>
+        <span class="n">row_nonzero</span> <span class="o">=</span> <span class="p">(</span><span class="n">ncol</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">nonzero</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="c1"># Now we have [0 0 0 0 1 1 1 1 2 2 ... no-1 no-1]</span>
+        <span class="n">row</span> <span class="o">=</span> <span class="n">repeat</span><span class="p">(</span><span class="n">row_nonzero</span><span class="p">,</span> <span class="n">ncol</span><span class="p">[</span><span class="n">row_nonzero</span><span class="p">])</span>
         <span class="k">if</span> <span class="n">sort</span><span class="p">:</span>
-            <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
-                <span class="c1"># Sort and check whether there are double entries</span>
-                <span class="n">sl</span> <span class="o">=</span> <span class="nb">slice</span><span class="p">(</span><span class="n">ptr</span><span class="p">[</span><span class="n">r</span><span class="p">],</span> <span class="n">ptr</span><span class="p">[</span><span class="n">r</span><span class="o">+</span><span class="mi">1</span><span class="p">])</span>
-                <span class="n">ccol</span> <span class="o">=</span> <span class="n">col</span><span class="p">[</span><span class="n">sl</span><span class="p">]</span>
-                <span class="n">DD</span> <span class="o">=</span> <span class="n">D</span><span class="p">[</span><span class="n">sl</span><span class="p">,</span> <span class="p">:]</span>
-                <span class="n">idx</span> <span class="o">=</span> <span class="n">argsort</span><span class="p">(</span><span class="n">ccol</span><span class="p">)</span>
-                <span class="c1"># Do in-place sorting</span>
-                <span class="n">ccol</span><span class="p">[:]</span> <span class="o">=</span> <span class="n">ccol</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span>
-                <span class="k">if</span> <span class="ow">not</span> <span class="n">sorted_unique</span><span class="p">(</span><span class="n">ccol</span><span class="p">):</span>
-                    <span class="k">raise</span> <span class="n">SislError</span><span class="p">(</span><span class="s1">&#39;You cannot have two elements between the same &#39;</span> <span class="o">+</span>
-                                    <span class="sa">f</span><span class="s1">&#39;i,j index (i=</span><span class="si">{</span><span class="n">r</span><span class="si">}</span><span class="s1">), something has went terribly wrong.&#39;</span><span class="p">)</span>
-                <span class="n">DD</span><span class="p">[:,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">DD</span><span class="p">[</span><span class="n">idx</span><span class="p">,</span> <span class="p">:]</span>
+            <span class="c1"># first sort according to row (which is already sorted)</span>
+            <span class="c1"># then sort by col</span>
+            <span class="n">idx</span> <span class="o">=</span> <span class="n">lexsort</span><span class="p">((</span><span class="n">col</span><span class="p">,</span> <span class="n">row</span><span class="p">))</span>
+            <span class="c1"># direct re-order</span>
+            <span class="n">col</span><span class="p">[:]</span> <span class="o">=</span> <span class="n">col</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span>
+            <span class="n">D</span><span class="p">[:,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">D</span><span class="p">[</span><span class="n">idx</span><span class="p">,</span> <span class="p">:]</span>
+
+            <span class="c1"># check that we don&#39;t have any duplicate values</span>
+            <span class="n">duplicates</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">logical_and</span><span class="p">(</span><span class="n">diff</span><span class="p">(</span><span class="n">col</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">,</span> <span class="n">diff</span><span class="p">(</span><span class="n">row</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">nonzero</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">duplicates</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">SislError</span><span class="p">(</span><span class="s1">&#39;You cannot have two elements between the same &#39;</span> <span class="o">+</span>
+                                <span class="sa">f</span><span class="s1">&#39;i,j index (i=</span><span class="si">{</span><span class="n">row</span><span class="p">[</span><span class="n">duplicates</span><span class="p">]</span><span class="si">}</span><span class="s1">, j=</span><span class="si">{</span><span class="n">col</span><span class="p">[</span><span class="n">duplicates</span><span class="p">]</span><span class="si">}</span><span class="s1">)&#39;</span><span class="p">)</span>
 
         <span class="k">else</span><span class="p">:</span>
             <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
@@ -2227,7 +2233,7 @@
   <div role="contentinfo">
     <p>
         
-        &copy; Copyright 2015-2020, Nick Papior
+        &copy; Copyright 2015-2021, Nick Papior
 
     </p>
   </div>

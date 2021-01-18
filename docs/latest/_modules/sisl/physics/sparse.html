@@ -193,6 +193,7 @@
 <span class="kn">from</span> <span class="nn">sisl._internal</span> <span class="kn">import</span> <span class="n">set_module</span>
 <span class="kn">import</span> <span class="nn">sisl.linalg</span> <span class="k">as</span> <span class="nn">lin</span>
 <span class="kn">import</span> <span class="nn">sisl._array</span> <span class="k">as</span> <span class="nn">_a</span>
+<span class="kn">from</span> <span class="nn">sisl.messages</span> <span class="kn">import</span> <span class="n">warn</span>
 <span class="kn">from</span> <span class="nn">sisl.sparse</span> <span class="kn">import</span> <span class="n">isspmatrix</span>
 <span class="kn">from</span> <span class="nn">sisl.sparse_geometry</span> <span class="kn">import</span> <span class="n">SparseOrbital</span>
 <span class="kn">from</span> <span class="nn">.spin</span> <span class="kn">import</span> <span class="n">Spin</span>
@@ -646,8 +647,8 @@
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
-<span class="sd">        tuple of tuples</span>
-<span class="sd">            for each of the Cartesian directions</span>
+<span class="sd">        list of matrices</span>
+<span class="sd">            for each of the Cartesian directions (in Voigt representation); xx, yy, zz, zy, xz, xy</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">pass</span></div>
 
@@ -877,9 +878,123 @@
         <span class="sa">r</span><span class="sd">&quot;&quot;&quot; Associated spin class &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_spin</span>
 
+<div class="viewcode-block" id="SparseOrbitalBZSpin.create_construct"><a class="viewcode-back" href="../../../api-generated/sisl.physics.SparseOrbitalBZSpin.html#sisl.physics.SparseOrbitalBZSpin.create_construct">[docs]</a>    <span class="k">def</span> <span class="nf">create_construct</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">R</span><span class="p">,</span> <span class="n">param</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot; Create a simple function for passing to the `construct` function.</span>
+
+<span class="sd">        This is to relieve the creation of simplistic</span>
+<span class="sd">        functions needed for setting up sparse elements.</span>
+
+<span class="sd">        For simple matrices this returns a function:</span>
+
+<span class="sd">        &gt;&gt;&gt; def func(self, ia, atoms, atoms_xyz=None):</span>
+<span class="sd">        ...     idx = self.geometry.close(ia, R=R, atoms=atoms, atoms_xyz=atoms_xyz)</span>
+<span class="sd">        ...     for ix, p in zip(idx, param):</span>
+<span class="sd">        ...         self[ia, ix] = p</span>
+
+<span class="sd">        In the non-colinear case the matrix element :math:`M_{ij}` will be set</span>
+<span class="sd">        to input values `param` if :math:`i \le j` and the Hermitian conjugated</span>
+<span class="sd">        values for :math:`j &lt; i`.</span>
+
+<span class="sd">        Notes</span>
+<span class="sd">        -----</span>
+<span class="sd">        This function only works for geometry sparse matrices (i.e. one</span>
+<span class="sd">        element per atom). If you have more than one element per atom</span>
+<span class="sd">        you have to implement the function your-self.</span>
+
+<span class="sd">        This method issues warnings if the on-site terms are not Hermitian</span>
+<span class="sd">        for spin-orbit systems. Do note that it *still* creates the matrices</span>
+<span class="sd">        based on the input.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        R : array_like</span>
+<span class="sd">           radii parameters for different shells.</span>
+<span class="sd">           Must have same length as `param` or one less.</span>
+<span class="sd">           If one less it will be extended with ``R[0]/100``</span>
+<span class="sd">        param : array_like</span>
+<span class="sd">           coupling constants corresponding to the `R`</span>
+<span class="sd">           ranges. ``param[0,:]`` are the elements</span>
+<span class="sd">           for the all atoms within ``R[0]`` of each atom.</span>
+
+<span class="sd">        See Also</span>
+<span class="sd">        --------</span>
+<span class="sd">        construct : routine to create the sparse matrix from a generic function (as returned from `create_construct`)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">R</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">param</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">.create_construct got different lengths of `R` and `param`&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">spin</span><span class="o">.</span><span class="n">has_noncolinear</span><span class="p">:</span>
+            <span class="n">is_complex</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dkind</span> <span class="o">==</span> <span class="s1">&#39;c&#39;</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">spin</span><span class="o">.</span><span class="n">is_spinorbit</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">is_complex</span><span class="p">:</span>
+                    <span class="n">nv</span> <span class="o">=</span> <span class="mi">4</span>
+                    <span class="c1"># Hermitian parameters</span>
+                    <span class="n">paramH</span> <span class="o">=</span> <span class="p">[[</span><span class="n">p</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">conj</span><span class="p">(),</span> <span class="n">p</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">conj</span><span class="p">(),</span> <span class="n">p</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span><span class="o">.</span><span class="n">conj</span><span class="p">(),</span> <span class="n">p</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">conj</span><span class="p">(),</span> <span class="o">*</span><span class="n">p</span><span class="p">[</span><span class="mi">4</span><span class="p">:]]</span>
+                              <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">param</span><span class="p">]</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">nv</span> <span class="o">=</span> <span class="mi">8</span>
+                    <span class="c1"># Hermitian parameters</span>
+                    <span class="n">paramH</span> <span class="o">=</span> <span class="p">[[</span><span class="n">p</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">p</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">p</span><span class="p">[</span><span class="mi">6</span><span class="p">],</span> <span class="o">-</span><span class="n">p</span><span class="p">[</span><span class="mi">7</span><span class="p">],</span> <span class="o">-</span><span class="n">p</span><span class="p">[</span><span class="mi">4</span><span class="p">],</span> <span class="o">-</span><span class="n">p</span><span class="p">[</span><span class="mi">5</span><span class="p">],</span> <span class="n">p</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="o">-</span><span class="n">p</span><span class="p">[</span><span class="mi">3</span><span class="p">],</span> <span class="o">*</span><span class="n">p</span><span class="p">[</span><span class="mi">8</span><span class="p">:]]</span>
+                              <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">param</span><span class="p">]</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">orthogonal</span><span class="p">:</span>
+                    <span class="n">nv</span> <span class="o">+=</span> <span class="mi">1</span>
+
+                <span class="c1"># ensure we have correct number of values</span>
+                <span class="k">assert</span> <span class="nb">all</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">p</span><span class="p">)</span> <span class="o">==</span> <span class="n">nv</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">param</span><span class="p">)</span>
+
+                <span class="k">if</span> <span class="n">R</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="mf">0.1001</span><span class="p">:</span> <span class="c1"># no atom closer than 0.1001 Ang!</span>
+                    <span class="c1"># We check that the the parameters here is Hermitian</span>
+                    <span class="n">p</span> <span class="o">=</span> <span class="n">param</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                    <span class="k">if</span> <span class="n">is_complex</span><span class="p">:</span>
+                        <span class="n">onsite</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="n">p</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">p</span><span class="p">[</span><span class="mi">2</span><span class="p">]],</span>
+                                           <span class="p">[</span><span class="n">p</span><span class="p">[</span><span class="mi">3</span><span class="p">],</span> <span class="n">p</span><span class="p">[</span><span class="mi">1</span><span class="p">]]],</span> <span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">onsite</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="n">p</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span><span class="n">j</span> <span class="o">*</span> <span class="n">p</span><span class="p">[</span><span class="mi">4</span><span class="p">],</span> <span class="n">p</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span><span class="n">j</span> <span class="o">*</span> <span class="n">p</span><span class="p">[</span><span class="mi">3</span><span class="p">]],</span>
+                                           <span class="p">[</span><span class="n">p</span><span class="p">[</span><span class="mi">6</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span><span class="n">j</span> <span class="o">*</span> <span class="n">p</span><span class="p">[</span><span class="mi">7</span><span class="p">],</span> <span class="n">p</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span><span class="n">j</span> <span class="o">*</span> <span class="n">p</span><span class="p">[</span><span class="mi">5</span><span class="p">]]],</span> <span class="n">np</span><span class="o">.</span><span class="n">complex128</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">allclose</span><span class="p">(</span><span class="n">onsite</span><span class="p">,</span> <span class="n">onsite</span><span class="o">.</span><span class="n">T</span><span class="o">.</span><span class="n">conj</span><span class="p">()):</span>
+                        <span class="n">warn</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">.create_construct is NOT Hermitian for on-site terms. This is your responsibility!&quot;</span><span class="p">)</span>
+
+            <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">spin</span><span class="o">.</span><span class="n">is_noncolinear</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">is_complex</span><span class="p">:</span>
+                    <span class="n">nv</span> <span class="o">=</span> <span class="mi">3</span>
+                    <span class="c1"># Hermitian parameters</span>
+                    <span class="n">paramH</span> <span class="o">=</span> <span class="p">[[</span><span class="n">p</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">conj</span><span class="p">(),</span> <span class="n">p</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">conj</span><span class="p">(),</span> <span class="n">p</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="o">*</span><span class="n">p</span><span class="p">[</span><span class="mi">3</span><span class="p">:]]</span>
+                              <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">param</span><span class="p">]</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">nv</span> <span class="o">=</span> <span class="mi">4</span>
+                    <span class="c1"># Hermitian parameters</span>
+                    <span class="c1"># Note that we don&#39;t need to do anything here.</span>
+                    <span class="c1"># H_ij = [[0, 2 + 1j 3],</span>
+                    <span class="c1">#         [2 - 1j 3, 1]]</span>
+                    <span class="c1"># H_ji = [[0, 2 + 1j 3],</span>
+                    <span class="c1">#         [2 - 1j 3, 1]]</span>
+                    <span class="c1"># H_ij^H == H_ji^H</span>
+                    <span class="n">paramH</span> <span class="o">=</span> <span class="n">param</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">orthogonal</span><span class="p">:</span>
+                    <span class="n">nv</span> <span class="o">+=</span> <span class="mi">1</span>
+
+                <span class="c1"># we don&#39;t need to check hermiticity for NC</span>
+                <span class="c1"># Since the values are ensured Hermitian in the on-site case anyways.</span>
+
+                <span class="c1"># ensure we have correct number of values</span>
+                <span class="k">assert</span> <span class="nb">all</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">p</span><span class="p">)</span> <span class="o">==</span> <span class="n">nv</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">param</span><span class="p">)</span>
+
+            <span class="n">na</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">na</span>
+
+            <span class="c1"># Now create the function that returns the assignment function</span>
+            <span class="k">def</span> <span class="nf">func</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ia</span><span class="p">,</span> <span class="n">atoms</span><span class="p">,</span> <span class="n">atoms_xyz</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+                <span class="n">idx</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">close</span><span class="p">(</span><span class="n">ia</span><span class="p">,</span> <span class="n">R</span><span class="o">=</span><span class="n">R</span><span class="p">,</span> <span class="n">atoms</span><span class="o">=</span><span class="n">atoms</span><span class="p">,</span> <span class="n">atoms_xyz</span><span class="o">=</span><span class="n">atoms_xyz</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">ix</span><span class="p">,</span> <span class="n">p</span><span class="p">,</span> <span class="n">pc</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">idx</span><span class="p">,</span> <span class="n">param</span><span class="p">,</span> <span class="n">paramH</span><span class="p">):</span>
+                    <span class="n">ix_ge</span> <span class="o">=</span> <span class="p">(</span><span class="n">ix</span> <span class="o">%</span> <span class="n">na</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="n">ia</span>
+                    <span class="bp">self</span><span class="p">[</span><span class="n">ia</span><span class="p">,</span> <span class="n">ix</span><span class="p">[</span><span class="n">ix_ge</span><span class="p">]]</span> <span class="o">=</span> <span class="n">p</span>
+                    <span class="bp">self</span><span class="p">[</span><span class="n">ia</span><span class="p">,</span> <span class="n">ix</span><span class="p">[</span><span class="o">~</span><span class="n">ix_ge</span><span class="p">]]</span> <span class="o">=</span> <span class="n">pc</span>
+
+            <span class="k">return</span> <span class="n">func</span>
+
+        <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">create_construct</span><span class="p">(</span><span class="n">R</span><span class="p">,</span> <span class="n">param</span><span class="p">)</span></div>
+
     <span class="k">def</span> <span class="fm">__len__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sa">r</span><span class="sd">&quot;&quot;&quot; Returns number of rows in the basis (if non-collinear or spin-orbit, twice the number of orbitals) &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">spin</span><span class="o">.</span><span class="n">spins</span> <span class="o">&gt;</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">spin</span><span class="o">.</span><span class="n">has_noncolinear</span><span class="p">:</span>
             <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">no</span> <span class="o">*</span> <span class="mi">2</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">no</span>
 
@@ -1182,7 +1297,7 @@
 
         <span class="k">return</span> <span class="n">lin</span><span class="o">.</span><span class="n">eigsh</span><span class="p">(</span><span class="n">P</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="n">n</span><span class="p">,</span> <span class="n">return_eigenvectors</span><span class="o">=</span><span class="ow">not</span> <span class="n">eigvals_only</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="SparseOrbitalBZSpin.transpose"><a class="viewcode-back" href="../../../api-generated/sisl.physics.SparseOrbitalBZSpin.html#sisl.physics.SparseOrbitalBZSpin.transpose">[docs]</a>    <span class="k">def</span> <span class="nf">transpose</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">hermitian</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+<div class="viewcode-block" id="SparseOrbitalBZSpin.transpose"><a class="viewcode-back" href="../../../api-generated/sisl.physics.SparseOrbitalBZSpin.html#sisl.physics.SparseOrbitalBZSpin.transpose">[docs]</a>    <span class="k">def</span> <span class="nf">transpose</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">hermitian</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">spin</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">sort</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
         <span class="sa">r</span><span class="sd">&quot;&quot;&quot; A transpose copy of this object, possibly apply the Hermitian conjugate as well</span>
 
 <span class="sd">        Parameters</span>
@@ -1190,43 +1305,59 @@
 <span class="sd">        hermitian : bool, optional</span>
 <span class="sd">           if true, also emply a spin-box Hermitian operator to ensure TRS, otherwise</span>
 <span class="sd">           only return the transpose values.</span>
+<span class="sd">        spin : bool, optional</span>
+<span class="sd">           whether the spin-box is also transposed if this is false, and `hermitian` is true,</span>
+<span class="sd">           then only imaginary values will change sign.</span>
+<span class="sd">        sort : bool, optional</span>
+<span class="sd">           the returned columns for the transposed structure will be sorted</span>
+<span class="sd">           if this is true, default</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">new</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">transpose</span><span class="p">()</span>
+        <span class="n">new</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="n">sort</span><span class="o">=</span><span class="n">sort</span><span class="p">)</span>
         <span class="n">sp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">spin</span>
         <span class="n">D</span> <span class="o">=</span> <span class="n">new</span><span class="o">.</span><span class="n">_csr</span><span class="o">.</span><span class="n">_D</span>
 
-        <span class="k">if</span> <span class="n">hermitian</span><span class="p">:</span>
-            <span class="k">if</span> <span class="n">sp</span><span class="o">.</span><span class="n">is_spinorbit</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">sp</span><span class="o">.</span><span class="n">is_spinorbit</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">hermitian</span> <span class="ow">and</span> <span class="n">spin</span><span class="p">:</span>
                 <span class="c1"># conjugate the imaginary value and transpose spin-box</span>
                 <span class="k">if</span> <span class="n">sp</span><span class="o">.</span><span class="n">dkind</span> <span class="o">==</span> <span class="s1">&#39;f&#39;</span><span class="p">:</span>
                     <span class="c1"># imaginary components (including transposing)</span>
                     <span class="c1">#    12,11,22,21</span>
                     <span class="n">D</span><span class="p">[:,</span> <span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">7</span><span class="p">]]</span> <span class="o">=</span> <span class="o">-</span><span class="n">D</span><span class="p">[:,</span> <span class="p">[</span><span class="mi">7</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">3</span><span class="p">]]</span>
-                    <span class="c1"># M21r -&gt; M12r</span>
+                    <span class="c1"># R12 &lt;-&gt; R21</span>
                     <span class="n">D</span><span class="p">[:,</span> <span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">6</span><span class="p">]]</span> <span class="o">=</span> <span class="n">D</span><span class="p">[:,</span> <span class="p">[</span><span class="mi">6</span><span class="p">,</span> <span class="mi">2</span><span class="p">]]</span>
                 <span class="k">else</span><span class="p">:</span>
-                    <span class="n">D</span><span class="p">[:,</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">conj</span><span class="p">(</span><span class="n">D</span><span class="p">[:,</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]])</span>
-                    <span class="n">D</span><span class="p">[:,</span> <span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">]]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">conj</span><span class="p">(</span><span class="n">D</span><span class="p">[:,</span> <span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="mi">2</span><span class="p">]])</span>
+                    <span class="n">D</span><span class="p">[:,</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">]]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">conj</span><span class="p">(</span><span class="n">D</span><span class="p">[:,</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">2</span><span class="p">]])</span>
+            <span class="k">elif</span> <span class="n">hermitian</span><span class="p">:</span>
+                <span class="c1"># conjugate the imaginary value</span>
+                <span class="k">if</span> <span class="n">sp</span><span class="o">.</span><span class="n">dkind</span> <span class="o">==</span> <span class="s1">&#39;f&#39;</span><span class="p">:</span>
+                    <span class="c1"># imaginary components</span>
+                    <span class="c1">#    12,11,22,21</span>
+                    <span class="n">D</span><span class="p">[:,</span> <span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">7</span><span class="p">]]</span> <span class="o">*=</span> <span class="o">-</span><span class="mf">1.</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">D</span><span class="p">[:,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">conj</span><span class="p">(</span><span class="n">D</span><span class="p">[:,</span> <span class="p">:])</span>
+            <span class="k">elif</span> <span class="n">spin</span><span class="p">:</span>
+                <span class="c1"># transpose spin-box, 12 &lt;-&gt; 21</span>
+                <span class="k">if</span> <span class="n">sp</span><span class="o">.</span><span class="n">dkind</span> <span class="o">==</span> <span class="s1">&#39;f&#39;</span><span class="p">:</span>
+                    <span class="n">D</span><span class="p">[:,</span> <span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">7</span><span class="p">]]</span> <span class="o">=</span> <span class="n">D</span><span class="p">[:,</span> <span class="p">[</span><span class="mi">6</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">]]</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">D</span><span class="p">[:,</span> <span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">]]</span> <span class="o">=</span> <span class="n">D</span><span class="p">[:,</span> <span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="mi">2</span><span class="p">]]</span>
+
         <span class="k">elif</span> <span class="n">sp</span><span class="o">.</span><span class="n">is_noncolinear</span><span class="p">:</span>
-            <span class="c1"># conjugate the imaginary value</span>
-            <span class="c1"># since for transposing D[:, 3] is the same</span>
-            <span class="c1"># value used for [--, ud]</span>
-            <span class="c1">#                [du, --]</span>
-            <span class="c1">#   ud = D[3] == - du</span>
-            <span class="c1"># So for transposing we should negate the sign</span>
-            <span class="c1"># to ensure we put the opposite value in the</span>
-            <span class="c1"># correct place.</span>
-            <span class="k">if</span> <span class="n">sp</span><span class="o">.</span><span class="n">dkind</span> <span class="o">==</span> <span class="s1">&#39;f&#39;</span><span class="p">:</span>
-                <span class="n">D</span><span class="p">[:,</span> <span class="mi">3</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="n">D</span><span class="p">[:,</span> <span class="mi">3</span><span class="p">]</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="n">D</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">conj</span><span class="p">(</span><span class="n">D</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">])</span>
-        <span class="k">elif</span> <span class="n">sp</span><span class="o">.</span><span class="n">is_spinorbit</span><span class="p">:</span>
-            <span class="c1"># transpose spin-box</span>
-            <span class="k">if</span> <span class="n">sp</span><span class="o">.</span><span class="n">dkind</span> <span class="o">==</span> <span class="s1">&#39;f&#39;</span><span class="p">:</span>
-                <span class="c1">#    12 -&gt; 21</span>
-                <span class="n">D</span><span class="p">[:,</span> <span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">7</span><span class="p">]]</span> <span class="o">=</span> <span class="n">D</span><span class="p">[:,</span> <span class="p">[</span><span class="mi">6</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">]]</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="n">D</span><span class="p">[:,</span> <span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">]]</span> <span class="o">=</span> <span class="n">D</span><span class="p">[:,</span> <span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="mi">2</span><span class="p">]]</span>
+            <span class="k">if</span> <span class="n">hermitian</span> <span class="ow">and</span> <span class="n">spin</span><span class="p">:</span>
+                <span class="k">pass</span> <span class="c1"># do nothing, it is already ensured Hermitian</span>
+            <span class="k">elif</span> <span class="n">hermitian</span> <span class="ow">or</span> <span class="n">spin</span><span class="p">:</span>
+                <span class="c1"># conjugate the imaginary value</span>
+                <span class="c1"># since for transposing D[:, 3] is the same</span>
+                <span class="c1"># value used for [--, ud]</span>
+                <span class="c1">#                [du, --]</span>
+                <span class="c1">#   ud = D[3] == - du</span>
+                <span class="c1"># So for transposing we should negate the sign</span>
+                <span class="c1"># to ensure we put the opposite value in the</span>
+                <span class="c1"># correct place.</span>
+                <span class="k">if</span> <span class="n">sp</span><span class="o">.</span><span class="n">dkind</span> <span class="o">==</span> <span class="s1">&#39;f&#39;</span><span class="p">:</span>
+                    <span class="n">D</span><span class="p">[:,</span> <span class="mi">3</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="n">D</span><span class="p">[:,</span> <span class="mi">3</span><span class="p">]</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">D</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">conj</span><span class="p">(</span><span class="n">D</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">])</span>
 
         <span class="k">return</span> <span class="n">new</span></div>
 
@@ -1292,7 +1423,7 @@
   <div role="contentinfo">
     <p>
         
-        &copy; Copyright 2015-2020, Nick Papior
+        &copy; Copyright 2015-2021, Nick Papior
 
     </p>
   </div>

@@ -218,20 +218,22 @@
 
 <span class="sd">    This enables reading the output quantities from the Siesta output.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">_job_completed</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">_completed</span> <span class="o">=</span> <span class="kc">None</span>
 
     <span class="k">def</span> <span class="nf">readline</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="n">line</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">readline</span><span class="p">()</span>
         <span class="k">if</span> <span class="s1">&#39;Job completed&#39;</span> <span class="ow">in</span> <span class="n">line</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_job_completed</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_completed</span> <span class="o">=</span> <span class="kc">True</span>
         <span class="k">return</span> <span class="n">line</span>
 
     <span class="n">readline</span><span class="o">.</span><span class="vm">__doc__</span> <span class="o">=</span> <span class="n">SileSiesta</span><span class="o">.</span><span class="n">readline</span><span class="o">.</span><span class="vm">__doc__</span>
 
-    <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">job_completed</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<div class="viewcode-block" id="outSileSiesta.completed"><a class="viewcode-back" href="../../../../api-generated/sisl.io.siesta.outSileSiesta.html#sisl.io.siesta.outSileSiesta.completed">[docs]</a>    <span class="nd">@sile_fh_open</span><span class="p">()</span>
+    <span class="k">def</span> <span class="nf">completed</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; True if the full file has been read and &quot;Job completed&quot; was found. &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_job_completed</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_completed</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_completed</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">step_to</span><span class="p">(</span><span class="s2">&quot;Job completed&quot;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_completed</span></div>
 
 <div class="viewcode-block" id="outSileSiesta.read_species"><a class="viewcode-back" href="../../../../api-generated/sisl.io.siesta.outSileSiesta.html#sisl.io.siesta.outSileSiesta.read_species">[docs]</a>    <span class="nd">@sile_fh_open</span><span class="p">()</span>
     <span class="k">def</span> <span class="nf">read_species</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -260,13 +262,27 @@
 
         <span class="k">return</span> <span class="n">atom</span></div>
 
+<div class="viewcode-block" id="outSileSiesta.read_basis_block"><a class="viewcode-back" href="../../../../api-generated/sisl.io.siesta.outSileSiesta.html#sisl.io.siesta.outSileSiesta.read_basis_block">[docs]</a>    <span class="nd">@sile_fh_open</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">read_basis_block</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Reads the PAO.Basis block that Siesta writes &quot;&quot;&quot;</span>
+        <span class="n">found</span><span class="p">,</span> <span class="n">line</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">step_to</span><span class="p">(</span><span class="s2">&quot;%block PAO.Basis&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">found</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">.read_basis_block could not find PAO.Basis in output&quot;</span><span class="p">)</span>
+
+        <span class="n">basis</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">while</span> <span class="ow">not</span> <span class="n">line</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%e</span><span class="s2">ndblock PAO.Basis&quot;</span><span class="p">):</span>
+            <span class="n">line</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">readline</span><span class="p">()</span>
+            <span class="n">basis</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">line</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">basis</span></div>
+
     <span class="k">def</span> <span class="nf">_read_supercell_outcell</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Wrapper for reading the unit-cell from the outcoor block &quot;&quot;&quot;</span>
 
         <span class="c1"># Read until outcell is found</span>
-        <span class="n">line</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">readline</span><span class="p">()</span>
-        <span class="k">while</span> <span class="ow">not</span> <span class="s1">&#39;outcell: Unit cell vectors&#39;</span> <span class="ow">in</span> <span class="n">line</span><span class="p">:</span>
-            <span class="n">line</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">readline</span><span class="p">()</span>
+        <span class="n">found</span><span class="p">,</span> <span class="n">line</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">step_to</span><span class="p">(</span><span class="s2">&quot;outcell: Unit cell vectors&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">found</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">._r_supercell_outcell did not find outcell key&quot;</span><span class="p">)</span>
 
         <span class="n">Ang</span> <span class="o">=</span> <span class="s1">&#39;Ang&#39;</span> <span class="ow">in</span> <span class="n">line</span>
 
@@ -594,7 +610,7 @@
 
             <span class="k">if</span> <span class="n">last</span><span class="p">:</span>
                 <span class="k">return</span> <span class="n">Ss</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
-            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">job_completed</span> <span class="ow">and</span> <span class="n">key</span> <span class="o">==</span> <span class="s1">&#39;static&#39;</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">completed</span><span class="p">()</span> <span class="ow">and</span> <span class="n">key</span> <span class="o">==</span> <span class="s1">&#39;static&#39;</span><span class="p">:</span>
                 <span class="k">return</span> <span class="n">Ss</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
             <span class="k">return</span> <span class="n">Ss</span>
 
@@ -1007,7 +1023,7 @@
   <div role="contentinfo">
     <p>
         
-        &copy; Copyright 2015-2020, Nick Papior
+        &copy; Copyright 2015-2021, Nick Papior
 
     </p>
   </div>
