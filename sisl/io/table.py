@@ -118,33 +118,42 @@ class tableSile(Sile):
         fmt = kwargs.get('fmt', '.5e')
         newline = kwargs.get('newline', '\n')
         delimiter = kwargs.get('delimiter', '\t')
+        _com = self._comment[0]
+
+        def comment_newline(line, prefix=''):
+            """ Converts a list of str arguments into nicely formatted commented
+            and newlined output """
+            nonlocal _com
+            line = map(lambda s: s.strip(), line.strip().split(newline))
+            # always append a newline
+            line = newline.join([s if s.startswith(_com) else f"{_com}{prefix}{s}" for s in line]) + newline
+            return line
 
         comment = kwargs.get('comment', None)
         if comment is None:
             comment = ''
-        elif isinstance(comment, (list, tuple)):
-            comment = (newline + self._comment[0] + ' ').join(comment)
-        if len(comment) > 0:
-            comment = self._comment[0] + ' ' + comment + newline
+        elif isinstance(comment, str):
+            comment = comment_newline(comment, ' ')
+        else:
+            comment = comment_newline(newline.join(comment), ' ')
 
         header = kwargs.get('header', None)
-        if isinstance(header, (list, tuple)):
-            header = delimiter.join(header)
-        if header is not None:
-            # Ensure no "dangling" spaces
-            header = header.strip()
-            if not header.startswith(self._comment[0]):
-                header = self._comment[0] + header
-            if not header.endswith('\n'):
-                header += '\n'
-        else:
+        if header is None:
             header = ''
+        elif isinstance(header, str):
+            header = comment_newline(header)
+        else:
+            header = comment_newline(delimiter.join(header))
+
+        # Finalize output
         header = comment + header
 
         footer = kwargs.get('footer', None)
         if footer is None:
             footer = ''
-        elif isinstance(footer, (list, tuple)):
+        elif isinstance(footer, str):
+            pass
+        else:
             footer = newline.join(footer)
 
         # Now we are ready to write

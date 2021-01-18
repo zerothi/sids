@@ -7,7 +7,7 @@ import numpy as np
 from numpy.lib.mixins import NDArrayOperatorsMixin
 from numpy import (
     int32,
-    take, delete, argsort,
+    take, delete, argsort, lexsort,
     unique, diff, allclose,
     tile, repeat, concatenate
 )
@@ -328,7 +328,7 @@ class _SparseGeometry(NDArrayOperatorsMixin):
 
         self.geometry.set_nsc(*args, **kwargs)
 
-    def transpose(self):
+    def transpose(self, sort=True):
         """ Create the transposed sparse geometry by interchanging supercell indices
 
         Sparse geometries are (typically) relying on symmetry in the supercell picture.
@@ -339,10 +339,15 @@ class _SparseGeometry(NDArrayOperatorsMixin):
         row, `r`, and column `c` in a given supercell `(i,j,k)` will be transposed
         into row `c`, column `r` in the supercell `(-i,-j,-k)`.
 
+        Parameters
+        ----------
+        sort : bool, optional
+           the returned columns for the transposed structure will be sorted
+           if this is true, default
+
         Notes
         -----
-        For Hamiltonians with non-collinear or spin-orbit there is no transposing of the
-        sub-spin matrix box. This needs to be done *manually*.
+        The components for each sparse element are not changed in this method.
 
         Examples
         --------
@@ -391,8 +396,7 @@ class _SparseGeometry(NDArrayOperatorsMixin):
         # figure out rows where ncol is > 0
         # we skip the first column
         row_nonzero = (ncol > 0).nonzero()[0]
-        row = repeat(row_nonzero.astype(np.int32, copy=False),
-                     ncol[row_nonzero]).astype(np.int32, copy=False)
+        row = repeat(row_nonzero.astype(np.int32, copy=False), ncol[row_nonzero])
 
         # Now we have the DOK format
         #  row, col, _D
@@ -413,10 +417,13 @@ class _SparseGeometry(NDArrayOperatorsMixin):
         T._csr.ncol[rows] = nrow
         del rows
 
-        # Now we have everything ready...
-        # Simply figure out how to sort the columns
-        # such that we have them unified.
-        idx = argsort(col)
+        if sort:
+            # also sort individual rows for each column
+            idx = lexsort((row, col))
+        else:
+            # sort columns to get transposed values.
+            # This will randomize the rows
+            idx = argsort(col)
 
         # Our new data will then be
         T._csr.col = row[idx]
@@ -425,9 +432,9 @@ class _SparseGeometry(NDArrayOperatorsMixin):
         del D
         T._csr.ptr = _ncol_to_indptr(T._csr.ncol)
 
-        # For-sure we haven't sorted the columns.
-        # We haven't changed the number of non-zeros
-        T._csr._finalized = False
+        # If `sort` we have everything sorted, otherwise it
+        # is not ensured
+        T._csr._finalized = sort
 
         return T
 
@@ -498,6 +505,8 @@ class _SparseGeometry(NDArrayOperatorsMixin):
         --------
         construct : routine to create the sparse matrix from a generic function (as returned from `create_construct`)
         """
+        if len(R) != len(param):
+            raise ValueError(f"{self.__class__.__name__}.create_construct got different lengths of `R` and `param`")
 
         def func(self, ia, atoms, atoms_xyz=None):
             idx = self.geometry.close(ia, R=R, atoms=atoms, atoms_xyz=atoms_xyz)

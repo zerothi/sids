@@ -89,7 +89,7 @@ class Bloch:
     def __str__(self):
         """ Representation of the Bloch model """
         B = self._bloch
-        return self.__class__.__name__ + '{{{0}, {1}, {2}}}'.format(B[0], B[1], B[2])
+        return f"{self.__class__.__name__}{{{B[0]}, {B[1]}, {B[2]}}}"
 
     @property
     def bloch(self):
@@ -101,7 +101,7 @@ class Bloch:
 
         The k-point `k` is with respect to the unfolded geometry.
         The return list of `k` points are the k-points required to be sampled in the
-        folded geometry (``this.parent``).
+        folded geometry.
 
         Parameters
         ----------

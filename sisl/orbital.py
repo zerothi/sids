@@ -14,7 +14,7 @@ from scipy.interpolate import UnivariateSpline
 from ._internal import set_module
 from . import _plot as plt
 from . import _array as _a
-from .messages import deprecate_method
+from .messages import deprecate, deprecate_method
 from .shape import Sphere
 from .utils.mathematics import cart2spher
 
@@ -655,7 +655,7 @@ class SphericalOrbital(Orbital):
         """
         return self.f(r) * self.spher(theta, phi, m, cos_phi)
 
-    def toAtomicOrbital(self, m=None, n=None, Z=1, P=False, q0=None):
+    def toAtomicOrbital(self, m=None, n=None, zeta=1, P=False, q0=None):
         r""" Create a list of `AtomicOrbital` objects
 
         This defaults to create a list of `AtomicOrbital` objects for every `m` (for m in -l:l).
@@ -665,7 +665,7 @@ class SphericalOrbital(Orbital):
         ----------
         m : int or list or None
            if ``None`` it defaults to ``-l:l``, else only for the requested `m`
-        Z : int, optional
+        zeta : int, optional
            the specified zeta-shell
         P : bool, optional
            whether the orbitals are polarized.
@@ -683,8 +683,8 @@ class SphericalOrbital(Orbital):
         if m is None:
             m = range(-self.l, self.l + 1)
         elif isinstance(m, Integral):
-            return AtomicOrbital(n=n, l=self.l, m=m, Z=Z, P=P, spherical=self, q0=q0)
-        return [AtomicOrbital(n=n, l=self.l, m=mm, Z=Z, P=P, spherical=self, q0=q0) for mm in m]
+            return AtomicOrbital(n=n, l=self.l, m=m, zeta=zeta, P=P, spherical=self, q0=q0)
+        return [AtomicOrbital(n=n, l=self.l, m=mm, zeta=zeta, P=P, spherical=self, q0=q0) for mm in m]
 
     def __getstate__(self):
         """ Return the state of this object """
@@ -728,7 +728,7 @@ class AtomicOrbital(Orbital):
         azimuthal quantum number
     m : int
         magnetic quantum number
-    Z : int
+    zeta : int
         zeta shell
     P : bool
         whether this corresponds to a polarized shell (``True``)
@@ -743,9 +743,9 @@ class AtomicOrbital(Orbital):
     --------
     >>> r = np.linspace(0, 5, 50)
     >>> f = np.exp(-r)
-    >>> #                    n, l, m, [Z, [P]]
+    >>> #                    n, l, m, [zeta, [P]]
     >>> orb1 = AtomicOrbital(2, 1, 0, 1, (r, f))
-    >>> orb2 = AtomicOrbital(n=2, l=1, m=0, Z=1, (r, f))
+    >>> orb2 = AtomicOrbital(n=2, l=1, m=0, zeta=1, (r, f))
     >>> orb3 = AtomicOrbital('2pzZ', (r, f))
     >>> orb4 = AtomicOrbital('2pzZ1', (r, f))
     >>> orb5 = AtomicOrbital('pz', (r, f))
@@ -779,6 +779,8 @@ class AtomicOrbital(Orbital):
         n = kwargs.get('n', None)
         l = kwargs.get('l', None)
         m = kwargs.get('m', None)
+        if 'Z' in kwargs:
+            deprecate(f"{self.__class__.__name__}(Z=) is deprecated, please use (zeta=) instead")
         zeta = kwargs.get('zeta', kwargs.get('Z', 1))
         P = kwargs.get('P', False)
 
@@ -978,31 +980,29 @@ class AtomicOrbital(Orbital):
     def name(self, tex=False):
         """ Return named specification of the atomic orbital """
         if tex:
-            name = '{}{}'.format(self.n, {0: 's', 1: 'p', 2: 'd', 3: 'f', 4: 'g'}.get(self.l))
+            name = '{}{}'.format(self.n, 'spdfg'[self.l])
             if self.l == 1:
-                name += {0: '_z', 1: '_x', -1: '_y'}.get(self.m)
+                name += ['_y', '_z', '_x'][self.m+1]
             elif self.l == 2:
-                name += {-2: '_{xy}', -1: '_{yz}', 0: '_{z^2}', 1: '_{xz}', 2: '_{x^2-y^2}'}.get(self.m)
+                name += ['_{xy}', '_{yz}', '_{z^2}', '_{xz}', '_{x^2-y^2}'][self.m+2]
             elif self.l == 3:
-                name += {-3: '_{y(3x^2-y^2)}', -2: '_{xyz}', -1: '_{z^2y}', 0: '_{z^3}',
-                         1: '_{z^2x}', 2: '_{z(x^2-y^2)}', 3: '_{x(x^2-3y^2)}'}.get(self.m)
+                name += ['_{y(3x^2-y^2)}', '_{xyz}', '_{z^2y}', '_{z^3}', '_{z^2x}', '_{z(x^2-y^2)}', '_{x(x^2-3y^2)}'][self.m+3]
             elif self.l == 4:
-                name += {-4: '_{_{xy(x^2-y^2)}}', -3: '_{zy(3x^2-y^2)}', -2: '_{z^2xy}', -1: '_{z^3y}', 0: '_{z^4}',
-                         1: '_{z^3x}', 2: '_{z^2(x^2-y^2)}', 3: '_{zx(x^2-3y^2)}', 4: '_{x^4+y^4}'}.get(self.m)
+                name += ['_{_{xy(x^2-y^2)}}', '_{zy(3x^2-y^2)}', '_{z^2xy}', '_{z^3y}', '_{z^4}',
+                         '_{z^3x}', '_{z^2(x^2-y^2)}', '_{zx(x^2-3y^2)}', '_{x^4+y^4}'][self.m+4]
             if self.P:
                 return name + fr'\zeta^{self.zeta}\mathrm{{P}}'
             return name + fr'\zeta^{self.zeta}'
-        name = '{}{}'.format(self.n, {0: 's', 1: 'p', 2: 'd', 3: 'f', 4: 'g'}.get(self.l))
+        name = '{}{}'.format(self.n, 'spdfg'[self.l])
         if self.l == 1:
-            name += {0: 'z', 1: 'x', -1: 'y'}.get(self.m)
+            name += ['y', 'z', 'x'][self.m+1]
         elif self.l == 2:
-            name += {-2: 'xy', -1: 'yz', 0: 'z2', 1: 'xz', 2: 'x2-y2'}.get(self.m)
+            name += ['xy', 'yz', 'z2', 'xz', 'x2-y2'][self.m+2]
         elif self.l == 3:
-            name += {-3: 'y(3x2-y2)', -2: 'xyz', -1: 'z2y', 0: 'z3',
-                     1: 'z2x', 2: 'z(x2-y2)', 3: 'x(x2-3y2)'}.get(self.m)
+            name += ['y(3x2-y2)', 'xyz', 'z2y', 'z3', 'z2x', 'z(x2-y2)', 'x(x2-3y2)'][self.m+3]
         elif self.l == 4:
-            name += {-4: 'xy(x2-y2)', -3: 'zy(3x2-y2)', -2: 'z2xy', -1: 'z3y', 0: 'z4',
-                     1: 'z3x', 2: 'z2(x2-y2)', 3: 'zx(x2-3y2)', 4: 'x4+y4'}.get(self.m)
+            name += ['xy(x2-y2)', 'zy(3x2-y2)', 'z2xy', 'z3y', 'z4',
+                     'z3x', 'z2(x2-y2)', 'zx(x2-3y2)', 'x4+y4'][self.m+4]
         if self.P:
             return name + f'Z{self.zeta}P'
         return name + f'Z{self.zeta}'

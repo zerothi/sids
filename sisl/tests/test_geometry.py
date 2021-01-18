@@ -745,16 +745,17 @@ class TestGeometry:
 
     def test_close_within3(self, setup):
         g = setup.g.repeat(6, 0).repeat(6, 1)
-        args = {'ret_xyz': True, 'ret_rij': True}
+        args = {'ret_xyz': True, 'ret_rij': True, 'ret_isc': True}
         for ia in g:
             shapes = [Sphere(0.1, g[ia]),
                       Sphere(1.5, g[ia])]
-            i, xa, d = g.close(ia, R=(0.1, 1.5), **args)
-            ii, xai, di = g.within(shapes, **args)
+            i, xa, d, isc = g.close(ia, R=(0.1, 1.5), **args)
+            ii, xai, di, isci = g.within(shapes, **args)
             for j in [0, 1]:
                 assert np.all(i[j] == ii[j])
                 assert np.allclose(xa[j], xai[j])
                 assert np.allclose(d[j], di[j])
+                assert np.allclose(isc[j], isci[j])
 
     def test_within_inf1(self, setup):
         g = setup.g.translate([0.05] * 3)
@@ -818,11 +819,15 @@ class TestGeometry:
         assert idx[1][1].shape[1] == 3
 
         # Return index of two things
-        idx = setup.mol.close(point, R=(.1, 1.1), ret_xyz=True, ret_rij=True)
-        # [[idx-1, idx-2], [coord-1, coord-2], [dist-1, dist-2]]
-        assert len(idx) == 3
+        idx = setup.mol.close(point, R=(.1, 1.1), ret_xyz=True, ret_rij=True, ret_isc=True)
+        # [[idx-1, idx-2], [coord-1, coord-2], [dist-1, dist-2], [isc-1, isc-2]]
+        assert len(idx) == 4
         assert len(idx[0]) == 2
         assert len(idx[1]) == 2
+        assert len(idx[2]) == 2
+        assert len(idx[3]) == 2
+        assert all(len(idx[0][0]) == len(t[0]) for t in idx)
+        assert all(len(idx[0][1]) == len(t[1]) for t in idx)
         # idx-1
         assert len(idx[0][0].shape) == 1
         assert idx[0][0].shape[0] == 1
@@ -838,6 +843,11 @@ class TestGeometry:
         assert idx[2][0].shape[0] == 1
         # dist-2
         assert idx[2][1].shape[0] == 1
+        # isc-1
+        assert len(idx[3][0].shape) == 2
+        assert idx[3][0].shape[1] == 3
+        # isc-2
+        assert idx[3][1].shape[1] == 3
 
         # Return index of two things
         idx = setup.mol.close(point, R=(.1, 1.1), ret_rij=True)

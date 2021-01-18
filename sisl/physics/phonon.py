@@ -296,8 +296,7 @@ class _phonon_Mode:
 
             \tilde C_j = e^{i\mathbf k\mathbf r_j} C_j
 
-        where :math:`C_j` belongs to the gauge ``R`` and :math:`\tilde C_j` is in the gauge
-        ``r``.
+        where :math:`C_j` and :math:`\tilde C_j` belongs to the ``r`` and ``R`` gauge, respectively.
 
         Parameters
         ----------
@@ -315,16 +314,18 @@ class _phonon_Mode:
 
         # Check that we can do a gauge transformation
         k = _a.asarrayd(self.info.get('k'))
-        if (k ** 2).sum() ** 0.5 <= 0.000001:
+        if k.dot(k) <= 0.000000001:
             return
 
         g = self.parent.geometry
         phase = dot(g.xyz[g.o2a(_a.arangei(g.no)), :], dot(k, g.rcell))
 
         if gauge == 'r':
-            self.state *= exp(1j * phase).reshape(1, -1)
-        elif gauge == 'R':
+            # R -> r gauge tranformation.
             self.state *= exp(-1j * phase).reshape(1, -1)
+        elif gauge == 'R':
+            # r -> R gauge tranformation.
+            self.state *= exp(1j * phase).reshape(1, -1)
 
 
 @set_module("sisl.physics.phonon")

@@ -282,9 +282,9 @@ class Test_atomicorbital:
         rf = r_f(6)
         a = []
         a.append(AtomicOrbital(2, 1, 0, 1, True, rf))
-        a.append(AtomicOrbital(l=1, m=0, Z=1, P=True, spherical=rf))
+        a.append(AtomicOrbital(l=1, m=0, zeta=1, P=True, spherical=rf))
         f = interp.interp1d(rf[0], rf[1], fill_value=(0., 0.), bounds_error=False, kind='cubic')
-        a.append(AtomicOrbital(l=1, m=0, Z=1, P=True, spherical=f))
+        a.append(AtomicOrbital(l=1, m=0, zeta=1, P=True, spherical=f))
         a.append(AtomicOrbital('pzP', f))
         a.append(AtomicOrbital('pzP', rf))
         a.append(AtomicOrbital('2pzP', rf))
@@ -344,19 +344,21 @@ class Test_atomicorbital:
                 o = AtomicOrbital(l=l, m=m, spherical=rf)
                 assert np.allclose(so.psi(r, m), o.psi(r))
 
-    @pytest.mark.xfail(raises=SislDeprecation, reason='Z is deprecated for zeta')
     def test_zeta_Z_deprecate(self):
         rf = r_f(6)
         r = np.linspace(0, 6, 999).reshape(-1, 3)
         o = AtomicOrbital(l=1, m=1, spherical=rf)
-        assert o.Z == o.zeta
+        with pytest.deprecated_call():
+            assert o.Z == o.zeta
+        with pytest.deprecated_call():
+            o = AtomicOrbital(l=1, m=1, spherical=rf, Z=1)
 
     def test_pickle1(self):
         import pickle as p
         rf = r_f(6)
         o0 = AtomicOrbital(2, 1, 0, 1, True, rf, tag='hello', q0=1.)
-        o1 = AtomicOrbital(l=1, m=0, Z=1, P=False, spherical=rf)
-        o2 = AtomicOrbital(l=1, m=0, Z=1, P=False)
+        o1 = AtomicOrbital(l=1, m=0, zeta=1, P=False, spherical=rf)
+        o2 = AtomicOrbital(l=1, m=0, zeta=1, P=False)
         p0 = p.dumps(o0)
         p1 = p.dumps(o1)
         p2 = p.dumps(o2)

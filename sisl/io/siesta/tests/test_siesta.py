@@ -144,7 +144,8 @@ def test_nc_density_matrix(sisl_tmp, sisl_system):
 def test_nc_H_non_colinear(sisl_tmp):
     H1 = Hamiltonian(sisl.geom.graphene(), spin=sisl.Spin('NC'))
     H1.construct(([0.1, 1.44],
-                 [0.1, 0.2, 0.3, 0.4]))
+                  [[0.1, 0.2, 0.3, 0.4],
+                   [0.2, 0.3, 0.4, 0.5]]))
 
     f1 = sisl_tmp('H1.nc', _dir)
     f2 = sisl_tmp('H2.nc', _dir)
@@ -185,15 +186,16 @@ def test_nc_DM_non_colinear(sisl_tmp):
 def test_nc_EDM_non_colinear(sisl_tmp):
     EDM1 = EnergyDensityMatrix(sisl.geom.graphene(), spin=sisl.Spin('NC'))
     EDM1.construct(([0.1, 1.44],
-                    [0.1, 0.2, 0.3, 0.4]))
+                    [[0.1, 0.2, 0.3, 0.4],
+                     [0.2, 0.3, 0.4, 0.5]]))
 
     f1 = sisl_tmp('EDM1.nc', _dir)
     f2 = sisl_tmp('EDM2.nc', _dir)
     EDM1.write(f1, sort=False)
     EDM1.finalize()
-    EDM2 = sisl.get_sile(f1).read_energy_density_matrix()
+    EDM2 = sisl.get_sile(f1).read_energy_density_matrix(sort=False)
     EDM2.write(f2, sort=False)
-    EDM3 = sisl.get_sile(f2).read_energy_density_matrix()
+    EDM3 = sisl.get_sile(f2).read_energy_density_matrix(sort=False)
     assert EDM1._csr.spsame(EDM2._csr)
     assert EDM1._csr.spsame(EDM3._csr)
     # EDM1 is finalized, but EDM2 is not finalized

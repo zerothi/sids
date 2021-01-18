@@ -1,6 +1,8 @@
 from numbers import Integral
-from itertools import product
+from itertools import product, groupby
+from collections import deque
 import numpy as np
+from numpy import pi
 
 try:
     from . import _siesta
@@ -16,7 +18,7 @@ from sisl.messages import warn, SislError
 
 from ._help import *
 import sisl._array as _a
-from sisl import Geometry, Atom, Atoms, SuperCell, Grid
+from sisl import Geometry, Atom, Atoms, SuperCell, Grid, SparseCSR
 from sisl.sparse import _ncol_to_indptr
 from sisl.unit.siesta import unit_convert
 from sisl.physics.sparse import SparseOrbitalBZ
@@ -32,10 +34,28 @@ __all__ += ['gridSileSiesta']
 __all__ += ['tsgfSileSiesta']
 
 
+_Bohr2Ang = unit_convert('Bohr', 'Ang')
+_Ry2eV = unit_convert('Ry', 'eV')
+_eV2Ry = unit_convert('eV', 'Ry')
+
+
 def _bin_check(obj, method, message):
     ierr = _siesta.io_m.iostat_query()
     if ierr != 0:
         raise SileError(f'{str(obj)}.{method} {message} (ierr={ierr})')
+
+
+def _toF(array, dtype, scale=None):
+    if scale is None:
+        return array.astype(dtype, order='F', copy=False)
+    elif array.dtype == dtype and array.flags.f_contiguous:
+        # no need to copy since the order is correct
+        return array * scale
+
+    # We have to handle cases
+    out = np.empty_like(array, dtype, order='F')
+    np.multiply(array, scale, out=out)
+    return out
 
 
 def _geometry_align(geom_b, geom_u, cls, method):
@@ -104,7 +124,7 @@ def _geometry_align(geom_b, geom_u, cls, method):
 
         # Now create a new atom specie with the correct number of orbitals
         norbs = geom_b.atoms.orbitals[:]
-        atoms = Atoms([geom.atoms[i].copy(orbitals=[-1] * norbs[i]) for i in range(geom.na)])
+        atoms = Atoms([geom.atoms[i].copy(orbitals=[-1.] * norbs[i]) for i in range(geom.na)])
         geom._atoms = atoms
 
     return geom
@@ -121,8 +141,13 @@ class onlysSileSiesta(SileBinSiesta):
         arr = _siesta.read_tshs_cell(self.file, n_s)
         _bin_check(self, 'read_supercell', 'could not read cell.')
         nsc = np.array(arr[0], np.int32)
-        cell = np.array(arr[1].T, np.float64)
-        cell.shape = (3, 3)
+        # We have to transpose since the data is read *as-is*
+        # The cell in fortran files are (:, A1)
+        # after reading this is still obeyed (regardless of order)
+        # So we transpose to get it C-like
+        # Note that care must be taken for the different data-structures
+        # In particular not all data needs to be transposed (sparse H and S)
+        cell = arr[1].T * _Bohr2Ang
         return SuperCell(cell, nsc=nsc)
 
     def read_geometry(self, geometry=None):
@@ -135,9 +160,9 @@ class onlysSileSiesta(SileBinSiesta):
         _bin_check(self, 'read_geometry', 'could not read sizes.')
         arr = _siesta.read_tshs_geom(self.file, na)
         _bin_check(self, 'read_geometry', 'could not read geometry.')
-        xyz = np.array(arr[0].T, np.float64)
-        xyz.shape = (-1, 3)
-        lasto = np.array(arr[1], np.int32)
+        # see onlysSileSiesta.read_supercell for .T
+        xyz = arr[0].T * _Bohr2Ang
+        lasto = arr[1]
 
         # Since the TSHS file does not contain species information
         # and/or other stuff we *can* reuse an existing
@@ -187,6 +212,7 @@ class onlysSileSiesta(SileBinSiesta):
         # read the sizes used...
         sizes = _siesta.read_tshs_sizes(self.file)
         _bin_check(self, 'read_overlap', 'could not read sizes.')
+        # see onlysSileSiesta.read_supercell for .T
         isc = _siesta.read_tshs_cell(self.file, sizes[3])[2].T
         _bin_check(self, 'read_overlap', 'could not read cell.')
         no = sizes[2]
@@ -211,7 +237,10 @@ class onlysSileSiesta(SileBinSiesta):
         # equivalent as _csr_from_siesta with explicit isc from file
         _csr_from_sc_off(S.geometry, isc, S._csr)
 
-        return S
+        # In siesta the matrix layout is written in CSC format
+        # due to fortran indexing, this means that we need to transpose
+        # to get it to correct layout.
+        return S.transpose(sort=kwargs.get("sort", True))
 
     def read_fermi_level(self):
         r""" Query the Fermi-level contained in the file
@@ -220,7 +249,7 @@ class onlysSileSiesta(SileBinSiesta):
         -------
         Ef : fermi-level of the system
         """
-        Ef = _siesta.read_tshs_ef(self.file)
+        Ef = _siesta.read_tshs_ef(self.file) * _Ry2eV
         _bin_check(self, 'read_fermi_level', 'could not read fermi-level.')
         return Ef
 
@@ -237,6 +266,7 @@ class tshsSileSiesta(onlysSileSiesta):
         # read the sizes used...
         sizes = _siesta.read_tshs_sizes(self.file)
         _bin_check(self, 'read_hamiltonian', 'could not read sizes.')
+        # see onlysSileSiesta.read_supercell for .T
         isc = _siesta.read_tshs_cell(self.file, sizes[3])[2].T
         _bin_check(self, 'read_hamiltonian', 'could not read cell.')
         spin = sizes[0]
@@ -260,10 +290,10 @@ class tshsSileSiesta(onlysSileSiesta):
 
         if orthogonal:
             H._csr._D = _a.emptyd([nnz, spin])
-            H._csr._D[:, :] = dH[:, :]
+            H._csr._D[:, :] = dH[:, :] * _Ry2eV
         else:
             H._csr._D = _a.emptyd([nnz, spin+1])
-            H._csr._D[:, :spin] = dH[:, :]
+            H._csr._D[:, :spin] = dH[:, :] * _Ry2eV
             H._csr._D[:, spin] = dS[:]
 
         _mat_spin_convert(H)
@@ -280,11 +310,15 @@ class tshsSileSiesta(onlysSileSiesta):
             raise SileError(str(self) + '.read_hamiltonian could not assert '
                             'the supercell connections in the primary unit-cell.')
 
-        return H
+        # see onlysSileSiesta.read_overlap for .transpose()
+        # For H, DM and EDM we also need to Hermitian conjugate it.
+        return H.transpose(spin=False, sort=kwargs.get("sort", True))
 
     def write_hamiltonian(self, H, **kwargs):
         """ Writes the Hamiltonian to a siesta.TSHS file """
-        csr = H._csr.copy()
+        # we sort below, so no need to do it here
+        # see onlysSileSiesta.read_overlap for .transpose()
+        csr = H.transpose(spin=False, sort=False)._csr
         if csr.nnz == 0:
             raise SileError(str(self) + '.write_hamiltonian cannot write '
                             'a zero element sparse matrix!')
@@ -300,7 +334,7 @@ class tshsSileSiesta(onlysSileSiesta):
 
         # Get H and S
         if H.orthogonal:
-            h = csr._D.astype(np.float64, 'C', copy=False)
+            h = csr._D
             s = csr.diags(1., dim=1)
             # Ensure all data is correctly formatted (i.e. have the same sparsity pattern)
             s.align(csr)
@@ -308,24 +342,21 @@ class tshsSileSiesta(onlysSileSiesta):
             if s.nnz != len(h):
                 raise SislError('The diagonal elements of your orthogonal Hamiltonian '
                                 'have not been defined, this is a requirement.')
-            s = (s._D[:, 0]).astype(np.float64, 'C', copy=False)
+            s = s._D[:, 0]
         else:
-            h = csr._D[:, :H.S_idx].astype(np.float64, 'C', copy=False)
-            s = csr._D[:, H.S_idx].astype(np.float64, 'C', copy=False)
-        # Ensure shapes (say if only 1 spin)
-        h.shape = (-1, len(H.spin))
-        s.shape = (-1,)
+            h = csr._D[:, :H.S_idx]
+            s = csr._D[:, H.S_idx]
 
         # Get shorter variants
         nsc = H.geometry.nsc[:].astype(np.int32)
         isc = _siesta.siesta_sc_off(*nsc)
 
-        # I can't seem to figure out the usage of f2py
-        # Below I get an error if xyz is not transposed and h is transposed,
-        # however, they are both in C-contiguous arrays and this is indeed weird... :(
+        # see onlysSileSiesta.read_supercell for .T
         _siesta.write_tshs_hs(self.file, nsc[0], nsc[1], nsc[2],
-                              cell.T, xyz.T, H.geometry.firsto,
-                              csr.ncol, csr.col + 1, h, s, isc)
+                              cell.T / _Bohr2Ang, xyz.T / _Bohr2Ang, H.geometry.firsto,
+                              csr.ncol, csr.col + 1,
+                              _toF(h, np.float64, _eV2Ry), _toF(s, np.float64),
+                              isc)
         _bin_check(self, 'write_hamiltonian', 'could not write Hamiltonian and overlap matrix.')
 
 
@@ -384,11 +415,11 @@ class dmSileSiesta(SileBinSiesta):
         else:
             warn(str(self) + '.read_density_matrix may result in a wrong sparse pattern!')
 
-        return DM
+        return DM.transpose(spin=False, sort=kwargs.get("sort", True))
 
     def write_density_matrix(self, DM, **kwargs):
         """ Writes the density matrix to a siesta.DM file """
-        csr = DM._csr.copy()
+        csr = DM.transpose(spin=False, sort=False)._csr
         # This ensures that we don't have any *empty* elements
         if csr.nnz == 0:
             raise SileError(str(self) + '.write_density_matrix cannot write '
@@ -411,7 +442,7 @@ class dmSileSiesta(SileBinSiesta):
 
         nsc = DM.geometry.sc.nsc.astype(np.int32)
 
-        _siesta.write_dm(self.file, nsc, csr.ncol, csr.col + 1, dm)
+        _siesta.write_dm(self.file, nsc, csr.ncol, csr.col + 1, _toF(dm, np.float64))
         _bin_check(self, 'write_density_matrix', 'could not write density matrix.')
 
 
@@ -457,7 +488,7 @@ class tsdeSileSiesta(dmSileSiesta):
         EDM._csr._nnz = len(col)
 
         EDM._csr._D = _a.emptyd([nnz, spin+1])
-        EDM._csr._D[:, :spin] = dEDM[:, :]
+        EDM._csr._D[:, :spin] = dEDM[:, :] * _Ry2eV
         # EDM file does not contain overlap matrix... so neglect it for now.
         EDM._csr._D[:, spin] = 0.
 
@@ -469,7 +500,7 @@ class tsdeSileSiesta(dmSileSiesta):
         else:
             warn(str(self) + '.read_energy_density_matrix may result in a wrong sparse pattern!')
 
-        return EDM
+        return EDM.transpose(spin=False, sort=kwargs.get("sort", True))
 
     def read_fermi_level(self):
         r""" Query the Fermi-level contained in the file
@@ -478,7 +509,7 @@ class tsdeSileSiesta(dmSileSiesta):
         -------
         Ef : fermi-level of the system
         """
-        Ef = _siesta.read_tsde_ef(self.file)
+        Ef = _siesta.read_tsde_ef(self.file) * _Ry2eV
         _bin_check(self, 'read_fermi_level', 'could not read fermi-level.')
         return Ef
 
@@ -494,8 +525,8 @@ class tsdeSileSiesta(dmSileSiesta):
         Ef : float, optional
            fermi-level to be contained
         """
-        DMcsr = DM._csr.copy()
-        EDMcsr = EDM._csr.copy()
+        DMcsr = DM.transpose(spin=False, sort=False)._csr
+        EDMcsr = EDM.transpose(spin=False, sort=False)._csr
         DMcsr.align(EDMcsr)
         EDMcsr.align(DMcsr)
 
@@ -514,13 +545,8 @@ class tsdeSileSiesta(dmSileSiesta):
         # Ensure everything is correct
         if not (np.allclose(DMcsr.ncol, EDMcsr.ncol) and
                 np.allclose(DMcsr.col, EDMcsr.col)):
-            # Only finalize in cases where it is needed
-            DMcsr.finalize()
-            EDMcsr.finalize()
-            if not (np.allclose(DMcsr.ncol, EDMcsr.ncol) and
-                    np.allclose(DMcsr.col, EDMcsr.col)):
-                raise ValueError(str(self) + '.write_density_matrices got non compatible '
-                                 'DM and EDM matrices.')
+            raise ValueError(str(self) + '.write_density_matrices got non compatible '
+                             'DM and EDM matrices.')
 
         if DM.orthogonal:
             dm = DMcsr._D
@@ -533,13 +559,304 @@ class tsdeSileSiesta(dmSileSiesta):
 
         nsc = DM.geometry.sc.nsc.astype(np.int32)
 
-        _siesta.write_tsde_dm_edm(self.file, nsc, DMcsr.ncol, DMcsr.col + 1, dm, edm, Ef)
+        _siesta.write_tsde_dm_edm(self.file, nsc, DMcsr.ncol, DMcsr.col + 1,
+                                  _toF(dm, np.float64),
+                                  _toF(edm, np.float64, _eV2Ry), Ef * _eV2Ry)
         _bin_check(self, 'write_density_matrices', 'could not write DM + EDM matrices.')
 
 
 @set_module("sisl.io.siesta")
 class hsxSileSiesta(SileBinSiesta):
-    """ Hamiltonian and overlap matrix file """
+    """ Hamiltonian and overlap matrix file
+
+    This file does not contain all information regarding the system.
+
+    To ensure no errors are being raised one should pass a `Geometry` with
+    correct number of atoms and correct number of supercells.
+    The number of orbitals will be updated in the returned matrices geometry.
+
+    >>> hsx = hsxSileSiesta("siesta.HSX")
+    >>> HS = hsx.read_hamiltonian() # may fail
+    >>> HS = hsx.read_hamiltonian(geometry=<>) # should run correctly if above satisfied
+
+    Users are adviced to use the `tshsSileSiesta` instead since that correctly contains
+    all information.
+    """
+
+    def _xij2system(self, xij, geometry=None):
+        """ Create a new geometry with *correct* nsc and somewhat correct xyz
+
+        Parameters
+        ----------
+        xij : SparseCSR
+            orbital distances
+        geometry : Geometry, optional
+            passed geometry
+        """
+        N = len(xij)
+        # convert csr to dok format
+        row = (xij.ncol > 0).nonzero()[0]
+        # Now we have [0 0 0 0 1 1 1 1 2 2 ... no-1 no-1]
+        row = np.repeat(row, xij.ncol[row])
+        col = xij.col
+
+        # Parse xij to correct geometry
+        # first figure out all zeros (i.e. self-atom-orbitals)
+        idx0 = np.isclose(np.fabs(xij._D).sum(axis=1), 0.).nonzero()[0]
+        row0 = row[idx0]
+
+        # convert row0 and col0 to a first attempt of "atomization"
+        atoms = []
+        for r in range(N):
+            idx0r = (row0 == r).nonzero()[0]
+            row0r = row0[idx0r]
+            # although xij == 0, we just do % to ensure unit-cell orbs
+            col0r = col[idx0[idx0r]] % N
+            if np.all(col0r >= r):
+                # we have a new atom
+                atoms.append(set(col0r))
+            else:
+                atoms[-1].update(set(col0r))
+
+        # convert list of orbitals to lists
+        def conv(a):
+            a = list(a)
+            a.sort()
+            return a
+        atoms = [list(a) for a in atoms]
+        if sum(map(len, atoms)) != len(xij):
+            raise ValueError(f"{self.__class__.__name__} could not determine correct "
+                             "number of orbitals.")
+
+        atms = Atoms(Atom('H', [-1. for _ in atoms[0]]))
+        for orbs in atoms[1:]:
+            atms.append(Atom('H', [-1. for _ in orbs]))
+        geom_handle = Geometry(np.zeros([len(atoms), 3]), atms)
+
+        def convert_to_atom(geom, xij):
+            # o2a does not check for correct super-cell index
+            n_s = xij.shape[1] // xij.shape[0]
+            atm_s = geom.o2a(np.arange(xij.shape[1]))
+
+            # convert csr to dok format
+            row = (xij.ncol > 0).nonzero()[0]
+            row = np.repeat(row, xij.ncol[row])
+            col = xij.col
+            arow = atm_s[row]
+            acol = atm_s[col]
+            del atm_s, row, col
+            idx = np.lexsort((acol, arow))
+            arow = arow[idx]
+            acol = acol[idx]
+            xij = xij._D[idx]
+            del idx
+
+            # Now figure out if xij is consistent
+            duplicates = np.logical_and(np.diff(acol) == 0, np.diff(arow) == 0).nonzero()[0]
+            if duplicates.size > 0:
+                if not np.allclose(xij[duplicates+1] - xij[duplicates], 0.):
+                    raise ValueError(f"{self.__class__.__name__} converting xij(orb) -> xij(atom) went wrong. "
+                                     "This may happen if your coordinates are not inside the unitcell, please pass "
+                                     "a usable geometry.")
+
+            # remove duplicates to create new matrix
+            arow = np.delete(arow, duplicates)
+            acol = np.delete(acol, duplicates)
+            xij = np.delete(xij, duplicates, axis=0)
+
+            # Create a new sparse matrix
+            # Create the new index pointer
+            indptr = np.insert(np.array([0, len(xij)], np.int32), 1,
+                               (np.diff(arow) != 0).nonzero()[0] + 1)
+            assert len(indptr) == geom.na + 1
+            return SparseCSR((xij, acol, indptr), shape=(geom.na, geom.na * n_s))
+
+        def coord_from_xij(xij):
+            # first atom is at 0, 0, 0
+            na = len(xij)
+            xyz = _a.zerosd([na, 3])
+            xyz[0] = [0, 0, 0]
+            mark = _a.zerosi(na)
+            mark[0] = 1
+            run_atoms = deque([0])
+            while len(run_atoms) > 0:
+                atm = run_atoms.popleft()
+                xyz_atm = xyz[atm].reshape(1, 3)
+                neighbours = xij.edges(atm, exclude=atm)
+                neighbours = neighbours[neighbours < na]
+
+                # update those that haven't been calculated
+                idx = mark[neighbours] == 0
+                neigh_idx = neighbours[idx]
+                if len(neigh_idx) == 0:
+                    continue
+                xyz[neigh_idx, :] = xij[atm, neigh_idx] - xyz_atm
+                mark[neigh_idx] = 1
+                # add more atoms to be processed, since we have *mark*
+                # we will only run every atom once
+                run_atoms.extend(neigh_idx.tolist())
+
+                # check that everything is correct
+                if (~idx).sum() > 0:
+                    neg_neighbours = neighbours[~idx]
+                    if not np.allclose(xyz[neg_neighbours, :],
+                                       xij[atm, neg_neighbours] - xyz_atm):
+                        raise ValueError(f"{self.__class__.__name__} xij(orb) -> xyz did not  "
+                                         f"find same coordinates for different connections")
+
+            if mark.sum() != na:
+                raise ValueError(f"{self.__class__.__name__} xij(orb) -> Geometry does not  "
+                                 f"have a fully connected geometry. It is impossible to create relative coordinates")
+
+            return xyz
+
+        def sc_from_xij(xij, xyz):
+            na = xij.shape[0]
+            n_s = xij.shape[1] // xij.shape[0]
+            if n_s == 1:
+                # easy!!
+                return SuperCell(xyz.max(axis=0) - xyz.min(axis=0) + 10., nsc=[1] * 3)
+
+            sc_off = _a.zerosd([n_s, 3])
+            mark = _a.zerosi(n_s)
+            mark[0] = 1
+            for atm in range(na):
+                neighbours = xij.edges(atm, exclude=atm)
+                uneighbours = neighbours % na
+                neighbour_isc = neighbours // na
+
+                # get offset in terms of unit-cell
+                off = xij[atm, neighbours] - (xyz[uneighbours] - xyz[atm].reshape(1, 3))
+
+                idx = mark[neighbour_isc] == 0
+                if not np.allclose(off[~idx], sc_off[neighbour_isc[~idx]]):
+                    raise ValueError(f"{self.__class__.__name__} xij(orb) -> xyz did not  "
+                                     f"find same supercell offsets for different connections")
+
+                if idx.sum() == 0:
+                    continue
+
+                for idx in idx.nonzero()[0]:
+                    nidx = neighbour_isc[idx]
+                    if mark[nidx] == 0:
+                        mark[nidx] = 1
+                        sc_off[nidx] = off[idx]
+                    elif not np.allclose(sc_off[nidx], off[idx]):
+                        raise ValueError(f"{self.__class__.__name__} xij(orb) -> xyz did not  "
+                                         f"find same supercell offsets for different connections")
+            # We know that siesta returns isc
+            # for iz in [0, 1, 2, 3, -3, -2, -1]:
+            #  for iy in [0, 1, 2, -2, -1]:
+            #   for ix in [0, 1, -1]:
+            # every block we find a half monotonically increasing vector additions
+            # Note the first is always [0, 0, 0]
+            # So our best chance is to *guess* the first nsc
+            # then reshape, then guess, then reshape, then guess :)
+            sc_diff = np.diff(sc_off, axis=0)
+
+            def get_nsc(sc_off):
+                """ Determine nsc depending on the axis """
+                # correct the offsets
+                ndim = sc_off.ndim
+
+                if sc_off.shape[0] == 1:
+                    return 1
+
+                # always select the 2nd one since that contains the offset
+                # for the first isc [1, 0, 0] or [0, 1, 0] or [0, 0, 1]
+                sc_dir = sc_off[(1, ) + np.index_exp[0] * (ndim - 2)].reshape(1, 3)
+                norm2_sc_dir = (sc_dir ** 2).sum()
+                # figure out the maximum integer part
+                # we select 0 indices for all already determined lattice
+                # vectors since we know the first one is [0, 0, 0]
+                idx = np.index_exp[:] + np.index_exp[0] * (ndim - 2)
+                projection = (sc_off[idx] * sc_dir).sum(-1) / norm2_sc_dir
+                iprojection = np.rint(projection)
+                # find where they are close
+                # since there may be *many* zeros (non-coupling elements)
+                # we first have to cut off anything that is not integer
+                idx_close = np.isclose(projection, iprojection).nonzero()[0]
+                return (np.diff(idx_close) > 1).nonzero()[0][0] + 1
+
+            nsc = _a.onesi(3)
+            nsc[0] = get_nsc(sc_off)
+            sc_off = sc_off.reshape(-1, nsc[0], 3)
+            nsc[1] = get_nsc(sc_off)
+            sc_off = sc_off.reshape(-1, nsc[1], nsc[0], 3)
+            nsc[2] = sc_off.shape[0]
+
+            # now determine cell parameters
+            if all(nsc > 1):
+                cell = _a.arrayd([sc_off[0, 0, 1],
+                                  sc_off[0, 1, 0],
+                                  sc_off[1, 0, 0]])
+            else:
+                # we will never have all(nsc == 1) since that is
+                # taken care of at the start
+
+                # this gets a bit tricky, since we don't know one of the
+                # lattice vectors
+                cell = _a.zerosd([3, 3])
+                i = 0
+                for idx, isc in enumerate(nsc):
+                    if isc > 1:
+                        sl = tuple(0, 0, 0)
+                        sl[2 - idx] = 1
+                        cell[i] = sc_off[sl]
+                        i += 1
+                # figure out the last vectors
+                # We'll just use Cartesian coordinates
+                roll_n = 0
+                while i <= 2:
+                    # this means we don't have any supercell connections
+                    # along at least 1 other lattice vector.
+                    lcell = np.fabs(cell).sum(0)
+
+                    # figure out which Cartesian direction we are *missing*
+                    cart_dir = np.argmin(lcell)
+                    cell[i, cart_dir] = xyz[:, cart_dir].max() - xyz[:, cart_dir].min() + 10.
+                    roll_n = cart_dir - i
+                    i += 1
+
+                # we roll data to make Cartesian coordinates
+                # this won't always work. but should in most cases
+                cell = np.roll(cell, roll_n)
+                nsc = np.roll(nsc, roll_n)
+
+            return SuperCell(cell, nsc)
+
+        # now we have all orbitals, ensure compatibility with passed geometry
+        if geometry is None:
+            atm_xij = convert_to_atom(geom_handle, xij)
+            xyz = coord_from_xij(atm_xij)
+            sc = sc_from_xij(atm_xij, xyz)
+            atms = Atoms(Atom('H', [-1. for _ in atoms[0]]))
+            for orbs in atoms[1:]:
+                atms.append(Atom('H', [-1. for _ in orbs]))
+            geometry = Geometry(xyz, atms, sc)
+
+            # Move coordinates into unit-cell
+            geometry.xyz[:, :] = (geometry.fxyz % 1.) @ geometry.cell
+
+        else:
+            if geometry.n_s != xij.shape[1] // xij.shape[0]:
+                atm_xij = convert_to_atom(geom_handle, xij)
+                sc = sc_from_xij(atm_xij, coord_from_xij(atm_xij))
+                geometry.set_nsc(sc.nsc)
+
+            def conv(orbs, atm):
+                if len(orbs) == len(atm):
+                    return atm
+                return atm.copy(orbitals=[-1. for _ in orbs])
+            atms = Atoms([conv(orbs, atm) for orbs, atm in zip(atoms, geometry.atoms)])
+            if len(atms) != len(geometry):
+                raise ValueError(f"{self.__class__.__name__} passed geometry for reading "
+                                 "sparse matrix does not contain same number of atoms!")
+            geometry = geometry.copy()
+            # TODO check that geometry and xyz are the same!
+            geometry._atoms = atms
+
+        return geometry
 
     def read_hamiltonian(self, **kwargs):
         """ Returns the electronic structure from the siesta.TSHS file """
@@ -548,38 +865,31 @@ class hsxSileSiesta(SileBinSiesta):
         Gamma, spin, no, no_s, nnz = _siesta.read_hsx_sizes(self.file)
         _bin_check(self, 'read_hamiltonian', 'could not read Hamiltonian sizes.')
         ncol, col, dH, dS, dxij = _siesta.read_hsx_hsx(self.file, Gamma, spin, no, no_s, nnz)
+        dxij = dxij.T * _Bohr2Ang
+        col -= 1
         _bin_check(self, 'read_hamiltonian', 'could not read Hamiltonian.')
 
-        # Try and immediately attach a geometry
-        geom = kwargs.get('geometry', kwargs.get('geom', None))
-        if geom is None:
-            # We have *no* clue about the
-            if np.allclose(dxij, 0.):
-                # We truly, have no clue,
-                # Just generate a boxed system
-                xyz = [[x, 0, 0] for x in range(no)]
-                geom = Geometry(xyz, Atom(1), sc=[no, 1, 1])
-            else:
-                # Try to figure out the supercell
-                warn(self.__class__.__name__ + '.read_hamiltonian '
-                     '(currently we can not calculate atomic positions from xij array)')
-        if geom.no != no:
-            raise SileError(str(self) + '.read_hamiltonian could not use the '
-                            'passed geometry as the number of atoms or orbitals is '
-                            'inconsistent with HSX file.')
+        ptr = _ncol_to_indptr(ncol)
+        xij = SparseCSR((dxij, col, ptr), shape=(no, no_s))
+        geom = self._xij2system(xij, kwargs.get('geometry', kwargs.get('geom', None)))
+
+        if geom.no != no or geom.no_s != no_s:
+            raise SileError(f"{str(self)}.read_hamiltonian could not use the "
+                            "passed geometry as the number of atoms or orbitals is "
+                            "inconsistent with HSX file.")
 
         # Create the Hamiltonian container
         H = Hamiltonian(geom, spin, nnzpr=1, dtype=np.float32, orthogonal=False)
 
         # Create the new sparse matrix
         H._csr.ncol = ncol.astype(np.int32, copy=False)
-        H._csr.ptr = _ncol_to_indptr(ncol)
+        H._csr.ptr = ptr
         # Correct fortran indices
-        H._csr.col = col.astype(np.int32, copy=False) - 1
+        H._csr.col = col.astype(np.int32, copy=False)
         H._csr._nnz = len(col)
 
         H._csr._D = _a.emptyf([nnz, spin+1])
-        H._csr._D[:, :spin] = dH[:, :]
+        H._csr._D[:, :spin] = dH[:, :] * _Ry2eV
         H._csr._D[:, spin] = dS[:]
 
         _mat_spin_convert(H)
@@ -588,23 +898,26 @@ class hsxSileSiesta(SileBinSiesta):
         if no_s // no == np.product(geom.nsc):
             _csr_from_siesta(geom, H._csr)
 
-        return H
+        return H.transpose(spin=False, sort=kwargs.get("sort", True))
 
     def read_overlap(self, **kwargs):
         """ Returns the overlap matrix from the siesta.HSX file """
         # Now read the sizes used...
         Gamma, spin, no, no_s, nnz = _siesta.read_hsx_sizes(self.file)
         _bin_check(self, 'read_overlap', 'could not read overlap matrix sizes.')
-        ncol, col, dS = _siesta.read_hsx_s(self.file, Gamma, spin, no, no_s, nnz)
+        ncol, col, dS, dxij = _siesta.read_hsx_sx(self.file, Gamma, spin, no, no_s, nnz)
+        dxij = dxij.T * _Bohr2Ang
+        col -= 1
         _bin_check(self, 'read_overlap', 'could not read overlap matrix.')
 
-        geom = kwargs.get('geometry', kwargs.get('geom', None))
-        if geom is None:
-            warn(self.__class__.__name__ + ".read_overlap requires input geometry to assign S")
-        if geom.no != no:
-            raise SileError(str(self) + '.read_overlap could not use the '
-                            'passed geometry as the number of atoms or orbitals is '
-                            'inconsistent with HSX file.')
+        ptr = _ncol_to_indptr(ncol)
+        xij = SparseCSR((dxij, col, ptr), shape=(no, no_s))
+        geom = self._xij2system(xij, kwargs.get('geometry', kwargs.get('geom', None)))
+
+        if geom.no != no or geom.no_s != no_s:
+            raise SileError(f"{str(self)}.read_overlap could not use the "
+                            "passed geometry as the number of atoms or orbitals is "
+                            "inconsistent with HSX file.")
 
         # Create the Hamiltonian container
         S = Overlap(geom, nnzpr=1)
@@ -613,7 +926,7 @@ class hsxSileSiesta(SileBinSiesta):
         S._csr.ncol = ncol.astype(np.int32, copy=False)
         S._csr.ptr = _ncol_to_indptr(ncol)
         # Correct fortran indices
-        S._csr.col = col.astype(np.int32, copy=False) - 1
+        S._csr.col = col.astype(np.int32, copy=False)
         S._csr._nnz = len(col)
 
         S._csr._D = _a.emptyf([nnz, 1])
@@ -623,7 +936,8 @@ class hsxSileSiesta(SileBinSiesta):
         if no_s // no == np.product(geom.nsc):
             _csr_from_siesta(geom, S._csr)
 
-        return S
+        # not really necessary with Hermitian transposing, but for consistency
+        return S.transpose(sort=kwargs.get("sort", True))
 
 
 @set_module("sisl.io.siesta")
@@ -649,20 +963,34 @@ class wfsxSileSiesta(SileBinSiesta):
         else:
             func = _siesta.read_wfsx_index_2
 
+        if parent is None:
+            def convert_k(k):
+                if not np.allclose(k, 0.):
+                    warn(f"{self.__class__.__name__}.yield_eigenstate returns a k-point in 1/Ang (not in reduced format), please pass 'parent' to ensure reduced k")
+                return k
+        else:
+            # We can succesfully convert to proper reduced k-points
+            if isinstance(parent, SuperCell):
+                def convert_k(k):
+                    return np.dot(k, parent.cell.T) / (2 * pi)
+            else:
+                def convert_k(k):
+                    return np.dot(k, parent.sc.cell.T) / (2 * pi)
+
         for ispin, ik in product(range(1, nspin + 1), range(1, nk + 1)):
             k, _, nwf = _siesta.read_wfsx_index_info(self.file, ispin, ik)
+            # Convert to 1/Ang
+            k /= _Bohr2Ang
             _bin_check(self, 'yield_eigenstate', f"could not read index info [{ispin}, {ik}]")
 
             idx, eig, state = func(self.file, ispin, ik, nou, nwf)
             _bin_check(self, 'yield_eigenstate', f"could not read state information [{ispin}, {ik}, {nwf}]")
 
             # eig is already in eV
-            # k is in 1/Bohr, we should probably adapt,
-            # but we should also consider using parent to convert to
-            # sisl-style k-point
-            # we also need to add spin
+            # we probably need to add spin
+            # see onlysSileSiesta.read_supercell for .T
             es = EigenstateElectron(state.T, eig, parent=parent,
-                                    k=k, gauge="r", indices=idx - 1)
+                                    k=convert_k(k), gauge="r", index=idx - 1)
             yield es
 
 
@@ -677,10 +1005,8 @@ class _gridSileSiesta(SileBinSiesta):
     def read_supercell(self, *args, **kwargs):
         r""" Return the cell contained in the file """
 
-        cell = _siesta.read_grid_cell(self.file)
+        cell = _siesta.read_grid_cell(self.file).T * _Bohr2Ang
         _bin_check(self, 'read_supercell', 'could not read cell.')
-        cell = np.array(cell.T, np.float64)
-        cell.shape = (3, 3)
 
         return SuperCell(cell)
 
@@ -714,8 +1040,7 @@ class _gridSileSiesta(SileBinSiesta):
         index = kwargs.get('spin', index)
         # Read the sizes and cell
         nspin, mesh = self.read_grid_size()
-        cell = _siesta.read_grid_cell(self.file)
-        _bin_check(self, 'read_grid', 'could not read grid cell.')
+        sc = self.read_supercell()
         grid = _siesta.read_grid(self.file, nspin, mesh[0], mesh[1], mesh[2])
         _bin_check(self, 'read_grid', 'could not read grid.')
 
@@ -731,15 +1056,12 @@ class _gridSileSiesta(SileBinSiesta):
                 g += grid[:, :, :, 1+i] * scale
             grid = g
 
-        cell = np.array(cell.T, np.float64)
-        cell.shape = (3, 3)
-
         # Simply create the grid (with no information)
         # We will overwrite the actual grid
-        g = Grid([1, 1, 1], sc=SuperCell(cell))
+        g = Grid([1, 1, 1], sc=sc)
         # NOTE: there is no need to swap-axes since the returned array is in F ordering
         #       and thus the first axis is the fast (x, y, z) is retained
-        g.grid = (grid * self.grid_unit).astype(dtype=dtype, order='C', copy=False)
+        g.grid = grid * self.grid_unit
         return g
 
 
@@ -774,6 +1096,12 @@ class _gfSileSiesta(SileBinSiesta):
     def _setup(self, *args, **kwargs):
         """ Simple setup that needs to be overwritten """
         self._iu = -1
+        # The unit convention used for energy-points
+        # This is necessary until Siesta uses CODATA values
+        if kwargs.get("unit", "old").lower() in ("old", "4.1"):
+            self._E_Ry2eV = 13.60580
+        else:
+            self._E_Ry2eV = _Ry2eV
 
     def _is_open(self):
         return self._iu != -1
@@ -996,15 +1324,14 @@ class _gfSileSiesta(SileBinSiesta):
         k, E = _siesta.read_gf_header(self._iu, nkpt, NE)
         _bin_check(self, 'read_header', 'could not read header information.')
 
-        k = k.T
         if self._nspin > 2: # non-colinear
             self._no_u = no_u * 2
         else:
             self._no_u = no_u
-        self._E = E
-        self._k = k
+        self._E = E * self._E_Ry2eV
+        self._k = k.T
 
-        return nspin, no_u, k, E
+        return nspin, no_u, self._k, self._E
 
     def disk_usage(self):
         """ Calculate the estimated size of the resulting file
@@ -1043,7 +1370,8 @@ class _gfSileSiesta(SileBinSiesta):
         self._step_counter('read_hamiltonian', HS=True, read=True)
         H, S = _siesta.read_gf_hs(self._iu, self._no_u)
         _bin_check(self, 'read_hamiltonian', 'could not read Hamiltonian and overlap matrices.')
-        return H.T, S.T
+        # we don't convert to C order!
+        return H * _Ry2eV, S
 
     def read_self_energy(self):
         r""" Read the currently reached bulk self-energy
@@ -1058,9 +1386,10 @@ class _gfSileSiesta(SileBinSiesta):
         complex128 : Self-energy matrix
         """
         self._step_counter('read_self_energy', read=True)
-        SE = _siesta.read_gf_se(self._iu, self._no_u, self._iE).T
+        SE = _siesta.read_gf_se(self._iu, self._no_u, self._iE)
         _bin_check(self, 'read_self_energy', 'could not read self-energy.')
-        return SE
+        # we don't convert to C order!
+        return SE * _Ry2eV
 
     def HkSk(self, k=(0, 0, 0), spin=0):
         """ Retrieve H and S for the given k-point
@@ -1178,8 +1507,12 @@ class _gfSileSiesta(SileBinSiesta):
 
         # Now write to it...
         self._step_counter('write_header', header=True, read=True)
-        _siesta.write_gf_header(self._iu, nspin, cell.T, na_u, no_u, no_u, xa.T, lasto,
-                                bloch, 0, mu, k.T, w, self._E, **sizes)
+        # see onlysSileSiesta.read_supercell for .T
+        _siesta.write_gf_header(self._iu, nspin, _toF(cell.T, np.float64, 1. / _Bohr2Ang),
+                                na_u, no_u, no_u, _toF(xa.T, np.float64, 1. / _Bohr2Ang),
+                                lasto, bloch, 0, mu * _eV2Ry, _toF(k.T, np.float64),
+                                w, self._E / self._E_Ry2eV,
+                                **sizes)
         _bin_check(self, 'write_header', 'could not write header information.')
 
     def write_hamiltonian(self, H, S=None):
@@ -1195,11 +1528,11 @@ class _gfSileSiesta(SileBinSiesta):
         """
         no = len(H)
         if S is None:
-            S = np.eye(no, dtype=H.dtype)
+            S = np.eye(no, dtype=np.complex128, order='F')
         self._step_counter('write_hamiltonian', HS=True, read=True)
-        _siesta.write_gf_hs(self._iu, self._ik, self._E[self._iE],
-                            H.astype(np.complex128, 'C', copy=False).T,
-                            S.astype(np.complex128, 'C', copy=False).T, no_u=no)
+        _siesta.write_gf_hs(self._iu, self._ik, self._E[self._iE] / self._E_Ry2eV,
+                            _toF(H, np.complex128, _eV2Ry),
+                            _toF(S, np.complex128), no_u=no)
         _bin_check(self, 'write_hamiltonian', 'could not write Hamiltonian and overlap matrices.')
 
     def write_self_energy(self, SE):
@@ -1217,9 +1550,8 @@ class _gfSileSiesta(SileBinSiesta):
         """
         no = len(SE)
         self._step_counter('write_self_energy', read=True)
-        _siesta.write_gf_se(self._iu, self._ik, self._iE,
-                            self._E[self._iE],
-                            SE.astype(np.complex128, 'C', copy=False).T, no_u=no)
+        _siesta.write_gf_se(self._iu, self._ik, self._iE, self._E[self._iE] / self._E_Ry2eV,
+                            _toF(SE, np.complex128, _eV2Ry), no_u=no)
         _bin_check(self, 'write_self_energy', 'could not write self-energy.')
 
     def __len__(self):
@@ -1275,22 +1607,20 @@ if found_module:
     add_sile('TSGF', tsgfSileSiesta)
     add_sile('WFSX', wfsxSileSiesta)
     # These have unit-conversions
-    BohrC2AngC = unit_convert('Bohr', 'Ang') ** 3
-    Ry2eV = unit_convert('Ry', 'eV')
-    add_sile('RHO', _type("rhoSileSiesta", _gridSileSiesta, {'grid_unit': 1./BohrC2AngC}))
-    add_sile('LDOS', _type("ldosSileSiesta", _gridSileSiesta, {'grid_unit': 1./BohrC2AngC}))
-    add_sile('RHOINIT', _type("rhoinitSileSiesta", _gridSileSiesta, {'grid_unit': 1./BohrC2AngC}))
-    add_sile('RHOXC', _type("rhoxcSileSiesta", _gridSileSiesta, {'grid_unit': 1./BohrC2AngC}))
-    add_sile('DRHO', _type("drhoSileSiesta", _gridSileSiesta, {'grid_unit': 1./BohrC2AngC}))
-    add_sile('BADER', _type("baderSileSiesta", _gridSileSiesta, {'grid_unit': 1./BohrC2AngC}))
-    add_sile('IOCH', _type("iorhoSileSiesta", _gridSileSiesta, {'grid_unit': 1./BohrC2AngC}))
-    add_sile('TOCH', _type("totalrhoSileSiesta", _gridSileSiesta, {'grid_unit': 1./BohrC2AngC}))
+    add_sile('RHO', _type("rhoSileSiesta", _gridSileSiesta, {'grid_unit': 1./_Bohr2Ang ** 3}))
+    add_sile('LDOS', _type("ldosSileSiesta", _gridSileSiesta, {'grid_unit': 1./_Bohr2Ang ** 3}))
+    add_sile('RHOINIT', _type("rhoinitSileSiesta", _gridSileSiesta, {'grid_unit': 1./_Bohr2Ang ** 3}))
+    add_sile('RHOXC', _type("rhoxcSileSiesta", _gridSileSiesta, {'grid_unit': 1./_Bohr2Ang ** 3}))
+    add_sile('DRHO', _type("drhoSileSiesta", _gridSileSiesta, {'grid_unit': 1./_Bohr2Ang ** 3}))
+    add_sile('BADER', _type("baderSileSiesta", _gridSileSiesta, {'grid_unit': 1./_Bohr2Ang ** 3}))
+    add_sile('IOCH', _type("iorhoSileSiesta", _gridSileSiesta, {'grid_unit': 1./_Bohr2Ang ** 3}))
+    add_sile('TOCH', _type("totalrhoSileSiesta", _gridSileSiesta, {'grid_unit': 1./_Bohr2Ang ** 3}))
     # The following two files *require* that
     #  STM.DensityUnits   Ele/bohr**3
     #  which I can't check!
     # They are however the default
-    add_sile('STS', _type("stsSileSiesta", _gridSileSiesta, {'grid_unit': 1./BohrC2AngC}))
-    add_sile('STM.LDOS', _type("stmldosSileSiesta", _gridSileSiesta, {'grid_unit': 1./BohrC2AngC}))
-    add_sile('VH', _type("hartreeSileSiesta", _gridSileSiesta, {'grid_unit': Ry2eV}))
-    add_sile('VNA', _type("neutralatomhartreeSileSiesta", _gridSileSiesta, {'grid_unit': Ry2eV}))
-    add_sile('VT', _type("totalhartreeSileSiesta", _gridSileSiesta, {'grid_unit': Ry2eV}))
+    add_sile('STS', _type("stsSileSiesta", _gridSileSiesta, {'grid_unit': 1./_Bohr2Ang ** 3}))
+    add_sile('STM.LDOS', _type("stmldosSileSiesta", _gridSileSiesta, {'grid_unit': 1./_Bohr2Ang ** 3}))
+    add_sile('VH', _type("hartreeSileSiesta", _gridSileSiesta, {'grid_unit': _Ry2eV}))
+    add_sile('VNA', _type("neutralatomhartreeSileSiesta", _gridSileSiesta, {'grid_unit': _Ry2eV}))
+    add_sile('VT', _type("totalhartreeSileSiesta", _gridSileSiesta, {'grid_unit': _Ry2eV}))
