@@ -108,7 +108,7 @@
 </ul>
 <p class="caption"><span class="caption-text">Toolboxes</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="../../../../toolbox/toolbox.html">Toolboxes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../toolbox.html">Toolboxes</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Visualization</span></p>
 <ul>
@@ -196,6 +196,7 @@
 <span class="kn">from</span> <span class="nn">sisl._internal</span> <span class="kn">import</span> <span class="n">set_module</span>
 <span class="kn">import</span> <span class="nn">sisl._array</span> <span class="k">as</span> <span class="nn">_a</span>
 <span class="kn">from</span> <span class="nn">sisl</span> <span class="kn">import</span> <span class="n">Geometry</span><span class="p">,</span> <span class="n">Atom</span><span class="p">,</span> <span class="n">SuperCell</span>
+<span class="kn">from</span> <span class="nn">sisl.utils</span> <span class="kn">import</span> <span class="n">PropertyDict</span>
 <span class="kn">from</span> <span class="nn">sisl.utils.cmd</span> <span class="kn">import</span> <span class="o">*</span>
 <span class="kn">from</span> <span class="nn">sisl.unit.siesta</span> <span class="kn">import</span> <span class="n">unit_convert</span>
 
@@ -700,7 +701,54 @@
 
 <div class="viewcode-block" id="outSileSiesta.read_energy"><a class="viewcode-back" href="../../../../api-generated/sisl.io.siesta.outSileSiesta.html#sisl.io.siesta.outSileSiesta.read_energy">[docs]</a>    <span class="nd">@sile_fh_open</span><span class="p">()</span>
     <span class="k">def</span> <span class="nf">read_energy</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot; Reads the final energy distribution &quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot; Reads the final energy distribution</span>
+
+<span class="sd">        Currently the energies translated are:</span>
+
+<span class="sd">        ``band``</span>
+<span class="sd">             band structure energy</span>
+<span class="sd">        ``kinetic``</span>
+<span class="sd">             electronic kinetic energy</span>
+<span class="sd">        ``hartree``</span>
+<span class="sd">             electronic electrostatic Hartree energy</span>
+<span class="sd">        ``dftu``</span>
+<span class="sd">             DFT+U energy</span>
+<span class="sd">        ``spin_orbit``</span>
+<span class="sd">             spin-orbit energy</span>
+<span class="sd">        ``extE``</span>
+<span class="sd">             external field energy</span>
+<span class="sd">        ``xc``</span>
+<span class="sd">             exchange-correlation energy</span>
+<span class="sd">        ``bulkV``</span>
+<span class="sd">             bulk-bias correction energy</span>
+<span class="sd">        ``total``</span>
+<span class="sd">             total energy</span>
+<span class="sd">        ``negf``</span>
+<span class="sd">             NEGF energy</span>
+<span class="sd">        ``fermi``</span>
+<span class="sd">             Fermi energy</span>
+<span class="sd">        ``ion.electron``</span>
+<span class="sd">             ion-electron interaction energy</span>
+<span class="sd">        ``ion.ion``</span>
+<span class="sd">             ion-ion interaction energy</span>
+<span class="sd">        ``ion.kinetic``</span>
+<span class="sd">             kinetic ion energy</span>
+
+
+<span class="sd">        Any unrecognized key gets added *as is*.</span>
+
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
+<span class="sd">        &gt;&gt;&gt; energies = sisl.get_sile(&quot;RUN.out&quot;).read_energy()</span>
+<span class="sd">        &gt;&gt;&gt; ion_energies = energies.ion</span>
+<span class="sd">        &gt;&gt;&gt; ion_energies.ion # ion-ion interaction energy</span>
+<span class="sd">        &gt;&gt;&gt; ion_energies.kinetic # ion kinetic energy</span>
+<span class="sd">        &gt;&gt;&gt; energies.fermi # fermi energy</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        PropertyDict : dictionary like lookup table ionic energies are stored in a nested `PropertyDict` at the key ``ion`` (all energies in eV)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">found</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">step_to</span><span class="p">(</span><span class="s2">&quot;siesta: Final energy&quot;</span><span class="p">,</span> <span class="n">reread</span><span class="o">=</span><span class="kc">False</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">found</span><span class="p">:</span>
             <span class="k">return</span> <span class="kc">None</span>
@@ -709,26 +757,33 @@
         <span class="c1"># Read data</span>
         <span class="n">line</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="n">itt</span><span class="p">)</span>
         <span class="n">name_conv</span> <span class="o">=</span> <span class="p">{</span>
-            <span class="s2">&quot;Band Struct.&quot;</span><span class="p">:</span> <span class="s2">&quot;Ebs&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;Kinetic&quot;</span><span class="p">:</span> <span class="s2">&quot;Ekin&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;Hartree&quot;</span><span class="p">:</span> <span class="s2">&quot;Ehartree&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;Eldau&quot;</span><span class="p">:</span> <span class="s2">&quot;Eldau&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;Eso&quot;</span><span class="p">:</span> <span class="s2">&quot;Eso&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;Ext. field&quot;</span><span class="p">:</span> <span class="s2">&quot;EextE&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;Exch.-corr.&quot;</span><span class="p">:</span> <span class="s2">&quot;Exc&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;Ion-electron&quot;</span><span class="p">:</span> <span class="s2">&quot;Eion_elec&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;Ion-ion&quot;</span><span class="p">:</span> <span class="s2">&quot;Eion_ion&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;Bulk bias&quot;</span><span class="p">:</span> <span class="s2">&quot;EbV&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;Ekinion&quot;</span><span class="p">:</span> <span class="s2">&quot;Ekin_ion&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;Total&quot;</span><span class="p">:</span> <span class="s2">&quot;Etot&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;Fermi&quot;</span><span class="p">:</span> <span class="s2">&quot;Ef&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;Enegf&quot;</span><span class="p">:</span> <span class="s2">&quot;Enegf&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Band Struct.&quot;</span><span class="p">:</span> <span class="s2">&quot;band&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Kinetic&quot;</span><span class="p">:</span> <span class="s2">&quot;kinetic&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Hartree&quot;</span><span class="p">:</span> <span class="s2">&quot;hartree&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Edftu&quot;</span><span class="p">:</span> <span class="s2">&quot;dftu&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Eldau&quot;</span><span class="p">:</span> <span class="s2">&quot;dftu&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Eso&quot;</span><span class="p">:</span> <span class="s2">&quot;spin_orbit&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Ext. field&quot;</span><span class="p">:</span> <span class="s2">&quot;extE&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Exch.-corr.&quot;</span><span class="p">:</span> <span class="s2">&quot;xc&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Ekinion&quot;</span><span class="p">:</span> <span class="s2">&quot;ion_kinetic&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Ion-electron&quot;</span><span class="p">:</span> <span class="s2">&quot;ion_electron&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Ion-ion&quot;</span><span class="p">:</span> <span class="s2">&quot;ion_ion&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Bulk bias&quot;</span><span class="p">:</span> <span class="s2">&quot;bulkV&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Total&quot;</span><span class="p">:</span> <span class="s2">&quot;total&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Fermi&quot;</span><span class="p">:</span> <span class="s2">&quot;fermi&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Enegf&quot;</span><span class="p">:</span> <span class="s2">&quot;negf&quot;</span><span class="p">,</span>
         <span class="p">}</span>
-        <span class="n">out</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="n">PropertyDict</span><span class="p">()</span>
+        <span class="n">out</span><span class="o">.</span><span class="n">ion</span> <span class="o">=</span> <span class="n">PropertyDict</span><span class="p">()</span>
         <span class="k">while</span> <span class="nb">len</span><span class="p">(</span><span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">())</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
             <span class="n">key</span><span class="p">,</span> <span class="n">val</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;=&quot;</span><span class="p">)</span>
             <span class="n">key</span> <span class="o">=</span> <span class="n">key</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;:&quot;</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
-            <span class="n">out</span><span class="p">[</span><span class="n">name_conv</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">key</span><span class="p">)]</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">val</span><span class="p">)</span>
+            <span class="n">key</span> <span class="o">=</span> <span class="n">name_conv</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">key</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">key</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;ion&quot;</span><span class="p">):</span>
+                <span class="c1"># sub-nest</span>
+                <span class="n">out</span><span class="o">.</span><span class="n">ion</span><span class="p">[</span><span class="n">key</span><span class="p">[</span><span class="mi">4</span><span class="p">:]]</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">val</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">out</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">val</span><span class="p">)</span>
             <span class="n">line</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="n">itt</span><span class="p">)</span>
 
         <span class="k">return</span> <span class="n">out</span></div>
