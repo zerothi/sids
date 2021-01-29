@@ -337,8 +337,7 @@ class AtomPseudo:
             core_c = np.trapz(ae_cc[1], ae_cc[0])
             valence_c = np.trapz(ps_vc[1], ps_vc[0])
             print(f"Total charge in atom: {core_c + valence_c:.5f}")
-            overlap_c = np.trapz(np.minimum(ae_cc[1], ps_vc[1]),
-                                 ae_cc[0])
+            overlap_c = np.trapz(np.minimum(ae_cc[1], ps_vc[1]), ae_cc[0])
             axs[1][0].set_title(f"Charge: int(min(AE_cc, PS_vc)) = {overlap_c:.3f} e")
 
             # We will try and *guess-stimate* a good position for rc for core-corrections
