@@ -162,7 +162,7 @@ class CopyRunner(PathRunner):
                 shutil.copyfile(f_in, f_out)
             elif f_out.is_file():
                 rem.append("->{}".format(str(fout)))
-                os.remove(f-out)
+                os.remove(f_out)
         _log.debug(f"copying {copy}; removing {rem}")
 
 
