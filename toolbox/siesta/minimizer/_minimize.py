@@ -17,6 +17,21 @@ from sisl.utils import PropertyDict
 _log = logging.getLogger("sisl_toolbox.siesta.pseudo")
 
 
+def _convert_optimize_result(minimizer, result):
+    """ Convert optimize result to conform to the scaling procedure performed """
+    # reverse optimized value
+    # and also store the normalized values (to match the gradients etc)
+    result.x_norm = result.x
+    result.x = minimizer.reverse_normalize(result.x)
+    if hasattr(result, "jac"):
+        # transform the jacobian
+        # The jacobian is dM / dx with dx possibly being scaled
+        result.jac_norm = result.jac
+        result.jac /= minimizer.reverse_normalize(np.ones(len(minimizer)),
+                                                  with_offset=False)
+    return result
+
+
 class BaseMinimize:
 
     # Basic minimizer basically used for figuring out whether
@@ -59,11 +74,11 @@ class BaseMinimize:
     def normalize_bounds(self):
         return [v.normalize(v.bounds, self.norm) for v in self.variables]
 
-    def reverse_normalize(self, variables):
+    def reverse_normalize(self, variables, with_offset=True):
         # ensures numpy array
         out = np.empty_like(variables)
         for i, v in enumerate(variables):
-            out[i] = self.variables[i].reverse_normalize(v, self.norm)
+            out[i] = self.variables[i].reverse_normalize(v, self.norm, with_offset=with_offset)
         return out
 
     def __getitem__(self, key):
@@ -254,11 +269,8 @@ class LocalMinimize(BaseMinimize):
             opt = minimize(self._minimize_func,
                            x0=norm_v0, args=args, bounds=bounds,
                            **kwargs)
-        # reverse optimized value
-        # and also store the normalized values (to match the gradients etc)
-        opt.x_norm = opt.x
-        opt.x = self.reverse_normalize(opt.x)
-        return opt
+
+        return _convert_optimize_result(self, opt)
 
 
 class DualAnnealingMinimize(BaseMinimize):
@@ -271,11 +283,7 @@ class DualAnnealingMinimize(BaseMinimize):
             opt = dual_annealing(self._minimize_func,
                                  x0=norm_v0, args=args, bounds=bounds,
                                  **kwargs)
-        # reverse optimized value
-        # and also store the normalized values (to match the gradients etc)
-        opt.x_norm = opt.x
-        opt.x = self.reverse_normalize(opt.x)
-        return opt
+        return _convert_optimize_result(self, opt)
 
 
 class MinimizeToDispatcher(AbstractDispatch):

@@ -122,7 +122,6 @@ class AtomBasis:
             l = int(nl_line.pop(0))
             nzeta = int(nl_line.pop(0))
             # assign defaults
-            npol = 0
             nlopts = {}
 
             while len(nl_line) > 0:
@@ -133,7 +132,7 @@ class AtomBasis:
                         nl_line.pop(0)
                         nlopts["pol"] = npol
                     except:
-                        npol = 1
+                        nlopts["pol"] = 1
                 elif opt == "S":
                     nlopts["split"] = float(nl_line.pop(0))
                 elif opt == "F":
@@ -212,8 +211,10 @@ class AtomBasis:
             for key, value in opts.items():
                 if key == "pol":
                     # number of polarization orbitals
-                    npol = value
-                    line += f" P {npol}"
+                    if value > 0:
+                        line += " P"
+                        if value > 1:
+                            line += f" {value}"
                 elif key == "soft":
                     V0, ri = value
                     # V0, inner-radius
@@ -440,5 +441,16 @@ class AtomBasis:
         for (n, l), orbs in self.yield_nl_orbs():
             V.extend(parse_nl(self, n, l, orbs,
                               dic.get(f"{n}" + "spdfg"[l], {})))
+
+        # Now add atomic charge
+        charge = dic.get("charge", {})
+        if len(charge) > 0:
+            v0 = charge["initial"]
+            bounds = charge["bounds"]
+            delta = charge["delta"]
+            var = UpdateVariable(f"{symbol}.charge", v0, bounds,
+                                 partial(update, d=self.opts, key="charge"),
+                                 delta=delta)
+            V.append(var)
 
         return V
